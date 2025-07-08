@@ -3,13 +3,6 @@
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, TestCaseStatus, TestCaseType, WorkItemType } from '@/types';
-import { 
-  epics as initialEpics, 
-  stories as initialStories, 
-  sprints as initialSprints,
-  employees as initialEmployees,
-  testCases as initialTestCases
-} from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -90,58 +83,35 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const seedDatabase = async () => {
-      const epicsSnap = await getDocs(collection(db, 'epics'));
-      if (epicsSnap.empty) {
-        console.log('Empty database, seeding with initial data...');
-        const batch = writeBatch(db);
-
-        const collectionsToSeed: { [key: string]: any[] } = {
-          epics: initialEpics,
-          stories: initialStories,
-          sprints: initialSprints,
-          employees: initialEmployees,
-          testCases: initialTestCases,
-        };
-
-        for (const [collectionName, data] of Object.entries(collectionsToSeed)) {
-          data.forEach(item => {
-            const { id, ...rest } = item;
-            const docRef = doc(db, collectionName, id);
-            batch.set(docRef, rest);
-          });
-        }
-        
-        await batch.commit();
-        console.log('Database seeded.');
-      }
+    setIsLoading(true);
+    const handleError = (err: any) => {
+        console.error("Firestore Initialization Error:", err);
+        setError("Could not connect to the database. Please check your Firebase project configuration and security rules.");
+        setIsLoading(false);
     };
 
-    const setupListeners = async () => {
-      try {
-        await seedDatabase();
-
+    try {
         const unsubEpics = onSnapshot(collection(db, 'epics'), (snapshot) => {
             setEpics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Epic)));
-        });
+        }, handleError);
 
         const unsubStories = onSnapshot(collection(db, 'stories'), (snapshot) => {
             setStories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Story)));
-        });
+        }, handleError);
 
         const unsubSprints = onSnapshot(collection(db, 'sprints'), (snapshot) => {
             setSprints(snapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) } as Sprint)));
-        });
+        }, handleError);
         
         const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot) => {
             setEmployees(snapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) } as Employee)));
-        });
+        }, handleError);
 
         const unsubTestCases = onSnapshot(collection(db, 'testCases'), (snapshot) => {
             setTestCases(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestCase)));
-        });
+        }, handleError);
 
-        setIsLoading(false);
+        setIsLoading(false); // Unblock the UI
 
         return () => {
             unsubEpics();
@@ -151,18 +121,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             unsubTestCases();
         };
       } catch (err: any) {
-        console.error("Firestore Initialization Error:", err);
-        setError("Could not connect to the database. Please check your Firebase project configuration and security rules.");
-        setIsLoading(false);
+        handleError(err)
         return () => {};
       }
-    };
-
-    const unsubscribePromise = setupListeners();
-
-    return () => {
-        unsubscribePromise.then(unsub => unsub && unsub());
-    };
   }, []);
 
   // Story Actions
