@@ -201,8 +201,14 @@ export default function BacklogPage() {
   };
 
   const onAddStorySubmit = (values: z.infer<typeof storyFormSchema>) => {
-    const newIdNumber = stories.length > 0 
-        ? Math.max(...stories.map(s => parseInt(s.storyId.replace('ST-', '')))) + 1
+    const newIdNumber =
+      stories.length > 0
+        ? Math.max(
+            0,
+            ...stories
+              .filter((s) => s.storyId && typeof s.storyId === 'string')
+              .map((s) => parseInt(s.storyId.replace('ST-', ''), 10) || 0)
+          ) + 1
         : 1;
 
     const newStory: Story = {
