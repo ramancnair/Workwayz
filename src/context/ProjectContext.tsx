@@ -2,22 +2,15 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, TestCaseStatus, TestCaseType, WorkItemType } from '@/types';
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  onSnapshot,
-  doc,
-  updateDoc,
-  addDoc,
-  deleteDoc,
-  writeBatch,
-  getDocs,
-  Timestamp,
-  query,
-  where,
-  documentId,
-} from 'firebase/firestore';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase } from '@/types';
+import { 
+    epics as mockEpics, 
+    stories as mockStories, 
+    sprints as mockSprints, 
+    employees as mockEmployees, 
+    testCases as mockTestCases 
+} from '@/lib/mock-data';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ProjectContextType {
   epics: Epic[];
@@ -27,7 +20,7 @@ interface ProjectContextType {
   testCases: TestCase[];
   
   // Story actions
-  addStory: (story: Omit<Story, 'id' | 'storyId'> & { storyId?: string }) => Promise<boolean>;
+  addStory: (story: Omit<Story, 'id' | 'storyId'>) => Promise<boolean>;
   updateStory: (storyId: string, data: Partial<Omit<Story, 'id'>>) => Promise<boolean>;
   deleteStory: (storyId: string) => Promise<boolean>;
   moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<boolean>;
@@ -51,7 +44,7 @@ interface ProjectContextType {
   deleteEmployee: (employeeId: string) => Promise<boolean>;
 
   // TestCase actions
-  addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'> & { testCaseId?: string }) => Promise<boolean>;
+  addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => Promise<boolean>;
   updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
 
@@ -61,271 +54,206 @@ interface ProjectContextType {
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
-const convertTimestamps = (data: any) => {
-  const converted: { [key: string]: any } = {};
-  for (const key in data) {
-    if (data[key] instanceof Timestamp) {
-      converted[key] = data[key].toDate().toISOString();
-    } else {
-      converted[key] = data[key];
-    }
-  }
-  return converted;
-};
-
 export function ProjectProvider({ children }: PropsWithChildren) {
   const [epics, setEpics] = useState<Epic[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const handleError = (err: any, collectionName: string) => {
-      console.error(`Firestore Error on ${collectionName}:`, err);
-      setError(`Could not connect to the '${collectionName}' collection. Please check your Firebase project configuration and security rules.`);
-    };
-  
-    const collections = ['epics', 'stories', 'sprints', 'employees', 'testCases'];
-    const setters: any = { setEpics, setStories, setSprints, setEmployees, setTestCases };
-    const typeConverters: any = {
-      sprints: convertTimestamps,
-      employees: convertTimestamps
-    };
-  
-    const unsubscribers = collections.map(name => {
-      const converter = typeConverters[name] || ((data: any) => data);
-      const setter = setters[`set${name.charAt(0).toUpperCase() + name.slice(1)}`];
-      
-      return onSnapshot(collection(db, name), snapshot => {
-        setter(snapshot.docs.map(doc => ({ id: doc.id, ...converter(doc.data()) })));
-        setIsLoading(false);
-      }, err => handleError(err, name));
-    });
-  
-    // Initial check to unblock UI if all collections are empty or connection fails
-    Promise.all(collections.map(name => getDocs(collection(db, name))))
-        .then(() => setIsLoading(false))
-        .catch(err => {
-            console.error("Initial connection check failed:", err);
-            setError("Could not connect to the database. Please verify your Firebase project setup and network connection.");
-            setIsLoading(false);
-        });
+    try {
+      const storedEpics = localStorage.getItem('epics');
+      const storedStories = localStorage.getItem('stories');
+      const storedSprints = localStorage.getItem('sprints');
+      const storedEmployees = localStorage.getItem('employees');
+      const storedTestCases = localStorage.getItem('testCases');
 
-    return () => unsubscribers.forEach(unsub => unsub());
+      setEpics(storedEpics ? JSON.parse(storedEpics) : mockEpics);
+      setStories(storedStories ? JSON.parse(storedStories) : mockStories);
+      setSprints(storedSprints ? JSON.parse(storedSprints) : mockSprints);
+      setEmployees(storedEmployees ? JSON.parse(storedEmployees) : mockEmployees);
+      setTestCases(storedTestCases ? JSON.parse(storedTestCases) : mockTestCases);
+    } catch (error) {
+      console.error("Failed to load data from localStorage, falling back to mock data.", error);
+      setEpics(mockEpics);
+      setStories(mockStories);
+      setSprints(mockSprints);
+      setEmployees(mockEmployees);
+      setTestCases(mockTestCases);
+    }
+    setIsLoaded(true);
   }, []);
 
-  const handleDbOperation = async <T>(operation: Promise<T>): Promise<boolean> => {
-    try {
-      await operation;
-      return true;
-    } catch (e) {
-      console.error("Firestore operation failed:", e);
-      return false;
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('epics', JSON.stringify(epics));
+      localStorage.setItem('stories', JSON.stringify(stories));
+      localStorage.setItem('sprints', JSON.stringify(sprints));
+      localStorage.setItem('employees', JSON.stringify(employees));
+      localStorage.setItem('testCases', JSON.stringify(testCases));
     }
+  }, [epics, stories, sprints, employees, testCases, isLoaded]);
+
+  const createAsyncCallback = <T extends any[], R>(fn: (...args: T) => R) => {
+    return async (...args: T): Promise<R> => {
+      try {
+        return Promise.resolve(fn(...args));
+      } catch (e) {
+        console.error("Operation failed", e);
+        throw e;
+      }
+    };
   };
 
   // Story Actions
-  const addStory = async (story: Omit<Story, 'id' | 'storyId'>) => {
-    return handleDbOperation(async () => {
-        const storiesCollection = collection(db, 'stories');
-        const snapshot = await getDocs(storiesCollection);
+  const addStory = createAsyncCallback((story: Omit<Story, 'id' | 'storyId'>) => {
+    setStories(prev => {
         const newIdNumber =
-        snapshot.docs.length > 0
+        prev.length > 0
             ? Math.max(
                 0,
-                ...snapshot.docs
-                .map(doc => doc.data().storyId)
+                ...prev
+                .map(doc => doc.storyId)
                 .filter(id => id && typeof id === 'string')
                 .map(id => parseInt(id.replace('ST-', ''), 10) || 0)
             ) + 1
             : 1;
 
-        const newStoryData: { [key: string]: any } = {
-        storyId: `ST-${newIdNumber}`,
-        title: story.title,
-        description: story.description,
-        itemType: story.itemType,
-        acceptanceCriteria: story.acceptanceCriteria,
-        sprintId: story.sprintId,
-        status: story.status,
+        const newStory: Story = {
+            ...story,
+            id: uuidv4(),
+            storyId: `ST-${newIdNumber}`,
         };
-        
-        if (story.assigneeId) {
-        newStoryData.assigneeId = story.assigneeId;
-        }
-        if (story.epicId) {
-        newStoryData.epicId = story.epicId;
-        }
+        return [...prev, newStory];
+    });
+    return true;
+  });
 
-        await addDoc(storiesCollection, newStoryData);
-    });
-  };
-  const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id'>>) => {
-    return handleDbOperation(updateDoc(doc(db, 'stories', storyId), data));
-  };
-  const deleteStory = async (storyId: string) => {
-    return handleDbOperation(deleteDoc(doc(db, 'stories', storyId)));
-  };
-  const moveStoryToSprint = async (storyId: string, sprintId: string | null) => {
-    return handleDbOperation(updateDoc(doc(db, 'stories', storyId), { sprintId }));
-  };
-  const moveStoryStatus = async (storyId: string, newStatus: StoryStatus) => {
-    return handleDbOperation(updateDoc(doc(db, 'stories', storyId), { status: newStatus }));
-  };
-  const moveStoryToEpic = async (storyId: string, epicId: string | null) => {
-    return handleDbOperation(updateDoc(doc(db, 'stories', storyId), { epicId }));
-  };
+  const updateStory = createAsyncCallback((storyId: string, data: Partial<Omit<Story, 'id'>>) => {
+    setStories(prev => prev.map(s => s.id === storyId ? { ...s, ...data } : s));
+    return true;
+  });
+
+  const deleteStory = createAsyncCallback((storyId: string) => {
+    setStories(prev => prev.filter(s => s.id !== storyId));
+    return true;
+  });
+
+  const moveStoryToSprint = createAsyncCallback((storyId: string, sprintId: string | null) => {
+    setStories(prev => prev.map(s => s.id === storyId ? { ...s, sprintId } : s));
+    return true;
+  });
+
+  const moveStoryStatus = createAsyncCallback((storyId: string, newStatus: StoryStatus) => {
+    setStories(prev => prev.map(s => s.id === storyId ? { ...s, status: newStatus } : s));
+    return true;
+  });
   
+  const moveStoryToEpic = createAsyncCallback((storyId: string, epicId: string | null) => {
+    setStories(prev => prev.map(s => s.id === storyId ? { ...s, epicId: epicId || undefined } : s));
+    return true;
+  });
+
   // Epic Actions
-  const addEpic = async (epic: Omit<Epic, 'id'>) => {
-    return handleDbOperation(addDoc(collection(db, 'epics'), epic));
-  };
-  const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>) => {
-    return handleDbOperation(updateDoc(doc(db, 'epics', epicId), data));
-  };
-  const deleteEpic = async (epicId: string) => {
-    return handleDbOperation(async () => {
-        const batch = writeBatch(db);
-        batch.delete(doc(db, 'epics', epicId));
-        const q = query(collection(db, 'stories'), where('epicId', '==', epicId));
-        const storiesSnap = await getDocs(q);
-        storiesSnap.forEach(storyDoc => {
-        batch.update(storyDoc.ref, { epicId: null });
-        });
-        await batch.commit();
-    });
-  };
-  
+  const addEpic = createAsyncCallback((epic: Omit<Epic, 'id'>) => {
+    setEpics(prev => [...prev, { ...epic, id: uuidv4() }]);
+    return true;
+  });
+
+  const updateEpic = createAsyncCallback((epicId: string, data: Partial<Omit<Epic, 'id'>>) => {
+    setEpics(prev => prev.map(e => e.id === epicId ? { ...e, ...data } : e));
+    return true;
+  });
+
+  const deleteEpic = createAsyncCallback((epicId: string) => {
+    setEpics(prev => prev.filter(e => e.id !== epicId));
+    setStories(prev => prev.map(s => s.epicId === epicId ? { ...s, epicId: undefined } : s));
+    return true;
+  });
+
   // Sprint Actions
-  const addSprint = async (sprint: Omit<Sprint, 'id' | 'isCurrent'>) => {
-    return handleDbOperation(async () => {
-        const sprintData: { [key: string]: any } = {
-        title: sprint.title,
-        isCurrent: false,
-        };
-        if (sprint.startDate) {
-        sprintData.startDate = Timestamp.fromDate(new Date(sprint.startDate));
-        }
-        if (sprint.endDate) {
-        sprintData.endDate = Timestamp.fromDate(new Date(sprint.endDate));
-        }
-        await addDoc(collection(db, 'sprints'), sprintData);
-    });
-  };
-  const updateSprint = async (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>) => {
-    return handleDbOperation(async () => {
-        const sprintData: {[key: string]: any} = {};
-        if(data.title) sprintData.title = data.title;
-        if (data.startDate) {
-        sprintData.startDate = Timestamp.fromDate(new Date(data.startDate));
-        } else {
-        sprintData.startDate = null;
-        }
-        if (data.endDate) {
-        sprintData.endDate = Timestamp.fromDate(new Date(data.endDate));
-        } else {
-        sprintData.endDate = null;
-        }
-        await updateDoc(doc(db, 'sprints', sprintId), sprintData);
-    });
-  };
-  const deleteSprint = async (sprintId: string) => {
-    return handleDbOperation(async () => {
-        const batch = writeBatch(db);
-        batch.delete(doc(db, 'sprints', sprintId));
-        const q = query(collection(db, 'stories'), where('sprintId', '==', sprintId));
-        const storiesSnap = await getDocs(q);
-        storiesSnap.forEach(storyDoc => {
-        batch.update(storyDoc.ref, { sprintId: null });
-        });
-        await batch.commit();
-    });
-  };
-  const setCurrentSprint = async (sprintId: string) => {
-    return handleDbOperation(async () => {
-        const batch = writeBatch(db);
-        const sprintsSnap = await getDocs(collection(db, 'sprints'));
-        sprintsSnap.forEach(sprintDoc => {
-            batch.update(sprintDoc.ref, { isCurrent: sprintDoc.id === sprintId });
-        });
-        await batch.commit();
-    });
-  };
+  const addSprint = createAsyncCallback((sprint: Omit<Sprint, 'id' | 'isCurrent'>) => {
+    const newSprint: Sprint = { ...sprint, id: uuidv4(), isCurrent: false };
+    setSprints(prev => [...prev, newSprint]);
+    return true;
+  });
+
+  const updateSprint = createAsyncCallback((sprintId: string, data: Partial<Omit<Sprint, 'id'>>) => {
+    setSprints(prev => prev.map(s => s.id === sprintId ? { ...s, ...data } : s));
+    return true;
+  });
+
+  const deleteSprint = createAsyncCallback((sprintId: string) => {
+    setSprints(prev => prev.filter(s => s.id !== sprintId));
+    setStories(prev => prev.map(s => s.sprintId === sprintId ? { ...s, sprintId: null } : s));
+    return true;
+  });
+
+  const setCurrentSprint = createAsyncCallback((sprintId: string) => {
+    setSprints(prev => prev.map(s => ({ ...s, isCurrent: s.id === sprintId })));
+    return true;
+  });
 
   // Employee Actions
-  const addEmployee = async (employee: Omit<Employee, 'id'>) => {
-    return handleDbOperation(async () => {
-        const employeeData: { [key: string]: any } = { ...employee };
-        if (employee.onboardingDate) employeeData.onboardingDate = Timestamp.fromDate(new Date(employee.onboardingDate));
-        if (employee.offloadingDate) employeeData.offloadingDate = Timestamp.fromDate(new Date(employee.offloadingDate));
-        await addDoc(collection(db, 'employees'), employeeData);
-    });
-  };
-  const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id'>>) => {
-    return handleDbOperation(async () => {
-        const employeeData: {[key: string]: any} = {...data};
-        if (data.onboardingDate) employeeData.onboardingDate = Timestamp.fromDate(new Date(data.onboardingDate));
-        if (data.offloadingDate) employeeData.offloadingDate = Timestamp.fromDate(new Date(data.offloadingDate));
-        await updateDoc(doc(db, 'employees', employeeId), employeeData);
-    });
-  };
-  const deleteEmployee = async (employeeId: string) => {
-    return handleDbOperation(deleteDoc(doc(db, 'employees', employeeId)));
-  };
+  const addEmployee = createAsyncCallback((employee: Omit<Employee, 'id'>) => {
+    setEmployees(prev => [...prev, { ...employee, id: uuidv4() }]);
+    return true;
+  });
+
+  const updateEmployee = createAsyncCallback((employeeId: string, data: Partial<Omit<Employee, 'id'>>) => {
+    setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, ...data } : e));
+    return true;
+  });
   
+  const deleteEmployee = createAsyncCallback((employeeId: string) => {
+    setEmployees(prev => prev.filter(e => e.id !== employeeId));
+    return true;
+  });
+
   // TestCase Actions
-  const addTestCase = async (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => {
-    return handleDbOperation(async () => {
-        const testCasesCollection = collection(db, 'testCases');
-        const snapshot = await getDocs(testCasesCollection);
+  const addTestCase = createAsyncCallback((testCase: Omit<TestCase, 'id' | 'testCaseId'>) => {
+    setTestCases(prev => {
         const newIdNumber =
-        snapshot.docs.length > 0
+        prev.length > 0
             ? Math.max(
                 0,
-                ...snapshot.docs
-                .map(doc => doc.data().testCaseId)
+                ...prev
+                .map(doc => doc.testCaseId)
                 .filter(id => id && typeof id === 'string')
                 .map(id => parseInt(id.replace('TC-', ''), 10) || 0)
             ) + 1
             : 1;
 
-        const newTestCaseData: { [key: string]: any } = {
-        testCaseId: `TC-${newIdNumber}`,
-        title: testCase.title,
-        type: testCase.type,
-        description: testCase.description,
-        expectedResult: testCase.expectedResult,
-        status: testCase.status,
+        const newTestCase: TestCase = {
+            ...testCase,
+            id: uuidv4(),
+            testCaseId: `TC-${newIdNumber}`,
         };
-
-        if (testCase.assigneeId) {
-        newTestCaseData.assigneeId = testCase.assigneeId;
-        }
-        if (testCase.storyId) {
-        newTestCaseData.storyId = testCase.storyId;
-        }
-
-        await addDoc(testCasesCollection, newTestCaseData);
+        return [...prev, newTestCase];
     });
-  };
-  const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => {
-    return handleDbOperation(updateDoc(doc(db, 'testCases', testCaseId), data));
-  };
-  const deleteTestCase = async (testCaseId: string) => {
-    return handleDbOperation(deleteDoc(doc(db, 'testCases', testCaseId)));
-  };
+    return true;
+  });
 
+  const updateTestCase = createAsyncCallback((testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => {
+    setTestCases(prev => prev.map(tc => tc.id === testCaseId ? { ...tc, ...data } : tc));
+    return true;
+  });
+
+  const deleteTestCase = createAsyncCallback((testCaseId: string) => {
+    setTestCases(prev => prev.filter(tc => tc.id !== testCaseId));
+    return true;
+  });
+  
   const value: ProjectContextType = {
     epics,
     stories,
     sprints,
     employees,
     testCases,
-    isLoading,
-    error,
+    isLoading: !isLoaded,
+    error: null,
     addStory,
     updateStory,
     deleteStory,
@@ -347,23 +275,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     deleteTestCase,
   };
 
-  if (isLoading) {
+  if (!isLoaded) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground">Connecting to database...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background p-4">
-        <div className="w-full max-w-lg rounded-lg border border-destructive bg-card p-6 text-center shadow-lg">
-          <h1 className="text-xl font-bold text-destructive">Database Connection Failed</h1>
-          <p className="mt-2 text-sm text-card-foreground">{error}</p>
+          <p className="text-muted-foreground">Loading project data...</p>
         </div>
       </div>
     );
