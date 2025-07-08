@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -92,7 +93,10 @@ function StoryCard({
     >
       <CardHeader className="p-4">
         <div className="flex justify-between items-start gap-4">
-          <p className="font-semibold flex-1 break-words">{story.title}</p>
+          <div className="flex-1">
+             <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+             <p className="font-semibold break-words">{story.title}</p>
+          </div>
           {assignee && (
             <TooltipProvider>
               <Tooltip>
@@ -197,8 +201,13 @@ export default function BacklogPage() {
   };
 
   const onAddStorySubmit = (values: z.infer<typeof storyFormSchema>) => {
+    const newIdNumber = stories.length > 0 
+        ? Math.max(...stories.map(s => parseInt(s.storyId.replace('ST-', '')))) + 1
+        : 1;
+
     const newStory: Story = {
       id: `story${Date.now()}`,
+      storyId: `ST-${newIdNumber}`,
       sprintId: null,
       title: values.title,
       description: values.description || '',
@@ -650,6 +659,12 @@ export default function BacklogPage() {
               </DialogHeader>
               <Form {...editStoryForm}>
                 <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4">
+                   <FormItem>
+                    <FormLabel>Story ID</FormLabel>
+                    <FormControl>
+                      <Input readOnly value={selectedStory.storyId} />
+                    </FormControl>
+                  </FormItem>
                   <FormField
                     control={editStoryForm.control}
                     name="title"

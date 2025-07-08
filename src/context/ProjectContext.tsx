@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
@@ -26,29 +27,33 @@ interface ProjectContextType {
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function ProjectProvider({ children }: PropsWithChildren) {
-  const [epics, setEpics] = useState<Epic[]>(initialEpics);
-  const [stories, setStories] = useState<Story[]>(initialStories);
-  const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [epics, setEpics] = useState<Epic[]>([]);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load data from localStorage on mount (client-side only)
   useEffect(() => {
     try {
       const storedEpics = window.localStorage.getItem('project_epics');
-      if (storedEpics) setEpics(JSON.parse(storedEpics));
+      setEpics(storedEpics ? JSON.parse(storedEpics) : initialEpics);
       
       const storedStories = window.localStorage.getItem('project_stories');
-      if (storedStories) setStories(JSON.parse(storedStories));
+      setStories(storedStories ? JSON.parse(storedStories) : initialStories);
 
       const storedSprints = window.localStorage.getItem('project_sprints');
-      if (storedSprints) setSprints(JSON.parse(storedSprints));
+      setSprints(storedSprints ? JSON.parse(storedSprints) : initialSprints);
 
       const storedEmployees = window.localStorage.getItem('project_employees');
-      if (storedEmployees) setEmployees(JSON.parse(storedEmployees));
+      setEmployees(storedEmployees ? JSON.parse(storedEmployees) : initialEmployees);
 
     } catch (error) {
-      console.error("Failed to load data from localStorage", error);
+      console.error("Failed to load data from localStorage, using initial data.", error);
+      setEpics(initialEpics);
+      setStories(initialStories);
+      setSprints(initialSprints);
+      setEmployees(initialEmployees);
     }
     setIsInitialized(true);
   }, []);
@@ -104,7 +109,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   return (
     <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, employees, setEmployees, moveStoryToSprint, moveStoryStatus, moveStoryToEpic }}>
-      {children}
+      {isInitialized ? children : null}
     </ProjectContext.Provider>
   );
 }

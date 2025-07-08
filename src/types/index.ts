@@ -24,6 +24,7 @@ export type StoryStatus = 'To Do' | 'In Progress' | 'Done';
 
 export type Story = {
   id: string;
+  storyId: string;
   title: string;
   description: string;
   acceptanceCriteria?: string;
