@@ -242,8 +242,8 @@ export default function BacklogPage() {
       startDate: values.startDate?.toISOString(),
       endDate: values.endDate?.toISOString(),
     });
-    sprintForm.reset();
     setAddSprintOpen(false);
+    sprintForm.reset();
   };
   
   const onEditSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
@@ -269,8 +269,8 @@ export default function BacklogPage() {
       title: values.title,
       description: values.description || '',
     });
-    epicForm.reset();
     setAddEpicOpen(false);
+    epicForm.reset();
   };
   
   const onEditEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
@@ -291,8 +291,8 @@ export default function BacklogPage() {
       status: 'To Do',
     };
     await addStory(newStory);
-    storyForm.reset();
     setAddStoryOpen(false);
+    storyForm.reset();
   };
   
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
