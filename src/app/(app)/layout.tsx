@@ -30,7 +30,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         </Sidebar>
         <SidebarInset>
           <div className="h-full flex flex-col">
-            <div className="px-4 md:px-8 pt-6 border-b">
+            <div className="bg-card px-4 md:px-8 py-4 border-b">
                 <Tabs value={tabValue} onValueChange={onTabChange}>
                     <TabsList>
                         <TabsTrigger value="development">Development</TabsTrigger>
