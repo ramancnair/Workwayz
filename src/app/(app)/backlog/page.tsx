@@ -16,9 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
   DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -27,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2 } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -41,7 +39,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { epics as initialEpics, stories as initialStories } from '@/lib/mock-data';
+import { epics as initialEpics, stories as initialStories, sprints as initialSprints } from '@/lib/mock-data';
 import type { Epic, Story, Sprint } from '@/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -110,7 +108,7 @@ function StoryCard({
 export default function BacklogPage() {
   const [epics, setEpics] = useState<Epic[]>(initialEpics);
   const [stories, setStories] = useState<Story[]>(initialStories);
-  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
 
@@ -130,6 +128,15 @@ export default function BacklogPage() {
       title: `Sprint ${sprints.length + 1}`,
     };
     setSprints([...sprints, newSprint]);
+  };
+  
+  const handleDeleteSprint = (sprintId: string) => {
+    setStories(
+      stories.map((story) =>
+        story.sprintId === sprintId ? { ...story, sprintId: null } : story
+      )
+    );
+    setSprints(sprints.filter((sprint) => sprint.id !== sprintId));
   };
 
   const moveStory = (storyId: string, sprintId: string | null) => {
@@ -158,6 +165,7 @@ export default function BacklogPage() {
       title: values.title,
       description: values.description || '',
       epicId: values.epicId,
+      status: 'To Do',
     };
     setStories([...stories, newStory]);
     storyForm.reset();
@@ -230,7 +238,7 @@ export default function BacklogPage() {
         
         <Dialog open={addStoryOpen} onOpenChange={setAddStoryOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline">
+            <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Story
             </Button>
@@ -356,9 +364,14 @@ export default function BacklogPage() {
             key={sprint.id}
             className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0"
           >
-            <h3 className="text-lg font-semibold mb-4 sticky top-0 bg-muted/50 pt-1 pb-3">
-              {sprint.title}
-            </h3>
+            <div className="flex justify-between items-center mb-4 sticky top-0 bg-muted/50 pt-1 pb-3">
+                <h3 className="text-lg font-semibold">
+                {sprint.title}
+                </h3>
+                <Button variant="ghost" size="icon" onClick={() => handleDeleteSprint(sprint.id)} className="h-8 w-8">
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </div>
             <div className="overflow-y-auto flex-1 -mr-4 pr-4 space-y-4">
               {stories
                 .filter((story) => story.sprintId === sprint.id)

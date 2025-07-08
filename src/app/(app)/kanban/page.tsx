@@ -1,13 +1,14 @@
+
 'use client';
 
 import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { Button } from '@/components/ui/button';
 import { StoryCard } from '@/components/kanban/TaskCard';
 import { stories as initialStories, epics as initialEpics } from '@/lib/mock-data';
 import type { Story, StoryStatus, Epic } from '@/types';
-import { PlusCircle, Columns, ChevronDown } from 'lucide-react';
+import { Columns, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 const columns: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
@@ -25,12 +26,7 @@ export default function KanbanPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
-      <PageHeader title="Kanban Board" description="Move stories to change their status.">
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Story
-        </Button>
-      </PageHeader>
+      <PageHeader title="Kanban Board" description="Move stories to change their status."></PageHeader>
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
         {columns.map((status) => (
           <div key={status} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
