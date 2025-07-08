@@ -3,17 +3,28 @@
 import { PageHeader } from '@/components/PageHeader';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig
+} from "@/components/ui/chart";
 import { tasks, stories } from '@/lib/mock-data';
-import type { Task } from '@/types';
-import { BarChart, PieChart, CheckCircle, ListTodo, GitFork, Boxes } from 'lucide-react';
-import { ResponsiveContainer, Pie, Cell, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { CheckCircle, ListTodo, GitFork, Boxes } from 'lucide-react';
+import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
 
-const COLORS = {
-  'To Do': '#3b82f6',
-  'In Development': '#f97316',
-  'In QA': '#eab308',
-  'Complete': '#22c55e',
-};
+const barChartConfig = {
+  completed: {
+    label: "Completed",
+    color: "#22c55e",
+  },
+  remaining: {
+    label: "Remaining",
+    color: "#e4e4e7",
+  },
+} satisfies ChartConfig;
 
 export default function DevelopmentDashboard() {
   const totalTasks = tasks.length;
@@ -27,14 +38,37 @@ export default function DevelopmentDashboard() {
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value }));
+
+  const pieChartConfig = {
+    tasks: {
+      label: 'Tasks',
+    },
+    'To Do': {
+      label: 'To Do',
+      color: '#3b82f6',
+    },
+    'In Development': {
+      label: 'In Development',
+      color: '#f97316',
+    },
+    'In QA': {
+      label: 'In QA',
+      color: '#eab308',
+    },
+    'Complete': {
+      label: 'Complete',
+      color: '#22c55e',
+    },
+  } satisfies ChartConfig;
   
   const storyProgressData = stories.map(story => {
     const storyTasks = tasks.filter(t => t.storyId === story.id);
     const completed = storyTasks.filter(t => t.status === 'Complete').length;
+    const remaining = storyTasks.length - completed;
     return {
       name: story.title,
-      total: storyTasks.length,
-      completed: completed,
+      completed,
+      remaining,
     }
   });
 
@@ -54,17 +88,22 @@ export default function DevelopmentDashboard() {
             <CardTitle>Tasks by Status</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer config={pieChartConfig}>
               <PieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
                 <Pie data={taskStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
                   {taskStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                    <Cell key={`cell-${index}`} fill={pieChartConfig[entry.name as keyof typeof pieChartConfig]?.color} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <ChartLegend
+                  content={<ChartLegendContent nameKey="name" />}
+                />
               </PieChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
         <Card className="lg:col-span-4">
@@ -72,16 +111,18 @@ export default function DevelopmentDashboard() {
             <CardTitle>Story Progress</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={storyProgressData} layout="vertical" margin={{ left: 10, right: 30 }}>
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }}/>
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="completed" stackId="a" fill="#22c55e" name="Completed Tasks" />
-                <Bar dataKey="total" stackId="b" fill="#a1a1aa" name="Total Tasks" barSize={20} radius={[0, 4, 4, 0]} />
+            <ChartContainer config={barChartConfig} className="h-full w-full">
+               <BarChart accessibilityLayer data={storyProgressData} layout="vertical" stackOffset="expand" margin={{left: -20}}>
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} tickLine={false} axisLine={false}/>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar dataKey="completed" stackId="a" fill="var(--color-completed)" radius={[4, 0, 0, 4]} />
+                <Bar dataKey="remaining" stackId="a" fill="var(--color-remaining)" radius={[0, 4, 4, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>

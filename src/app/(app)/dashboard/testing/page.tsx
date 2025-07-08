@@ -3,22 +3,57 @@
 import { PageHeader } from '@/components/PageHeader';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig
+} from "@/components/ui/chart";
 import { testCases, bugs } from '@/lib/mock-data';
-import { Bug, ClipboardCheck, AlertTriangle, ShieldCheck, Flame } from 'lucide-react';
-import { ResponsiveContainer, Pie, Cell, Legend, Tooltip, BarChart, XAxis, YAxis, Bar } from 'recharts';
+import { Bug, ClipboardCheck, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
 
-const BUG_STATUS_COLORS = {
-  'Open': '#ef4444',
-  'In Progress': '#f97316',
-  'Fixed': '#3b82f6',
-  'Closed': '#22c55e',
-};
+const bugStatusConfig = {
+  bugs: {
+    label: "Bugs",
+  },
+  'Open': {
+    label: "Open",
+    color: '#ef4444',
+  },
+  'In Progress': {
+    label: "In Progress",
+    color: '#f97316',
+  },
+  'Fixed': {
+    label: "Fixed",
+    color: '#3b82f6',
+  },
+  'Closed': {
+    label: "Closed",
+    color: '#22c55e',
+  },
+} satisfies ChartConfig;
 
-const TEST_CASE_STATUS_COLORS = {
-  'Pass': '#22c55e',
-  'Fail': '#ef4444',
-  'Not Run': '#a1a1aa',
-};
+const testCaseStatusConfig = {
+  testCases: {
+    label: "Test Cases",
+  },
+  'Pass': {
+    label: "Pass",
+    color: '#22c55e',
+  },
+  'Fail': {
+    label: "Fail",
+    color: '#ef4444',
+  },
+  'Not Run': {
+    label: "Not Run",
+    color: '#a1a1aa',
+  },
+} satisfies ChartConfig;
 
 export default function TestingDashboard() {
   const totalTests = testCases.length;
@@ -63,17 +98,22 @@ export default function TestingDashboard() {
             <CardTitle>Bugs by Status</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+             <ChartContainer config={bugStatusConfig}>
               <PieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
                 <Pie data={bugStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
                   {bugStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={BUG_STATUS_COLORS[entry.name as keyof typeof BUG_STATUS_COLORS]} />
+                    <Cell key={`cell-${index}`} fill={bugStatusConfig[entry.name as keyof typeof bugStatusConfig]?.color} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                 <ChartLegend
+                  content={<ChartLegendContent nameKey="name" />}
+                />
               </PieChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
         <Card className="lg:col-span-4">
@@ -81,18 +121,21 @@ export default function TestingDashboard() {
             <CardTitle>Test Cases by Status</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
-             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={testCaseStatusData} layout="vertical">
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="name" width={80} />
-                <Tooltip />
-                <Bar dataKey="value" name="Test Cases">
-                    {testCaseStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={TEST_CASE_STATUS_COLORS[entry.name as keyof typeof TEST_CASE_STATUS_COLORS]} />
-                    ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+             <ChartContainer config={testCaseStatusConfig} className="h-full w-full">
+                <BarChart accessibilityLayer data={testCaseStatusData} layout="vertical" margin={{ left: -10 }}>
+                  <XAxis type="number" hide/>
+                  <YAxis type="category" dataKey="name" width={80} tickLine={false} axisLine={false}/>
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent hideLabel />}
+                  />
+                  <Bar dataKey="value" name="Test Cases" layout="vertical" radius={4}>
+                      {testCaseStatusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={testCaseStatusConfig[entry.name as keyof typeof testCaseStatusConfig]?.color} />
+                      ))}
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
           </CardContent>
         </Card>
       </div>
