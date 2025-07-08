@@ -185,7 +185,7 @@ export default function BacklogPage() {
 
   const developers = employees.filter(e => e.role === 'Developer');
 
-  const epicForm = useForm<z.infer<typeof epicFormSchema>>({
+  const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
     defaultValues: { title: '', description: '' },
   });
@@ -194,7 +194,7 @@ export default function BacklogPage() {
     resolver: zodResolver(epicFormSchema),
   });
 
-  const storyForm = useForm<z.infer<typeof storyFormSchema>>({
+  const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
     defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned' },
   });
@@ -203,10 +203,22 @@ export default function BacklogPage() {
     resolver: zodResolver(storyFormSchema),
   });
 
-  const sprintForm = useForm<z.infer<typeof sprintFormSchema>>({
+  const addSprintForm = useForm<z.infer<typeof sprintFormSchema>>({
     resolver: zodResolver(sprintFormSchema),
-    defaultValues: { title: '' },
+    defaultValues: { title: `Sprint ${sprints.length + 1}` },
   });
+  
+  const editSprintForm = useForm<z.infer<typeof sprintFormSchema>>({
+    resolver: zodResolver(sprintFormSchema),
+  });
+
+  const { formState: { isSubmitting: isAddingEpic } } = addEpicForm;
+  const { formState: { isSubmitting: isEditingEpic } } = editEpicForm;
+  const { formState: { isSubmitting: isAddingStory } } = addStoryForm;
+  const { formState: { isSubmitting: isEditingStory } } = editStoryForm;
+  const { formState: { isSubmitting: isAddingSprint } } = addSprintForm;
+  const { formState: { isSubmitting: isEditingSprint } } = editSprintForm;
+
 
   useEffect(() => {
     if (editingEpic) {
@@ -216,15 +228,19 @@ export default function BacklogPage() {
   
   useEffect(() => {
     if (editingSprint) {
-      sprintForm.reset({
+      editSprintForm.reset({
         title: editingSprint.title,
         startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
         endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
       });
-    } else {
-      sprintForm.reset({ title: `Sprint ${sprints.length + 1}`, startDate: undefined, endDate: undefined });
     }
-  }, [editingSprint, sprints.length, sprintForm]);
+  }, [editingSprint, editSprintForm]);
+  
+  useEffect(() => {
+    if (!addSprintOpen) {
+      addSprintForm.reset({ title: `Sprint ${sprints.length + 1}`, startDate: undefined, endDate: undefined });
+    }
+  }, [addSprintOpen, sprints.length, addSprintForm]);
 
   useEffect(() => {
     if (selectedStory) {
@@ -246,7 +262,6 @@ export default function BacklogPage() {
         endDate: values.endDate?.toISOString(),
       });
       setAddSprintOpen(false);
-      sprintForm.reset();
     } catch (error) {
       console.error("Failed to add sprint:", error);
       toast({
@@ -291,7 +306,6 @@ export default function BacklogPage() {
         description: values.description || '',
       });
       setAddEpicOpen(false);
-      epicForm.reset();
     } catch (error) {
       console.error("Failed to add epic:", error);
       toast({
@@ -331,7 +345,6 @@ export default function BacklogPage() {
       };
       await addStory(newStory);
       setAddStoryOpen(false);
-      storyForm.reset();
     } catch (error) {
       console.error("Failed to add requirement:", error);
       toast({
@@ -400,10 +413,10 @@ export default function BacklogPage() {
               <DialogHeader>
                 <DialogTitle>Add New Epic</DialogTitle>
               </DialogHeader>
-              <Form {...epicForm}>
-                <form onSubmit={epicForm.handleSubmit(onAddEpicSubmit)} className="space-y-4">
+              <Form {...addEpicForm}>
+                <form onSubmit={addEpicForm.handleSubmit(onAddEpicSubmit)} className="space-y-4">
                   <FormField
-                    control={epicForm.control}
+                    control={addEpicForm.control}
                     name="title"
                     render={({ field }) => (
                       <FormItem>
@@ -416,7 +429,7 @@ export default function BacklogPage() {
                     )}
                   />
                   <FormField
-                    control={epicForm.control}
+                    control={addEpicForm.control}
                     name="description"
                     render={({ field }) => (
                       <FormItem>
@@ -429,7 +442,9 @@ export default function BacklogPage() {
                     )}
                   />
                   <DialogFooter>
-                    <Button type="submit">Create Epic</Button>
+                    <Button type="submit" disabled={isAddingEpic}>
+                      {isAddingEpic ? 'Creating...' : 'Create Epic'}
+                    </Button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -447,10 +462,10 @@ export default function BacklogPage() {
                 <DialogHeader>
                     <DialogTitle>Add New Sprint</DialogTitle>
                 </DialogHeader>
-                <Form {...sprintForm}>
-                    <form onSubmit={sprintForm.handleSubmit(onAddSprintSubmit)} className="space-y-4">
+                <Form {...addSprintForm}>
+                    <form onSubmit={addSprintForm.handleSubmit(onAddSprintSubmit)} className="space-y-4">
                     <FormField
-                        control={sprintForm.control}
+                        control={addSprintForm.control}
                         name="title"
                         render={({ field }) => (
                         <FormItem>
@@ -463,7 +478,7 @@ export default function BacklogPage() {
                         )}
                     />
                     <FormField
-                        control={sprintForm.control}
+                        control={addSprintForm.control}
                         name="startDate"
                         render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -474,7 +489,7 @@ export default function BacklogPage() {
                         )}
                     />
                     <FormField
-                        control={sprintForm.control}
+                        control={addSprintForm.control}
                         name="endDate"
                         render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -485,7 +500,9 @@ export default function BacklogPage() {
                         )}
                     />
                     <DialogFooter>
-                        <Button type="submit">Create Sprint</Button>
+                      <Button type="submit" disabled={isAddingSprint}>
+                        {isAddingSprint ? 'Creating...' : 'Create Sprint'}
+                      </Button>
                     </DialogFooter>
                     </form>
                 </Form>
@@ -503,7 +520,7 @@ export default function BacklogPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 {workItemTypes.map(itemType => (
-                  <DropdownMenuItem key={itemType} onClick={() => { setItemTypeToAdd(itemType); setAddStoryOpen(true); }}>
+                  <DropdownMenuItem key={itemType} onClick={() => { setItemTypeToAdd(itemType); setAddStoryOpen(true); addStoryForm.reset(); }}>
                     {itemType}
                   </DropdownMenuItem>
                 ))}
@@ -514,10 +531,10 @@ export default function BacklogPage() {
               <DialogHeader>
                 <DialogTitle>Add New {itemTypeToAdd}</DialogTitle>
               </DialogHeader>
-              <Form {...storyForm}>
-                <form onSubmit={storyForm.handleSubmit(onAddStorySubmit)} className="space-y-4">
+              <Form {...addStoryForm}>
+                <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="space-y-4">
                   <FormField
-                    control={storyForm.control}
+                    control={addStoryForm.control}
                     name="title"
                     render={({ field }) => (
                       <FormItem>
@@ -530,7 +547,7 @@ export default function BacklogPage() {
                     )}
                   />
                   <FormField
-                    control={storyForm.control}
+                    control={addStoryForm.control}
                     name="description"
                     render={({ field }) => (
                       <FormItem>
@@ -543,7 +560,7 @@ export default function BacklogPage() {
                     )}
                   />
                   <FormField
-                    control={storyForm.control}
+                    control={addStoryForm.control}
                     name="acceptanceCriteria"
                     render={({ field }) => (
                       <FormItem>
@@ -556,12 +573,12 @@ export default function BacklogPage() {
                     )}
                   />
                   <FormField
-                      control={storyForm.control}
+                      control={addStoryForm.control}
                       name="epicId"
                       render={({ field }) => (
                           <FormItem>
                           <FormLabel>Epic</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                               <FormControl>
                               <SelectTrigger>
                                   <SelectValue placeholder="Assign to an epic" />
@@ -579,12 +596,12 @@ export default function BacklogPage() {
                       )}
                   />
                   <FormField
-                      control={storyForm.control}
+                      control={addStoryForm.control}
                       name="assigneeId"
                       render={({ field }) => (
                           <FormItem>
                           <FormLabel>Assignee</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                               <FormControl>
                               <SelectTrigger>
                                   <SelectValue placeholder="Assign to a developer" />
@@ -602,7 +619,9 @@ export default function BacklogPage() {
                       )}
                   />
                   <DialogFooter>
-                    <Button type="submit">Create {itemTypeToAdd}</Button>
+                    <Button type="submit" disabled={isAddingStory}>
+                      {isAddingStory ? 'Creating...' : `Create ${itemTypeToAdd}`}
+                    </Button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -1091,8 +1110,9 @@ export default function BacklogPage() {
                               ))}
                           </DropdownMenuContent>
                       </DropdownMenu>
-
-                      <Button type="submit">Save Changes</Button>
+                      <Button type="submit" disabled={isEditingStory}>
+                        {isEditingStory ? 'Saving...' : 'Save Changes'}
+                      </Button>
                     </div>
                   </DialogFooter>
                 </form>
@@ -1136,7 +1156,9 @@ export default function BacklogPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit" disabled={isEditingEpic}>
+                  {isEditingEpic ? 'Saving...' : 'Save Changes'}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -1148,10 +1170,10 @@ export default function BacklogPage() {
             <DialogHeader>
                 <DialogTitle>Edit Sprint</DialogTitle>
             </DialogHeader>
-            <Form {...sprintForm}>
-                <form onSubmit={sprintForm.handleSubmit(onEditSprintSubmit)} className="space-y-4">
+            <Form {...editSprintForm}>
+                <form onSubmit={editSprintForm.handleSubmit(onEditSprintSubmit)} className="space-y-4">
                 <FormField
-                    control={sprintForm.control}
+                    control={editSprintForm.control}
                     name="title"
                     render={({ field }) => (
                     <FormItem>
@@ -1164,7 +1186,7 @@ export default function BacklogPage() {
                     )}
                 />
                 <FormField
-                    control={sprintForm.control}
+                    control={editSprintForm.control}
                     name="startDate"
                     render={({ field }) => (
                     <FormItem className="flex flex-col">
@@ -1175,7 +1197,7 @@ export default function BacklogPage() {
                     )}
                 />
                 <FormField
-                    control={sprintForm.control}
+                    control={editSprintForm.control}
                     name="endDate"
                     render={({ field }) => (
                     <FormItem className="flex flex-col">
@@ -1186,7 +1208,9 @@ export default function BacklogPage() {
                     )}
                 />
                 <DialogFooter>
-                    <Button type="submit">Save Changes</Button>
+                  <Button type="submit" disabled={isEditingSprint}>
+                    {isEditingSprint ? 'Saving...' : 'Save Changes'}
+                  </Button>
                 </DialogFooter>
                 </form>
             </Form>
