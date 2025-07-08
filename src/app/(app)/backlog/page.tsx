@@ -52,6 +52,11 @@ import type { Epic, Story, Sprint } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const epicFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -442,9 +447,27 @@ export default function BacklogPage() {
                       >
                           <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setSprintToDelete(sprint)} className="h-8 w-8">
-                          <Trash2 className="h-4 w-4" />
-                      </Button>
+                       <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span tabIndex={0}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSprintToDelete(sprint)}
+                              className="h-8 w-8"
+                              disabled={sprint.isCurrent}
+                              aria-label="Delete sprint"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {sprint.isCurrent && (
+                          <TooltipContent>
+                            <p>Cannot delete the current sprint.</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
                   </div>
               </div>
               <div className="overflow-y-auto flex-1 -mr-4 pr-4 space-y-4">
