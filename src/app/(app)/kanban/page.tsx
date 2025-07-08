@@ -1,6 +1,6 @@
-
 'use client';
 
+import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { StoryCard } from '@/components/kanban/TaskCard';
 import type { StoryStatus } from '@/types';
@@ -8,17 +8,30 @@ import { Columns, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 const columns: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, moveStoryStatus } = useProject();
+  const { stories, epics, sprints, moveStoryStatus, employees } = useProject();
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
   
   const currentSprint = sprints.find((s) => s.isCurrent);
   
-  const sprintStories = currentSprint
+  const baseSprintStories = currentSprint
       ? stories.filter((story) => story.sprintId === currentSprint.id)
       : [];
+
+  const sprintStories = selectedAssigneeId === 'all'
+    ? baseSprintStories
+    : baseSprintStories.filter(story => story.assigneeId === selectedAssigneeId);
       
   if (!currentSprint) {
     return (
@@ -31,9 +44,29 @@ export default function KanbanPage() {
     );
   }
 
+  const sprintAssigneeIds = new Set(baseSprintStories.map(story => story.assigneeId).filter(Boolean));
+  const sprintAssignees = employees.filter(emp => sprintAssigneeIds.has(emp.id));
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
-      <PageHeader title={`Kanban Board: ${currentSprint.title}`} description={`Move work items to change their status.`} />
+      <PageHeader title={`Kanban Board: ${currentSprint.title}`} description={`Move work items to change their status.`}>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="assignee-filter" className="text-sm font-medium">View by</Label>
+          <Select value={selectedAssigneeId} onValueChange={setSelectedAssigneeId}>
+            <SelectTrigger id="assignee-filter" className="w-[200px]">
+              <SelectValue placeholder="Filter by assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assignees</SelectItem>
+              {sprintAssignees.map(employee => (
+                <SelectItem key={employee.id} value={employee.id}>
+                  {employee.firstName} {employee.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </PageHeader>
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
         {columns.map((status) => (
           <div key={status} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
