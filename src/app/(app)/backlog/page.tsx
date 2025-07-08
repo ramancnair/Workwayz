@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -123,7 +123,7 @@ function StoryCard({
 }
 
 export default function BacklogPage() {
-  const { epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint, moveStoryToEpic } = useProject();
+  const { epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint } = useProject();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
@@ -138,6 +138,22 @@ export default function BacklogPage() {
     resolver: zodResolver(storyFormSchema),
     defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: '', assigneeId: '' },
   });
+
+  const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
+    resolver: zodResolver(storyFormSchema),
+  });
+
+  useEffect(() => {
+    if (selectedStory) {
+      editStoryForm.reset({
+        title: selectedStory.title,
+        description: selectedStory.description || '',
+        acceptanceCriteria: selectedStory.acceptanceCriteria || '',
+        epicId: selectedStory.epicId || '',
+        assigneeId: selectedStory.assigneeId || '',
+      });
+    }
+  }, [selectedStory, editStoryForm]);
 
   const handleAddSprint = () => {
     const newSprint: Sprint = {
@@ -184,13 +200,33 @@ export default function BacklogPage() {
       title: values.title,
       description: values.description || '',
       acceptanceCriteria: values.acceptanceCriteria,
-      assigneeId: values.assigneeId,
-      epicId: values.epicId,
+      assigneeId: values.assigneeId || undefined,
+      epicId: values.epicId || undefined,
       status: 'To Do',
     };
     setStories([...stories, newStory]);
     storyForm.reset();
     setAddStoryOpen(false);
+  };
+  
+  const onEditStorySubmit = (values: z.infer<typeof storyFormSchema>) => {
+    if (!selectedStory) return;
+
+    setStories(currentStories =>
+      currentStories.map(story =>
+        story.id === selectedStory.id
+          ? {
+              ...story,
+              title: values.title,
+              description: values.description,
+              acceptanceCriteria: values.acceptanceCriteria,
+              assigneeId: values.assigneeId || undefined,
+              epicId: values.epicId || undefined,
+            }
+          : story
+      )
+    );
+    setSelectedStory(null);
   };
 
   const backlogStories = stories.filter((story) => story.sprintId === null);
@@ -325,6 +361,7 @@ export default function BacklogPage() {
                               </SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                              <SelectItem value="">Unassigned</SelectItem>
                               {epics.map(epic => (
                                   <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
                               ))}
@@ -347,6 +384,7 @@ export default function BacklogPage() {
                               </SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                              <SelectItem value="">Unassigned</SelectItem>
                               {developers.map(dev => (
                                   <SelectItem key={dev.id} value={dev.id}>{dev.name}</SelectItem>
                               ))}
@@ -377,7 +415,7 @@ export default function BacklogPage() {
               Backlog
             </h3>
             <div className="overflow-y-auto flex-1 -mr-4 pr-4">
-              <Accordion type="multiple" className="w-full">
+              <Accordion type="multiple" className="w-full" defaultValue={epics.map(e => e.id).concat('unassigned')}>
                  {epics.map((epic) => {
                   const epicStories = stories.filter(story => story.epicId === epic.id);
                   const totalStories = epicStories.length;
@@ -552,99 +590,139 @@ export default function BacklogPage() {
           {selectedStory && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedStory.title}</DialogTitle>
+                <DialogTitle>Edit Story</DialogTitle>
                 <DialogDescription>
-                  In epic: {epics.find(e => e.id === selectedStory.epicId)?.title || 'Unassigned'}
+                  Make changes to your story here. Click save when you're done.
                 </DialogDescription>
               </DialogHeader>
-              <div className="py-4 space-y-6">
-                 <div>
-                    <h4 className="text-sm font-semibold mb-2">Assignee</h4>
-                    {developers.find(d => d.id === selectedStory.assigneeId) ? (
-                        <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={developers.find(d => d.id === selectedStory.assigneeId)?.avatar} alt={developers.find(d => d.id === selectedStory.assigneeId)?.name} data-ai-hint="developer avatar" />
-                                <AvatarFallback>{developers.find(d => d.id === selectedStory.assigneeId)?.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">{developers.find(d => d.id === selectedStory.assigneeId)?.name}</span>
-                        </div>
-                    ) : <p className="text-sm text-muted-foreground">Not assigned</p>}
-                </div>
-                {selectedStory.description && (
-                  <div>
-                    <h4 className="text-sm font-semibold mb-2">Description</h4>
-                    <p className="text-sm text-muted-foreground">{selectedStory.description}</p>
-                  </div>
-                )}
-                {selectedStory.acceptanceCriteria && (
-                  <div>
-                    <h4 className="text-sm font-semibold mb-2">Acceptance Criteria</h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedStory.acceptanceCriteria}</p>
-                  </div>
-                )}
-              </div>
-              <DialogFooter className="sm:justify-end gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      Change Epic <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {selectedStory.epicId && (
-                      <DropdownMenuItem onClick={() => {
-                        moveStoryToEpic(selectedStory.id, null);
-                        setSelectedStory(null);
-                      }}>
-                        Unassigned
-                      </DropdownMenuItem>
+              <Form {...editStoryForm}>
+                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4">
+                  <FormField
+                    control={editStoryForm.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Story title" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    {epics
-                      .filter((e) => e.id !== selectedStory.epicId)
-                      .map((epic) => (
-                        <DropdownMenuItem
-                          key={epic.id}
-                          onClick={() => {
-                            moveStoryToEpic(selectedStory.id, epic.id);
-                            setSelectedStory(null);
-                          }}
-                        >
-                          {epic.title}
-                        </DropdownMenuItem>
-                      ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {selectedStory.sprintId !== null && (
-                      <DropdownMenuItem onClick={() => {
-                        moveStoryToSprint(selectedStory.id, null);
-                        setSelectedStory(null);
-                      }}>
-                        Backlog
-                      </DropdownMenuItem>
+                  />
+                  <FormField
+                    control={editStoryForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe the story..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    {sprints
-                      .filter((sprint) => sprint.id !== selectedStory.sprintId)
-                      .map((sprint) => (
-                        <DropdownMenuItem
-                          key={sprint.id}
-                          onClick={() => {
-                            moveStoryToSprint(selectedStory.id, sprint.id);
-                            setSelectedStory(null);
-                          }}
-                        >
-                          {sprint.title}
-                        </DropdownMenuItem>
-                      ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </DialogFooter>
+                  />
+                  <FormField
+                    control={editStoryForm.control}
+                    name="acceptanceCriteria"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Acceptance Criteria</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Define acceptance criteria for this story..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editStoryForm.control}
+                    name="epicId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Epic</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Assign to an epic" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">Unassigned</SelectItem>
+                            {epics.map((epic) => (
+                              <SelectItem key={epic.id} value={epic.id}>
+                                {epic.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editStoryForm.control}
+                    name="assigneeId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assignee</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Assign to a developer" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">Unassigned</SelectItem>
+                            {developers.map((dev) => (
+                              <SelectItem key={dev.id} value={dev.id}>
+                                {dev.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <DialogFooter className="sm:justify-between pt-4">
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                            Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {selectedStory.sprintId !== null && (
+                            <DropdownMenuItem onClick={() => {
+                                moveStoryToSprint(selectedStory.id, null);
+                                setSelectedStory(null);
+                            }}>
+                                Backlog
+                            </DropdownMenuItem>
+                            )}
+                            {sprints
+                            .filter((sprint) => sprint.id !== selectedStory.sprintId)
+                            .map((sprint) => (
+                                <DropdownMenuItem
+                                key={sprint.id}
+                                onClick={() => {
+                                    moveStoryToSprint(selectedStory.id, sprint.id);
+                                    setSelectedStory(null);
+                                }}
+                                >
+                                {sprint.title}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+
+                    <Button type="submit">Save Changes</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
             </>
           )}
         </DialogContent>
