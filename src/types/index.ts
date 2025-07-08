@@ -61,6 +61,8 @@ export type TestCase = {
 
 export type OnshoreOffshore = 'Onshore' | 'Offshore';
 
+export type EmployeeRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM';
+
 export type Employee = {
   id: string;
   empId: string;
@@ -71,7 +73,7 @@ export type Employee = {
   avatar?: string;
   clientEmpId?: string;
   clientEmail?: string;
-  role?: string;
+  role?: EmployeeRole;
   experience?: number;
   onboardingDate?: string; // ISO String
   offloadingDate?: string; // ISO String

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -40,10 +39,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/datepicker';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
-import { type Employee } from '@/types';
+import { type Employee, type EmployeeRole } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+const employeeRoles: EmployeeRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
 
 const employeeFormSchema = z.object({
   empId: z.string().min(1, 'Employee ID is required'),
@@ -53,7 +54,7 @@ const employeeFormSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   clientEmpId: z.string().optional(),
   clientEmail: z.string().email('Invalid email address').optional().or(z.literal('')),
-  role: z.string().optional(),
+  role: z.enum(employeeRoles).optional(),
   experience: z.coerce.number().optional(),
   onboardingDate: z.date().optional(),
   offloadingDate: z.date().optional(),
@@ -88,7 +89,7 @@ export default function ResourcesPage() {
         phone: '',
         clientEmpId: '',
         clientEmail: '',
-        role: '',
+        role: undefined,
         experience: undefined,
         onboardingDate: undefined,
         offloadingDate: undefined,
@@ -226,7 +227,18 @@ export default function ResourcesPage() {
                 <FormField control={form.control} name="role" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <FormControl><Input placeholder="Developer" {...field} value={field.value ?? ''} /></FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {employeeRoles.map(role => (
+                          <SelectItem key={role} value={role}>{role}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )} />
