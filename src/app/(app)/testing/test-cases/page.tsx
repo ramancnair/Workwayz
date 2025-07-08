@@ -69,7 +69,7 @@ const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
 
 export default function TestCasesPage() {
-  const { testCases, setTestCases, employees, stories } = useProject();
+  const { testCases, employees, stories, addTestCase, updateTestCase, deleteTestCase } = useProject();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingTestCase, setDeletingTestCase] = useState<TestCase | null>(null);
@@ -105,12 +105,12 @@ export default function TestCasesPage() {
     setIsDialogOpen(true);
   };
   
-  const handleDelete = (testCaseId: string) => {
-    setTestCases(testCases.filter((tc) => tc.id !== testCaseId));
+  const handleDelete = async (testCaseId: string) => {
+    await deleteTestCase(testCaseId);
     setDeletingTestCase(null);
   };
 
-  const onSubmit = (values: z.infer<typeof testCaseFormSchema>) => {
+  const onSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     const testCaseData = {
         title: values.title,
         type: values.type,
@@ -123,27 +123,10 @@ export default function TestCasesPage() {
 
     if (editingTestCase) {
       // Update existing test case
-      setTestCases(
-        testCases.map((tc) =>
-          tc.id === editingTestCase.id ? { ...tc, ...testCaseData } : tc
-        )
-      );
+      await updateTestCase(editingTestCase.id, testCaseData);
     } else {
       // Add new test case
-       const newIdNumber =
-        testCases.length > 0
-          ? Math.max(
-              0,
-              ...testCases
-                .filter((s) => s.testCaseId && typeof s.testCaseId === 'string')
-                .map((s) => parseInt(s.testCaseId.replace('TC-', ''), 10) || 0)
-            ) + 1
-          : 1;
-
-      setTestCases([
-        ...testCases,
-        { id: crypto.randomUUID(), testCaseId: `TC-${newIdNumber}`, ...testCaseData },
-      ]);
+      await addTestCase(testCaseData);
     }
     setIsDialogOpen(false);
     setEditingTestCase(null);

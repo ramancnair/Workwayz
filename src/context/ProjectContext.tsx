@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, TestCaseStatus, TestCaseType, WorkItemType } from '@/types';
 import { 
   epics as initialEpics, 
   stories as initialStories, 
@@ -10,28 +10,74 @@ import {
   employees as initialEmployees,
   testCases as initialTestCases
 } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  onSnapshot,
+  doc,
+  updateDoc,
+  addDoc,
+  deleteDoc,
+  writeBatch,
+  getDocs,
+  Timestamp,
+  query,
+  where,
+  documentId,
+} from 'firebase/firestore';
 
 interface ProjectContextType {
   epics: Epic[];
-  setEpics: React.Dispatch<React.SetStateAction<Epic[]>>;
   stories: Story[];
-  setStories: React.Dispatch<React.SetStateAction<Story[]>>;
   sprints: Sprint[];
-  setSprints: React.Dispatch<React.SetStateAction<Sprint[]>>;
   employees: Employee[];
-  setEmployees: React.Dispatch<React.SetStateAction<Employee[]>>;
   testCases: TestCase[];
-  setTestCases: React.Dispatch<React.SetStateAction<TestCase[]>>;
-  moveStoryToSprint: (storyId: string, sprintId: string | null) => void;
-  moveStoryToEpic: (storyId: string, epicId: string | null) => void;
-  moveStoryStatus: (storyId: string, newStatus: StoryStatus) => void;
-  deleteStory: (storyId: string) => void;
-  deleteEpic: (epicId: string) => void;
-  updateEpic: (epicId: string, data: Partial<Omit<Epic, 'id'>>) => void;
-  updateSprint: (sprintId: string, data: Partial<Omit<Sprint, 'id'>>) => void;
+  
+  // Story actions
+  addStory: (story: Omit<Story, 'id' | 'storyId'> & { storyId?: string }) => Promise<void>;
+  updateStory: (storyId: string, data: Partial<Omit<Story, 'id'>>) => Promise<void>;
+  deleteStory: (storyId: string) => Promise<void>;
+  moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<void>;
+  moveStoryStatus: (storyId: string, newStatus: StoryStatus) => Promise<void>;
+  moveStoryToEpic: (storyId: string, epicId: string | null) => Promise<void>;
+
+  // Epic actions
+  addEpic: (epic: Omit<Epic, 'id'>) => Promise<void>;
+  updateEpic: (epicId: string, data: Partial<Omit<Epic, 'id'>>) => Promise<void>;
+  deleteEpic: (epicId: string) => Promise<void>;
+
+  // Sprint actions
+  addSprint: (sprint: Omit<Sprint, 'id' | 'isCurrent'>) => Promise<void>;
+  updateSprint: (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>) => Promise<void>;
+  deleteSprint: (sprintId: string) => Promise<void>;
+  setCurrentSprint: (sprintId: string) => Promise<void>;
+
+  // Employee actions
+  addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
+  updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id'>>) => Promise<void>;
+  deleteEmployee: (employeeId: string) => Promise<void>;
+
+  // TestCase actions
+  addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'> & { testCaseId?: string }) => Promise<void>;
+  updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => Promise<void>;
+  deleteTestCase: (testCaseId: string) => Promise<void>;
+
+  isLoading: boolean;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+const convertTimestamps = (data: any) => {
+  const converted: { [key: string]: any } = {};
+  for (const key in data) {
+    if (data[key] instanceof Timestamp) {
+      converted[key] = data[key].toDate().toISOString();
+    } else {
+      converted[key] = data[key];
+    }
+  }
+  return converted;
+};
 
 export function ProjectProvider({ children }: PropsWithChildren) {
   const [epics, setEpics] = useState<Epic[]>([]);
@@ -39,129 +85,237 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load data from localStorage on mount (client-side only)
   useEffect(() => {
-    try {
-      const storedEpics = window.localStorage.getItem('project_epics');
-      setEpics(storedEpics ? JSON.parse(storedEpics) : initialEpics);
-      
-      const storedStories = window.localStorage.getItem('project_stories');
-      const parsedStories = storedStories ? JSON.parse(storedStories) : initialStories;
-      const migratedStories = parsedStories.map((story: Story) => ({
-        ...story,
-        itemType: story.itemType || 'Story',
-      }));
-      setStories(migratedStories);
+    const seedDatabase = async () => {
+      const epicsSnap = await getDocs(collection(db, 'epics'));
+      if (epicsSnap.empty) {
+        console.log('Empty database, seeding with initial data...');
+        const batch = writeBatch(db);
 
-      const storedSprints = window.localStorage.getItem('project_sprints');
-      setSprints(storedSprints ? JSON.parse(storedSprints) : initialSprints);
+        const collectionsToSeed: { [key: string]: any[] } = {
+          epics: initialEpics,
+          stories: initialStories,
+          sprints: initialSprints,
+          employees: initialEmployees,
+          testCases: initialTestCases,
+        };
 
-      const storedEmployees = window.localStorage.getItem('project_employees');
-      setEmployees(storedEmployees ? JSON.parse(storedEmployees) : initialEmployees);
-      
-      const storedTestCases = window.localStorage.getItem('project_test_cases');
-      setTestCases(storedTestCases ? JSON.parse(storedTestCases) : initialTestCases);
+        for (const [collectionName, data] of Object.entries(collectionsToSeed)) {
+          data.forEach(item => {
+            const { id, ...rest } = item;
+            const docRef = doc(db, collectionName, id);
+            batch.set(docRef, rest);
+          });
+        }
+        
+        await batch.commit();
+        console.log('Database seeded.');
+      }
+    };
 
-    } catch (error) {
-      console.error("Failed to load data from localStorage, using initial data.", error);
-      setEpics(initialEpics);
-      setStories(initialStories);
-      setSprints(initialSprints);
-      setEmployees(initialEmployees);
-      setTestCases(initialTestCases);
-    }
-    setIsInitialized(true);
+    const setupListeners = async () => {
+        await seedDatabase();
+
+        const unsubEpics = onSnapshot(collection(db, 'epics'), (snapshot) => {
+            setEpics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Epic)));
+        });
+
+        const unsubStories = onSnapshot(collection(db, 'stories'), (snapshot) => {
+            setStories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Story)));
+        });
+
+        const unsubSprints = onSnapshot(collection(db, 'sprints'), (snapshot) => {
+            setSprints(snapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) } as Sprint)));
+        });
+        
+        const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot) => {
+            setEmployees(snapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) } as Employee)));
+        });
+
+        const unsubTestCases = onSnapshot(collection(db, 'testCases'), (snapshot) => {
+            setTestCases(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestCase)));
+        });
+
+        setIsLoading(false);
+
+        return () => {
+            unsubEpics();
+            unsubStories();
+            unsubSprints();
+            unsubEmployees();
+            unsubTestCases();
+        };
+    };
+
+    const unsubscribePromise = setupListeners();
+
+    return () => {
+        unsubscribePromise.then(unsub => unsub && unsub());
+    };
   }, []);
 
-  useEffect(() => {
-    if (isInitialized) {
-      window.localStorage.setItem('project_epics', JSON.stringify(epics));
+  // Story Actions
+  const addStory = async (story: Omit<Story, 'id' | 'storyId'> & { storyId?: string }) => {
+     const storiesCollection = collection(db, 'stories');
+     const snapshot = await getDocs(storiesCollection);
+     const newIdNumber =
+      snapshot.docs.length > 0
+        ? Math.max(
+            0,
+            ...snapshot.docs
+              .map(doc => doc.data().storyId)
+              .filter(id => id && typeof id === 'string')
+              .map(id => parseInt(id.replace('ST-', ''), 10) || 0)
+          ) + 1
+        : 1;
+    
+    const newStory = {
+        ...story,
+        storyId: `ST-${newIdNumber}`
     }
-  }, [epics, isInitialized]);
-
-  useEffect(() => {
-    if (isInitialized) {
-      window.localStorage.setItem('project_stories', JSON.stringify(stories));
-    }
-  }, [stories, isInitialized]);
-
-  useEffect(() => {
-    if (isInitialized) {
-      window.localStorage.setItem('project_sprints', JSON.stringify(sprints));
-    }
-  }, [sprints, isInitialized]);
-  
-  useEffect(() => {
-    if (isInitialized) {
-      window.localStorage.setItem('project_employees', JSON.stringify(employees));
-    }
-  }, [employees, isInitialized]);
-  
-  useEffect(() => {
-    if (isInitialized) {
-      window.localStorage.setItem('project_test_cases', JSON.stringify(testCases));
-    }
-  }, [testCases, isInitialized]);
-
-
-  const moveStoryToSprint = (storyId: string, sprintId: string | null) => {
-    setStories((prevStories) =>
-      prevStories.map((story) =>
-        story.id === storyId ? { ...story, sprintId } : story
-      )
-    );
+    await addDoc(storiesCollection, newStory);
   };
-
-  const moveStoryStatus = (storyId: string, newStatus: StoryStatus) => {
-    setStories((prevStories) =>
-      prevStories.map((story) =>
-        story.id === storyId ? { ...story, status: newStatus } : story
-      )
-    );
+  const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id'>>) => {
+    await updateDoc(doc(db, 'stories', storyId), data);
+  };
+  const deleteStory = async (storyId: string) => {
+    await deleteDoc(doc(db, 'stories', storyId));
+  };
+  const moveStoryToSprint = async (storyId: string, sprintId: string | null) => {
+    await updateDoc(doc(db, 'stories', storyId), { sprintId });
+  };
+  const moveStoryStatus = async (storyId: string, newStatus: StoryStatus) => {
+    await updateDoc(doc(db, 'stories', storyId), { status: newStatus });
+  };
+  const moveStoryToEpic = async (storyId: string, epicId: string | null) => {
+    await updateDoc(doc(db, 'stories', storyId), { epicId });
   };
   
-  const moveStoryToEpic = (storyId: string, epicId: string | null) => {
-    setStories(prevStories => 
-      prevStories.map(story => 
-        story.id === storyId ? { ...story, epicId: epicId || undefined } : story
-      )
-    );
+  // Epic Actions
+  const addEpic = async (epic: Omit<Epic, 'id'>) => {
+    await addDoc(collection(db, 'epics'), epic);
+  };
+  const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>) => {
+    await updateDoc(doc(db, 'epics', epicId), data);
+  };
+  const deleteEpic = async (epicId: string) => {
+    const batch = writeBatch(db);
+    // Delete the epic
+    batch.delete(doc(db, 'epics', epicId));
+    // Find stories in the epic and unassign them
+    const q = query(collection(db, 'stories'), where('epicId', '==', epicId));
+    const storiesSnap = await getDocs(q);
+    storiesSnap.forEach(storyDoc => {
+      batch.update(storyDoc.ref, { epicId: null });
+    });
+    await batch.commit();
+  };
+  
+  // Sprint Actions
+  const addSprint = async (sprint: Omit<Sprint, 'id' | 'isCurrent'>) => {
+    await addDoc(collection(db, 'sprints'), { ...sprint, isCurrent: false });
+  };
+  const updateSprint = async (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>) => {
+    const sprintData: {[key: string]: any} = {...data};
+    if (data.startDate) sprintData.startDate = Timestamp.fromDate(new Date(data.startDate));
+    if (data.endDate) sprintData.endDate = Timestamp.fromDate(new Date(data.endDate));
+    await updateDoc(doc(db, 'sprints', sprintId), sprintData);
+  };
+  const deleteSprint = async (sprintId: string) => {
+    const batch = writeBatch(db);
+    // Delete the sprint
+    batch.delete(doc(db, 'sprints', sprintId));
+    // Find stories in the sprint and move them to backlog
+    const q = query(collection(db, 'stories'), where('sprintId', '==', sprintId));
+    const storiesSnap = await getDocs(q);
+    storiesSnap.forEach(storyDoc => {
+      batch.update(storyDoc.ref, { sprintId: null });
+    });
+    await batch.commit();
+  };
+  const setCurrentSprint = async (sprintId: string) => {
+     const batch = writeBatch(db);
+     const sprintsSnap = await getDocs(collection(db, 'sprints'));
+     sprintsSnap.forEach(sprintDoc => {
+        batch.update(sprintDoc.ref, { isCurrent: sprintDoc.id === sprintId });
+     });
+     await batch.commit();
   };
 
-  const deleteStory = (storyId: string) => {
-    setStories((prevStories) =>
-      prevStories.filter((story) => story.id !== storyId)
-    );
+  // Employee Actions
+  const addEmployee = async (employee: Omit<Employee, 'id'>) => {
+    await addDoc(collection(db, 'employees'), employee);
+  };
+  const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id'>>) => {
+     const employeeData: {[key: string]: any} = {...data};
+     if (data.onboardingDate) employeeData.onboardingDate = Timestamp.fromDate(new Date(data.onboardingDate));
+     if (data.offloadingDate) employeeData.offloadingDate = Timestamp.fromDate(new Date(data.offloadingDate));
+    await updateDoc(doc(db, 'employees', employeeId), employeeData);
+  };
+  const deleteEmployee = async (employeeId: string) => {
+    await deleteDoc(doc(db, 'employees', employeeId));
+  };
+  
+  // TestCase Actions
+  const addTestCase = async (testCase: Omit<TestCase, 'id' | 'testCaseId'> & { testCaseId?: string }) => {
+    const testCasesCollection = collection(db, 'testCases');
+    const snapshot = await getDocs(testCasesCollection);
+    const newIdNumber =
+      snapshot.docs.length > 0
+        ? Math.max(
+            0,
+            ...snapshot.docs
+              .map(doc => doc.data().testCaseId)
+              .filter(id => id && typeof id === 'string')
+              .map(id => parseInt(id.replace('TC-', ''), 10) || 0)
+          ) + 1
+        : 1;
+    const newTestCase = {
+        ...testCase,
+        testCaseId: `TC-${newIdNumber}`
+    }
+    await addDoc(testCasesCollection, newTestCase);
+  };
+  const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => {
+    await updateDoc(doc(db, 'testCases', testCaseId), data);
+  };
+  const deleteTestCase = async (testCaseId: string) => {
+    await deleteDoc(doc(db, 'testCases', testCaseId));
   };
 
-  const deleteEpic = (epicId: string) => {
-    // Set stories with this epicId to unassigned
-    setStories(prevStories =>
-      prevStories.map(story =>
-        story.epicId === epicId ? { ...story, epicId: undefined } : story
-      )
-    );
-    // Remove the epic
-    setEpics(prevEpics => prevEpics.filter(epic => epic.id !== epicId));
-  };
-
-  const updateEpic = (epicId: string, data: Partial<Omit<Epic, 'id'>>) => {
-    setEpics(prevEpics =>
-      prevEpics.map(epic => (epic.id === epicId ? { ...epic, ...data } : epic))
-    );
-  };
-
-  const updateSprint = (sprintId: string, data: Partial<Omit<Sprint, 'id'>>) => {
-    setSprints(prevSprints =>
-      prevSprints.map(sprint => (sprint.id === sprintId ? { ...sprint, ...data } : sprint))
-    );
+  const value: ProjectContextType = {
+    epics,
+    stories,
+    sprints,
+    employees,
+    testCases,
+    isLoading,
+    addStory,
+    updateStory,
+    deleteStory,
+    moveStoryToSprint,
+    moveStoryStatus,
+    moveStoryToEpic,
+    addEpic,
+    updateEpic,
+    deleteEpic,
+    addSprint,
+    updateSprint,
+    deleteSprint,
+    setCurrentSprint,
+    addEmployee,
+    updateEmployee,
+    deleteEmployee,
+    addTestCase,
+    updateTestCase,
+    deleteTestCase,
   };
 
   return (
-    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, employees, setEmployees, testCases, setTestCases, moveStoryToSprint, moveStoryStatus, moveStoryToEpic, deleteStory, deleteEpic, updateEpic, updateSprint }}>
-      {isInitialized ? children : null}
+    <ProjectContext.Provider value={value}>
+      {!isLoading ? children : null}
     </ProjectContext.Provider>
   );
 }

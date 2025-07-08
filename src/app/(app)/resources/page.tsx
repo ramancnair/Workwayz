@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -64,7 +65,7 @@ const employeeFormSchema = z.object({
 });
 
 export default function ResourcesPage() {
-  const { employees, setEmployees } = useProject();
+  const { employees, addEmployee, updateEmployee, deleteEmployee } = useProject();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
@@ -104,12 +105,12 @@ export default function ResourcesPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (employee: Employee) => {
-    setEmployees(employees.filter((e) => e.id !== employee.id));
+  const handleDelete = async (employee: Employee) => {
+    await deleteEmployee(employee.id);
     setDeletingEmployee(null);
   };
 
-  const onSubmit = (values: z.infer<typeof employeeFormSchema>) => {
+  const onSubmit = async (values: z.infer<typeof employeeFormSchema>) => {
     const employeeData = {
       ...values,
       onboardingDate: values.onboardingDate?.toISOString(),
@@ -118,12 +119,10 @@ export default function ResourcesPage() {
 
     if (editingEmployee) {
       // Update existing employee
-      setEmployees(
-        employees.map((e) => (e.id === editingEmployee.id ? { ...e, ...employeeData } : e))
-      );
+      await updateEmployee(editingEmployee.id, employeeData);
     } else {
       // Add new employee
-      setEmployees([...employees, { id: crypto.randomUUID(), ...employeeData }]);
+      await addEmployee(employeeData);
     }
     setIsDialogOpen(false);
     setEditingEmployee(null);

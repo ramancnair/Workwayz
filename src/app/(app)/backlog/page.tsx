@@ -151,7 +151,25 @@ function StoryCard({
 }
 
 export default function BacklogPage() {
-  const { epics, setEpics, stories, setStories, sprints, setSprints, employees, moveStoryToSprint, moveStoryToEpic, deleteStory, deleteEpic, updateEpic, updateSprint } = useProject();
+  const { 
+    epics, 
+    stories, 
+    sprints, 
+    employees, 
+    moveStoryToSprint, 
+    moveStoryToEpic, 
+    deleteStory, 
+    deleteEpic, 
+    updateEpic, 
+    updateSprint,
+    addEpic,
+    addSprint,
+    deleteSprint,
+    setCurrentSprint,
+    addStory,
+    updateStory,
+  } = useProject();
+  
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
@@ -218,22 +236,19 @@ export default function BacklogPage() {
     }
   }, [selectedStory, editStoryForm]);
 
-  const onAddSprintSubmit = (values: z.infer<typeof sprintFormSchema>) => {
-    const newSprint: Sprint = {
-      id: `sprint${Date.now()}`,
+  const onAddSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
+    await addSprint({
       title: values.title,
-      isCurrent: false,
       startDate: values.startDate?.toISOString(),
       endDate: values.endDate?.toISOString(),
-    };
-    setSprints([...sprints, newSprint]);
+    });
     sprintForm.reset();
     setAddSprintOpen(false);
   };
   
-  const onEditSprintSubmit = (values: z.infer<typeof sprintFormSchema>) => {
+  const onEditSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
     if (!editingSprint) return;
-    updateSprint(editingSprint.id, {
+    await updateSprint(editingSprint.id, {
       title: values.title,
       startDate: values.startDate?.toISOString(),
       endDate: values.endDate?.toISOString(),
@@ -241,55 +256,31 @@ export default function BacklogPage() {
     setEditingSprint(null);
   };
   
-  const handleDeleteSprint = (sprintId: string) => {
-    setStories(
-      stories.map((story) =>
-        story.sprintId === sprintId ? { ...story, sprintId: null } : story
-      )
-    );
-    setSprints(sprints.filter((sprint) => sprint.id !== sprintId));
+  const handleDeleteSprint = async (sprintId: string) => {
+    await deleteSprint(sprintId);
   };
   
-  const handleSetCurrentSprint = (sprintId: string) => {
-    setSprints(
-      sprints.map((sprint) => ({
-        ...sprint,
-        isCurrent: sprint.id === sprintId,
-      }))
-    );
+  const handleSetCurrentSprint = async (sprintId: string) => {
+    await setCurrentSprint(sprintId);
   };
 
-  const onAddEpicSubmit = (values: z.infer<typeof epicFormSchema>) => {
-    const newEpic: Epic = {
-      id: `epic${Date.now()}`,
+  const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
+    await addEpic({
       title: values.title,
       description: values.description || '',
-    };
-    setEpics([...epics, newEpic]);
+    });
     epicForm.reset();
     setAddEpicOpen(false);
   };
   
-  const onEditEpicSubmit = (values: z.infer<typeof epicFormSchema>) => {
+  const onEditEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     if (!editingEpic) return;
-    updateEpic(editingEpic.id, values);
+    await updateEpic(editingEpic.id, values);
     setEditingEpic(null);
   };
 
-  const onAddStorySubmit = (values: z.infer<typeof storyFormSchema>) => {
-    const newIdNumber =
-      stories.length > 0
-        ? Math.max(
-            0,
-            ...stories
-              .filter((s) => s.storyId && typeof s.storyId === 'string')
-              .map((s) => parseInt(s.storyId.replace('ST-', ''), 10) || 0)
-          ) + 1
-        : 1;
-
-    const newStory: Story = {
-      id: `story${Date.now()}`,
-      storyId: `ST-${newIdNumber}`,
+  const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
+    const newStory: Omit<Story, 'id' | 'storyId'> = {
       sprintId: null,
       title: values.title,
       description: values.description || '',
@@ -299,33 +290,26 @@ export default function BacklogPage() {
       epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
       status: 'To Do',
     };
-    setStories([...stories, newStory]);
+    await addStory(newStory);
     storyForm.reset();
     setAddStoryOpen(false);
   };
   
-  const onEditStorySubmit = (values: z.infer<typeof storyFormSchema>) => {
+  const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
 
-    setStories(currentStories =>
-      currentStories.map(story =>
-        story.id === selectedStory.id
-          ? {
-              ...story,
-              title: values.title,
-              description: values.description,
-              acceptanceCriteria: values.acceptanceCriteria,
-              assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-              epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
-            }
-          : story
-      )
-    );
+    await updateStory(selectedStory.id, {
+        title: values.title,
+        description: values.description,
+        acceptanceCriteria: values.acceptanceCriteria,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+      });
     setSelectedStory(null);
   };
   
-  const handleDeleteStory = (storyId: string) => {
-    deleteStory(storyId);
+  const handleDeleteStory = async (storyId: string) => {
+    await deleteStory(storyId);
     setDeletingStory(null);
   };
 
