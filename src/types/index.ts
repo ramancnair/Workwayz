@@ -25,12 +25,15 @@ export type Epic = {
   description: string;
 };
 
+export type StoryStatus = 'To Do' | 'In Progress' | 'Done';
+
 export type Story = {
   id: string;
   title: string;
   description: string;
   epicId?: string;
   sprintId?: string | null;
+  status: StoryStatus;
 };
 
 export type Sprint = {

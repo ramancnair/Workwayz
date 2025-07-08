@@ -17,11 +17,11 @@ export const epics: Epic[] = [
 ];
 
 export const stories: Story[] = [
-  { id: 'story1', title: 'User Authentication', description: 'Implement user sign-up and login functionality.', epicId: 'epic1', sprintId: null },
-  { id: 'story2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.', epicId: 'epic2', sprintId: null },
-  { id: 'story3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.', sprintId: null },
-  { id: 'story4', title: 'Password Reset', description: 'Allow users to reset their password via email.', epicId: 'epic1', sprintId: null },
-  { id: 'story5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', epicId: 'epic2', sprintId: null },
+  { id: 'story1', title: 'User Authentication', description: 'Implement user sign-up and login functionality.', epicId: 'epic1', sprintId: null, status: 'In Progress' },
+  { id: 'story2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.', epicId: 'epic2', sprintId: null, status: 'In Progress' },
+  { id: 'story3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.', sprintId: null, status: 'To Do' },
+  { id: 'story4', title: 'Password Reset', description: 'Allow users to reset their password via email.', epicId: 'epic1', sprintId: null, status: 'To Do' },
+  { id: 'story5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', epicId: 'epic2', sprintId: null, status: 'Done' },
 ];
 
 export const tasks: Task[] = [

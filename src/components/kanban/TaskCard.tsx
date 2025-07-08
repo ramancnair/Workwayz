@@ -1,31 +1,24 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Task } from '@/types';
+import type { Story, Epic } from '@/types';
 import { PropsWithChildren } from 'react';
 
-interface TaskCardProps extends PropsWithChildren {
-  task: Task;
+interface StoryCardProps extends PropsWithChildren {
+  story: Story;
+  epic?: Epic;
 }
 
-export function TaskCard({ task, children }: TaskCardProps) {
+export function StoryCard({ story, epic, children }: StoryCardProps) {
   return (
     <Card className="bg-card">
       <CardHeader>
-        <CardTitle className="text-base">{task.title}</CardTitle>
-        <CardDescription>{task.description}</CardDescription>
+        <CardTitle className="text-base">{story.title}</CardTitle>
+        <CardDescription>{story.description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={task.assignee.avatar} alt={task.assignee.name} data-ai-hint="developer avatar" />
-              <AvatarFallback>{task.assignee.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium">{task.assignee.name}</span>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        <Badge variant="secondary">{task.storyId}</Badge>
+      <CardFooter className="flex justify-between items-center">
+        {epic ? (
+            <Badge variant="secondary">{epic.title}</Badge>
+        ) : <div />}
         {children}
       </CardFooter>
     </Card>
