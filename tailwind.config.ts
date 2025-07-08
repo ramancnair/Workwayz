@@ -62,6 +62,10 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        topbar: {
+          DEFAULT: 'hsl(var(--topbar-background))',
+          foreground: 'hsl(var(--topbar-foreground))',
+        },
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',
