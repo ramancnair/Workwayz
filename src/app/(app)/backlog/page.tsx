@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2 } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -126,6 +126,7 @@ export default function BacklogPage() {
     const newSprint: Sprint = {
       id: `sprint${sprints.length + 1}`,
       title: `Sprint ${sprints.length + 1}`,
+      isCurrent: false,
     };
     setSprints([...sprints, newSprint]);
   };
@@ -137,6 +138,15 @@ export default function BacklogPage() {
       )
     );
     setSprints(sprints.filter((sprint) => sprint.id !== sprintId));
+  };
+  
+  const handleSetCurrentSprint = (sprintId: string) => {
+    setSprints(
+      sprints.map((sprint) => ({
+        ...sprint,
+        isCurrent: sprint.id === sprintId,
+      }))
+    );
   };
 
   const moveStory = (storyId: string, sprintId: string | null) => {
@@ -365,12 +375,25 @@ export default function BacklogPage() {
             className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0"
           >
             <div className="flex justify-between items-center mb-4 sticky top-0 bg-muted/50 pt-1 pb-3">
-                <h3 className="text-lg font-semibold">
-                {sprint.title}
-                </h3>
-                <Button variant="ghost" size="icon" onClick={() => handleDeleteSprint(sprint.id)} className="h-8 w-8">
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                    {sprint.isCurrent && <Badge>Current</Badge>}
+                </div>
+                <div className="flex items-center">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleSetCurrentSprint(sprint.id)}
+                        disabled={sprint.isCurrent}
+                        className="h-8 w-8"
+                        aria-label="Set as current sprint"
+                    >
+                        <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteSprint(sprint.id)} className="h-8 w-8">
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
             <div className="overflow-y-auto flex-1 -mr-4 pr-4 space-y-4">
               {stories

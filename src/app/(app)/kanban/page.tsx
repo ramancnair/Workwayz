@@ -4,8 +4,8 @@
 import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { StoryCard } from '@/components/kanban/TaskCard';
-import { stories as initialStories, epics as initialEpics } from '@/lib/mock-data';
-import type { Story, StoryStatus, Epic } from '@/types';
+import { stories as initialStories, epics as initialEpics, sprints as initialSprints } from '@/lib/mock-data';
+import type { Story, StoryStatus, Epic, Sprint } from '@/types';
 import { Columns, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,13 @@ import { Button } from '@/components/ui/button';
 const columns: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function KanbanPage() {
-  const [stories, setStories] = useState<Story[]>(initialStories);
+  const currentSprint = initialSprints.find((s) => s.isCurrent);
+  
+  const [stories, setStories] = useState<Story[]>(
+    currentSprint
+      ? initialStories.filter((story) => story.sprintId === currentSprint.id)
+      : []
+  );
   const [epics] = useState<Epic[]>(initialEpics);
 
   const moveStory = (storyId: string, newStatus: StoryStatus) => {
@@ -24,9 +30,20 @@ export default function KanbanPage() {
     );
   };
 
+  if (!currentSprint) {
+    return (
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
+        <PageHeader title="Kanban Board" description="No active sprint found."></PageHeader>
+        <div className="flex flex-1 items-center justify-center bg-muted/50 rounded-lg">
+            <p className="text-lg text-muted-foreground">There is no active sprint. Please set a current sprint in the backlog.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
-      <PageHeader title="Kanban Board" description="Move stories to change their status."></PageHeader>
+      <PageHeader title={`Kanban Board: ${currentSprint.title}`} description="Move stories to change their status." />
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
         {columns.map((status) => (
           <div key={status} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">

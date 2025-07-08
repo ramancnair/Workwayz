@@ -18,7 +18,7 @@ export const epics: Epic[] = [
 ];
 
 export const sprints: Sprint[] = [
-  { id: 'sprint1', title: 'Sprint 1' },
+  { id: 'sprint1', title: 'Sprint 1', isCurrent: true },
 ];
 
 export const stories: Story[] = [

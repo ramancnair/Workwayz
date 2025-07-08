@@ -7,7 +7,7 @@ export type User = {
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
-  id: string;
+  id:string;
   title: string;
   description: string;
   status: TaskStatus;
@@ -39,6 +39,7 @@ export type Story = {
 export type Sprint = {
   id: string;
   title: string;
+  isCurrent: boolean;
 };
 
 export type BugStatus = 'Open' | 'In Progress' | 'Fixed' | 'Closed';
