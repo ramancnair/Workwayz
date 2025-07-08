@@ -45,7 +45,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       setEpics(storedEpics ? JSON.parse(storedEpics) : initialEpics);
       
       const storedStories = window.localStorage.getItem('project_stories');
-      setStories(storedStories ? JSON.parse(storedStories) : initialStories);
+      const parsedStories = storedStories ? JSON.parse(storedStories) : initialStories;
+      const migratedStories = parsedStories.map((story: Story) => ({
+        ...story,
+        itemType: story.itemType || 'Story',
+      }));
+      setStories(migratedStories);
 
       const storedSprints = window.localStorage.getItem('project_sprints');
       setSprints(storedSprints ? JSON.parse(storedSprints) : initialSprints);

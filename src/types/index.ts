@@ -21,12 +21,14 @@ export type Epic = {
 };
 
 export type StoryStatus = 'To Do' | 'In Progress' | 'Done';
+export type WorkItemType = 'Story' | 'Bug' | 'Task' | 'Change' | 'Improvement';
 
 export type Story = {
   id: string;
   storyId: string;
   title: string;
   description: string;
+  itemType: WorkItemType;
   acceptanceCriteria?: string;
   assigneeId?: string;
   epicId?: string;

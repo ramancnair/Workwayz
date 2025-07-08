@@ -33,7 +33,7 @@ export default function KanbanPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
-      <PageHeader title={`Kanban Board: ${currentSprint.title}`} description="Move stories to change their status." />
+      <PageHeader title={`Kanban Board: ${currentSprint.title}`} description={`Move work items to change their status.`} />
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
         {columns.map((status) => (
           <div key={status} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">

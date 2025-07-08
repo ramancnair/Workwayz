@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -50,7 +50,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, Employee } from '@/types';
+import type { Epic, Story, Sprint, Employee, WorkItemType } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -62,6 +62,16 @@ import {
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+
+const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  Story: BookOpen,
+  Bug: Bug,
+  Task: CheckSquare,
+  Change: GitCommit,
+  Improvement: TrendingUp,
+};
+
+const workItemTypes: WorkItemType[] = ['Story', 'Bug', 'Task', 'Change', 'Improvement'];
 
 const epicFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -87,6 +97,7 @@ function StoryCard({
   assignee?: Employee;
   onClick: () => void;
 }) {
+  const Icon = workItemIcons[story.itemType];
   return (
     <Card
       className="bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md"
@@ -95,7 +106,10 @@ function StoryCard({
       <CardHeader className="p-4">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
-             <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+            <div className="flex items-center gap-2">
+              {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+              <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+            </div>
              <p className="font-semibold break-words">{story.title}</p>
           </div>
           {assignee && (
@@ -136,6 +150,7 @@ export default function BacklogPage() {
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
+  const [itemTypeToAdd, setItemTypeToAdd] = useState<WorkItemType>('Story');
 
   const developers = employees.filter(e => e.role === 'Developer');
 
@@ -220,6 +235,7 @@ export default function BacklogPage() {
       sprintId: null,
       title: values.title,
       description: values.description || '',
+      itemType: itemTypeToAdd,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
@@ -324,15 +340,26 @@ export default function BacklogPage() {
           </Dialog>
           
           <Dialog open={addStoryOpen} onOpenChange={setAddStoryOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Story
-              </Button>
-            </DialogTrigger>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Item
+                  <ChevronDown className="ml-1 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {workItemTypes.map(itemType => (
+                  <DropdownMenuItem key={itemType} onClick={() => { setItemTypeToAdd(itemType); setAddStoryOpen(true); }}>
+                    {itemType}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
-                <DialogTitle>Add New Story</DialogTitle>
+                <DialogTitle>Add New {itemTypeToAdd}</DialogTitle>
               </DialogHeader>
               <Form {...storyForm}>
                 <form onSubmit={storyForm.handleSubmit(onAddStorySubmit)} className="space-y-4">
@@ -343,7 +370,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="Story title" {...field} />
+                          <Input placeholder={`${itemTypeToAdd} title`} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -356,7 +383,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Describe the story..." {...field} />
+                          <Textarea placeholder={`Describe the ${itemTypeToAdd.toLowerCase()}...`} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -369,7 +396,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Acceptance Criteria</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Define acceptance criteria for this story..." {...field} />
+                          <Textarea placeholder={`Define acceptance criteria for this ${itemTypeToAdd.toLowerCase()}...`} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -422,7 +449,7 @@ export default function BacklogPage() {
                       )}
                   />
                   <DialogFooter>
-                    <Button type="submit">Create Story</Button>
+                    <Button type="submit">Create {itemTypeToAdd}</Button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -725,15 +752,15 @@ export default function BacklogPage() {
           {selectedStory && (
             <>
               <DialogHeader>
-                <DialogTitle>Edit Story</DialogTitle>
+                <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
                 <DialogDescription>
-                  Make changes to your story here. Click save when you're done.
+                  Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
                 </DialogDescription>
               </DialogHeader>
               <Form {...editStoryForm}>
                 <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4">
                    <FormItem>
-                    <FormLabel>Story ID</FormLabel>
+                    <FormLabel>ID</FormLabel>
                     <FormControl>
                       <Input readOnly value={selectedStory.storyId} />
                     </FormControl>
@@ -844,11 +871,11 @@ export default function BacklogPage() {
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete Story</span>
+                            <span className="sr-only">Delete {selectedStory.itemType}</span>
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Delete Story</p>
+                          <p>Delete {selectedStory.itemType}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
