@@ -66,8 +66,8 @@ export function SidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-2">
+      <SidebarHeader className="flex items-center justify-between p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
+        <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
                 <ChevronLeft />
             </Button>
@@ -76,7 +76,7 @@ export function SidebarNav() {
         </div>
         <SidebarTrigger className="hidden md:flex" />
       </SidebarHeader>
-      <SidebarContent className="p-4">
+      <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
@@ -93,8 +93,8 @@ export function SidebarNav() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-4">
-        <Separator className="my-2 bg-sidebar-border" />
+      <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
+        <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
           <SidebarMenuItem>
               <SidebarMenuButton tooltip="Settings">
@@ -103,7 +103,7 @@ export function SidebarNav() {
               </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="flex items-center gap-3 mt-4 px-2">
+        <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:hidden">
             <Avatar className="h-10 w-10">
                 <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
                 <AvatarFallback>JD</AvatarFallback>
