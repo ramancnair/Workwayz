@@ -23,9 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { AiAssistantForm } from '@/components/AiAssistantForm';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const statusStyles: Record<TestCaseStatus, string> = {
   'Pass': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -58,6 +59,12 @@ export default function TestCasesPage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>AI Assistant</DialogTitle>
+              <DialogDescription>
+                Get suggestions to improve your task or test case description.
+              </DialogDescription>
+            </DialogHeader>
             <AiAssistantForm projectContext="This is a project management application." />
           </DialogContent>
         </Dialog>
@@ -109,7 +116,7 @@ export default function TestCasesPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{selectedTestCase.title}</CardTitle>
-                <CardDescription>{selectedTestCase.description}</CardDescription>
+                <p className="text-sm text-muted-foreground">{selectedTestCase.description}</p>
               </CardHeader>
               <CardContent>
                 <h4 className="font-semibold mb-2">Linked Bugs</h4>

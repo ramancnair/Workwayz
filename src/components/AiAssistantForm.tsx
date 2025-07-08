@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAiTaskSuggestions } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Lightbulb } from 'lucide-react';
@@ -52,48 +51,42 @@ export function AiAssistantForm({ initialDescription = '', projectContext = '' }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>AI Assistant</CardTitle>
-        <CardDescription>Get suggestions to improve your task or test case description.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter a detailed description..." {...field} rows={5} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Getting Suggestions...' : 'Get AI Suggestions'}
-            </Button>
-          </form>
-        </Form>
-        {suggestions && (
-          <Alert className="mt-4">
-            <Lightbulb className="h-4 w-4" />
-            <AlertTitle>Suggestions</AlertTitle>
-            <AlertDescription>
-              <div className="whitespace-pre-wrap">{suggestions}</div>
-            </AlertDescription>
-          </Alert>
-        )}
-        {error && (
-           <Alert variant="destructive" className="mt-4">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter a detailed description..." {...field} rows={5} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Getting Suggestions...' : 'Get AI Suggestions'}
+          </Button>
+        </form>
+      </Form>
+      {suggestions && (
+        <Alert className="mt-4">
+          <Lightbulb className="h-4 w-4" />
+          <AlertTitle>Suggestions</AlertTitle>
+          <AlertDescription>
+            <div className="whitespace-pre-wrap">{suggestions}</div>
+          </AlertDescription>
+        </Alert>
+      )}
+      {error && (
+         <Alert variant="destructive" className="mt-4">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+    </>
   );
 }
