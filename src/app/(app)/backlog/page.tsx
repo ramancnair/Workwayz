@@ -452,7 +452,10 @@ export default function BacklogPage() {
                       <AccordionItem value={epic.id} key={epic.id}>
                       <AccordionTrigger>
                           <div className="flex-1 text-left pr-2">
-                              <span className="font-semibold">{epic.title}</span>
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold">{epic.title}</span>
+                                <Badge variant="secondary">{totalStories} {totalStories === 1 ? 'story' : 'stories'}</Badge>
+                              </div>
                                <div className="flex items-center gap-2 mt-2" title={`${doneStories} of ${totalStories} stories completed`}>
                                   <Progress value={donePercentage} className="h-2" />
                                   <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
@@ -483,7 +486,12 @@ export default function BacklogPage() {
                 })}
                 {(storiesByEpic['unassigned'] || []).length > 0 && (
                   <AccordionItem value="unassigned" key="unassigned">
-                    <AccordionTrigger>Unassigned Stories</AccordionTrigger>
+                    <AccordionTrigger>
+                      <div className="flex justify-between items-center w-full">
+                        <span>Unassigned Stories</span>
+                        <Badge variant="secondary">{(storiesByEpic['unassigned'] || []).length} {(storiesByEpic['unassigned'] || []).length === 1 ? 'story' : 'stories'}</Badge>
+                      </div>
+                    </AccordionTrigger>
                     <AccordionContent className="space-y-4">
                       {(storiesByEpic['unassigned'] || []).map((story) => (
                         <StoryCard
