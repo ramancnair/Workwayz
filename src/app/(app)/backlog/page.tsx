@@ -344,26 +344,56 @@ export default function BacklogPage() {
           </h3>
           <div className="overflow-y-auto flex-1 -mr-4 pr-4">
             <Accordion type="multiple" className="w-full">
-              {epics.map(
-                (epic) =>
-                  (storiesByEpic[epic.id] || []).length > 0 && (
+               {epics.map((epic) => {
+                const epicStories = stories.filter(story => story.epicId === epic.id);
+                const totalStories = epicStories.length;
+                
+                const doneStories = epicStories.filter(s => s.status === 'Done').length;
+                const inProgressStories = epicStories.filter(s => s.status === 'In Progress').length;
+                const toDoStories = epicStories.filter(s => s.status === 'To Do').length;
+
+                const donePercentage = totalStories > 0 ? (doneStories / totalStories) * 100 : 0;
+                const inProgressPercentage = totalStories > 0 ? (inProgressStories / totalStories) * 100 : 0;
+                const toDoPercentage = totalStories > 0 ? (toDoStories / totalStories) * 100 : 0;
+                
+                const backlogStoriesInEpic = storiesByEpic[epic.id] || [];
+
+                return (
                     <AccordionItem value={epic.id} key={epic.id}>
-                      <AccordionTrigger>{epic.title}</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        {(storiesByEpic[epic.id] || []).map((story) => (
-                          <StoryCard
-                            key={story.id}
-                            story={story}
-                            sprints={sprints}
-                            epics={epics}
-                            onMoveToSprint={moveStoryToSprint}
-                            onMoveToEpic={moveStoryToEpic}
-                          />
-                        ))}
-                      </AccordionContent>
+                    <AccordionTrigger>
+                        <div className="flex-1 text-left pr-2">
+                            <span className="font-semibold">{epic.title}</span>
+                             <div 
+                                className="w-full h-1.5 rounded-full overflow-hidden flex bg-muted mt-2" 
+                                title={totalStories > 0 ? `${doneStories} Done, ${inProgressStories} In Progress, ${toDoStories} To Do` : "No stories in this epic."}
+                            >
+                                <div className="bg-green-500 h-full" style={{ width: `${donePercentage}%` }}></div>
+                                <div className="bg-yellow-400 h-full" style={{ width: `${inProgressPercentage}%` }}></div>
+                                <div className="bg-gray-800 h-full" style={{ width: `${toDoPercentage}%` }}></div>
+                            </div>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-4">
+                        {backlogStoriesInEpic.length > 0 ? (
+                        backlogStoriesInEpic.map((story) => (
+                            <StoryCard
+                                key={story.id}
+                                story={story}
+                                sprints={sprints}
+                                epics={epics}
+                                onMoveToSprint={moveStoryToSprint}
+                                onMoveToEpic={moveStoryToEpic}
+                            />
+                        ))
+                        ) : (
+                        <p className="text-sm text-muted-foreground italic px-2">
+                            No stories from this epic are in the backlog.
+                        </p>
+                        )}
+                    </AccordionContent>
                     </AccordionItem>
-                  )
-              )}
+                );
+              })}
               {(storiesByEpic['unassigned'] || []).length > 0 && (
                 <AccordionItem value="unassigned" key="unassigned">
                   <AccordionTrigger>Unassigned Stories</AccordionTrigger>
