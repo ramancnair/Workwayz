@@ -64,6 +64,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/datepicker';
 import { format } from 'date-fns';
+import { useToast } from "@/hooks/use-toast"
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Story: BookOpen,
@@ -170,6 +171,7 @@ export default function BacklogPage() {
     updateStory,
   } = useProject();
   
+  const { toast } = useToast();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
@@ -237,23 +239,41 @@ export default function BacklogPage() {
   }, [selectedStory, editStoryForm]);
 
   const onAddSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
-    await addSprint({
-      title: values.title,
-      startDate: values.startDate?.toISOString(),
-      endDate: values.endDate?.toISOString(),
-    });
-    setAddSprintOpen(false);
-    sprintForm.reset();
+    try {
+      await addSprint({
+        title: values.title,
+        startDate: values.startDate?.toISOString(),
+        endDate: values.endDate?.toISOString(),
+      });
+      setAddSprintOpen(false);
+      sprintForm.reset();
+    } catch (error) {
+      console.error("Failed to add sprint:", error);
+      toast({
+        title: "Error Creating Sprint",
+        description: "There was a problem saving your sprint. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   const onEditSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
     if (!editingSprint) return;
-    await updateSprint(editingSprint.id, {
-      title: values.title,
-      startDate: values.startDate?.toISOString(),
-      endDate: values.endDate?.toISOString(),
-    });
-    setEditingSprint(null);
+    try {
+      await updateSprint(editingSprint.id, {
+        title: values.title,
+        startDate: values.startDate?.toISOString(),
+        endDate: values.endDate?.toISOString(),
+      });
+      setEditingSprint(null);
+    } catch (error) {
+      console.error("Failed to edit sprint:", error);
+      toast({
+        title: "Error Editing Sprint",
+        description: "There was a problem saving your changes. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   const handleDeleteSprint = async (sprintId: string) => {
@@ -265,47 +285,82 @@ export default function BacklogPage() {
   };
 
   const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
-    await addEpic({
-      title: values.title,
-      description: values.description || '',
-    });
-    setAddEpicOpen(false);
-    epicForm.reset();
+    try {
+      await addEpic({
+        title: values.title,
+        description: values.description || '',
+      });
+      setAddEpicOpen(false);
+      epicForm.reset();
+    } catch (error) {
+      console.error("Failed to add epic:", error);
+      toast({
+        title: "Error Creating Epic",
+        description: "There was a problem saving your epic. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   const onEditEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     if (!editingEpic) return;
-    await updateEpic(editingEpic.id, values);
-    setEditingEpic(null);
+    try {
+      await updateEpic(editingEpic.id, values);
+      setEditingEpic(null);
+    } catch (error) {
+      console.error("Failed to edit epic:", error);
+      toast({
+        title: "Error Editing Epic",
+        description: "There was a problem saving your changes. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
-    const newStory: Omit<Story, 'id' | 'storyId'> = {
-      sprintId: null,
-      title: values.title,
-      description: values.description || '',
-      itemType: itemTypeToAdd,
-      acceptanceCriteria: values.acceptanceCriteria,
-      assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
-      status: 'To Do',
-    };
-    await addStory(newStory);
-    setAddStoryOpen(false);
-    storyForm.reset();
+    try {
+      const newStory: Omit<Story, 'id' | 'storyId'> = {
+        sprintId: null,
+        title: values.title,
+        description: values.description || '',
+        itemType: itemTypeToAdd,
+        acceptanceCriteria: values.acceptanceCriteria,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+        status: 'To Do',
+      };
+      await addStory(newStory);
+      setAddStoryOpen(false);
+      storyForm.reset();
+    } catch (error) {
+      console.error("Failed to add requirement:", error);
+      toast({
+        title: `Error Creating ${itemTypeToAdd}`,
+        description: `There was a problem saving your ${itemTypeToAdd.toLowerCase()}. Please try again.`,
+        variant: "destructive",
+      });
+    }
   };
   
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
-
-    await updateStory(selectedStory.id, {
-        title: values.title,
-        description: values.description,
-        acceptanceCriteria: values.acceptanceCriteria,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+    try {
+      await updateStory(selectedStory.id, {
+          title: values.title,
+          description: values.description,
+          acceptanceCriteria: values.acceptanceCriteria,
+          assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+          epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+        });
+      setSelectedStory(null);
+    } catch (error) {
+      console.error("Failed to edit story:", error);
+      toast({
+        title: `Error Editing ${selectedStory.itemType}`,
+        description: "There was a problem saving your changes. Please try again.",
+        variant: "destructive",
       });
-    setSelectedStory(null);
+    }
   };
   
   const handleDeleteStory = async (storyId: string) => {
