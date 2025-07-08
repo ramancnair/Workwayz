@@ -338,13 +338,18 @@ export default function BacklogPage() {
               </Form>
             </DialogContent>
           </Dialog>
+
+          <Button onClick={handleAddSprint}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Sprint
+          </Button>
           
           <Dialog open={addStoryOpen} onOpenChange={setAddStoryOpen}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Item
+                  Add Requirement
                   <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -455,11 +460,6 @@ export default function BacklogPage() {
               </Form>
             </DialogContent>
           </Dialog>
-
-          <Button onClick={handleAddSprint}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Sprint
-          </Button>
         </PageHeader>
 
         <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
