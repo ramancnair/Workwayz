@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { AiAssistantForm } from '@/components/AiAssistantForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useProject } from '@/context/ProjectContext';
 
 const statusStyles: Record<TestCaseStatus, string> = {
   'Pass': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -38,6 +39,7 @@ export default function TestCasesPage() {
   const [testCases] = useState<TestCase[]>(initialTestCases);
   const [bugs] = useState<Bug[]>(initialBugs);
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
+  const { employees } = useProject();
 
   const getStoryTitle = (storyId: string) => {
     return stories.find(s => s.id === storyId)?.title || 'N/A';
@@ -84,29 +86,34 @@ export default function TestCasesPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {testCases.map((tc) => (
-                    <TableRow key={tc.id} onClick={() => setSelectedTestCase(tc)} className="cursor-pointer">
-                        <TableCell className="font-medium">{tc.title}</TableCell>
-                        <TableCell>{getStoryTitle(tc.storyId)}</TableCell>
-                        <TableCell>
-                        <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={tc.assignee.avatar} alt={tc.assignee.name} data-ai-hint="tester avatar" />
-                                <AvatarFallback>{tc.assignee.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            {tc.assignee.name}
-                        </div>
-                        </TableCell>
-                        <TableCell>
-                        <Badge className={cn('font-semibold', statusStyles[tc.status])}>
-                            {tc.status}
-                        </Badge>
-                        </TableCell>
-                         <TableCell>
-                            <Badge variant="destructive">{getBugsForTestCase(tc.id).length}</Badge>
-                         </TableCell>
-                    </TableRow>
-                    ))}
+                    {testCases.map((tc) => {
+                      const assignee = employees.find(e => e.id === tc.assigneeId);
+                      return (
+                        <TableRow key={tc.id} onClick={() => setSelectedTestCase(tc)} className="cursor-pointer">
+                            <TableCell className="font-medium">{tc.title}</TableCell>
+                            <TableCell>{getStoryTitle(tc.storyId)}</TableCell>
+                            <TableCell>
+                              {assignee ? (
+                                <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="tester avatar" />
+                                        <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    {assignee.firstName} {assignee.lastName}
+                                </div>
+                              ) : "Unassigned"}
+                            </TableCell>
+                            <TableCell>
+                            <Badge className={cn('font-semibold', statusStyles[tc.status])}>
+                                {tc.status}
+                            </Badge>
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant="destructive">{getBugsForTestCase(tc.id).length}</Badge>
+                            </TableCell>
+                        </TableRow>
+                      )
+                    })}
                 </TableBody>
                 </Table>
             </Card>

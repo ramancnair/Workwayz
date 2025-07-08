@@ -49,7 +49,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User } from '@/types';
+import type { Epic, Story, Sprint, Employee } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -59,7 +59,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { developers } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const epicFormSchema = z.object({
@@ -83,7 +82,7 @@ function StoryCard({
 }: {
   story: Story;
   epic?: Epic;
-  assignee?: User;
+  assignee?: Employee;
   onClick: () => void;
 }) {
   return (
@@ -101,14 +100,14 @@ function StoryCard({
                   <Avatar className="h-8 w-8">
                     <AvatarImage
                       src={assignee.avatar}
-                      alt={assignee.name}
+                      alt={`${assignee.firstName} ${assignee.lastName}`}
                       data-ai-hint="developer avatar"
                     />
-                    <AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Assigned to {assignee.name}</p>
+                  <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -125,11 +124,13 @@ function StoryCard({
 }
 
 export default function BacklogPage() {
-  const { epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint, moveStoryToEpic } = useProject();
+  const { epics, setEpics, stories, setStories, sprints, setSprints, employees, moveStoryToSprint, moveStoryToEpic } = useProject();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+
+  const developers = employees.filter(e => e.role === 'Developer');
 
   const epicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
@@ -388,7 +389,7 @@ export default function BacklogPage() {
                               <SelectContent>
                               <SelectItem value="unassigned">Unassigned</SelectItem>
                               {developers.map(dev => (
-                                  <SelectItem key={dev.id} value={dev.id}>{dev.name}</SelectItem>
+                                  <SelectItem key={dev.id} value={dev.id}>{dev.firstName} {dev.lastName}</SelectItem>
                               ))}
                               </SelectContent>
                           </Select>
@@ -444,7 +445,7 @@ export default function BacklogPage() {
                           {backlogStoriesInEpic.length > 0 ? (
                           backlogStoriesInEpic.map((story) => {
                             const epic = epics.find((e) => e.id === story.epicId);
-                            const assignee = developers.find((d) => d.id === story.assigneeId);
+                            const assignee = employees.find((d) => d.id === story.assigneeId);
                             return (
                               <div key={story.id} className="relative group">
                                 <StoryCard
@@ -500,7 +501,7 @@ export default function BacklogPage() {
                     <AccordionContent className="space-y-2">
                       {(storiesByEpic['unassigned'] || []).map((story) => {
                           const epic = epics.find((e) => e.id === story.epicId);
-                          const assignee = developers.find((d) => d.id === story.assigneeId);
+                          const assignee = employees.find((d) => d.id === story.assigneeId);
                           return (
                              <div key={story.id} className="relative group">
                                 <StoryCard
@@ -595,7 +596,7 @@ export default function BacklogPage() {
                   .filter((story) => story.sprintId === sprint.id)
                   .map((story) => {
                     const epic = epics.find((e) => e.id === story.epicId);
-                    const assignee = developers.find((d) => d.id === story.assigneeId);
+                    const assignee = employees.find((d) => d.id === story.assigneeId);
                     return (
                         <StoryCard
                             key={story.id}
@@ -729,7 +730,7 @@ export default function BacklogPage() {
                             <SelectItem value="unassigned">Unassigned</SelectItem>
                             {developers.map((dev) => (
                               <SelectItem key={dev.id} value={dev.id}>
-                                {dev.name}
+                                {dev.firstName} {dev.lastName}
                               </SelectItem>
                             ))}
                           </SelectContent>

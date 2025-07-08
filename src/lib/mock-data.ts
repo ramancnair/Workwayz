@@ -1,15 +1,82 @@
 
-import type { User, Story, Task, TestCase, Bug, Epic, Sprint, Employee } from '@/types';
+import type { Story, Task, TestCase, Bug, Epic, Sprint, Employee } from '@/types';
 
-export const developers: User[] = [
-  { id: 'dev1', name: 'Alice', avatar: 'https://placehold.co/40x40.png' },
-  { id: 'dev2', name: 'Bob', avatar: 'https://placehold.co/40x40.png' },
-  { id: 'dev3', name: 'Charlie', avatar: 'https://placehold.co/40x40.png' },
-];
-
-export const testers: User[] = [
-  { id: 'tester1', name: 'Diana', avatar: 'https://placehold.co/40x40.png' },
-  { id: 'tester2', name: 'Eve', avatar: 'https://placehold.co/40x40.png' },
+export const employees: Employee[] = [
+  {
+    id: 'dev1',
+    empId: 'D001',
+    firstName: 'Alice',
+    lastName: 'Smith',
+    email: 'alice@internal.com',
+    phone: '555-0111',
+    role: 'Developer',
+    experience: 5,
+    onboardingDate: new Date('2023-02-01').toISOString(),
+    onshoreOrOffshore: 'Onshore',
+    billedRate: 100,
+    availability: 100,
+    avatar: 'https://placehold.co/40x40.png'
+  },
+  {
+    id: 'dev2',
+    empId: 'D002',
+    firstName: 'Bob',
+    lastName: 'Johnson',
+    email: 'bob@internal.com',
+    phone: '555-0112',
+    role: 'Developer',
+    experience: 3,
+    onboardingDate: new Date('2023-05-20').toISOString(),
+    onshoreOrOffshore: 'Offshore',
+    billedRate: 80,
+    availability: 100,
+    avatar: 'https://placehold.co/40x40.png'
+  },
+  {
+    id: 'dev3',
+    empId: 'D003',
+    firstName: 'Charlie',
+    lastName: 'Brown',
+    email: 'charlie@internal.com',
+    phone: '555-0113',
+    role: 'Developer',
+    experience: 7,
+    onboardingDate: new Date('2022-11-10').toISOString(),
+    onshoreOrOffshore: 'Onshore',
+    billedRate: 115,
+    availability: 75,
+    avatar: 'https://placehold.co/40x40.png'
+  },
+  {
+    id: 'tester1',
+    empId: 'T001',
+    firstName: 'Diana',
+    lastName: 'Prince',
+    email: 'diana@internal.com',
+    phone: '555-0211',
+    role: 'Tester',
+    experience: 4,
+    onboardingDate: new Date('2023-03-15').toISOString(),
+    onshoreOrOffshore: 'Offshore',
+    billedRate: 60,
+    availability: 100,
+    avatar: 'https://placehold.co/40x40.png'
+  },
+  {
+    id: 'tester2',
+    empId: 'T002',
+    firstName: 'Eve',
+    lastName: 'Adams',
+    email: 'eve@internal.com',
+    phone: '555-0212',
+    role: 'Tester',
+    experience: 6,
+    onboardingDate: new Date('2022-09-01').toISOString(),
+    onshoreOrOffshore: 'Onshore',
+    billedRate: 75,
+    availability: 100,
+    avatar: 'https://placehold.co/40x40.png'
+  },
 ];
 
 export const epics: Epic[] = [
@@ -35,7 +102,7 @@ export const tasks: Task[] = [
     title: 'Design login UI',
     description: 'Create wireframes and mockups for the login page.',
     status: 'Complete',
-    assignee: developers[0],
+    assigneeId: 'dev1',
     storyId: 'story1',
     plannedStartDate: new Date('2024-07-01'),
     plannedEndDate: new Date('2024-07-03'),
@@ -47,7 +114,7 @@ export const tasks: Task[] = [
     title: 'Develop login API',
     description: 'Build the backend endpoint for user authentication.',
     status: 'Complete',
-    assignee: developers[1],
+    assigneeId: 'dev2',
     storyId: 'story1',
     plannedStartDate: new Date('2024-07-04'),
     plannedEndDate: new Date('2024-07-08'),
@@ -59,7 +126,7 @@ export const tasks: Task[] = [
     title: 'Integrate login UI and API',
     description: 'Connect the frontend form with the authentication API.',
     status: 'In QA',
-    assignee: developers[0],
+    assigneeId: 'dev1',
     storyId: 'story1',
     plannedStartDate: new Date('2024-07-09'),
     plannedEndDate: new Date('2024-07-11'),
@@ -70,7 +137,7 @@ export const tasks: Task[] = [
     title: 'Stats component for dashboard',
     description: 'Create a reusable component for displaying key stats.',
     status: 'In Development',
-    assignee: developers[2],
+    assigneeId: 'dev3',
     storyId: 'story2',
     plannedStartDate: new Date('2024-07-10'),
     plannedEndDate: new Date('2024-07-15'),
@@ -81,7 +148,7 @@ export const tasks: Task[] = [
     title: 'Chart for task status',
     description: 'Implement a pie chart showing tasks by status.',
     status: 'In Development',
-    assignee: developers[1],
+    assigneeId: 'dev2',
     storyId: 'story2',
     plannedStartDate: new Date('2024-07-12'),
     plannedEndDate: new Date('2024-07-17'),
@@ -92,7 +159,7 @@ export const tasks: Task[] = [
     title: 'Create Kanban columns',
     description: 'Set up the UI for Kanban board swim lanes.',
     status: 'To Do',
-    assignee: developers[0],
+    assigneeId: 'dev1',
     storyId: 'story3',
     plannedStartDate: new Date(),
     plannedEndDate: new Date(new Date().setDate(new Date().getDate() + 3)),
@@ -102,7 +169,7 @@ export const tasks: Task[] = [
     title: 'Implement Task Cards',
     description: 'Design and build the component for task cards.',
     status: 'To Do',
-    assignee: developers[2],
+    assigneeId: 'dev3',
     storyId: 'story3',
     plannedStartDate: new Date(new Date().setDate(new Date().getDate() + 2)),
     plannedEndDate: new Date(new Date().setDate(new Date().getDate() + 5)),
@@ -115,7 +182,7 @@ export const testCases: TestCase[] = [
     title: 'Valid user login',
     description: 'Test login with correct credentials.',
     status: 'Pass',
-    assignee: testers[0],
+    assigneeId: 'tester1',
     storyId: 'story1',
   },
   {
@@ -123,7 +190,7 @@ export const testCases: TestCase[] = [
     title: 'Invalid user login',
     description: 'Test login with incorrect password.',
     status: 'Fail',
-    assignee: testers[0],
+    assigneeId: 'tester1',
     storyId: 'story1',
   },
   {
@@ -131,7 +198,7 @@ export const testCases: TestCase[] = [
     title: 'Dashboard stats display',
     description: 'Verify that all statistics on the dashboard are displayed correctly.',
     status: 'Not Run',
-    assignee: testers[1],
+    assigneeId: 'tester2',
     storyId: 'story2',
   },
   {
@@ -139,7 +206,7 @@ export const testCases: TestCase[] = [
     title: 'Non-existent user login',
     description: 'Test login with a username that does not exist.',
     status: 'Pass',
-    assignee: testers[0],
+    assigneeId: 'tester1',
     storyId: 'story1',
   },
 ];
@@ -160,37 +227,5 @@ export const bugs: Bug[] = [
     status: 'In Progress',
     severity: 'Medium',
     testCaseId: 'tc2',
-  },
-];
-
-export const employees: Employee[] = [
-  {
-    id: 'uuid-1',
-    empId: 'E12345',
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@internal.com',
-    phone: '555-0101',
-    role: 'Lead Developer',
-    experience: 8,
-    onboardingDate: new Date('2022-08-01').toISOString(),
-    onshoreOrOffshore: 'Onshore',
-    billedRate: 120,
-    availability: 100,
-  },
-  {
-    id: 'uuid-2',
-    empId: 'E67890',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    email: 'jane.smith@internal.com',
-    phone: '555-0102',
-    role: 'Senior QA Engineer',
-    experience: 6,
-    onboardingDate: new Date('2023-01-15').toISOString(),
-    onshoreOrOffshore: 'Offshore',
-    billedRate: 75,
-    availability: 50,
-    clientEmail: 'jane.s@client.com'
   },
 ];

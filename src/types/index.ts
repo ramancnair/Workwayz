@@ -1,8 +1,3 @@
-export type User = {
-  id: string;
-  name: string;
-  avatar: string;
-};
 
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
@@ -11,7 +6,7 @@ export type Task = {
   title: string;
   description: string;
   status: TaskStatus;
-  assignee: User;
+  assigneeId: string;
   storyId: string;
   plannedStartDate: Date;
   plannedEndDate: Date;
@@ -63,7 +58,7 @@ export type TestCase = {
   title: string;
   description: string;
   status: TestCaseStatus;
-  assignee: User;
+  assigneeId: string;
   storyId: string;
 };
 
@@ -76,6 +71,7 @@ export type Employee = {
   lastName: string;
   email: string;
   phone: string;
+  avatar?: string;
   clientEmpId?: string;
   clientEmail?: string;
   role?: string;
