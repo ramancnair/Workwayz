@@ -40,27 +40,19 @@ export type Sprint = {
   isCurrent: boolean;
 };
 
-export type BugStatus = 'Open' | 'In Progress' | 'Fixed' | 'Closed';
-export type BugSeverity = 'Low' | 'Medium' | 'High' | 'Critical';
-
-export type Bug = {
-  id: string;
-  title: string;
-  description: string;
-  status: BugStatus;
-  severity: BugSeverity;
-  testCaseId: string;
-};
-
-export type TestCaseStatus = 'Not Run' | 'Pass' | 'Fail';
+export type TestCaseStatus = 'Not Run' | 'Passed' | 'Failed' | 'Blocked' | 'Skipped';
+export type TestCaseType = 'Functional' | 'Non-functional';
 
 export type TestCase = {
   id: string;
+  testCaseId: string;
   title: string;
+  type: TestCaseType;
   description: string;
+  expectedResult: string;
   status: TestCaseStatus;
-  assigneeId: string;
-  storyId: string;
+  assigneeId?: string;
+  storyId?: string;
 };
 
 export type OnshoreOffshore = 'Onshore' | 'Offshore';

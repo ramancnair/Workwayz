@@ -1,5 +1,5 @@
 
-import type { Story, Task, TestCase, Bug, Epic, Sprint, Employee } from '@/types';
+import type { Story, Task, Epic, Sprint, Employee } from '@/types';
 
 export const employees: Employee[] = [
   {
@@ -173,59 +173,5 @@ export const tasks: Task[] = [
     storyId: 'story3',
     plannedStartDate: new Date(new Date().setDate(new Date().getDate() + 2)),
     plannedEndDate: new Date(new Date().setDate(new Date().getDate() + 5)),
-  },
-];
-
-export const testCases: TestCase[] = [
-  {
-    id: 'tc1',
-    title: 'Valid user login',
-    description: 'Test login with correct credentials.',
-    status: 'Pass',
-    assigneeId: 'tester1',
-    storyId: 'story1',
-  },
-  {
-    id: 'tc2',
-    title: 'Invalid user login',
-    description: 'Test login with incorrect password.',
-    status: 'Fail',
-    assigneeId: 'tester1',
-    storyId: 'story1',
-  },
-  {
-    id: 'tc3',
-    title: 'Dashboard stats display',
-    description: 'Verify that all statistics on the dashboard are displayed correctly.',
-    status: 'Not Run',
-    assigneeId: 'tester2',
-    storyId: 'story2',
-  },
-  {
-    id: 'tc4',
-    title: 'Non-existent user login',
-    description: 'Test login with a username that does not exist.',
-    status: 'Pass',
-    assigneeId: 'tester1',
-    storyId: 'story1',
-  },
-];
-
-export const bugs: Bug[] = [
-  {
-    id: 'bug1',
-    title: 'Error message not shown for wrong password',
-    description: 'When a user enters a wrong password, no error message is displayed.',
-    status: 'Open',
-    severity: 'High',
-    testCaseId: 'tc2',
-  },
-  {
-    id: 'bug2',
-    title: 'Login button remains disabled',
-    description: 'The login button remains disabled after entering credentials.',
-    status: 'In Progress',
-    severity: 'Medium',
-    testCaseId: 'tc2',
   },
 ];
