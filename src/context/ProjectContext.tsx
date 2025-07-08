@@ -127,10 +127,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   }, []);
 
   // Story Actions
-  const addStory = async (story: Omit<Story, 'id' | 'storyId'> & { storyId?: string }) => {
-     const storiesCollection = collection(db, 'stories');
-     const snapshot = await getDocs(storiesCollection);
-     const newIdNumber =
+  const addStory = async (story: Omit<Story, 'id' | 'storyId'>) => {
+    const storiesCollection = collection(db, 'stories');
+    const snapshot = await getDocs(storiesCollection);
+    const newIdNumber =
       snapshot.docs.length > 0
         ? Math.max(
             0,
@@ -140,12 +140,25 @@ export function ProjectProvider({ children }: PropsWithChildren) {
               .map(id => parseInt(id.replace('ST-', ''), 10) || 0)
           ) + 1
         : 1;
+
+    const newStoryData: { [key: string]: any } = {
+      storyId: `ST-${newIdNumber}`,
+      title: story.title,
+      description: story.description,
+      itemType: story.itemType,
+      acceptanceCriteria: story.acceptanceCriteria,
+      sprintId: story.sprintId,
+      status: story.status,
+    };
     
-    const newStory = {
-        ...story,
-        storyId: `ST-${newIdNumber}`
+    if (story.assigneeId) {
+      newStoryData.assigneeId = story.assigneeId;
     }
-    await addDoc(storiesCollection, newStory);
+    if (story.epicId) {
+      newStoryData.epicId = story.epicId;
+    }
+
+    await addDoc(storiesCollection, newStoryData);
   };
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id'>>) => {
     await updateDoc(doc(db, 'stories', storyId), data);
@@ -185,12 +198,29 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   
   // Sprint Actions
   const addSprint = async (sprint: Omit<Sprint, 'id' | 'isCurrent'>) => {
-    await addDoc(collection(db, 'sprints'), { ...sprint, isCurrent: false });
+    const sprintData: { [key: string]: any } = {
+      title: sprint.title,
+      isCurrent: false,
+    };
+    if (sprint.startDate) {
+      sprintData.startDate = Timestamp.fromDate(new Date(sprint.startDate));
+    }
+    if (sprint.endDate) {
+      sprintData.endDate = Timestamp.fromDate(new Date(sprint.endDate));
+    }
+    await addDoc(collection(db, 'sprints'), sprintData);
   };
   const updateSprint = async (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>) => {
-    const sprintData: {[key: string]: any} = {...data};
-    if (data.startDate) sprintData.startDate = Timestamp.fromDate(new Date(data.startDate));
-    if (data.endDate) sprintData.endDate = Timestamp.fromDate(new Date(data.endDate));
+    const sprintData: {[key: string]: any} = {};
+
+    if(data.title) sprintData.title = data.title;
+
+    if (data.startDate) {
+      sprintData.startDate = Timestamp.fromDate(new Date(data.startDate));
+    }
+    if (data.endDate) {
+      sprintData.endDate = Timestamp.fromDate(new Date(data.endDate));
+    }
     await updateDoc(doc(db, 'sprints', sprintId), sprintData);
   };
   const deleteSprint = async (sprintId: string) => {
@@ -216,7 +246,24 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Employee Actions
   const addEmployee = async (employee: Omit<Employee, 'id'>) => {
-    await addDoc(collection(db, 'employees'), employee);
+    const employeeData: { [key: string]: any } = {
+      empId: employee.empId,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      email: employee.email,
+      phone: employee.phone,
+    };
+    if (employee.avatar) employeeData.avatar = employee.avatar;
+    if (employee.clientEmpId) employeeData.clientEmpId = employee.clientEmpId;
+    if (employee.clientEmail) employeeData.clientEmail = employee.clientEmail;
+    if (employee.role) employeeData.role = employee.role;
+    if (employee.experience) employeeData.experience = employee.experience;
+    if (employee.onboardingDate) employeeData.onboardingDate = Timestamp.fromDate(new Date(employee.onboardingDate));
+    if (employee.offloadingDate) employeeData.offloadingDate = Timestamp.fromDate(new Date(employee.offloadingDate));
+    if (employee.onshoreOrOffshore) employeeData.onshoreOrOffshore = employee.onshoreOrOffshore;
+    if (employee.billedRate) employeeData.billedRate = employee.billedRate;
+    if (employee.availability) employeeData.availability = employee.availability;
+    await addDoc(collection(db, 'employees'), employeeData);
   };
   const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id'>>) => {
      const employeeData: {[key: string]: any} = {...data};
@@ -229,7 +276,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
   
   // TestCase Actions
-  const addTestCase = async (testCase: Omit<TestCase, 'id' | 'testCaseId'> & { testCaseId?: string }) => {
+  const addTestCase = async (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => {
     const testCasesCollection = collection(db, 'testCases');
     const snapshot = await getDocs(testCasesCollection);
     const newIdNumber =
@@ -242,11 +289,24 @@ export function ProjectProvider({ children }: PropsWithChildren) {
               .map(id => parseInt(id.replace('TC-', ''), 10) || 0)
           ) + 1
         : 1;
-    const newTestCase = {
-        ...testCase,
-        testCaseId: `TC-${newIdNumber}`
+
+    const newTestCaseData: { [key: string]: any } = {
+      testCaseId: `TC-${newIdNumber}`,
+      title: testCase.title,
+      type: testCase.type,
+      description: testCase.description,
+      expectedResult: testCase.expectedResult,
+      status: testCase.status,
+    };
+
+    if (testCase.assigneeId) {
+      newTestCaseData.assigneeId = testCase.assigneeId;
     }
-    await addDoc(testCasesCollection, newTestCase);
+    if (testCase.storyId) {
+      newTestCaseData.storyId = testCase.storyId;
+    }
+
+    await addDoc(testCasesCollection, newTestCaseData);
   };
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => {
     await updateDoc(doc(db, 'testCases', testCaseId), data);
