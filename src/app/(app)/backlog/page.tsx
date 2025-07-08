@@ -41,6 +41,7 @@ import {
 import type { Epic, Story, Sprint } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
+import { Progress } from '@/components/ui/progress';
 
 const epicFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -347,14 +348,8 @@ export default function BacklogPage() {
                {epics.map((epic) => {
                 const epicStories = stories.filter(story => story.epicId === epic.id);
                 const totalStories = epicStories.length;
-                
                 const doneStories = epicStories.filter(s => s.status === 'Done').length;
-                const inProgressStories = epicStories.filter(s => s.status === 'In Progress').length;
-                const toDoStories = epicStories.filter(s => s.status === 'To Do').length;
-
-                const donePercentage = totalStories > 0 ? (doneStories / totalStories) * 100 : 0;
-                const inProgressPercentage = totalStories > 0 ? (inProgressStories / totalStories) * 100 : 0;
-                const toDoPercentage = totalStories > 0 ? (toDoStories / totalStories) * 100 : 0;
+                const donePercentage = totalStories > 0 ? Math.round((doneStories / totalStories) * 100) : 0;
                 
                 const backlogStoriesInEpic = storiesByEpic[epic.id] || [];
 
@@ -363,13 +358,9 @@ export default function BacklogPage() {
                     <AccordionTrigger>
                         <div className="flex-1 text-left pr-2">
                             <span className="font-semibold">{epic.title}</span>
-                             <div 
-                                className="w-full h-1.5 rounded-full overflow-hidden flex bg-muted mt-2" 
-                                title={totalStories > 0 ? `${doneStories} Done, ${inProgressStories} In Progress, ${toDoStories} To Do` : "No stories in this epic."}
-                            >
-                                <div className="bg-green-500 h-full" style={{ width: `${donePercentage}%` }}></div>
-                                <div className="bg-yellow-400 h-full" style={{ width: `${inProgressPercentage}%` }}></div>
-                                <div className="bg-gray-800 h-full" style={{ width: `${toDoPercentage}%` }}></div>
+                             <div className="flex items-center gap-2 mt-2" title={`${doneStories} of ${totalStories} stories completed`}>
+                                <Progress value={donePercentage} className="h-2" />
+                                <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
                             </div>
                         </div>
                     </AccordionTrigger>
