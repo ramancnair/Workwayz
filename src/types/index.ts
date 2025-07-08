@@ -40,6 +40,8 @@ export type Sprint = {
   id: string;
   title: string;
   isCurrent: boolean;
+  startDate?: string; // ISO String
+  endDate?: string; // ISO String
 };
 
 export type TestCaseStatus = 'Not Run' | 'Passed' | 'Failed' | 'Blocked' | 'Skipped';

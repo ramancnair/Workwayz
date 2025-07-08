@@ -7,7 +7,8 @@ import {
   epics as initialEpics, 
   stories as initialStories, 
   sprints as initialSprints,
-  employees as initialEmployees
+  employees as initialEmployees,
+  testCases as initialTestCases
 } from '@/lib/mock-data';
 
 interface ProjectContextType {
@@ -26,6 +27,8 @@ interface ProjectContextType {
   moveStoryStatus: (storyId: string, newStatus: StoryStatus) => void;
   deleteStory: (storyId: string) => void;
   deleteEpic: (epicId: string) => void;
+  updateEpic: (epicId: string, data: Partial<Omit<Epic, 'id'>>) => void;
+  updateSprint: (sprintId: string, data: Partial<Omit<Sprint, 'id'>>) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -59,7 +62,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       setEmployees(storedEmployees ? JSON.parse(storedEmployees) : initialEmployees);
       
       const storedTestCases = window.localStorage.getItem('project_test_cases');
-      setTestCases(storedTestCases ? JSON.parse(storedTestCases) : []);
+      setTestCases(storedTestCases ? JSON.parse(storedTestCases) : initialTestCases);
 
     } catch (error) {
       console.error("Failed to load data from localStorage, using initial data.", error);
@@ -67,7 +70,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       setStories(initialStories);
       setSprints(initialSprints);
       setEmployees(initialEmployees);
-      setTestCases([]);
+      setTestCases(initialTestCases);
     }
     setIsInitialized(true);
   }, []);
@@ -144,8 +147,20 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     setEpics(prevEpics => prevEpics.filter(epic => epic.id !== epicId));
   };
 
+  const updateEpic = (epicId: string, data: Partial<Omit<Epic, 'id'>>) => {
+    setEpics(prevEpics =>
+      prevEpics.map(epic => (epic.id === epicId ? { ...epic, ...data } : epic))
+    );
+  };
+
+  const updateSprint = (sprintId: string, data: Partial<Omit<Sprint, 'id'>>) => {
+    setSprints(prevSprints =>
+      prevSprints.map(sprint => (sprint.id === sprintId ? { ...sprint, ...data } : sprint))
+    );
+  };
+
   return (
-    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, employees, setEmployees, testCases, setTestCases, moveStoryToSprint, moveStoryStatus, moveStoryToEpic, deleteStory, deleteEpic }}>
+    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, employees, setEmployees, testCases, setTestCases, moveStoryToSprint, moveStoryStatus, moveStoryToEpic, deleteStory, deleteEpic, updateEpic, updateSprint }}>
       {isInitialized ? children : null}
     </ProjectContext.Provider>
   );

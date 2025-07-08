@@ -1,5 +1,5 @@
 
-import type { Story, Task, Epic, Sprint, Employee } from '@/types';
+import type { Story, Task, Epic, Sprint, Employee, TestCase } from '@/types';
 
 export const employees: Employee[] = [
   {
@@ -85,7 +85,7 @@ export const epics: Epic[] = [
 ];
 
 export const sprints: Sprint[] = [
-  { id: 'sprint1', title: 'Sprint 1', isCurrent: true },
+  { id: 'sprint1', title: 'Sprint 1', isCurrent: true, startDate: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString(), endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString() },
 ];
 
 export const stories: Story[] = [
@@ -93,8 +93,15 @@ export const stories: Story[] = [
   { id: 'story2', storyId: 'ST-2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.', itemType: 'Story', epicId: 'epic2', sprintId: 'sprint1', status: 'In Progress', acceptanceCriteria: 'The dashboard displays total tasks, completed tasks, and completion rate.', assigneeId: 'dev2' },
   { id: 'story3', storyId: 'ST-3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.', itemType: 'Story', sprintId: 'sprint1', status: 'To Do', acceptanceCriteria: 'Users can drag and drop stories between columns.' },
   { id: 'story4', storyId: 'ST-4', title: 'Password Reset', description: 'Allow users to reset their password via email.', itemType: 'Story', epicId: 'epic1', sprintId: 'sprint1', status: 'To Do', assigneeId: 'dev3' },
-  { id: 'story5', storyId: 'ST-5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', itemType: 'Story', epicId: 'epic2', sprintId: 'sprint1', status: 'Done', acceptanceCriteria: 'The exported PDF matches the dashboard view.', assigneeId: 'dev2' },
+  { id: 'story5', storyId: 'ST-5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', itemType: 'Story', epicId: 'epic2', sprintId: null, status: 'Done', acceptanceCriteria: 'The exported PDF matches the dashboard view.', assigneeId: 'dev2' },
 ];
+
+export const testCases: TestCase[] = [
+    { id: 'tc1', testCaseId: 'TC-1', title: 'Verify successful login', type: 'Functional', description: 'Enter valid credentials and click login.', expectedResult: 'User is redirected to dashboard.', status: 'Passed', assigneeId: 'tester1', storyId: 'story1' },
+    { id: 'tc2', testCaseId: 'TC-2', title: 'Verify failed login', type: 'Functional', description: 'Enter invalid credentials and click login.', expectedResult: 'Error message is displayed.', status: 'Passed', assigneeId: 'tester1', storyId: 'story1' },
+    { id: 'tc3', testCaseId: 'TC-3', title: 'Dashboard loading performance', type: 'Non-functional', description: 'Measure time to load dashboard with 100+ tasks.', expectedResult: 'Dashboard loads in under 2 seconds.', status: 'Not Run', assigneeId: 'tester2', storyId: 'story2' },
+];
+
 
 export const tasks: Task[] = [
   {

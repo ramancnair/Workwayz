@@ -62,6 +62,8 @@ import {
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/datepicker';
+import { format } from 'date-fns';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Story: BookOpen,
@@ -84,6 +86,12 @@ const storyFormSchema = z.object({
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
   assigneeId: z.string().optional(),
+});
+
+const sprintFormSchema = z.object({
+  title: z.string().min(1, 'Title is required.'),
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
 });
 
 function StoryCard({
@@ -143,7 +151,7 @@ function StoryCard({
 }
 
 export default function BacklogPage() {
-  const { epics, setEpics, stories, setStories, sprints, setSprints, employees, moveStoryToSprint, moveStoryToEpic, deleteStory, deleteEpic } = useProject();
+  const { epics, setEpics, stories, setStories, sprints, setSprints, employees, moveStoryToSprint, moveStoryToEpic, deleteStory, deleteEpic, updateEpic, updateSprint } = useProject();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
@@ -151,12 +159,19 @@ export default function BacklogPage() {
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
   const [itemTypeToAdd, setItemTypeToAdd] = useState<WorkItemType>('Story');
+  const [addSprintOpen, setAddSprintOpen] = useState(false);
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
+  const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
 
   const developers = employees.filter(e => e.role === 'Developer');
 
   const epicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
     defaultValues: { title: '', description: '' },
+  });
+  
+  const editEpicForm = useForm<z.infer<typeof epicFormSchema>>({
+    resolver: zodResolver(epicFormSchema),
   });
 
   const storyForm = useForm<z.infer<typeof storyFormSchema>>({
@@ -167,6 +182,29 @@ export default function BacklogPage() {
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
   });
+
+  const sprintForm = useForm<z.infer<typeof sprintFormSchema>>({
+    resolver: zodResolver(sprintFormSchema),
+    defaultValues: { title: '' },
+  });
+
+  useEffect(() => {
+    if (editingEpic) {
+      editEpicForm.reset(editingEpic);
+    }
+  }, [editingEpic, editEpicForm]);
+  
+  useEffect(() => {
+    if (editingSprint) {
+      sprintForm.reset({
+        title: editingSprint.title,
+        startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
+        endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
+      });
+    } else {
+      sprintForm.reset({ title: `Sprint ${sprints.length + 1}`, startDate: undefined, endDate: undefined });
+    }
+  }, [editingSprint, sprints.length, sprintForm]);
 
   useEffect(() => {
     if (selectedStory) {
@@ -180,13 +218,27 @@ export default function BacklogPage() {
     }
   }, [selectedStory, editStoryForm]);
 
-  const handleAddSprint = () => {
+  const onAddSprintSubmit = (values: z.infer<typeof sprintFormSchema>) => {
     const newSprint: Sprint = {
-      id: `sprint${sprints.length + 1}`,
-      title: `Sprint ${sprints.length + 1}`,
+      id: `sprint${Date.now()}`,
+      title: values.title,
       isCurrent: false,
+      startDate: values.startDate?.toISOString(),
+      endDate: values.endDate?.toISOString(),
     };
     setSprints([...sprints, newSprint]);
+    sprintForm.reset();
+    setAddSprintOpen(false);
+  };
+  
+  const onEditSprintSubmit = (values: z.infer<typeof sprintFormSchema>) => {
+    if (!editingSprint) return;
+    updateSprint(editingSprint.id, {
+      title: values.title,
+      startDate: values.startDate?.toISOString(),
+      endDate: values.endDate?.toISOString(),
+    });
+    setEditingSprint(null);
   };
   
   const handleDeleteSprint = (sprintId: string) => {
@@ -216,6 +268,12 @@ export default function BacklogPage() {
     setEpics([...epics, newEpic]);
     epicForm.reset();
     setAddEpicOpen(false);
+  };
+  
+  const onEditEpicSubmit = (values: z.infer<typeof epicFormSchema>) => {
+    if (!editingEpic) return;
+    updateEpic(editingEpic.id, values);
+    setEditingEpic(null);
   };
 
   const onAddStorySubmit = (values: z.infer<typeof storyFormSchema>) => {
@@ -339,10 +397,61 @@ export default function BacklogPage() {
             </DialogContent>
           </Dialog>
 
-          <Button onClick={handleAddSprint}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Sprint
-          </Button>
+          <Dialog open={addSprintOpen} onOpenChange={setAddSprintOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Sprint
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Sprint</DialogTitle>
+                </DialogHeader>
+                <Form {...sprintForm}>
+                    <form onSubmit={sprintForm.handleSubmit(onAddSprintSubmit)} className="space-y-4">
+                    <FormField
+                        control={sprintForm.control}
+                        name="title"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Title</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Sprint title" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={sprintForm.control}
+                        name="startDate"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Start Date</FormLabel>
+                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={sprintForm.control}
+                        name="endDate"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>End Date</FormLabel>
+                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <DialogFooter>
+                        <Button type="submit">Create Sprint</Button>
+                    </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+          </Dialog>
           
           <Dialog open={addStoryOpen} onOpenChange={setAddStoryOpen}>
             <DropdownMenu>
@@ -537,7 +646,11 @@ export default function BacklogPage() {
                               No stories from this epic are in the backlog.
                           </p>
                           )}
-                           <div className="pt-4 px-4 flex justify-end">
+                           <div className="pt-4 px-4 flex justify-end gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Epic
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete Epic
@@ -607,22 +720,46 @@ export default function BacklogPage() {
               key={sprint.id}
               className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0"
             >
-              <div className="flex justify-between items-center mb-4 sticky top-0 bg-muted/50 pt-1 pb-3">
-                  <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold">{sprint.title}</h3>
-                      {sprint.isCurrent && <Badge>Current</Badge>}
+              <div className="flex justify-between items-center mb-2 sticky top-0 bg-muted/50 pt-1 pb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                        {sprint.isCurrent && <Badge>Current</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {sprint.startDate && sprint.endDate
+                        ? `${format(new Date(sprint.startDate), 'MMM d')} - ${format(new Date(sprint.endDate), 'MMM d, yyyy')}`
+                        : 'No dates set'}
+                    </p>
                   </div>
                   <div className="flex items-center">
-                      <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleSetCurrentSprint(sprint.id)}
-                          disabled={sprint.isCurrent}
-                          className="h-8 w-8"
-                          aria-label="Set as current sprint"
-                      >
-                          <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleSetCurrentSprint(sprint.id)}
+                                disabled={sprint.isCurrent}
+                                className="h-8 w-8"
+                                aria-label="Set as current sprint"
+                            >
+                                <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Set as current sprint</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => setEditingSprint(sprint)} className="h-8 w-8">
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Edit sprint</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                        <TooltipProvider>
                          <Tooltip>
                           <TooltipTrigger asChild>
@@ -639,9 +776,13 @@ export default function BacklogPage() {
                               </Button>
                             </span>
                           </TooltipTrigger>
-                          {sprint.isCurrent && (
+                          {sprint.isCurrent ? (
                             <TooltipContent>
                               <p>Cannot delete the current sprint.</p>
+                            </TooltipContent>
+                          ) : (
+                            <TooltipContent>
+                              <p>Delete sprint</p>
                             </TooltipContent>
                           )}
                         </Tooltip>
@@ -921,6 +1062,98 @@ export default function BacklogPage() {
           )}
         </DialogContent>
       </Dialog>
+      
+      <Dialog open={!!editingEpic} onOpenChange={(isOpen) => !isOpen && setEditingEpic(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Epic</DialogTitle>
+          </DialogHeader>
+          <Form {...editEpicForm}>
+            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
+              <FormField
+                control={editEpicForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Epic title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editEpicForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the epic..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={!!editingSprint} onOpenChange={(isOpen) => !isOpen && setEditingSprint(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Sprint</DialogTitle>
+            </DialogHeader>
+            <Form {...sprintForm}>
+                <form onSubmit={sprintForm.handleSubmit(onEditSprintSubmit)} className="space-y-4">
+                <FormField
+                    control={sprintForm.control}
+                    name="title"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Sprint title" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={sprintForm.control}
+                    name="startDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Start Date</FormLabel>
+                        <DatePicker date={field.value} setDate={field.onChange} />
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={sprintForm.control}
+                    name="endDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>End Date</FormLabel>
+                        <DatePicker date={field.value} setDate={field.onChange} />
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <DialogFooter>
+                    <Button type="submit">Save Changes</Button>
+                </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
+
     </>
   );
 }
