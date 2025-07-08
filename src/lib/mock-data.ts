@@ -1,5 +1,5 @@
 
-import type { User, Story, Task, TestCase, Bug, Epic, Sprint } from '@/types';
+import type { User, Story, Task, TestCase, Bug, Epic, Sprint, Employee } from '@/types';
 
 export const developers: User[] = [
   { id: 'dev1', name: 'Alice', avatar: 'https://placehold.co/40x40.png' },
@@ -160,5 +160,37 @@ export const bugs: Bug[] = [
     status: 'In Progress',
     severity: 'Medium',
     testCaseId: 'tc2',
+  },
+];
+
+export const employees: Employee[] = [
+  {
+    id: 'uuid-1',
+    empId: 'E12345',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@internal.com',
+    phone: '555-0101',
+    role: 'Lead Developer',
+    experience: 8,
+    onboardingDate: new Date('2022-08-01').toISOString(),
+    onshoreOrOffshore: 'Onshore',
+    billedRate: 120,
+    availability: 100,
+  },
+  {
+    id: 'uuid-2',
+    empId: 'E67890',
+    firstName: 'Jane',
+    lastName: 'Smith',
+    email: 'jane.smith@internal.com',
+    phone: '555-0102',
+    role: 'Senior QA Engineer',
+    experience: 6,
+    onboardingDate: new Date('2023-01-15').toISOString(),
+    onshoreOrOffshore: 'Offshore',
+    billedRate: 75,
+    availability: 50,
+    clientEmail: 'jane.s@client.com'
   },
 ];

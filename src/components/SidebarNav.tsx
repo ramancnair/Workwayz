@@ -22,7 +22,8 @@ import {
   Settings,
   Flame,
   ChevronLeft,
-  Layers
+  Layers,
+  Users
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -61,8 +62,18 @@ export function SidebarNav() {
     },
   ];
 
+  const resourcesMenuItems = [
+    {
+      href: "/resources",
+      label: "Employees",
+      icon: Users,
+    },
+  ];
+
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases'].some(p => pathname.startsWith(p));
-  const menuItems = isTestingPath ? testMenuItems : devMenuItems;
+  const isResourcesPath = pathname.startsWith('/resources');
+  
+  const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : devMenuItems;
 
   return (
     <>

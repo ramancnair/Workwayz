@@ -66,3 +66,23 @@ export type TestCase = {
   assignee: User;
   storyId: string;
 };
+
+export type OnshoreOffshore = 'Onshore' | 'Offshore';
+
+export type Employee = {
+  id: string;
+  empId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  clientEmpId?: string;
+  clientEmail?: string;
+  role?: string;
+  experience?: number;
+  onboardingDate?: string; // ISO String
+  offloadingDate?: string; // ISO String
+  onshoreOrOffshore?: OnshoreOffshore;
+  billedRate?: number;
+  availability?: number;
+};
