@@ -19,10 +19,23 @@ export type Task = {
   actualEndDate?: Date;
 };
 
+export type Epic = {
+  id: string;
+  title: string;
+  description: string;
+};
+
 export type Story = {
   id: string;
   title: string;
   description: string;
+  epicId?: string;
+  sprintId?: string | null;
+};
+
+export type Sprint = {
+  id: string;
+  title: string;
 };
 
 export type BugStatus = 'Open' | 'In Progress' | 'Fixed' | 'Closed';

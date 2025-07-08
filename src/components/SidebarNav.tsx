@@ -21,7 +21,8 @@ import {
   TestTube2,
   Settings,
   Flame,
-  ChevronLeft
+  ChevronLeft,
+  Layers
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -44,6 +45,11 @@ export function SidebarNav() {
       href: "/kanban",
       label: "Kanban Board",
       icon: KanbanSquare,
+    },
+    {
+      href: "/backlog",
+      label: "Backlog",
+      icon: Layers,
     },
     {
       href: "/testing/test-cases",

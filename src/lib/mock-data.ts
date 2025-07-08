@@ -1,20 +1,27 @@
-import type { User, Story, Task, TestCase, Bug } from '@/types';
+import type { User, Story, Task, TestCase, Bug, Epic } from '@/types';
 
 export const developers: User[] = [
-  { id: 'dev1', name: 'Alice', avatar: '/avatars/01.png' },
-  { id: 'dev2', name: 'Bob', avatar: '/avatars/02.png' },
-  { id: 'dev3', name: 'Charlie', avatar: '/avatars/03.png' },
+  { id: 'dev1', name: 'Alice', avatar: 'https://placehold.co/40x40.png' },
+  { id: 'dev2', name: 'Bob', avatar: 'https://placehold.co/40x40.png' },
+  { id: 'dev3', name: 'Charlie', avatar: 'https://placehold.co/40x40.png' },
 ];
 
 export const testers: User[] = [
-  { id: 'tester1', name: 'Diana', avatar: '/avatars/04.png' },
-  { id: 'tester2', name: 'Eve', avatar: '/avatars/05.png' },
+  { id: 'tester1', name: 'Diana', avatar: 'https://placehold.co/40x40.png' },
+  { id: 'tester2', name: 'Eve', avatar: 'https://placehold.co/40x40.png' },
+];
+
+export const epics: Epic[] = [
+  { id: 'epic1', title: 'User Management', description: 'Features related to user accounts and authentication.' },
+  { id: 'epic2', title: 'Reporting & Analytics', description: 'Features related to data visualization and reporting.' },
 ];
 
 export const stories: Story[] = [
-  { id: 'story1', title: 'User Authentication', description: 'Implement user sign-up and login functionality.' },
-  { id: 'story2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.' },
-  { id: 'story3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.' },
+  { id: 'story1', title: 'User Authentication', description: 'Implement user sign-up and login functionality.', epicId: 'epic1', sprintId: null },
+  { id: 'story2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.', epicId: 'epic2', sprintId: null },
+  { id: 'story3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.', sprintId: null },
+  { id: 'story4', title: 'Password Reset', description: 'Allow users to reset their password via email.', epicId: 'epic1', sprintId: null },
+  { id: 'story5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', epicId: 'epic2', sprintId: null },
 ];
 
 export const tasks: Task[] = [
