@@ -23,7 +23,8 @@ import {
   Flame,
   ChevronLeft,
   Layers,
-  Users
+  Users,
+  Bug,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -60,6 +61,11 @@ export function SidebarNav() {
       label: "Test Cases",
       icon: ClipboardCheck,
     },
+    {
+      href: "/testing/bug-list",
+      label: "Bug List",
+      icon: Bug,
+    },
   ];
 
   const resourcesMenuItems = [
@@ -70,7 +76,7 @@ export function SidebarNav() {
     },
   ];
 
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases'].some(p => pathname.startsWith(p));
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
   
   const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : devMenuItems;

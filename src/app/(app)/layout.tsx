@@ -11,7 +11,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases'].some(p => pathname.startsWith(p));
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
   
   const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : 'development';
