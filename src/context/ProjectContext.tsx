@@ -63,6 +63,7 @@ interface ProjectContextType {
   deleteTestCase: (testCaseId: string) => Promise<void>;
 
   isLoading: boolean;
+  error: string | null;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -86,6 +87,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const seedDatabase = async () => {
@@ -116,6 +118,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     };
 
     const setupListeners = async () => {
+      try {
         await seedDatabase();
 
         const unsubEpics = onSnapshot(collection(db, 'epics'), (snapshot) => {
@@ -147,6 +150,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             unsubEmployees();
             unsubTestCases();
         };
+      } catch (err: any) {
+        console.error("Firestore Initialization Error:", err);
+        setError("Could not connect to the database. Please check your Firebase project configuration and security rules.");
+        setIsLoading(false);
+        return () => {};
+      }
     };
 
     const unsubscribePromise = setupListeners();
@@ -292,6 +301,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     employees,
     testCases,
     isLoading,
+    error,
     addStory,
     updateStory,
     deleteStory,
@@ -313,9 +323,31 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     deleteTestCase,
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Connecting to database...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background p-4">
+        <div className="w-full max-w-lg rounded-lg border border-destructive bg-card p-6 text-center shadow-lg">
+          <h1 className="text-xl font-bold text-destructive">Database Connection Failed</h1>
+          <p className="mt-2 text-sm text-card-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ProjectContext.Provider value={value}>
-      {!isLoading ? children : null}
+      {children}
     </ProjectContext.Provider>
   );
 }
