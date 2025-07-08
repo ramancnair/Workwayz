@@ -128,11 +128,12 @@ function StoryCard({
 }
 
 export default function BacklogPage() {
-  const { epics, setEpics, stories, setStories, sprints, setSprints, employees, moveStoryToSprint, moveStoryToEpic } = useProject();
+  const { epics, setEpics, stories, setStories, sprints, setSprints, employees, moveStoryToSprint, moveStoryToEpic, deleteStory } = useProject();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [deletingStory, setDeletingStory] = useState<Story | null>(null);
 
   const developers = employees.filter(e => e.role === 'Developer');
 
@@ -245,6 +246,11 @@ export default function BacklogPage() {
       )
     );
     setSelectedStory(null);
+  };
+  
+  const handleDeleteStory = (storyId: string) => {
+    deleteStory(storyId);
+    setDeletingStory(null);
   };
 
   const backlogStories = stories.filter((story) => story.sprintId === null);
@@ -653,6 +659,29 @@ export default function BacklogPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={!!deletingStory} onOpenChange={(isOpen) => !isOpen && setDeletingStory(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the story "{deletingStory?.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingStory) {
+                  handleDeleteStory(deletingStory.id);
+                }
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={!!selectedStory} onOpenChange={(isOpen) => !isOpen && setSelectedStory(null)}>
         <DialogContent className="sm:max-w-[600px]">
           {selectedStory && (
@@ -761,39 +790,65 @@ export default function BacklogPage() {
                     )}
                   />
 
-                  <DialogFooter className="sm:justify-between pt-4">
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                            Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {selectedStory.sprintId !== null && (
-                            <DropdownMenuItem onClick={() => {
-                                moveStoryToSprint(selectedStory.id, null);
-                                setSelectedStory(null);
-                            }}>
-                                Backlog
-                            </DropdownMenuItem>
-                            )}
-                            {sprints
-                            .filter((sprint) => sprint.id !== selectedStory.sprintId)
-                            .map((sprint) => (
-                                <DropdownMenuItem
-                                key={sprint.id}
-                                onClick={() => {
-                                    moveStoryToSprint(selectedStory.id, sprint.id);
-                                    setSelectedStory(null);
-                                }}
-                                >
-                                {sprint.title}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                        </DropdownMenu>
+                  <DialogFooter className="flex justify-between items-center pt-4">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => {
+                              if (selectedStory) {
+                                  setDeletingStory(selectedStory);
+                                  setSelectedStory(null);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete Story</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Delete Story</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
 
-                    <Button type="submit">Save Changes</Button>
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                              Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                              {selectedStory.sprintId !== null && (
+                              <DropdownMenuItem onClick={() => {
+                                  moveStoryToSprint(selectedStory.id, null);
+                                  setSelectedStory(null);
+                              }}>
+                                  Backlog
+                              </DropdownMenuItem>
+                              )}
+                              {sprints
+                              .filter((sprint) => sprint.id !== selectedStory.sprintId)
+                              .map((sprint) => (
+                                  <DropdownMenuItem
+                                  key={sprint.id}
+                                  onClick={() => {
+                                      moveStoryToSprint(selectedStory.id, sprint.id);
+                                      setSelectedStory(null);
+                                  }}
+                                  >
+                                  {sprint.title}
+                                  </DropdownMenuItem>
+                              ))}
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <Button type="submit">Save Changes</Button>
+                    </div>
                   </DialogFooter>
                 </form>
               </Form>

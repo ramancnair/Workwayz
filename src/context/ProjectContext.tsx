@@ -22,6 +22,7 @@ interface ProjectContextType {
   moveStoryToSprint: (storyId: string, sprintId: string | null) => void;
   moveStoryToEpic: (storyId: string, epicId: string | null) => void;
   moveStoryStatus: (storyId: string, newStatus: StoryStatus) => void;
+  deleteStory: (storyId: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -107,8 +108,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     );
   };
 
+  const deleteStory = (storyId: string) => {
+    setStories((prevStories) =>
+      prevStories.filter((story) => story.id !== storyId)
+    );
+  };
+
   return (
-    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, employees, setEmployees, moveStoryToSprint, moveStoryStatus, moveStoryToEpic }}>
+    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, employees, setEmployees, moveStoryToSprint, moveStoryStatus, moveStoryToEpic, deleteStory }}>
       {isInitialized ? children : null}
     </ProjectContext.Provider>
   );
