@@ -1,35 +1,25 @@
 
 'use client';
 
-import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { StoryCard } from '@/components/kanban/TaskCard';
-import { stories as initialStories, epics as initialEpics, sprints as initialSprints } from '@/lib/mock-data';
-import type { Story, StoryStatus, Epic, Sprint } from '@/types';
+import type { StoryStatus } from '@/types';
 import { Columns, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { useProject } from '@/context/ProjectContext';
 
 const columns: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function KanbanPage() {
-  const currentSprint = initialSprints.find((s) => s.isCurrent);
+  const { stories, epics, sprints, moveStoryStatus } = useProject();
   
-  const [stories, setStories] = useState<Story[]>(
-    currentSprint
-      ? initialStories.filter((story) => story.sprintId === currentSprint.id)
-      : []
-  );
-  const [epics] = useState<Epic[]>(initialEpics);
-
-  const moveStory = (storyId: string, newStatus: StoryStatus) => {
-    setStories((prevStories) =>
-      prevStories.map((story) =>
-        story.id === storyId ? { ...story, status: newStatus } : story
-      )
-    );
-  };
-
+  const currentSprint = sprints.find((s) => s.isCurrent);
+  
+  const sprintStories = currentSprint
+      ? stories.filter((story) => story.sprintId === currentSprint.id)
+      : [];
+      
   if (!currentSprint) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
@@ -51,11 +41,11 @@ export default function KanbanPage() {
               <Columns className="mr-2 h-5 w-5" />
               {status}
               <span className="ml-2 bg-primary text-primary-foreground h-6 w-6 rounded-full flex items-center justify-center text-sm">
-                {stories.filter((story) => story.status === status).length}
+                {sprintStories.filter((story) => story.status === status).length}
               </span>
             </h3>
             <div className="flex-1 space-y-4 overflow-y-auto">
-              {stories
+              {sprintStories
                 .filter((story) => story.status === status)
                 .map((story) => {
                   const epic = epics.find(e => e.id === story.epicId);
@@ -72,7 +62,7 @@ export default function KanbanPage() {
                         {columns
                           .filter((col) => col !== story.status)
                           .map((col) => (
-                            <DropdownMenuItem key={col} onClick={() => moveStory(story.id, col)}>
+                            <DropdownMenuItem key={col} onClick={() => moveStoryStatus(story.id, col)}>
                               {col}
                             </DropdownMenuItem>
                           ))}

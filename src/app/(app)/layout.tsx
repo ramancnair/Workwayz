@@ -1,18 +1,20 @@
+
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
 import { PropsWithChildren } from "react";
+import { ProjectProvider } from "@/context/ProjectContext";
 
 export default function AppLayout({ children }: PropsWithChildren) {
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <SidebarNav />
-      </Sidebar>
-      <SidebarInset>
-        <div className="min-h-screen">
+    <ProjectProvider>
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarNav />
+        </Sidebar>
+        <SidebarInset>
           {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+        </SidebarInset>
+      </SidebarProvider>
+    </ProjectProvider>
   );
 }

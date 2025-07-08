@@ -39,9 +39,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { epics as initialEpics, stories as initialStories, sprints as initialSprints } from '@/lib/mock-data';
 import type { Epic, Story, Sprint } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { useProject } from '@/context/ProjectContext';
 
 const epicFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -106,9 +106,7 @@ function StoryCard({
 }
 
 export default function BacklogPage() {
-  const [epics, setEpics] = useState<Epic[]>(initialEpics);
-  const [stories, setStories] = useState<Story[]>(initialStories);
-  const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
+  const { epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint } = useProject();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
 
@@ -146,14 +144,6 @@ export default function BacklogPage() {
         ...sprint,
         isCurrent: sprint.id === sprintId,
       }))
-    );
-  };
-
-  const moveStory = (storyId: string, sprintId: string | null) => {
-    setStories(
-      stories.map((story) =>
-        story.id === storyId ? { ...story, sprintId } : story
-      )
     );
   };
 
@@ -341,7 +331,7 @@ export default function BacklogPage() {
                             story={story}
                             sprints={sprints}
                             epics={epics}
-                            onMove={moveStory}
+                            onMove={moveStoryToSprint}
                           />
                         ))}
                       </AccordionContent>
@@ -358,7 +348,7 @@ export default function BacklogPage() {
                         story={story}
                         sprints={sprints}
                         epics={epics}
-                        onMove={moveStory}
+                        onMove={moveStoryToSprint}
                       />
                     ))}
                   </AccordionContent>
@@ -404,7 +394,7 @@ export default function BacklogPage() {
                     story={story}
                     sprints={sprints}
                     epics={epics}
-                    onMove={moveStory}
+                    onMove={moveStoryToSprint}
                   />
                 ))}
             </div>
