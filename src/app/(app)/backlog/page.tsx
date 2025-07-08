@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -116,14 +116,16 @@ function StoryCard({
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        {epic && <Badge variant="secondary">{epic.title}</Badge>}
+        <div className="flex justify-between items-center">
+            {epic && <Badge variant="secondary">{epic.title}</Badge>}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
 export default function BacklogPage() {
-  const { epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint } = useProject();
+  const { epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint, moveStoryToEpic } = useProject();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
@@ -136,7 +138,7 @@ export default function BacklogPage() {
 
   const storyForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: '', assigneeId: '' },
+    defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned' },
   });
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
@@ -149,8 +151,8 @@ export default function BacklogPage() {
         title: selectedStory.title,
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-        epicId: selectedStory.epicId || '',
-        assigneeId: selectedStory.assigneeId || '',
+        epicId: selectedStory.epicId || 'unassigned',
+        assigneeId: selectedStory.assigneeId || 'unassigned',
       });
     }
   }, [selectedStory, editStoryForm]);
@@ -200,8 +202,8 @@ export default function BacklogPage() {
       title: values.title,
       description: values.description || '',
       acceptanceCriteria: values.acceptanceCriteria,
-      assigneeId: values.assigneeId || undefined,
-      epicId: values.epicId || undefined,
+      assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+      epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
       status: 'To Do',
     };
     setStories([...stories, newStory]);
@@ -220,8 +222,8 @@ export default function BacklogPage() {
               title: values.title,
               description: values.description,
               acceptanceCriteria: values.acceptanceCriteria,
-              assigneeId: values.assigneeId || undefined,
-              epicId: values.epicId || undefined,
+              assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+              epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
             }
           : story
       )
@@ -354,14 +356,14 @@ export default function BacklogPage() {
                       render={({ field }) => (
                           <FormItem>
                           <FormLabel>Epic</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                               <SelectTrigger>
                                   <SelectValue placeholder="Assign to an epic" />
                               </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                              <SelectItem value="">Unassigned</SelectItem>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
                               {epics.map(epic => (
                                   <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
                               ))}
@@ -377,14 +379,14 @@ export default function BacklogPage() {
                       render={({ field }) => (
                           <FormItem>
                           <FormLabel>Assignee</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                               <SelectTrigger>
                                   <SelectValue placeholder="Assign to a developer" />
                               </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                              <SelectItem value="">Unassigned</SelectItem>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
                               {developers.map(dev => (
                                   <SelectItem key={dev.id} value={dev.id}>{dev.name}</SelectItem>
                               ))}
@@ -444,13 +446,38 @@ export default function BacklogPage() {
                             const epic = epics.find((e) => e.id === story.epicId);
                             const assignee = developers.find((d) => d.id === story.assigneeId);
                             return (
-                              <StoryCard
-                                  key={story.id}
-                                  story={story}
-                                  epic={epic}
-                                  assignee={assignee}
-                                  onClick={() => setSelectedStory(story)}
-                              />
+                              <div key={story.id} className="relative group">
+                                <StoryCard
+                                    story={story}
+                                    epic={epic}
+                                    assignee={assignee}
+                                    onClick={() => setSelectedStory(story)}
+                                />
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="sm" className="h-7">
+                                            Change Epic <ChevronDown className="ml-1 h-4 w-4" />
+                                          </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
+                                          Unassigned
+                                        </DropdownMenuItem>
+                                        {epics
+                                        .filter((e) => e.id !== story.epicId)
+                                        .map((e) => (
+                                            <DropdownMenuItem
+                                            key={e.id}
+                                            onClick={() => moveStoryToEpic(story.id, e.id)}
+                                            >
+                                            {e.title}
+                                            </DropdownMenuItem>
+                                        ))}
+                                      </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
                             )
                           })
                           ) : (
@@ -475,13 +502,38 @@ export default function BacklogPage() {
                           const epic = epics.find((e) => e.id === story.epicId);
                           const assignee = developers.find((d) => d.id === story.assigneeId);
                           return (
-                            <StoryCard
-                              key={story.id}
-                              story={story}
-                              epic={epic}
-                              assignee={assignee}
-                              onClick={() => setSelectedStory(story)}
-                            />
+                             <div key={story.id} className="relative group">
+                                <StoryCard
+                                    story={story}
+                                    epic={epic}
+                                    assignee={assignee}
+                                    onClick={() => setSelectedStory(story)}
+                                />
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="sm" className="h-7">
+                                            Change Epic <ChevronDown className="ml-1 h-4 w-4" />
+                                          </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                         <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
+                                          Unassigned
+                                        </DropdownMenuItem>
+                                        {epics
+                                        .filter((e) => e.id !== story.epicId)
+                                        .map((e) => (
+                                            <DropdownMenuItem
+                                            key={e.id}
+                                            onClick={() => moveStoryToEpic(story.id, e.id)}
+                                            >
+                                            {e.title}
+                                            </DropdownMenuItem>
+                                        ))}
+                                      </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
                           )
                       })}
                     </AccordionContent>
@@ -649,7 +701,7 @@ export default function BacklogPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Unassigned</SelectItem>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
                             {epics.map((epic) => (
                               <SelectItem key={epic.id} value={epic.id}>
                                 {epic.title}
@@ -674,7 +726,7 @@ export default function BacklogPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Unassigned</SelectItem>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
                             {developers.map((dev) => (
                               <SelectItem key={dev.id} value={dev.id}>
                                 {dev.name}
