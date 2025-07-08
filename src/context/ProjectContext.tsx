@@ -23,6 +23,7 @@ interface ProjectContextType {
   moveStoryToEpic: (storyId: string, epicId: string | null) => void;
   moveStoryStatus: (storyId: string, newStatus: StoryStatus) => void;
   deleteStory: (storyId: string) => void;
+  deleteEpic: (epicId: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -114,8 +115,19 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     );
   };
 
+  const deleteEpic = (epicId: string) => {
+    // Set stories with this epicId to unassigned
+    setStories(prevStories =>
+      prevStories.map(story =>
+        story.epicId === epicId ? { ...story, epicId: undefined } : story
+      )
+    );
+    // Remove the epic
+    setEpics(prevEpics => prevEpics.filter(epic => epic.id !== epicId));
+  };
+
   return (
-    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, employees, setEmployees, moveStoryToSprint, moveStoryStatus, moveStoryToEpic, deleteStory }}>
+    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, employees, setEmployees, moveStoryToSprint, moveStoryStatus, moveStoryToEpic, deleteStory, deleteEpic }}>
       {isInitialized ? children : null}
     </ProjectContext.Provider>
   );

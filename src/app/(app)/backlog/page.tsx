@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -61,6 +61,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 const epicFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -128,10 +129,11 @@ function StoryCard({
 }
 
 export default function BacklogPage() {
-  const { epics, setEpics, stories, setStories, sprints, setSprints, employees, moveStoryToSprint, moveStoryToEpic, deleteStory } = useProject();
+  const { epics, setEpics, stories, setStories, sprints, setSprints, employees, moveStoryToSprint, moveStoryToEpic, deleteStory, deleteEpic } = useProject();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
+  const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
 
@@ -265,6 +267,7 @@ export default function BacklogPage() {
   }, {} as Record<string, Story[]>);
 
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
+  const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
 
   return (
     <>
@@ -507,6 +510,12 @@ export default function BacklogPage() {
                               No stories from this epic are in the backlog.
                           </p>
                           )}
+                           <div className="pt-4 px-4 flex justify-end">
+                            <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Epic
+                            </Button>
+                          </div>
                       </AccordionContent>
                       </AccordionItem>
                   );
@@ -652,6 +661,34 @@ export default function BacklogPage() {
                   setSprintToDelete(null);
                 }
               }}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!epicToDelete} onOpenChange={(isOpen) => !isOpen && setEpicToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+               {epicToDelete && storiesInEpicToDelete > 0
+                ? `This epic contains ${storiesInEpicToDelete} ${storiesInEpicToDelete === 1 ? 'story' : 'stories'}. Deleting the epic will mark them as unassigned. This action cannot be undone.`
+                : `This will permanently delete the epic "${epicToDelete?.title}". This action cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (epicToDelete) {
+                  deleteEpic(epicToDelete.id);
+                  setEpicToDelete(null);
+                }
+              }}
+               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
             </AlertDialogAction>
@@ -675,6 +712,7 @@ export default function BacklogPage() {
                   handleDeleteStory(deletingStory.id);
                 }
               }}
+               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
             </AlertDialogAction>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,7 @@ import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { type Employee } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const employeeFormSchema = z.object({
   empId: z.string().min(1, 'Employee ID is required'),
@@ -314,7 +316,10 @@ export default function ResourcesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deletingEmployee && handleDelete(deletingEmployee)}>
+            <AlertDialogAction 
+              onClick={() => deletingEmployee && handleDelete(deletingEmployee)}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
               Continue
             </AlertDialogAction>
           </AlertDialogFooter>
