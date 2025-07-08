@@ -30,16 +30,11 @@ export function SidebarNav() {
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
 
-  const menuItems = [
+  const devMenuItems = [
     {
       href: "/dashboard/development",
       label: "Dev Dashboard",
       icon: LayoutDashboard,
-    },
-    {
-      href: "/dashboard/testing",
-      label: "Test Dashboard",
-      icon: TestTube2,
     },
     {
       href: "/kanban",
@@ -51,12 +46,23 @@ export function SidebarNav() {
       label: "Backlog",
       icon: Layers,
     },
+  ];
+
+  const testMenuItems = [
+    {
+      href: "/dashboard/testing",
+      label: "Test Dashboard",
+      icon: TestTube2,
+    },
     {
       href: "/testing/test-cases",
       label: "Test Cases",
       icon: ClipboardCheck,
     },
   ];
+
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases'].some(p => pathname.startsWith(p));
+  const menuItems = isTestingPath ? testMenuItems : devMenuItems;
 
   return (
     <>

@@ -1,10 +1,27 @@
+'use client';
 
+import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
-import { PropsWithChildren } from "react";
+import { type PropsWithChildren } from "react";
 import { ProjectProvider } from "@/context/ProjectContext";
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AppLayout({ children }: PropsWithChildren) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases'].some(p => pathname.startsWith(p));
+  const tabValue = isTestingPath ? 'testing' : 'development';
+
+  const onTabChange = (value: string) => {
+    if (value === 'development') {
+      router.push('/dashboard/development');
+    } else {
+      router.push('/dashboard/testing');
+    }
+  };
+
   return (
     <ProjectProvider>
       <SidebarProvider>
@@ -12,7 +29,19 @@ export default function AppLayout({ children }: PropsWithChildren) {
           <SidebarNav />
         </Sidebar>
         <SidebarInset>
-          {children}
+          <div className="h-full flex flex-col">
+            <div className="px-4 md:px-8 pt-6 border-b">
+                <Tabs value={tabValue} onValueChange={onTabChange}>
+                    <TabsList>
+                        <TabsTrigger value="development">Development</TabsTrigger>
+                        <TabsTrigger value="testing">Testing</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+                {children}
+            </div>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </ProjectProvider>
