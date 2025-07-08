@@ -191,7 +191,7 @@ export default function BacklogPage() {
       >
         <Dialog open={addEpicOpen} onOpenChange={setAddEpicOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline">
+            <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Epic
             </Button>
