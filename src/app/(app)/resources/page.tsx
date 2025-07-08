@@ -224,7 +224,7 @@ export default function ResourcesPage() {
                 <FormField control={form.control} name="role" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <FormControl><Input placeholder="Developer" {...field} /></FormControl>
+                    <FormControl><Input placeholder="Developer" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -232,21 +232,21 @@ export default function ResourcesPage() {
                 <FormField control={form.control} name="clientEmpId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Client Employee ID</FormLabel>
-                    <FormControl><Input placeholder="C54321" {...field} /></FormControl>
+                    <FormControl><Input placeholder="C54321" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="clientEmail" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Client Email</FormLabel>
-                    <FormControl><Input type="email" placeholder="john.client@example.com" {...field} /></FormControl>
+                    <FormControl><Input type="email" placeholder="john.client@example.com" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="experience" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Experience (years)</FormLabel>
-                    <FormControl><Input type="number" placeholder="5" {...field} /></FormControl>
+                    <FormControl><Input type="number" placeholder="5" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -267,7 +267,7 @@ export default function ResourcesPage() {
                 <FormField control={form.control} name="onshoreOrOffshore" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Location</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select location" />
@@ -284,14 +284,14 @@ export default function ResourcesPage() {
                 <FormField control={form.control} name="billedRate" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Monthly Billed Rate ($)</FormLabel>
-                    <FormControl><Input type="number" placeholder="5000" {...field} /></FormControl>
+                    <FormControl><Input type="number" placeholder="5000" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="availability" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Availability (%)</FormLabel>
-                    <FormControl><Input type="number" placeholder="100" {...field} /></FormControl>
+                    <FormControl><Input type="number" placeholder="100" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
