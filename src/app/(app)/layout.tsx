@@ -25,7 +25,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   return (
     <ProjectProvider>
       <SidebarProvider>
-        <Sidebar>
+        <Sidebar collapsible="icon">
           <SidebarNav />
         </Sidebar>
         <SidebarInset>
