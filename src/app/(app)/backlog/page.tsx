@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -41,7 +42,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,26 +77,23 @@ const storyFormSchema = z.object({
 
 function StoryCard({
   story,
-  sprints,
-  epics,
-  developers,
-  onMoveToSprint,
-  onMoveToEpic,
+  epic,
+  assignee,
+  onClick,
 }: {
   story: Story;
-  sprints: Sprint[];
-  epics: Epic[];
-  developers: User[];
-  onMoveToSprint: (storyId: string, sprintId: string | null) => void;
-  onMoveToEpic: (storyId: string, epicId: string | null) => void;
+  epic?: Epic;
+  assignee?: User;
+  onClick: () => void;
 }) {
-  const epic = epics.find((e) => e.id === story.epicId);
-  const assignee = developers.find((d) => d.id === story.assigneeId);
   return (
-    <Card className="bg-card">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-base pr-2">{story.title}</CardTitle>
+    <Card
+      className="bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md"
+      onClick={onClick}
+    >
+      <CardHeader className="p-4">
+        <div className="flex justify-between items-start gap-4">
+          <p className="font-semibold flex-1 break-words">{story.title}</p>
           {assignee && (
             <TooltipProvider>
               <Tooltip>
@@ -117,69 +115,8 @@ function StoryCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">{story.description}</p>
-        {story.acceptanceCriteria && (
-          <div>
-            <h4 className="text-sm font-semibold mb-1">
-              Acceptance Criteria
-            </h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-line">
-              {story.acceptanceCriteria}
-            </p>
-          </div>
-        )}
+      <CardContent className="p-4 pt-0">
         {epic && <Badge variant="secondary">{epic.title}</Badge>}
-      </CardContent>
-      <CardContent className="flex justify-end items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              Change Epic <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {story.epicId && (
-              <DropdownMenuItem onClick={() => onMoveToEpic(story.id, null)}>
-                Unassigned
-              </DropdownMenuItem>
-            )}
-            {epics
-              .filter((e) => e.id !== story.epicId)
-              .map((epic) => (
-                <DropdownMenuItem
-                  key={epic.id}
-                  onClick={() => onMoveToEpic(story.id, epic.id)}
-                >
-                  {epic.title}
-                </DropdownMenuItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {story.sprintId !== null && (
-              <DropdownMenuItem onClick={() => onMoveToSprint(story.id, null)}>
-                Backlog
-              </DropdownMenuItem>
-            )}
-            {sprints
-              .filter((sprint) => sprint.id !== story.sprintId)
-              .map((sprint) => (
-                <DropdownMenuItem
-                  key={sprint.id}
-                  onClick={() => onMoveToSprint(story.id, sprint.id)}
-                >
-                  {sprint.title}
-                </DropdownMenuItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </CardContent>
     </Card>
   );
@@ -190,6 +127,7 @@ export default function BacklogPage() {
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
   const epicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
@@ -462,19 +400,21 @@ export default function BacklogPage() {
                               </div>
                           </div>
                       </AccordionTrigger>
-                      <AccordionContent className="space-y-4">
+                      <AccordionContent className="space-y-2">
                           {backlogStoriesInEpic.length > 0 ? (
-                          backlogStoriesInEpic.map((story) => (
+                          backlogStoriesInEpic.map((story) => {
+                            const epic = epics.find((e) => e.id === story.epicId);
+                            const assignee = developers.find((d) => d.id === story.assigneeId);
+                            return (
                               <StoryCard
                                   key={story.id}
                                   story={story}
-                                  sprints={sprints}
-                                  epics={epics}
-                                  developers={developers}
-                                  onMoveToSprint={moveStoryToSprint}
-                                  onMoveToEpic={moveStoryToEpic}
+                                  epic={epic}
+                                  assignee={assignee}
+                                  onClick={() => setSelectedStory(story)}
                               />
-                          ))
+                            )
+                          })
                           ) : (
                           <p className="text-sm text-muted-foreground italic px-2">
                               No stories from this epic are in the backlog.
@@ -492,18 +432,20 @@ export default function BacklogPage() {
                         <Badge variant="secondary">{(storiesByEpic['unassigned'] || []).length} {(storiesByEpic['unassigned'] || []).length === 1 ? 'story' : 'stories'}</Badge>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="space-y-4">
-                      {(storiesByEpic['unassigned'] || []).map((story) => (
-                        <StoryCard
-                          key={story.id}
-                          story={story}
-                          sprints={sprints}
-                          epics={epics}
-                          developers={developers}
-                          onMoveToSprint={moveStoryToSprint}
-                          onMoveToEpic={moveStoryToEpic}
-                        />
-                      ))}
+                    <AccordionContent className="space-y-2">
+                      {(storiesByEpic['unassigned'] || []).map((story) => {
+                          const epic = epics.find((e) => e.id === story.epicId);
+                          const assignee = developers.find((d) => d.id === story.assigneeId);
+                          return (
+                            <StoryCard
+                              key={story.id}
+                              story={story}
+                              epic={epic}
+                              assignee={assignee}
+                              onClick={() => setSelectedStory(story)}
+                            />
+                          )
+                      })}
                     </AccordionContent>
                   </AccordionItem>
                 )}
@@ -533,43 +475,47 @@ export default function BacklogPage() {
                       >
                           <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
                       </Button>
-                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span tabIndex={0}>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setSprintToDelete(sprint)}
-                              className="h-8 w-8"
-                              disabled={sprint.isCurrent}
-                              aria-label="Delete sprint"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        {sprint.isCurrent && (
-                          <TooltipContent>
-                            <p>Cannot delete the current sprint.</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
+                       <TooltipProvider>
+                         <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span tabIndex={sprint.isCurrent ? -1 : 0}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setSprintToDelete(sprint)}
+                                className="h-8 w-8"
+                                disabled={sprint.isCurrent}
+                                aria-label="Delete sprint"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          {sprint.isCurrent && (
+                            <TooltipContent>
+                              <p>Cannot delete the current sprint.</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                       </TooltipProvider>
                   </div>
               </div>
-              <div className="overflow-y-auto flex-1 -mr-4 pr-4 space-y-4">
+              <div className="overflow-y-auto flex-1 -mr-4 pr-4 space-y-2">
                 {stories
                   .filter((story) => story.sprintId === sprint.id)
-                  .map((story) => (
-                    <StoryCard
-                      key={story.id}
-                      story={story}
-                      sprints={sprints}
-                      epics={epics}
-                      developers={developers}
-                      onMoveToSprint={moveStoryToSprint}
-                      onMoveToEpic={moveStoryToEpic}
-                    />
-                  ))}
+                  .map((story) => {
+                    const epic = epics.find((e) => e.id === story.epicId);
+                    const assignee = developers.find((d) => d.id === story.assigneeId);
+                    return (
+                        <StoryCard
+                            key={story.id}
+                            story={story}
+                            epic={epic}
+                            assignee={assignee}
+                            onClick={() => setSelectedStory(story)}
+                        />
+                    )
+                  })}
               </div>
             </div>
           ))}
@@ -600,6 +546,109 @@ export default function BacklogPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!selectedStory} onOpenChange={(isOpen) => !isOpen && setSelectedStory(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          {selectedStory && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedStory.title}</DialogTitle>
+                <DialogDescription>
+                  In epic: {epics.find(e => e.id === selectedStory.epicId)?.title || 'Unassigned'}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-6">
+                 <div>
+                    <h4 className="text-sm font-semibold mb-2">Assignee</h4>
+                    {developers.find(d => d.id === selectedStory.assigneeId) ? (
+                        <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={developers.find(d => d.id === selectedStory.assigneeId)?.avatar} alt={developers.find(d => d.id === selectedStory.assigneeId)?.name} data-ai-hint="developer avatar" />
+                                <AvatarFallback>{developers.find(d => d.id === selectedStory.assigneeId)?.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{developers.find(d => d.id === selectedStory.assigneeId)?.name}</span>
+                        </div>
+                    ) : <p className="text-sm text-muted-foreground">Not assigned</p>}
+                </div>
+                {selectedStory.description && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Description</h4>
+                    <p className="text-sm text-muted-foreground">{selectedStory.description}</p>
+                  </div>
+                )}
+                {selectedStory.acceptanceCriteria && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Acceptance Criteria</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedStory.acceptanceCriteria}</p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="sm:justify-end gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Change Epic <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {selectedStory.epicId && (
+                      <DropdownMenuItem onClick={() => {
+                        moveStoryToEpic(selectedStory.id, null);
+                        setSelectedStory(null);
+                      }}>
+                        Unassigned
+                      </DropdownMenuItem>
+                    )}
+                    {epics
+                      .filter((e) => e.id !== selectedStory.epicId)
+                      .map((epic) => (
+                        <DropdownMenuItem
+                          key={epic.id}
+                          onClick={() => {
+                            moveStoryToEpic(selectedStory.id, epic.id);
+                            setSelectedStory(null);
+                          }}
+                        >
+                          {epic.title}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {selectedStory.sprintId !== null && (
+                      <DropdownMenuItem onClick={() => {
+                        moveStoryToSprint(selectedStory.id, null);
+                        setSelectedStory(null);
+                      }}>
+                        Backlog
+                      </DropdownMenuItem>
+                    )}
+                    {sprints
+                      .filter((sprint) => sprint.id !== selectedStory.sprintId)
+                      .map((sprint) => (
+                        <DropdownMenuItem
+                          key={sprint.id}
+                          onClick={() => {
+                            moveStoryToSprint(selectedStory.id, sprint.id);
+                            setSelectedStory(null);
+                          }}
+                        >
+                          {sprint.title}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
