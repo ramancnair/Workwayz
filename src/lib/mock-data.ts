@@ -22,11 +22,11 @@ export const sprints: Sprint[] = [
 ];
 
 export const stories: Story[] = [
-  { id: 'story1', title: 'User Authentication', description: 'Implement user sign-up and login functionality.', epicId: 'epic1', sprintId: 'sprint1', status: 'In Progress' },
-  { id: 'story2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.', epicId: 'epic2', sprintId: 'sprint1', status: 'In Progress' },
-  { id: 'story3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.', sprintId: 'sprint1', status: 'To Do' },
-  { id: 'story4', title: 'Password Reset', description: 'Allow users to reset their password via email.', epicId: 'epic1', sprintId: 'sprint1', status: 'To Do' },
-  { id: 'story5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', epicId: 'epic2', sprintId: 'sprint1', status: 'Done' },
+  { id: 'story1', title: 'User Authentication', description: 'Implement user sign-up and login functionality.', epicId: 'epic1', sprintId: 'sprint1', status: 'In Progress', acceptanceCriteria: 'A user can successfully sign up and log in. Invalid credentials show an error.', assigneeId: 'dev1' },
+  { id: 'story2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.', epicId: 'epic2', sprintId: 'sprint1', status: 'In Progress', acceptanceCriteria: 'The dashboard displays total tasks, completed tasks, and completion rate.', assigneeId: 'dev2' },
+  { id: 'story3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.', sprintId: 'sprint1', status: 'To Do', acceptanceCriteria: 'Users can drag and drop stories between columns.' },
+  { id: 'story4', title: 'Password Reset', description: 'Allow users to reset their password via email.', epicId: 'epic1', sprintId: 'sprint1', status: 'To Do', assigneeId: 'dev3' },
+  { id: 'story5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', epicId: 'epic2', sprintId: 'sprint1', status: 'Done', acceptanceCriteria: 'The exported PDF matches the dashboard view.' },
 ];
 
 export const tasks: Task[] = [

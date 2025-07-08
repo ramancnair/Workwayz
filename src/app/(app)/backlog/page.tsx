@@ -48,15 +48,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint } from '@/types';
+import type { Epic, Story, Sprint, User } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { developers } from '@/lib/mock-data';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const epicFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -66,30 +69,66 @@ const epicFormSchema = z.object({
 const storyFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
+  acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
+  assigneeId: z.string().optional(),
 });
 
 function StoryCard({
   story,
   sprints,
   epics,
+  developers,
   onMoveToSprint,
   onMoveToEpic,
 }: {
   story: Story;
   sprints: Sprint[];
   epics: Epic[];
+  developers: User[];
   onMoveToSprint: (storyId: string, sprintId: string | null) => void;
   onMoveToEpic: (storyId: string, epicId: string | null) => void;
 }) {
   const epic = epics.find((e) => e.id === story.epicId);
+  const assignee = developers.find((d) => d.id === story.assigneeId);
   return (
     <Card className="bg-card">
       <CardHeader>
-        <CardTitle className="text-base">{story.title}</CardTitle>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-base pr-2">{story.title}</CardTitle>
+          {assignee && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src={assignee.avatar}
+                      alt={assignee.name}
+                      data-ai-hint="developer avatar"
+                    />
+                    <AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Assigned to {assignee.name}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">{story.description}</p>
+        {story.acceptanceCriteria && (
+          <div>
+            <h4 className="text-sm font-semibold mb-1">
+              Acceptance Criteria
+            </h4>
+            <p className="text-sm text-muted-foreground whitespace-pre-line">
+              {story.acceptanceCriteria}
+            </p>
+          </div>
+        )}
         {epic && <Badge variant="secondary">{epic.title}</Badge>}
       </CardContent>
       <CardContent className="flex justify-end items-center gap-2">
@@ -159,7 +198,7 @@ export default function BacklogPage() {
 
   const storyForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { title: '', description: '', epicId: '' },
+    defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: '', assigneeId: '' },
   });
 
   const handleAddSprint = () => {
@@ -206,6 +245,8 @@ export default function BacklogPage() {
       sprintId: null,
       title: values.title,
       description: values.description || '',
+      acceptanceCriteria: values.acceptanceCriteria,
+      assigneeId: values.assigneeId,
       epicId: values.epicId,
       status: 'To Do',
     };
@@ -288,7 +329,7 @@ export default function BacklogPage() {
                 Add Story
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>Add New Story</DialogTitle>
               </DialogHeader>
@@ -321,6 +362,19 @@ export default function BacklogPage() {
                     )}
                   />
                   <FormField
+                    control={storyForm.control}
+                    name="acceptanceCriteria"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Acceptance Criteria</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Define acceptance criteria for this story..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
                       control={storyForm.control}
                       name="epicId"
                       render={({ field }) => (
@@ -335,6 +389,28 @@ export default function BacklogPage() {
                               <SelectContent>
                               {epics.map(epic => (
                                   <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={storyForm.control}
+                      name="assigneeId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Assignee</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Assign to a developer" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              {developers.map(dev => (
+                                  <SelectItem key={dev.id} value={dev.id}>{dev.name}</SelectItem>
                               ))}
                               </SelectContent>
                           </Select>
@@ -391,6 +467,7 @@ export default function BacklogPage() {
                                   story={story}
                                   sprints={sprints}
                                   epics={epics}
+                                  developers={developers}
                                   onMoveToSprint={moveStoryToSprint}
                                   onMoveToEpic={moveStoryToEpic}
                               />
@@ -414,6 +491,7 @@ export default function BacklogPage() {
                           story={story}
                           sprints={sprints}
                           epics={epics}
+                          developers={developers}
                           onMoveToSprint={moveStoryToSprint}
                           onMoveToEpic={moveStoryToEpic}
                         />
@@ -479,6 +557,7 @@ export default function BacklogPage() {
                       story={story}
                       sprints={sprints}
                       epics={epics}
+                      developers={developers}
                       onMoveToSprint={moveStoryToSprint}
                       onMoveToEpic={moveStoryToEpic}
                     />

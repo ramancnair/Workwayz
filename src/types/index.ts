@@ -31,6 +31,8 @@ export type Story = {
   id: string;
   title: string;
   description: string;
+  acceptanceCriteria?: string;
+  assigneeId?: string;
   epicId?: string;
   sprintId?: string | null;
   status: StoryStatus;
