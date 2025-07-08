@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -58,12 +57,14 @@ function StoryCard({
   story,
   sprints,
   epics,
-  onMove,
+  onMoveToSprint,
+  onMoveToEpic,
 }: {
   story: Story;
   sprints: Sprint[];
   epics: Epic[];
-  onMove: (storyId: string, sprintId: string | null) => void;
+  onMoveToSprint: (storyId: string, sprintId: string | null) => void;
+  onMoveToEpic: (storyId: string, epicId: string | null) => void;
 }) {
   const epic = epics.find((e) => e.id === story.epicId);
   return (
@@ -75,16 +76,40 @@ function StoryCard({
         <p className="text-sm text-muted-foreground">{story.description}</p>
         {epic && <Badge variant="secondary">{epic.title}</Badge>}
       </CardContent>
-      <CardContent className="flex justify-end items-center">
+      <CardContent className="flex justify-end items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
-              Move to <ChevronDown className="ml-2 h-4 w-4" />
+              Change Epic <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {story.epicId && (
+              <DropdownMenuItem onClick={() => onMoveToEpic(story.id, null)}>
+                Unassigned
+              </DropdownMenuItem>
+            )}
+            {epics
+              .filter((e) => e.id !== story.epicId)
+              .map((epic) => (
+                <DropdownMenuItem
+                  key={epic.id}
+                  onClick={() => onMoveToEpic(story.id, epic.id)}
+                >
+                  {epic.title}
+                </DropdownMenuItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {story.sprintId !== null && (
-              <DropdownMenuItem onClick={() => onMove(story.id, null)}>
+              <DropdownMenuItem onClick={() => onMoveToSprint(story.id, null)}>
                 Backlog
               </DropdownMenuItem>
             )}
@@ -93,7 +118,7 @@ function StoryCard({
               .map((sprint) => (
                 <DropdownMenuItem
                   key={sprint.id}
-                  onClick={() => onMove(story.id, sprint.id)}
+                  onClick={() => onMoveToSprint(story.id, sprint.id)}
                 >
                   {sprint.title}
                 </DropdownMenuItem>
@@ -106,7 +131,7 @@ function StoryCard({
 }
 
 export default function BacklogPage() {
-  const { epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint } = useProject();
+  const { epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint, moveStoryToEpic } = useProject();
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
 
@@ -331,7 +356,8 @@ export default function BacklogPage() {
                             story={story}
                             sprints={sprints}
                             epics={epics}
-                            onMove={moveStoryToSprint}
+                            onMoveToSprint={moveStoryToSprint}
+                            onMoveToEpic={moveStoryToEpic}
                           />
                         ))}
                       </AccordionContent>
@@ -348,7 +374,8 @@ export default function BacklogPage() {
                         story={story}
                         sprints={sprints}
                         epics={epics}
-                        onMove={moveStoryToSprint}
+                        onMoveToSprint={moveStoryToSprint}
+                        onMoveToEpic={moveStoryToEpic}
                       />
                     ))}
                   </AccordionContent>
@@ -394,7 +421,8 @@ export default function BacklogPage() {
                     story={story}
                     sprints={sprints}
                     epics={epics}
-                    onMove={moveStoryToSprint}
+                    onMoveToSprint={moveStoryToSprint}
+                    onMoveToEpic={moveStoryToEpic}
                   />
                 ))}
             </div>

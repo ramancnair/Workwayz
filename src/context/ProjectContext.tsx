@@ -14,6 +14,7 @@ interface ProjectContextType {
   setSprints: React.Dispatch<React.SetStateAction<Sprint[]>>;
   moveStoryToSprint: (storyId: string, sprintId: string | null) => void;
   moveStoryStatus: (storyId: string, newStatus: StoryStatus) => void;
+  moveStoryToEpic: (storyId: string, epicId: string | null) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -39,8 +40,16 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     );
   };
 
+  const moveStoryToEpic = (storyId: string, epicId: string | null) => {
+    setStories((prevStories) =>
+      prevStories.map((story) =>
+        story.id === storyId ? { ...story, epicId: epicId ?? undefined } : story
+      )
+    );
+  };
+
   return (
-    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint, moveStoryStatus }}>
+    <ProjectContext.Provider value={{ epics, setEpics, stories, setStories, sprints, setSprints, moveStoryToSprint, moveStoryStatus, moveStoryToEpic }}>
       {children}
     </ProjectContext.Provider>
   );
