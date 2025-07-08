@@ -173,7 +173,6 @@ export default function BacklogPage() {
   
   const { toast } = useToast();
 
-  // Dialog open/close states
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
   const [addSprintOpen, setAddSprintOpen] = useState(false);
@@ -181,24 +180,15 @@ export default function BacklogPage() {
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
   
-  // Dialog submission states
-  const [isCreatingEpic, setIsCreatingEpic] = useState(false);
-  const [isUpdatingEpic, setIsUpdatingEpic] = useState(false);
-  const [isCreatingSprint, setIsCreatingSprint] = useState(false);
-  const [isUpdatingSprint, setIsUpdatingSprint] = useState(false);
-  const [isCreatingStory, setIsCreatingStory] = useState(false);
-  const [isUpdatingStory, setIsUpdatingStory] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Alert/Confirm dialog states
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
   
-  // Other states
   const [itemTypeToAdd, setItemTypeToAdd] = useState<WorkItemType>('Story');
   const developers = employees.filter(e => e.role === 'Developer');
 
-  // Forms
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
     defaultValues: { title: '', description: '' },
@@ -226,7 +216,6 @@ export default function BacklogPage() {
     resolver: zodResolver(sprintFormSchema),
   });
 
-  // Form reset and data population effects
   useEffect(() => {
     if (!addEpicOpen) addEpicForm.reset({ title: '', description: '' });
   }, [addEpicOpen, addEpicForm]);
@@ -234,8 +223,6 @@ export default function BacklogPage() {
   useEffect(() => {
     if (editingEpic) {
       editEpicForm.reset(editingEpic);
-    } else {
-      editEpicForm.reset();
     }
   }, [editingEpic, editEpicForm]);
   
@@ -246,8 +233,6 @@ export default function BacklogPage() {
         startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
         endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
       });
-    } else {
-      editSprintForm.reset();
     }
   }, [editingSprint, editSprintForm]);
   
@@ -266,8 +251,6 @@ export default function BacklogPage() {
         epicId: selectedStory.epicId || 'unassigned',
         assigneeId: selectedStory.assigneeId || 'unassigned',
       });
-    } else {
-      editStoryForm.reset();
     }
   }, [selectedStory, editStoryForm]);
   
@@ -277,152 +260,127 @@ export default function BacklogPage() {
     }
   }, [addStoryOpen, addStoryForm]);
 
-
-  // Submission Handlers
   const onAddSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
-    setIsCreatingSprint(true);
-    try {
-      await addSprint({
-        title: values.title,
-        startDate: values.startDate?.toISOString(),
-        endDate: values.endDate?.toISOString(),
-      });
+    setIsSubmitting(true);
+    const success = await addSprint({
+      title: values.title,
+      startDate: values.startDate?.toISOString(),
+      endDate: values.endDate?.toISOString(),
+    });
+    if (success) {
       setAddSprintOpen(false);
-    } catch (error) {
-      console.error("Failed to add sprint:", error);
-      toast({
-        title: "Error Creating Sprint",
-        description: "There was a problem saving your sprint. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingSprint(false);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not create sprint." });
     }
+    setIsSubmitting(false);
   };
   
   const onEditSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
     if (!editingSprint) return;
-    setIsUpdatingSprint(true);
-    try {
-      await updateSprint(editingSprint.id, {
-        title: values.title,
-        startDate: values.startDate?.toISOString(),
-        endDate: values.endDate?.toISOString(),
-      });
+    setIsSubmitting(true);
+    const success = await updateSprint(editingSprint.id, {
+      title: values.title,
+      startDate: values.startDate?.toISOString(),
+      endDate: values.endDate?.toISOString(),
+    });
+    if (success) {
       setEditingSprint(null);
-    } catch (error) {
-      console.error("Failed to edit sprint:", error);
-      toast({
-        title: "Error Editing Sprint",
-        description: "There was a problem saving your changes. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingSprint(false);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not update sprint." });
     }
+    setIsSubmitting(false);
   };
   
   const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
-    setIsCreatingEpic(true);
-    try {
-      await addEpic({
-        title: values.title,
-        description: values.description || '',
-      });
+    setIsSubmitting(true);
+    const success = await addEpic({
+      title: values.title,
+      description: values.description || '',
+    });
+    if (success) {
       setAddEpicOpen(false);
-    } catch (error) {
-      console.error("Failed to add epic:", error);
-      toast({
-        title: "Error Creating Epic",
-        description: "There was a problem saving your epic. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingEpic(false);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not create epic." });
     }
+    setIsSubmitting(false);
   };
   
   const onEditEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     if (!editingEpic) return;
-    setIsUpdatingEpic(true);
-    try {
-      await updateEpic(editingEpic.id, values);
+    setIsSubmitting(true);
+    const success = await updateEpic(editingEpic.id, values);
+    if (success) {
       setEditingEpic(null);
-    } catch (error) {
-      console.error("Failed to edit epic:", error);
-      toast({
-        title: "Error Editing Epic",
-        description: "There was a problem saving your changes. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingEpic(false);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not update epic." });
     }
+    setIsSubmitting(false);
   };
 
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
-    setIsCreatingStory(true);
-    try {
-      const newStory: Omit<Story, 'id' | 'storyId'> = {
-        sprintId: null,
-        title: values.title,
-        description: values.description || '',
-        itemType: itemTypeToAdd,
-        acceptanceCriteria: values.acceptanceCriteria,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
-        status: 'To Do',
-      };
-      await addStory(newStory);
+    setIsSubmitting(true);
+    const newStory: Omit<Story, 'id' | 'storyId'> = {
+      sprintId: null,
+      title: values.title,
+      description: values.description || '',
+      itemType: itemTypeToAdd,
+      acceptanceCriteria: values.acceptanceCriteria,
+      assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+      epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+      status: 'To Do',
+    };
+    const success = await addStory(newStory);
+    if (success) {
       setAddStoryOpen(false);
-    } catch (error) {
-      console.error("Failed to add requirement:", error);
-      toast({
-        title: `Error Creating ${itemTypeToAdd}`,
-        description: `There was a problem saving your ${itemTypeToAdd.toLowerCase()}. Please try again.`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingStory(false);
+    } else {
+      toast({ variant: "destructive", title: `Error Creating ${itemTypeToAdd}`, description: `Could not save your ${itemTypeToAdd.toLowerCase()}.` });
     }
+    setIsSubmitting(false);
   };
   
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
-    setIsUpdatingStory(true);
-    try {
-      await updateStory(selectedStory.id, {
-          title: values.title,
-          description: values.description,
-          acceptanceCriteria: values.acceptanceCriteria,
-          assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-          epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
-        });
+    setIsSubmitting(true);
+    const success = await updateStory(selectedStory.id, {
+        title: values.title,
+        description: values.description,
+        acceptanceCriteria: values.acceptanceCriteria,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+    });
+    if (success) {
       setSelectedStory(null);
-    } catch (error) {
-      console.error("Failed to edit story:", error);
-      toast({
-        title: `Error Editing ${selectedStory.itemType}`,
-        description: "There was a problem saving your changes. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingStory(false);
+    } else {
+      toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
+    setIsSubmitting(false);
   };
   
-  // Delete Handlers
-  const handleDeleteStory = async (storyId: string) => {
-    await deleteStory(storyId);
+  const handleDeleteStory = (storyId: string) => {
     setDeletingStory(null);
+    deleteStory(storyId).then(success => {
+        if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
+    });
   };
     
-  const handleDeleteSprint = async (sprintId: string) => {
-    await deleteSprint(sprintId);
+  const handleDeleteSprint = (sprintId: string) => {
+    setSprintToDelete(null);
+    deleteSprint(sprintId).then(success => {
+        if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete sprint." });
+    });
   };
   
-  const handleSetCurrentSprint = async (sprintId: string) => {
-    await setCurrentSprint(sprintId);
+  const handleDeleteEpic = (epicId: string) => {
+    setEpicToDelete(null);
+    deleteEpic(epicId).then(success => {
+        if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete epic." });
+    });
+  };
+
+  const handleSetCurrentSprint = (sprintId: string) => {
+    setCurrentSprint(sprintId).then(success => {
+        if (!success) toast({ variant: "destructive", title: "Error", description: "Could not set current sprint." });
+    });
   };
 
   const backlogStories = stories.filter((story) => story.sprintId === null);
@@ -486,8 +444,8 @@ export default function BacklogPage() {
                     )}
                   />
                   <DialogFooter>
-                    <Button type="submit" disabled={isCreatingEpic}>
-                      {isCreatingEpic ? 'Creating...' : 'Create Epic'}
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? 'Creating...' : 'Create Epic'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -544,8 +502,8 @@ export default function BacklogPage() {
                         )}
                     />
                     <DialogFooter>
-                      <Button type="submit" disabled={isCreatingSprint}>
-                        {isCreatingSprint ? 'Creating...' : 'Create Sprint'}
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Creating...' : 'Create Sprint'}
                       </Button>
                     </DialogFooter>
                     </form>
@@ -663,8 +621,8 @@ export default function BacklogPage() {
                       )}
                   />
                   <DialogFooter>
-                    <Button type="submit" disabled={isCreatingStory}>
-                      {isCreatingStory ? 'Creating...' : `Create ${itemTypeToAdd}`}
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? 'Creating...' : `Create ${itemTypeToAdd}`}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -925,12 +883,7 @@ export default function BacklogPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (sprintToDelete) {
-                  handleDeleteSprint(sprintToDelete.id);
-                  setSprintToDelete(null);
-                }
-              }}
+              onClick={() => sprintToDelete && handleDeleteSprint(sprintToDelete.id)}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
@@ -952,12 +905,7 @@ export default function BacklogPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (epicToDelete) {
-                  deleteEpic(epicToDelete.id);
-                  setEpicToDelete(null);
-                }
-              }}
+              onClick={() => epicToDelete && handleDeleteEpic(epicToDelete.id)}
                className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
@@ -977,11 +925,7 @@ export default function BacklogPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (deletingStory) {
-                  handleDeleteStory(deletingStory.id);
-                }
-              }}
+              onClick={() => deletingStory && handleDeleteStory(deletingStory.id)}
                className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
@@ -1154,8 +1098,8 @@ export default function BacklogPage() {
                               ))}
                           </DropdownMenuContent>
                       </DropdownMenu>
-                      <Button type="submit" disabled={isUpdatingStory}>
-                        {isUpdatingStory ? 'Saving...' : 'Save Changes'}
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </div>
                   </DialogFooter>
@@ -1200,8 +1144,8 @@ export default function BacklogPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={isUpdatingEpic}>
-                  {isUpdatingEpic ? 'Saving...' : 'Save Changes'}
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </form>
@@ -1252,8 +1196,8 @@ export default function BacklogPage() {
                     )}
                 />
                 <DialogFooter>
-                  <Button type="submit" disabled={isUpdatingSprint}>
-                    {isUpdatingSprint ? 'Saving...' : 'Save Changes'}
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </DialogFooter>
                 </form>

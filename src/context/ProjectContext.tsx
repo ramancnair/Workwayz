@@ -27,33 +27,33 @@ interface ProjectContextType {
   testCases: TestCase[];
   
   // Story actions
-  addStory: (story: Omit<Story, 'id' | 'storyId'> & { storyId?: string }) => Promise<void>;
-  updateStory: (storyId: string, data: Partial<Omit<Story, 'id'>>) => Promise<void>;
-  deleteStory: (storyId: string) => Promise<void>;
-  moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<void>;
-  moveStoryStatus: (storyId: string, newStatus: StoryStatus) => Promise<void>;
-  moveStoryToEpic: (storyId: string, epicId: string | null) => Promise<void>;
+  addStory: (story: Omit<Story, 'id' | 'storyId'> & { storyId?: string }) => Promise<boolean>;
+  updateStory: (storyId: string, data: Partial<Omit<Story, 'id'>>) => Promise<boolean>;
+  deleteStory: (storyId: string) => Promise<boolean>;
+  moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<boolean>;
+  moveStoryStatus: (storyId: string, newStatus: StoryStatus) => Promise<boolean>;
+  moveStoryToEpic: (storyId: string, epicId: string | null) => Promise<boolean>;
 
   // Epic actions
-  addEpic: (epic: Omit<Epic, 'id'>) => Promise<void>;
-  updateEpic: (epicId: string, data: Partial<Omit<Epic, 'id'>>) => Promise<void>;
-  deleteEpic: (epicId: string) => Promise<void>;
+  addEpic: (epic: Omit<Epic, 'id'>) => Promise<boolean>;
+  updateEpic: (epicId: string, data: Partial<Omit<Epic, 'id'>>) => Promise<boolean>;
+  deleteEpic: (epicId: string) => Promise<boolean>;
 
   // Sprint actions
-  addSprint: (sprint: Omit<Sprint, 'id' | 'isCurrent'>) => Promise<void>;
-  updateSprint: (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>) => Promise<void>;
-  deleteSprint: (sprintId: string) => Promise<void>;
-  setCurrentSprint: (sprintId: string) => Promise<void>;
+  addSprint: (sprint: Omit<Sprint, 'id' | 'isCurrent'>) => Promise<boolean>;
+  updateSprint: (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>) => Promise<boolean>;
+  deleteSprint: (sprintId: string) => Promise<boolean>;
+  setCurrentSprint: (sprintId: string) => Promise<boolean>;
 
   // Employee actions
-  addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
-  updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id'>>) => Promise<void>;
-  deleteEmployee: (employeeId: string) => Promise<void>;
+  addEmployee: (employee: Omit<Employee, 'id'>) => Promise<boolean>;
+  updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id'>>) => Promise<boolean>;
+  deleteEmployee: (employeeId: string) => Promise<boolean>;
 
   // TestCase actions
-  addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'> & { testCaseId?: string }) => Promise<void>;
-  updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => Promise<void>;
-  deleteTestCase: (testCaseId: string) => Promise<void>;
+  addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'> & { testCaseId?: string }) => Promise<boolean>;
+  updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => Promise<boolean>;
+  deleteTestCase: (testCaseId: string) => Promise<boolean>;
 
   isLoading: boolean;
   error: string | null;
@@ -83,236 +83,239 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    const handleError = (err: any) => {
-        console.error("Firestore Initialization Error:", err);
-        setError("Could not connect to the database. Please check your Firebase project configuration and security rules.");
-        setIsLoading(false);
+    const handleError = (err: any, collectionName: string) => {
+      console.error(`Firestore Error on ${collectionName}:`, err);
+      setError(`Could not connect to the '${collectionName}' collection. Please check your Firebase project configuration and security rules.`);
     };
+  
+    const collections = ['epics', 'stories', 'sprints', 'employees', 'testCases'];
+    const setters: any = { setEpics, setStories, setSprints, setEmployees, setTestCases };
+    const typeConverters: any = {
+      sprints: convertTimestamps,
+      employees: convertTimestamps
+    };
+  
+    const unsubscribers = collections.map(name => {
+      const converter = typeConverters[name] || ((data: any) => data);
+      const setter = setters[`set${name.charAt(0).toUpperCase() + name.slice(1)}`];
+      
+      return onSnapshot(collection(db, name), snapshot => {
+        setter(snapshot.docs.map(doc => ({ id: doc.id, ...converter(doc.data()) })));
+        setIsLoading(false);
+      }, err => handleError(err, name));
+    });
+  
+    // Initial check to unblock UI if all collections are empty or connection fails
+    Promise.all(collections.map(name => getDocs(collection(db, name))))
+        .then(() => setIsLoading(false))
+        .catch(err => {
+            console.error("Initial connection check failed:", err);
+            setError("Could not connect to the database. Please verify your Firebase project setup and network connection.");
+            setIsLoading(false);
+        });
 
-    try {
-        const unsubEpics = onSnapshot(collection(db, 'epics'), (snapshot) => {
-            setEpics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Epic)));
-        }, handleError);
-
-        const unsubStories = onSnapshot(collection(db, 'stories'), (snapshot) => {
-            setStories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Story)));
-        }, handleError);
-
-        const unsubSprints = onSnapshot(collection(db, 'sprints'), (snapshot) => {
-            setSprints(snapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) } as Sprint)));
-        }, handleError);
-        
-        const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot) => {
-            setEmployees(snapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) } as Employee)));
-        }, handleError);
-
-        const unsubTestCases = onSnapshot(collection(db, 'testCases'), (snapshot) => {
-            setTestCases(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestCase)));
-        }, handleError);
-
-        setIsLoading(false); // Unblock the UI
-
-        return () => {
-            unsubEpics();
-            unsubStories();
-            unsubSprints();
-            unsubEmployees();
-            unsubTestCases();
-        };
-      } catch (err: any) {
-        handleError(err)
-        return () => {};
-      }
+    return () => unsubscribers.forEach(unsub => unsub());
   }, []);
+
+  const handleDbOperation = async <T>(operation: Promise<T>): Promise<boolean> => {
+    try {
+      await operation;
+      return true;
+    } catch (e) {
+      console.error("Firestore operation failed:", e);
+      return false;
+    }
+  };
 
   // Story Actions
   const addStory = async (story: Omit<Story, 'id' | 'storyId'>) => {
-    const storiesCollection = collection(db, 'stories');
-    const snapshot = await getDocs(storiesCollection);
-    const newIdNumber =
-      snapshot.docs.length > 0
-        ? Math.max(
-            0,
-            ...snapshot.docs
-              .map(doc => doc.data().storyId)
-              .filter(id => id && typeof id === 'string')
-              .map(id => parseInt(id.replace('ST-', ''), 10) || 0)
-          ) + 1
-        : 1;
+    return handleDbOperation(async () => {
+        const storiesCollection = collection(db, 'stories');
+        const snapshot = await getDocs(storiesCollection);
+        const newIdNumber =
+        snapshot.docs.length > 0
+            ? Math.max(
+                0,
+                ...snapshot.docs
+                .map(doc => doc.data().storyId)
+                .filter(id => id && typeof id === 'string')
+                .map(id => parseInt(id.replace('ST-', ''), 10) || 0)
+            ) + 1
+            : 1;
 
-    const newStoryData: { [key: string]: any } = {
-      storyId: `ST-${newIdNumber}`,
-      title: story.title,
-      description: story.description,
-      itemType: story.itemType,
-      acceptanceCriteria: story.acceptanceCriteria,
-      sprintId: story.sprintId,
-      status: story.status,
-    };
-    
-    if (story.assigneeId) {
-      newStoryData.assigneeId = story.assigneeId;
-    }
-    if (story.epicId) {
-      newStoryData.epicId = story.epicId;
-    }
+        const newStoryData: { [key: string]: any } = {
+        storyId: `ST-${newIdNumber}`,
+        title: story.title,
+        description: story.description,
+        itemType: story.itemType,
+        acceptanceCriteria: story.acceptanceCriteria,
+        sprintId: story.sprintId,
+        status: story.status,
+        };
+        
+        if (story.assigneeId) {
+        newStoryData.assigneeId = story.assigneeId;
+        }
+        if (story.epicId) {
+        newStoryData.epicId = story.epicId;
+        }
 
-    await addDoc(storiesCollection, newStoryData);
+        await addDoc(storiesCollection, newStoryData);
+    });
   };
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id'>>) => {
-    await updateDoc(doc(db, 'stories', storyId), data);
+    return handleDbOperation(updateDoc(doc(db, 'stories', storyId), data));
   };
   const deleteStory = async (storyId: string) => {
-    await deleteDoc(doc(db, 'stories', storyId));
+    return handleDbOperation(deleteDoc(doc(db, 'stories', storyId)));
   };
   const moveStoryToSprint = async (storyId: string, sprintId: string | null) => {
-    await updateDoc(doc(db, 'stories', storyId), { sprintId });
+    return handleDbOperation(updateDoc(doc(db, 'stories', storyId), { sprintId }));
   };
   const moveStoryStatus = async (storyId: string, newStatus: StoryStatus) => {
-    await updateDoc(doc(db, 'stories', storyId), { status: newStatus });
+    return handleDbOperation(updateDoc(doc(db, 'stories', storyId), { status: newStatus }));
   };
   const moveStoryToEpic = async (storyId: string, epicId: string | null) => {
-    await updateDoc(doc(db, 'stories', storyId), { epicId });
+    return handleDbOperation(updateDoc(doc(db, 'stories', storyId), { epicId }));
   };
   
   // Epic Actions
   const addEpic = async (epic: Omit<Epic, 'id'>) => {
-    await addDoc(collection(db, 'epics'), epic);
+    return handleDbOperation(addDoc(collection(db, 'epics'), epic));
   };
   const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>) => {
-    await updateDoc(doc(db, 'epics', epicId), data);
+    return handleDbOperation(updateDoc(doc(db, 'epics', epicId), data));
   };
   const deleteEpic = async (epicId: string) => {
-    const batch = writeBatch(db);
-    // Delete the epic
-    batch.delete(doc(db, 'epics', epicId));
-    // Find stories in the epic and unassign them
-    const q = query(collection(db, 'stories'), where('epicId', '==', epicId));
-    const storiesSnap = await getDocs(q);
-    storiesSnap.forEach(storyDoc => {
-      batch.update(storyDoc.ref, { epicId: null });
+    return handleDbOperation(async () => {
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'epics', epicId));
+        const q = query(collection(db, 'stories'), where('epicId', '==', epicId));
+        const storiesSnap = await getDocs(q);
+        storiesSnap.forEach(storyDoc => {
+        batch.update(storyDoc.ref, { epicId: null });
+        });
+        await batch.commit();
     });
-    await batch.commit();
   };
   
   // Sprint Actions
   const addSprint = async (sprint: Omit<Sprint, 'id' | 'isCurrent'>) => {
-    const sprintData: { [key: string]: any } = {
-      title: sprint.title,
-      isCurrent: false,
-    };
-    if (sprint.startDate) {
-      sprintData.startDate = Timestamp.fromDate(new Date(sprint.startDate));
-    }
-    if (sprint.endDate) {
-      sprintData.endDate = Timestamp.fromDate(new Date(sprint.endDate));
-    }
-    await addDoc(collection(db, 'sprints'), sprintData);
+    return handleDbOperation(async () => {
+        const sprintData: { [key: string]: any } = {
+        title: sprint.title,
+        isCurrent: false,
+        };
+        if (sprint.startDate) {
+        sprintData.startDate = Timestamp.fromDate(new Date(sprint.startDate));
+        }
+        if (sprint.endDate) {
+        sprintData.endDate = Timestamp.fromDate(new Date(sprint.endDate));
+        }
+        await addDoc(collection(db, 'sprints'), sprintData);
+    });
   };
   const updateSprint = async (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>) => {
-    const sprintData: {[key: string]: any} = {};
-
-    if(data.title) sprintData.title = data.title;
-
-    if (data.startDate) {
-      sprintData.startDate = Timestamp.fromDate(new Date(data.startDate));
-    }
-    if (data.endDate) {
-      sprintData.endDate = Timestamp.fromDate(new Date(data.endDate));
-    }
-    await updateDoc(doc(db, 'sprints', sprintId), sprintData);
+    return handleDbOperation(async () => {
+        const sprintData: {[key: string]: any} = {};
+        if(data.title) sprintData.title = data.title;
+        if (data.startDate) {
+        sprintData.startDate = Timestamp.fromDate(new Date(data.startDate));
+        } else {
+        sprintData.startDate = null;
+        }
+        if (data.endDate) {
+        sprintData.endDate = Timestamp.fromDate(new Date(data.endDate));
+        } else {
+        sprintData.endDate = null;
+        }
+        await updateDoc(doc(db, 'sprints', sprintId), sprintData);
+    });
   };
   const deleteSprint = async (sprintId: string) => {
-    const batch = writeBatch(db);
-    // Delete the sprint
-    batch.delete(doc(db, 'sprints', sprintId));
-    // Find stories in the sprint and move them to backlog
-    const q = query(collection(db, 'stories'), where('sprintId', '==', sprintId));
-    const storiesSnap = await getDocs(q);
-    storiesSnap.forEach(storyDoc => {
-      batch.update(storyDoc.ref, { sprintId: null });
+    return handleDbOperation(async () => {
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'sprints', sprintId));
+        const q = query(collection(db, 'stories'), where('sprintId', '==', sprintId));
+        const storiesSnap = await getDocs(q);
+        storiesSnap.forEach(storyDoc => {
+        batch.update(storyDoc.ref, { sprintId: null });
+        });
+        await batch.commit();
     });
-    await batch.commit();
   };
   const setCurrentSprint = async (sprintId: string) => {
-     const batch = writeBatch(db);
-     const sprintsSnap = await getDocs(collection(db, 'sprints'));
-     sprintsSnap.forEach(sprintDoc => {
-        batch.update(sprintDoc.ref, { isCurrent: sprintDoc.id === sprintId });
-     });
-     await batch.commit();
+    return handleDbOperation(async () => {
+        const batch = writeBatch(db);
+        const sprintsSnap = await getDocs(collection(db, 'sprints'));
+        sprintsSnap.forEach(sprintDoc => {
+            batch.update(sprintDoc.ref, { isCurrent: sprintDoc.id === sprintId });
+        });
+        await batch.commit();
+    });
   };
 
   // Employee Actions
   const addEmployee = async (employee: Omit<Employee, 'id'>) => {
-    const employeeData: { [key: string]: any } = {
-      empId: employee.empId,
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      email: employee.email,
-      phone: employee.phone,
-    };
-    if (employee.avatar) employeeData.avatar = employee.avatar;
-    if (employee.clientEmpId) employeeData.clientEmpId = employee.clientEmpId;
-    if (employee.clientEmail) employeeData.clientEmail = employee.clientEmail;
-    if (employee.role) employeeData.role = employee.role;
-    if (employee.experience) employeeData.experience = employee.experience;
-    if (employee.onboardingDate) employeeData.onboardingDate = Timestamp.fromDate(new Date(employee.onboardingDate));
-    if (employee.offloadingDate) employeeData.offloadingDate = Timestamp.fromDate(new Date(employee.offloadingDate));
-    if (employee.onshoreOrOffshore) employeeData.onshoreOrOffshore = employee.onshoreOrOffshore;
-    if (employee.billedRate) employeeData.billedRate = employee.billedRate;
-    if (employee.availability) employeeData.availability = employee.availability;
-    await addDoc(collection(db, 'employees'), employeeData);
+    return handleDbOperation(async () => {
+        const employeeData: { [key: string]: any } = { ...employee };
+        if (employee.onboardingDate) employeeData.onboardingDate = Timestamp.fromDate(new Date(employee.onboardingDate));
+        if (employee.offloadingDate) employeeData.offloadingDate = Timestamp.fromDate(new Date(employee.offloadingDate));
+        await addDoc(collection(db, 'employees'), employeeData);
+    });
   };
   const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id'>>) => {
-     const employeeData: {[key: string]: any} = {...data};
-     if (data.onboardingDate) employeeData.onboardingDate = Timestamp.fromDate(new Date(data.onboardingDate));
-     if (data.offloadingDate) employeeData.offloadingDate = Timestamp.fromDate(new Date(data.offloadingDate));
-    await updateDoc(doc(db, 'employees', employeeId), employeeData);
+    return handleDbOperation(async () => {
+        const employeeData: {[key: string]: any} = {...data};
+        if (data.onboardingDate) employeeData.onboardingDate = Timestamp.fromDate(new Date(data.onboardingDate));
+        if (data.offloadingDate) employeeData.offloadingDate = Timestamp.fromDate(new Date(data.offloadingDate));
+        await updateDoc(doc(db, 'employees', employeeId), employeeData);
+    });
   };
   const deleteEmployee = async (employeeId: string) => {
-    await deleteDoc(doc(db, 'employees', employeeId));
+    return handleDbOperation(deleteDoc(doc(db, 'employees', employeeId)));
   };
   
   // TestCase Actions
   const addTestCase = async (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => {
-    const testCasesCollection = collection(db, 'testCases');
-    const snapshot = await getDocs(testCasesCollection);
-    const newIdNumber =
-      snapshot.docs.length > 0
-        ? Math.max(
-            0,
-            ...snapshot.docs
-              .map(doc => doc.data().testCaseId)
-              .filter(id => id && typeof id === 'string')
-              .map(id => parseInt(id.replace('TC-', ''), 10) || 0)
-          ) + 1
-        : 1;
+    return handleDbOperation(async () => {
+        const testCasesCollection = collection(db, 'testCases');
+        const snapshot = await getDocs(testCasesCollection);
+        const newIdNumber =
+        snapshot.docs.length > 0
+            ? Math.max(
+                0,
+                ...snapshot.docs
+                .map(doc => doc.data().testCaseId)
+                .filter(id => id && typeof id === 'string')
+                .map(id => parseInt(id.replace('TC-', ''), 10) || 0)
+            ) + 1
+            : 1;
 
-    const newTestCaseData: { [key: string]: any } = {
-      testCaseId: `TC-${newIdNumber}`,
-      title: testCase.title,
-      type: testCase.type,
-      description: testCase.description,
-      expectedResult: testCase.expectedResult,
-      status: testCase.status,
-    };
+        const newTestCaseData: { [key: string]: any } = {
+        testCaseId: `TC-${newIdNumber}`,
+        title: testCase.title,
+        type: testCase.type,
+        description: testCase.description,
+        expectedResult: testCase.expectedResult,
+        status: testCase.status,
+        };
 
-    if (testCase.assigneeId) {
-      newTestCaseData.assigneeId = testCase.assigneeId;
-    }
-    if (testCase.storyId) {
-      newTestCaseData.storyId = testCase.storyId;
-    }
+        if (testCase.assigneeId) {
+        newTestCaseData.assigneeId = testCase.assigneeId;
+        }
+        if (testCase.storyId) {
+        newTestCaseData.storyId = testCase.storyId;
+        }
 
-    await addDoc(testCasesCollection, newTestCaseData);
+        await addDoc(testCasesCollection, newTestCaseData);
+    });
   };
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => {
-    await updateDoc(doc(db, 'testCases', testCaseId), data);
+    return handleDbOperation(updateDoc(doc(db, 'testCases', testCaseId), data));
   };
   const deleteTestCase = async (testCaseId: string) => {
-    await deleteDoc(doc(db, 'testCases', testCaseId));
+    return handleDbOperation(deleteDoc(doc(db, 'testCases', testCaseId)));
   };
 
   const value: ProjectContextType = {
