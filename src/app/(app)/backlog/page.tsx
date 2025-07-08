@@ -172,19 +172,33 @@ export default function BacklogPage() {
   } = useProject();
   
   const { toast } = useToast();
+
+  // Dialog open/close states
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addStoryOpen, setAddStoryOpen] = useState(false);
-  const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
-  const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
-  const [deletingStory, setDeletingStory] = useState<Story | null>(null);
-  const [itemTypeToAdd, setItemTypeToAdd] = useState<WorkItemType>('Story');
   const [addSprintOpen, setAddSprintOpen] = useState(false);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
+  
+  // Dialog submission states
+  const [isCreatingEpic, setIsCreatingEpic] = useState(false);
+  const [isUpdatingEpic, setIsUpdatingEpic] = useState(false);
+  const [isCreatingSprint, setIsCreatingSprint] = useState(false);
+  const [isUpdatingSprint, setIsUpdatingSprint] = useState(false);
+  const [isCreatingStory, setIsCreatingStory] = useState(false);
+  const [isUpdatingStory, setIsUpdatingStory] = useState(false);
 
+  // Alert/Confirm dialog states
+  const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
+  const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
+  const [deletingStory, setDeletingStory] = useState<Story | null>(null);
+  
+  // Other states
+  const [itemTypeToAdd, setItemTypeToAdd] = useState<WorkItemType>('Story');
   const developers = employees.filter(e => e.role === 'Developer');
 
+  // Forms
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
     defaultValues: { title: '', description: '' },
@@ -205,24 +219,23 @@ export default function BacklogPage() {
 
   const addSprintForm = useForm<z.infer<typeof sprintFormSchema>>({
     resolver: zodResolver(sprintFormSchema),
-    defaultValues: { title: `Sprint ${sprints.length + 1}` },
+    defaultValues: { title: '' },
   });
   
   const editSprintForm = useForm<z.infer<typeof sprintFormSchema>>({
     resolver: zodResolver(sprintFormSchema),
   });
 
-  const { formState: { isSubmitting: isAddingEpic } } = addEpicForm;
-  const { formState: { isSubmitting: isEditingEpic } } = editEpicForm;
-  const { formState: { isSubmitting: isAddingStory } } = addStoryForm;
-  const { formState: { isSubmitting: isEditingStory } } = editStoryForm;
-  const { formState: { isSubmitting: isAddingSprint } } = addSprintForm;
-  const { formState: { isSubmitting: isEditingSprint } } = editSprintForm;
-
+  // Form reset and data population effects
+  useEffect(() => {
+    if (!addEpicOpen) addEpicForm.reset({ title: '', description: '' });
+  }, [addEpicOpen, addEpicForm]);
 
   useEffect(() => {
     if (editingEpic) {
       editEpicForm.reset(editingEpic);
+    } else {
+      editEpicForm.reset();
     }
   }, [editingEpic, editEpicForm]);
   
@@ -233,6 +246,8 @@ export default function BacklogPage() {
         startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
         endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
       });
+    } else {
+      editSprintForm.reset();
     }
   }, [editingSprint, editSprintForm]);
   
@@ -251,10 +266,21 @@ export default function BacklogPage() {
         epicId: selectedStory.epicId || 'unassigned',
         assigneeId: selectedStory.assigneeId || 'unassigned',
       });
+    } else {
+      editStoryForm.reset();
     }
   }, [selectedStory, editStoryForm]);
+  
+  useEffect(() => {
+    if (!addStoryOpen) {
+      addStoryForm.reset({ title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned' });
+    }
+  }, [addStoryOpen, addStoryForm]);
 
+
+  // Submission Handlers
   const onAddSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
+    setIsCreatingSprint(true);
     try {
       await addSprint({
         title: values.title,
@@ -269,11 +295,14 @@ export default function BacklogPage() {
         description: "There was a problem saving your sprint. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingSprint(false);
     }
   };
   
   const onEditSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
     if (!editingSprint) return;
+    setIsUpdatingSprint(true);
     try {
       await updateSprint(editingSprint.id, {
         title: values.title,
@@ -288,18 +317,13 @@ export default function BacklogPage() {
         description: "There was a problem saving your changes. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdatingSprint(false);
     }
   };
   
-  const handleDeleteSprint = async (sprintId: string) => {
-    await deleteSprint(sprintId);
-  };
-  
-  const handleSetCurrentSprint = async (sprintId: string) => {
-    await setCurrentSprint(sprintId);
-  };
-
   const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
+    setIsCreatingEpic(true);
     try {
       await addEpic({
         title: values.title,
@@ -313,11 +337,14 @@ export default function BacklogPage() {
         description: "There was a problem saving your epic. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingEpic(false);
     }
   };
   
   const onEditEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     if (!editingEpic) return;
+    setIsUpdatingEpic(true);
     try {
       await updateEpic(editingEpic.id, values);
       setEditingEpic(null);
@@ -328,10 +355,13 @@ export default function BacklogPage() {
         description: "There was a problem saving your changes. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdatingEpic(false);
     }
   };
 
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
+    setIsCreatingStory(true);
     try {
       const newStory: Omit<Story, 'id' | 'storyId'> = {
         sprintId: null,
@@ -352,11 +382,14 @@ export default function BacklogPage() {
         description: `There was a problem saving your ${itemTypeToAdd.toLowerCase()}. Please try again.`,
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingStory(false);
     }
   };
   
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
+    setIsUpdatingStory(true);
     try {
       await updateStory(selectedStory.id, {
           title: values.title,
@@ -373,12 +406,23 @@ export default function BacklogPage() {
         description: "There was a problem saving your changes. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdatingStory(false);
     }
   };
   
+  // Delete Handlers
   const handleDeleteStory = async (storyId: string) => {
     await deleteStory(storyId);
     setDeletingStory(null);
+  };
+    
+  const handleDeleteSprint = async (sprintId: string) => {
+    await deleteSprint(sprintId);
+  };
+  
+  const handleSetCurrentSprint = async (sprintId: string) => {
+    await setCurrentSprint(sprintId);
   };
 
   const backlogStories = stories.filter((story) => story.sprintId === null);
@@ -442,8 +486,8 @@ export default function BacklogPage() {
                     )}
                   />
                   <DialogFooter>
-                    <Button type="submit" disabled={isAddingEpic}>
-                      {isAddingEpic ? 'Creating...' : 'Create Epic'}
+                    <Button type="submit" disabled={isCreatingEpic}>
+                      {isCreatingEpic ? 'Creating...' : 'Create Epic'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -500,8 +544,8 @@ export default function BacklogPage() {
                         )}
                     />
                     <DialogFooter>
-                      <Button type="submit" disabled={isAddingSprint}>
-                        {isAddingSprint ? 'Creating...' : 'Create Sprint'}
+                      <Button type="submit" disabled={isCreatingSprint}>
+                        {isCreatingSprint ? 'Creating...' : 'Create Sprint'}
                       </Button>
                     </DialogFooter>
                     </form>
@@ -619,8 +663,8 @@ export default function BacklogPage() {
                       )}
                   />
                   <DialogFooter>
-                    <Button type="submit" disabled={isAddingStory}>
-                      {isAddingStory ? 'Creating...' : `Create ${itemTypeToAdd}`}
+                    <Button type="submit" disabled={isCreatingStory}>
+                      {isCreatingStory ? 'Creating...' : `Create ${itemTypeToAdd}`}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -946,7 +990,7 @@ export default function BacklogPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={!!selectedStory} onOpenChange={(isOpen) => !isOpen && setSelectedStory(null)}>
+      <Dialog open={!!selectedStory} onOpenChange={setSelectedStory}>
         <DialogContent className="sm:max-w-[600px]">
           {selectedStory && (
             <>
@@ -1110,8 +1154,8 @@ export default function BacklogPage() {
                               ))}
                           </DropdownMenuContent>
                       </DropdownMenu>
-                      <Button type="submit" disabled={isEditingStory}>
-                        {isEditingStory ? 'Saving...' : 'Save Changes'}
+                      <Button type="submit" disabled={isUpdatingStory}>
+                        {isUpdatingStory ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </div>
                   </DialogFooter>
@@ -1122,7 +1166,7 @@ export default function BacklogPage() {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={!!editingEpic} onOpenChange={(isOpen) => !isOpen && setEditingEpic(null)}>
+      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Epic</DialogTitle>
@@ -1156,8 +1200,8 @@ export default function BacklogPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={isEditingEpic}>
-                  {isEditingEpic ? 'Saving...' : 'Save Changes'}
+                <Button type="submit" disabled={isUpdatingEpic}>
+                  {isUpdatingEpic ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </form>
@@ -1165,7 +1209,7 @@ export default function BacklogPage() {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={!!editingSprint} onOpenChange={(isOpen) => !isOpen && setEditingSprint(null)}>
+      <Dialog open={!!editingSprint} onOpenChange={setEditingSprint}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Edit Sprint</DialogTitle>
@@ -1208,8 +1252,8 @@ export default function BacklogPage() {
                     )}
                 />
                 <DialogFooter>
-                  <Button type="submit" disabled={isEditingSprint}>
-                    {isEditingSprint ? 'Saving...' : 'Save Changes'}
+                  <Button type="submit" disabled={isUpdatingSprint}>
+                    {isUpdatingSprint ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </DialogFooter>
                 </form>
