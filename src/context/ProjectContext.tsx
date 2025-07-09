@@ -23,13 +23,16 @@ const sanitizeData = (data: any) => {
   const sanitized: any = {};
   for (const key in data) {
     if (data[key] !== undefined && data[key] !== null) {
-      if (!Number.isNaN(data[key])) { // Exclude NaN values which can come from empty number inputs
+      if (typeof data[key] === 'number' && !Number.isNaN(data[key])) {
+          sanitized[key] = data[key];
+      } else if (typeof data[key] !== 'number') {
           sanitized[key] = data[key];
       }
     }
   }
   return sanitized;
 };
+
 
 interface ProjectContextType {
   epics: Epic[];

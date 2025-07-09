@@ -13,7 +13,7 @@ const firebaseConfig = {
 let db: any = null;
 
 // Only initialize Firebase if a project ID is provided in the environment variables.
-if (firebaseConfig.projectId) {
+if (firebaseConfig.projectId && firebaseConfig.projectId !== 'your-project-id') {
     const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     db = getFirestore(app);
 }
