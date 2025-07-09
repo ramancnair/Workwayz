@@ -123,17 +123,12 @@ export default function ResourcesPage() {
 
   const onSubmit = async (values: z.infer<typeof employeeFormSchema>) => {
     setIsSubmitting(true);
-    const employeeData = {
-      ...values,
-      onboardingDate: values.onboardingDate?.toISOString(),
-      offloadingDate: values.offloadingDate?.toISOString(),
-    };
-
+    
     let success = false;
     if (editingEmployee) {
-      success = await updateEmployee(editingEmployee.id, employeeData);
+      success = await updateEmployee(editingEmployee.id, values);
     } else {
-      success = await addEmployee(employeeData);
+      success = await addEmployee(values);
     }
 
     if (success) {

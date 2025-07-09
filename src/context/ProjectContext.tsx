@@ -14,6 +14,7 @@ import {
   query,
   getDocs,
   where,
+  Timestamp,
 } from 'firebase/firestore';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase } from '@/types';
 
@@ -38,14 +39,14 @@ interface ProjectContextType {
   deleteEpic: (epicId: string) => Promise<boolean>;
 
   // Sprint actions
-  addSprint: (sprint: Omit<Sprint, 'id' | 'isCurrent'>) => Promise<boolean>;
-  updateSprint: (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>) => Promise<boolean>;
+  addSprint: (sprint: { title: string, startDate?: Date, endDate?: Date }) => Promise<boolean>;
+  updateSprint: (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date }) => Promise<boolean>;
   deleteSprint: (sprintId: string) => Promise<boolean>;
   setCurrentSprint: (sprintId: string) => Promise<boolean>;
 
   // Employee actions
-  addEmployee: (employee: Omit<Employee, 'id'>) => Promise<boolean>;
-  updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id'>>) => Promise<boolean>;
+  addEmployee: (employee: Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }) => Promise<boolean>;
+  updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }>) => Promise<boolean>;
   deleteEmployee: (employeeId: string) => Promise<boolean>;
 
   // TestCase actions
@@ -75,7 +76,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         return;
     }
 
-    const collections: { name: keyof ProjectContextType, setState: React.Dispatch<any> }[] = [
+    const collections: { name: string, setState: React.Dispatch<any> }[] = [
         { name: 'epics', setState: setEpics },
         { name: 'stories', setState: setStories },
         { name: 'sprints', setState: setSprints },
@@ -84,10 +85,30 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     ];
     
     const unsubscribers = collections.map(({ name, setState }) => {
-        const q = query(collection(db, name as string));
+        const q = query(collection(db, name));
         return onSnapshot(q, 
             (querySnapshot) => {
-                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const data = querySnapshot.docs.map(doc => {
+                    const docData = doc.data();
+                    // Convert Firestore Timestamps to ISO strings for client-side use
+                    if (name === 'sprints') {
+                        if (docData.startDate && docData.startDate.toDate) {
+                            docData.startDate = docData.startDate.toDate().toISOString();
+                        }
+                        if (docData.endDate && docData.endDate.toDate) {
+                            docData.endDate = docData.endDate.toDate().toISOString();
+                        }
+                    }
+                     if (name === 'employees') {
+                        if (docData.onboardingDate && docData.onboardingDate.toDate) {
+                            docData.onboardingDate = docData.onboardingDate.toDate().toISOString();
+                        }
+                        if (docData.offloadingDate && docData.offloadingDate.toDate) {
+                            docData.offloadingDate = docData.offloadingDate.toDate().toISOString();
+                        }
+                    }
+                    return { id: doc.id, ...docData };
+                });
                 setState(data);
                 setIsLoading(false);
             },
@@ -195,10 +216,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   // Sprint Actions
-  const addSprint = async (sprint: Omit<Sprint, 'id' | 'isCurrent'>): Promise<boolean> => {
+  const addSprint = async (sprint: { title: string, startDate?: Date, endDate?: Date }): Promise<boolean> => {
     if (!db) return false;
     try {
-      await addDoc(collection(db, 'sprints'), { ...sprint, isCurrent: false });
+      const payload: any = { ...sprint, isCurrent: false };
+      if (sprint.startDate) payload.startDate = Timestamp.fromDate(sprint.startDate);
+      if (sprint.endDate) payload.endDate = Timestamp.fromDate(sprint.endDate);
+      await addDoc(collection(db, 'sprints'), payload);
       return true;
     } catch (e) {
       console.error("Error adding sprint: ", e);
@@ -206,10 +230,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const updateSprint = async (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>): Promise<boolean> => {
+  const updateSprint = async (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date }): Promise<boolean> => {
     if (!db) return false;
     try {
-      await updateDoc(doc(db, 'sprints', sprintId), data);
+      const payload: any = { ...data };
+      if (data.startDate) payload.startDate = Timestamp.fromDate(data.startDate);
+      if (data.endDate) payload.endDate = Timestamp.fromDate(data.endDate);
+      await updateDoc(doc(db, 'sprints', sprintId), payload);
       return true;
     } catch (e) {
       console.error("Error updating sprint: ", e);
@@ -256,10 +283,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   // Employee Actions
-  const addEmployee = async (employee: Omit<Employee, 'id'>): Promise<boolean> => {
+  const addEmployee = async (employee: Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }): Promise<boolean> => {
     if (!db) return false;
     try {
-        await addDoc(collection(db, 'employees'), { ...employee, avatar: 'https://placehold.co/40x40.png' });
+        const { onboardingDate, offloadingDate, ...rest } = employee;
+        const payload: any = { ...rest, avatar: 'https://placehold.co/40x40.png' };
+        if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
+        if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
+        await addDoc(collection(db, 'employees'), payload);
         return true;
     } catch (e) {
         console.error("Error adding employee: ", e);
@@ -267,10 +298,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id'>>): Promise<boolean> => {
+  const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await updateDoc(doc(db, 'employees', employeeId), data);
+        const { onboardingDate, offloadingDate, ...rest } = data;
+        const payload: any = { ...rest };
+        if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
+        if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
+      await updateDoc(doc(db, 'employees', employeeId), payload);
       return true;
     } catch (e) {
       console.error("Error updating employee: ", e);

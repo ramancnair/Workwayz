@@ -180,7 +180,12 @@ export default function BacklogPage() {
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
   
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAddEpicSubmitting, setAddEpicSubmitting] = useState(false);
+  const [isEditEpicSubmitting, setEditEpicSubmitting] = useState(false);
+  const [isAddSprintSubmitting, setAddSprintSubmitting] = useState(false);
+  const [isEditSprintSubmitting, setEditSprintSubmitting] = useState(false);
+  const [isAddStorySubmitting, setAddStorySubmitting] = useState(false);
+  const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
 
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
@@ -217,18 +222,25 @@ export default function BacklogPage() {
   });
 
   useEffect(() => {
-    if (!addEpicOpen) addEpicForm.reset({ title: '', description: '' });
+    if (!addEpicOpen) {
+      addEpicForm.reset();
+      setAddEpicSubmitting(false);
+    }
   }, [addEpicOpen, addEpicForm]);
 
   useEffect(() => {
-    if (editingEpic) {
+    if (!editingEpic) {
+      setEditEpicSubmitting(false);
+    } else {
       editEpicForm.reset(editingEpic);
     }
   }, [editingEpic, editEpicForm]);
   
   useEffect(() => {
-    if (editingSprint) {
-      editSprintForm.reset({
+    if (!editingSprint) {
+      setEditSprintSubmitting(false);
+    } else {
+       editSprintForm.reset({
         title: editingSprint.title,
         startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
         endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
@@ -238,12 +250,15 @@ export default function BacklogPage() {
   
   useEffect(() => {
     if (!addSprintOpen) {
-      addSprintForm.reset({ title: `Sprint ${sprints.length + 1}`, startDate: undefined, endDate: undefined });
+      addSprintForm.reset({ title: `Sprint ${sprints.length + 1}` });
+      setAddSprintSubmitting(false);
     }
   }, [addSprintOpen, sprints.length, addSprintForm]);
 
   useEffect(() => {
-    if (selectedStory) {
+    if (!selectedStory) {
+      setEditStorySubmitting(false);
+    } else {
       editStoryForm.reset({
         title: selectedStory.title,
         description: selectedStory.description || '',
@@ -256,43 +271,44 @@ export default function BacklogPage() {
   
   useEffect(() => {
     if (!addStoryOpen) {
-      addStoryForm.reset({ title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned' });
+      addStoryForm.reset();
+      setAddStorySubmitting(false);
     }
   }, [addStoryOpen, addStoryForm]);
 
   const onAddSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
-    setIsSubmitting(true);
+    setAddSprintSubmitting(true);
     const success = await addSprint({
       title: values.title,
-      startDate: values.startDate?.toISOString(),
-      endDate: values.endDate?.toISOString(),
+      startDate: values.startDate,
+      endDate: values.endDate,
     });
     if (success) {
       setAddSprintOpen(false);
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not create sprint." });
     }
-    setIsSubmitting(false);
+    setAddSprintSubmitting(false);
   };
   
   const onEditSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
     if (!editingSprint) return;
-    setIsSubmitting(true);
+    setEditSprintSubmitting(true);
     const success = await updateSprint(editingSprint.id, {
       title: values.title,
-      startDate: values.startDate?.toISOString(),
-      endDate: values.endDate?.toISOString(),
+      startDate: values.startDate,
+      endDate: values.endDate,
     });
     if (success) {
       setEditingSprint(null);
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not update sprint." });
     }
-    setIsSubmitting(false);
+    setEditSprintSubmitting(false);
   };
   
   const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
-    setIsSubmitting(true);
+    setAddEpicSubmitting(true);
     const success = await addEpic({
       title: values.title,
       description: values.description || '',
@@ -302,23 +318,23 @@ export default function BacklogPage() {
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not create epic." });
     }
-    setIsSubmitting(false);
+    setAddEpicSubmitting(false);
   };
   
   const onEditEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     if (!editingEpic) return;
-    setIsSubmitting(true);
+    setEditEpicSubmitting(true);
     const success = await updateEpic(editingEpic.id, values);
     if (success) {
       setEditingEpic(null);
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not update epic." });
     }
-    setIsSubmitting(false);
+    setEditEpicSubmitting(false);
   };
 
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
-    setIsSubmitting(true);
+    setAddStorySubmitting(true);
     const newStory: Omit<Story, 'id' | 'storyId'> = {
       sprintId: null,
       title: values.title,
@@ -335,12 +351,12 @@ export default function BacklogPage() {
     } else {
       toast({ variant: "destructive", title: `Error Creating ${itemTypeToAdd}`, description: `Could not save your ${itemTypeToAdd.toLowerCase()}.` });
     }
-    setIsSubmitting(false);
+    setAddStorySubmitting(false);
   };
   
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
-    setIsSubmitting(true);
+    setEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         title: values.title,
         description: values.description,
@@ -353,7 +369,7 @@ export default function BacklogPage() {
     } else {
       toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
-    setIsSubmitting(false);
+    setEditStorySubmitting(false);
   };
   
   const handleDeleteStory = (storyId: string) => {
@@ -444,8 +460,8 @@ export default function BacklogPage() {
                     )}
                   />
                   <DialogFooter>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? 'Creating...' : 'Create Epic'}
+                    <Button type="submit" disabled={isAddEpicSubmitting}>
+                      {isAddEpicSubmitting ? 'Creating...' : 'Create Epic'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -502,8 +518,8 @@ export default function BacklogPage() {
                         )}
                     />
                     <DialogFooter>
-                      <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Creating...' : 'Create Sprint'}
+                      <Button type="submit" disabled={isAddSprintSubmitting}>
+                        {isAddSprintSubmitting ? 'Creating...' : 'Create Sprint'}
                       </Button>
                     </DialogFooter>
                     </form>
@@ -621,8 +637,8 @@ export default function BacklogPage() {
                       )}
                   />
                   <DialogFooter>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? 'Creating...' : `Create ${itemTypeToAdd}`}
+                    <Button type="submit" disabled={isAddStorySubmitting}>
+                      {isAddStorySubmitting ? 'Creating...' : `Create ${itemTypeToAdd}`}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -1098,8 +1114,8 @@ export default function BacklogPage() {
                               ))}
                           </DropdownMenuContent>
                       </DropdownMenu>
-                      <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Saving...' : 'Save Changes'}
+                      <Button type="submit" disabled={isEditStorySubmitting}>
+                        {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </div>
                   </DialogFooter>
@@ -1144,8 +1160,8 @@ export default function BacklogPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
+                <Button type="submit" disabled={isEditEpicSubmitting}>
+                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </form>
@@ -1196,8 +1212,8 @@ export default function BacklogPage() {
                     )}
                 />
                 <DialogFooter>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                  <Button type="submit" disabled={isEditSprintSubmitting}>
+                    {isEditSprintSubmitting ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </DialogFooter>
                 </form>
