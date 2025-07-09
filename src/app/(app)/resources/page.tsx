@@ -123,22 +123,24 @@ export default function ResourcesPage() {
 
   const onSubmit = async (values: z.infer<typeof employeeFormSchema>) => {
     setIsSubmitting(true);
-    
-    let success = false;
-    if (editingEmployee) {
-      success = await updateEmployee(editingEmployee.id, values);
-    } else {
-      success = await addEmployee(values);
-    }
+    try {
+      const success = editingEmployee
+        ? await updateEmployee(editingEmployee.id, values)
+        : await addEmployee(values);
 
-    if (success) {
-      toast({ title: "Success", description: `Employee ${editingEmployee ? 'updated' : 'added'} successfully.` });
-      setIsDialogOpen(false);
-      setEditingEmployee(null);
-    } else {
-      toast({ variant: "destructive", title: "Error", description: `Could not ${editingEmployee ? 'update' : 'add'} employee.` });
+      if (success) {
+        toast({ title: "Success", description: `Employee ${editingEmployee ? 'updated' : 'added'} successfully.` });
+        setIsDialogOpen(false);
+        setEditingEmployee(null);
+      } else {
+        toast({ variant: "destructive", title: "Error", description: `Could not ${editingEmployee ? 'update' : 'add'} employee.` });
+      }
+    } catch (error) {
+      console.error("An unexpected error occurred while submitting the employee form:", error);
+      toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred. Please try again." });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (

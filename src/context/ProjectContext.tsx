@@ -287,6 +287,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     try {
         const { onboardingDate, offloadingDate, ...rest } = employee;
         const payload: any = { ...rest, avatar: 'https://placehold.co/40x40.png' };
+        
+        // Sanitize payload to remove any NaN values from optional number fields
+        for (const key in payload) {
+            if (Number.isNaN(payload[key])) {
+                delete payload[key];
+            }
+        }
+
         if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
         if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
         await addDoc(collection(db, 'employees'), payload);
@@ -302,6 +310,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     try {
         const { onboardingDate, offloadingDate, ...rest } = data;
         const payload: any = { ...rest };
+        
+        // Sanitize payload to remove any NaN values from optional number fields
+        for (const key in payload) {
+            if (Number.isNaN(payload[key])) {
+                delete payload[key];
+            }
+        }
+
         if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
         if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
       await updateDoc(doc(db, 'employees', employeeId), payload);
