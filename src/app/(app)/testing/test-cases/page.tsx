@@ -77,8 +77,6 @@ export default function TestCasesPage() {
   const [deletingTestCase, setDeletingTestCase] = useState<TestCase | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const testers = employees.filter(e => e.role === 'Tester');
-
   const form = useForm<z.infer<typeof testCaseFormSchema>>({
     resolver: zodResolver(testCaseFormSchema),
   });
@@ -289,10 +287,10 @@ export default function TestCasesPage() {
                       <FormItem>
                         <FormLabel>Assignee</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a tester" /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a resource" /></SelectTrigger></FormControl>
                             <SelectContent>
                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {testers.map(tester => <SelectItem key={tester.id} value={tester.id}>{tester.firstName} {tester.lastName}</SelectItem>)}
+                                {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <FormMessage />

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -192,7 +191,6 @@ export default function BacklogPage() {
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
   
   const [itemTypeToAdd, setItemTypeToAdd] = useState<WorkItemType>('Story');
-  const developers = employees.filter(e => e.role === 'Developer');
 
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
@@ -640,13 +638,13 @@ export default function BacklogPage() {
                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                               <FormControl>
                               <SelectTrigger>
-                                  <SelectValue placeholder="Assign to a developer" />
+                                  <SelectValue placeholder="Assign to a resource" />
                               </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                               <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {developers.map(dev => (
-                                  <SelectItem key={dev.id} value={dev.id}>{dev.firstName} {dev.lastName}</SelectItem>
+                              {employees.map(emp => (
+                                  <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                               ))}
                               </SelectContent>
                           </Select>
@@ -1020,14 +1018,14 @@ export default function BacklogPage() {
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Assign to a developer" />
+                              <SelectValue placeholder="Assign to a resource" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {developers.map((dev) => (
-                              <SelectItem key={dev.id} value={dev.id}>
-                                {dev.firstName} {dev.lastName}
+                            {employees.map((emp) => (
+                              <SelectItem key={emp.id} value={emp.id}>
+                                {emp.firstName} {emp.lastName}
                               </SelectItem>
                             ))}
                           </SelectContent>
