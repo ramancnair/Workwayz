@@ -91,21 +91,20 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                 const data = querySnapshot.docs.map(doc => {
                     const docData = doc.data();
                     // Convert Firestore Timestamps to ISO strings for client-side use
+                    const convertTimestamp = (field: any) => {
+                      if (field && typeof field.toDate === 'function') {
+                        return field.toDate().toISOString();
+                      }
+                      return field;
+                    }
+
                     if (name === 'sprints') {
-                        if (docData.startDate && docData.startDate.toDate) {
-                            docData.startDate = docData.startDate.toDate().toISOString();
-                        }
-                        if (docData.endDate && docData.endDate.toDate) {
-                            docData.endDate = docData.endDate.toDate().toISOString();
-                        }
+                        docData.startDate = convertTimestamp(docData.startDate);
+                        docData.endDate = convertTimestamp(docData.endDate);
                     }
                      if (name === 'employees') {
-                        if (docData.onboardingDate && docData.onboardingDate.toDate) {
-                            docData.onboardingDate = docData.onboardingDate.toDate().toISOString();
-                        }
-                        if (docData.offloadingDate && docData.offloadingDate.toDate) {
-                            docData.offloadingDate = docData.offloadingDate.toDate().toISOString();
-                        }
+                        docData.onboardingDate = convertTimestamp(docData.onboardingDate);
+                        docData.offloadingDate = convertTimestamp(docData.offloadingDate);
                     }
                     return { id: doc.id, ...docData };
                 });
