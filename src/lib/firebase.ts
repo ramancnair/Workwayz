@@ -18,4 +18,4 @@ if (firebaseConfig.projectId && firebaseConfig.projectId !== 'your-project-id') 
     db = getFirestore(app);
 }
 
-export { db };
+export { db, firebaseConfig };

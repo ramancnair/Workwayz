@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
-import { db } from '@/lib/firebase';
+import { db, firebaseConfig } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -15,6 +15,7 @@ import {
   getDocs,
   where,
   Timestamp,
+  getDoc,
 } from 'firebase/firestore';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase } from '@/types';
 
@@ -86,56 +87,80 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!db) {
-        setError("Firebase is not configured. This is likely because the environment variables for your Firebase project are not set. Please check your project setup in the Firebase Studio settings to ensure it's correctly linked to a Firebase project.");
-        setIsLoading(false);
-        return;
+    async function checkFirestoreConnection() {
+      if (!db) {
+        return `Firebase is not configured correctly. The application is trying to use the Project ID: "${firebaseConfig.projectId || 'Not Found'}". This is likely a placeholder. Please check your project setup in the Firebase Studio settings to ensure it's correctly linked to a Firebase project.`;
+      }
+      try {
+        // Attempt a simple read. This tests connectivity and rules.
+        // It's okay if this doc doesn't exist; the call itself is the test.
+        await getDoc(doc(db, '__healthcheck', 'check'));
+        return null; // Success
+      } catch (e: any) {
+        if (e.code === 'permission-denied') {
+          return "Firestore connection failed due to security rules. Please go to the Firestore 'Rules' tab in the Firebase Console and ensure your rules allow reads, for example: 'allow read, write: if true;'.";
+        }
+        if (e.code === 'unimplemented' || e.code === 'failed-precondition') {
+          return "Firestore connection failed. The database has likely not been created in your Firebase project. Please go to the Firebase Console, select Firestore, and click 'Create database'.";
+        }
+        return `An unexpected error occurred while connecting to Firestore: ${e.message} (Code: ${e.code})`;
+      }
     }
 
-    const collections: { name: string, setState: React.Dispatch<any> }[] = [
-        { name: 'epics', setState: setEpics },
-        { name: 'stories', setState: setStories },
-        { name: 'sprints', setState: setSprints },
-        { name: 'employees', setState: setEmployees },
-        { name: 'testCases', setState: setTestCases },
-    ];
-    
-    const unsubscribers = collections.map(({ name, setState }) => {
-        const q = query(collection(db, name));
-        return onSnapshot(q, 
-            (querySnapshot) => {
-                const data = querySnapshot.docs.map(doc => {
-                    const docData = doc.data();
-                    // Convert Firestore Timestamps to ISO strings for client-side use
-                    const convertTimestamp = (field: any) => {
-                      if (field && typeof field.toDate === 'function') {
-                        return field.toDate().toISOString();
-                      }
-                      return field;
-                    }
+    async function initialize() {
+        const connectionError = await checkFirestoreConnection();
+        if (connectionError) {
+            setError(connectionError);
+            setIsLoading(false);
+            return;
+        }
 
-                    if (name === 'sprints') {
-                        docData.startDate = convertTimestamp(docData.startDate);
-                        docData.endDate = convertTimestamp(docData.endDate);
-                    }
-                     if (name === 'employees') {
-                        docData.onboardingDate = convertTimestamp(docData.onboardingDate);
-                        docData.offloadingDate = convertTimestamp(docData.offloadingDate);
-                    }
-                    return { id: doc.id, ...docData };
-                });
-                setState(data);
-                setIsLoading(false);
-            },
-            (err) => {
-                console.error(`Error fetching ${name}:`, err);
-                setError(`Failed to connect to the database. Please check your Firebase configuration and security rules. (Collection: ${name})`);
-                setIsLoading(false);
-            }
-        );
-    });
+        const collections: { name: string, setState: React.Dispatch<any> }[] = [
+            { name: 'epics', setState: setEpics },
+            { name: 'stories', setState: setStories },
+            { name: 'sprints', setState: setSprints },
+            { name: 'employees', setState: setEmployees },
+            { name: 'testCases', setState: setTestCases },
+        ];
+        
+        const unsubscribers = collections.map(({ name, setState }) => {
+            const q = query(collection(db, name));
+            return onSnapshot(q, 
+                (querySnapshot) => {
+                    const data = querySnapshot.docs.map(doc => {
+                        const docData = doc.data();
+                        const convertTimestamp = (field: any) => {
+                          if (field && typeof field.toDate === 'function') {
+                            return field.toDate().toISOString();
+                          }
+                          return field;
+                        }
 
-    return () => unsubscribers.forEach(unsub => unsub());
+                        if (name === 'sprints') {
+                            docData.startDate = convertTimestamp(docData.startDate);
+                            docData.endDate = convertTimestamp(docData.endDate);
+                        }
+                         if (name === 'employees') {
+                            docData.onboardingDate = convertTimestamp(docData.onboardingDate);
+                            docData.offloadingDate = convertTimestamp(docData.offloadingDate);
+                        }
+                        return { id: doc.id, ...docData };
+                    });
+                    setState(data);
+                    setIsLoading(false);
+                },
+                (err) => {
+                    console.error(`Error fetching ${name}:`, err);
+                    setError(`Failed to listen to the database after initial connection. Please check your Firebase configuration and security rules. (Collection: ${name}, Error: ${err.message})`);
+                    setIsLoading(false);
+                }
+            );
+        });
+
+        return () => unsubscribers.forEach(unsub => unsub());
+    }
+
+    initialize();
   }, []);
 
   // Story Actions
