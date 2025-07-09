@@ -135,8 +135,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             ) + 1
             : 1;
 
-        const newStory = { ...story, storyId: `ST-${newIdNumber}` };
-        await addDoc(collection(db, 'stories'), newStory);
+        const payload: any = { ...story, storyId: `ST-${newIdNumber}` };
+        Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
+
+        await addDoc(collection(db, 'stories'), payload);
         return true;
     } catch (e) {
         console.error("Error adding story: ", e);
@@ -147,8 +149,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      const storyRef = doc(db, 'stories', storyId);
-      await updateDoc(storyRef, data);
+      const payload: any = { ...data };
+      Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
+      await updateDoc(doc(db, 'stories', storyId), payload);
       return true;
     } catch (e) {
       console.error("Error updating story: ", e);
@@ -175,7 +178,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const addEpic = async (epic: Omit<Epic, 'id'>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await addDoc(collection(db, 'epics'), epic);
+      const payload: any = { ...epic };
+      Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
+      await addDoc(collection(db, 'epics'), payload);
       return true;
     } catch (e) {
       console.error("Error adding epic: ", e);
@@ -186,7 +191,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await updateDoc(doc(db, 'epics', epicId), data);
+      const payload: any = { ...data };
+      Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
+      await updateDoc(doc(db, 'epics', epicId), payload);
       return true;
     } catch (e) {
       console.error("Error updating epic: ", e);
@@ -218,7 +225,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const addSprint = async (sprint: { title: string, startDate?: Date, endDate?: Date }): Promise<boolean> => {
     if (!db) return false;
     try {
-      const payload: any = { ...sprint, isCurrent: false };
+      const payload: any = { title: sprint.title, isCurrent: false };
       if (sprint.startDate) payload.startDate = Timestamp.fromDate(sprint.startDate);
       if (sprint.endDate) payload.endDate = Timestamp.fromDate(sprint.endDate);
       await addDoc(collection(db, 'sprints'), payload);
@@ -232,9 +239,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateSprint = async (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date }): Promise<boolean> => {
     if (!db) return false;
     try {
-      const payload: any = { ...data };
-      if (data.startDate) payload.startDate = Timestamp.fromDate(data.startDate);
-      if (data.endDate) payload.endDate = Timestamp.fromDate(data.endDate);
+      const payload: any = { title: data.title };
+      payload.startDate = data.startDate ? Timestamp.fromDate(data.startDate) : null;
+      payload.endDate = data.endDate ? Timestamp.fromDate(data.endDate) : null;
       await updateDoc(doc(db, 'sprints', sprintId), payload);
       return true;
     } catch (e) {
@@ -288,12 +295,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         const { onboardingDate, offloadingDate, ...rest } = employee;
         const payload: any = { ...rest, avatar: 'https://placehold.co/40x40.png' };
         
-        // Sanitize payload to remove any NaN values from optional number fields
-        for (const key in payload) {
-            if (Number.isNaN(payload[key])) {
-                delete payload[key];
-            }
-        }
+        Object.keys(payload).forEach(key => { if (payload[key] === undefined || Number.isNaN(payload[key])) delete payload[key]; });
 
         if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
         if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
@@ -311,17 +313,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         const { onboardingDate, offloadingDate, ...rest } = data;
         const payload: any = { ...rest };
         
-        // Sanitize payload to remove any NaN values from optional number fields
-        for (const key in payload) {
-            if (Number.isNaN(payload[key])) {
-                delete payload[key];
-            }
-        }
+        Object.keys(payload).forEach(key => { if (payload[key] === undefined || Number.isNaN(payload[key])) delete payload[key]; });
 
-        if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
-        if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
-      await updateDoc(doc(db, 'employees', employeeId), payload);
-      return true;
+        if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(onboardingDate) : null;
+        if (data.hasOwnProperty('offloadingDate')) payload.offloadingDate = offloadingDate ? Timestamp.fromDate(offloadingDate) : null;
+
+        await updateDoc(doc(db, 'employees', employeeId), payload);
+        return true;
     } catch (e) {
       console.error("Error updating employee: ", e);
       return false;
@@ -352,8 +350,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             ) + 1
             : 1;
 
-        const newTestCase = { ...testCase, testCaseId: `TC-${newIdNumber}` };
-        await addDoc(collection(db, 'testCases'), newTestCase);
+        const payload: any = { ...testCase, testCaseId: `TC-${newIdNumber}` };
+        Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
+
+        await addDoc(collection(db, 'testCases'), payload);
         return true;
     } catch (e) {
         console.error("Error adding test case: ", e);
@@ -364,7 +364,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await updateDoc(doc(db, 'testCases', testCaseId), data);
+      const payload: any = { ...data };
+      Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
+      await updateDoc(doc(db, 'testCases', testCaseId), payload);
       return true;
     } catch (e) {
       console.error("Error updating test case: ", e);

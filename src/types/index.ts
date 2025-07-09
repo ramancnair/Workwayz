@@ -1,4 +1,5 @@
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -17,7 +18,7 @@ export type Task = {
 export type Epic = {
   id: string;
   title: string;
-  description: string;
+  description?: string;
 };
 
 export type StoryStatus = 'To Do' | 'In Progress' | 'Done';
