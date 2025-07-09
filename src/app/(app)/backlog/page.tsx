@@ -676,26 +676,28 @@ export default function BacklogPage() {
                  {epicsToDisplay.map((epic) => {
                   const isUnassignedEpic = epic.id === 'unassigned';
                   
-                  const storiesInThisGroup = isUnassignedEpic 
+                  // For progress calculation (entire epic)
+                  const allStoriesInEpic = isUnassignedEpic 
                       ? allUnassignedStories 
                       : stories.filter(story => story.epicId === epic.id);
-                  
-                  const totalStories = storiesInThisGroup.length;
-                  const doneStories = storiesInThisGroup.filter(s => s.status === 'Done').length;
-                  const donePercentage = totalStories > 0 ? Math.round((doneStories / totalStories) * 100) : 0;
-                  
+                  const totalEpicItemsCount = allStoriesInEpic.length;
+                  const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
+                  const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
+
+                  // For display (backlog items only)
                   const backlogStoriesInThisGroup = storiesByEpic[epic.id] || [];
-                  
+                  const backlogItemsCount = backlogStoriesInThisGroup.length;
+
                   return (
                       <AccordionItem value={epic.id} key={epic.id}>
                       <AccordionTrigger>
                           <div className="flex-1 text-left pr-2">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold">{epic.title}</span>
-                                <Badge variant="secondary">{totalStories} {totalStories === 1 ? 'item' : 'items'}</Badge>
+                                <Badge variant="secondary">{backlogItemsCount} {backlogItemsCount === 1 ? 'item' : 'items'}</Badge>
                               </div>
-                              {!isUnassignedEpic && totalStories > 0 && (
-                                <div className="flex items-center gap-2 mt-2" title={`${doneStories} of ${totalStories} stories completed`}>
+                              {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                                <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
                                     <Progress value={donePercentage} className="h-2" />
                                     <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
                                 </div>
