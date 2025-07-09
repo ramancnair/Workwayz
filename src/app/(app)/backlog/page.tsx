@@ -410,6 +410,24 @@ export default function BacklogPage() {
     return acc;
   }, {} as Record<string, Story[]>);
 
+  const allUnassignedStories = stories.filter(s => !s.epicId);
+
+  const epicsToDisplay = [...epics];
+  if (allUnassignedStories.length > 0) {
+      epicsToDisplay.push({
+          id: 'unassigned',
+          title: 'Unassigned',
+          description: 'Items not assigned to any epic.',
+      });
+  }
+
+  // Sort epics alphabetically, but keep Unassigned at the end.
+  epicsToDisplay.sort((a, b) => {
+      if (a.id === 'unassigned') return 1;
+      if (b.id === 'unassigned') return -1;
+      return a.title.localeCompare(b.title);
+  });
+
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
 
@@ -654,39 +672,46 @@ export default function BacklogPage() {
               Backlog
             </h3>
             <div className="overflow-y-auto flex-1 -mr-4 pr-4">
-              <Accordion type="multiple" className="w-full" defaultValue={epics.map(e => e.id).concat('unassigned')}>
-                 {epics.map((epic) => {
-                  const epicStories = stories.filter(story => story.epicId === epic.id);
-                  const totalStories = epicStories.length;
-                  const doneStories = epicStories.filter(s => s.status === 'Done').length;
+              <Accordion type="multiple" className="w-full" defaultValue={epicsToDisplay.map(e => e.id)}>
+                 {epicsToDisplay.map((epic) => {
+                  const isUnassignedEpic = epic.id === 'unassigned';
+                  
+                  const storiesInThisGroup = isUnassignedEpic 
+                      ? allUnassignedStories 
+                      : stories.filter(story => story.epicId === epic.id);
+                  
+                  const totalStories = storiesInThisGroup.length;
+                  const doneStories = storiesInThisGroup.filter(s => s.status === 'Done').length;
                   const donePercentage = totalStories > 0 ? Math.round((doneStories / totalStories) * 100) : 0;
                   
-                  const backlogStoriesInEpic = storiesByEpic[epic.id] || [];
-
+                  const backlogStoriesInThisGroup = storiesByEpic[epic.id] || [];
+                  
                   return (
                       <AccordionItem value={epic.id} key={epic.id}>
                       <AccordionTrigger>
                           <div className="flex-1 text-left pr-2">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold">{epic.title}</span>
-                                <Badge variant="secondary">{totalStories} {totalStories === 1 ? 'story' : 'stories'}</Badge>
+                                <Badge variant="secondary">{totalStories} {totalStories === 1 ? 'item' : 'items'}</Badge>
                               </div>
-                               <div className="flex items-center gap-2 mt-2" title={`${doneStories} of ${totalStories} stories completed`}>
-                                  <Progress value={donePercentage} className="h-2" />
-                                  <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
-                              </div>
+                              {!isUnassignedEpic && totalStories > 0 && (
+                                <div className="flex items-center gap-2 mt-2" title={`${doneStories} of ${totalStories} stories completed`}>
+                                    <Progress value={donePercentage} className="h-2" />
+                                    <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                                </div>
+                              )}
                           </div>
                       </AccordionTrigger>
                       <AccordionContent className="space-y-2">
-                          {backlogStoriesInEpic.length > 0 ? (
-                          backlogStoriesInEpic.map((story) => {
-                            const epic = epics.find((e) => e.id === story.epicId);
+                          {backlogStoriesInThisGroup.length > 0 ? (
+                          backlogStoriesInThisGroup.map((story) => {
+                            const storyEpic = epics.find((e) => e.id === story.epicId);
                             const assignee = employees.find((d) => d.id === story.assigneeId);
                             return (
                               <div key={story.id} className="relative group">
                                 <StoryCard
                                     story={story}
-                                    epic={epic}
+                                    epic={storyEpic}
                                     assignee={assignee}
                                     onClick={() => setSelectedStory(story)}
                                 />
@@ -719,73 +744,25 @@ export default function BacklogPage() {
                           })
                           ) : (
                           <p className="text-sm text-muted-foreground italic px-2">
-                              No stories from this epic are in the backlog.
+                              No items from this group are in the backlog.
                           </p>
                           )}
-                           <div className="pt-4 px-4 flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Epic
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Epic
-                            </Button>
-                          </div>
+                           {!isUnassignedEpic && (
+                            <div className="pt-4 px-4 flex justify-end gap-2">
+                              <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Epic
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Epic
+                              </Button>
+                            </div>
+                           )}
                       </AccordionContent>
                       </AccordionItem>
                   );
                 })}
-                {(storiesByEpic['unassigned'] || []).length > 0 && (
-                  <AccordionItem value="unassigned" key="unassigned">
-                    <AccordionTrigger>
-                      <div className="flex justify-between items-center w-full">
-                        <span>Unassigned Stories</span>
-                        <Badge variant="secondary">{(storiesByEpic['unassigned'] || []).length} {(storiesByEpic['unassigned'] || []).length === 1 ? 'story' : 'stories'}</Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="space-y-2">
-                      {(storiesByEpic['unassigned'] || []).map((story) => {
-                          const epic = epics.find((e) => e.id === story.epicId);
-                          const assignee = employees.find((d) => d.id === story.assigneeId);
-                          return (
-                             <div key={story.id} className="relative group">
-                                <StoryCard
-                                    story={story}
-                                    epic={epic}
-                                    assignee={assignee}
-                                    onClick={() => setSelectedStory(story)}
-                                />
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="sm" className="h-7">
-                                            Change Epic <ChevronDown className="ml-1 h-4 w-4" />
-                                          </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                         <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
-                                          Unassigned
-                                        </DropdownMenuItem>
-                                        {epics
-                                        .filter((e) => e.id !== story.epicId)
-                                        .map((e) => (
-                                            <DropdownMenuItem
-                                            key={e.id}
-                                            onClick={() => moveStoryToEpic(story.id, e.id)}
-                                            >
-                                            {e.title}
-                                            </DropdownMenuItem>
-                                        ))}
-                                      </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </div>
-                          )
-                      })}
-                    </AccordionContent>
-                  </AccordionItem>
-                )}
               </Accordion>
             </div>
           </div>
