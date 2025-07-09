@@ -18,12 +18,14 @@ import {
 } from 'firebase/firestore';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase } from '@/types';
 
-// Helper to remove undefined properties from an object
+// Helper to remove undefined or null properties from an object before sending to Firestore
 const sanitizeData = (data: any) => {
   const sanitized: any = {};
   for (const key in data) {
-    if (data[key] !== undefined) {
-      sanitized[key] = data[key];
+    if (data[key] !== undefined && data[key] !== null) {
+      if (!Number.isNaN(data[key])) { // Exclude NaN values which can come from empty number inputs
+          sanitized[key] = data[key];
+      }
     }
   }
   return sanitized;
@@ -82,7 +84,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!db) {
-        setError("Firebase not configured. Please check your .env.local file.");
+        setError("Firebase is not configured. This is likely because the environment variables for your Firebase project are not set. Please check your project setup in the Firebase Studio settings to ensure it's correctly linked to a Firebase project.");
         setIsLoading(false);
         return;
     }
