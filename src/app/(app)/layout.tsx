@@ -13,8 +13,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
+  const isRisksPath = pathname.startsWith('/risks');
   
-  const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : 'development';
+  const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : isRisksPath ? 'risks' : 'development';
 
   const onTabChange = (value: string) => {
     if (value === 'development') {
@@ -23,6 +24,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/dashboard/testing');
     } else if (value === 'resources') {
       router.push('/resources');
+    } else if (value === 'risks') {
+      router.push('/risks');
     }
   };
 
@@ -40,6 +43,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                         <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
                         <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
+                        <TabsTrigger value="risks" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Risks</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>

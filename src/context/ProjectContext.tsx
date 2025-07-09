@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
-import { db } from '@/lib/firebase';
+import { db, firebaseConfig } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -15,22 +15,24 @@ import {
   getDocs,
   where,
   Timestamp,
+  connectFirestoreEmulator,
+  getFirestore,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk } from '@/types';
 
-// Helper to remove undefined or null properties from an object before sending to Firestore
-const sanitizeData = (data: any) => {
-  const sanitized: any = {};
-  for (const key in data) {
-    if (data[key] !== undefined && data[key] !== null) {
-      if (typeof data[key] === 'number' && !Number.isNaN(data[key])) {
-          sanitized[key] = data[key];
-      } else if (typeof data[key] !== 'number') {
-          sanitized[key] = data[key];
-      }
+// Helper to remove undefined values from an object before sending to Firestore
+const sanitizeForFirestore = (data: any) => {
+    const sanitized: any = {};
+    for (const key in data) {
+        if (data[key] !== undefined) {
+             if (typeof data[key] === 'number' && !Number.isNaN(data[key])) {
+                sanitized[key] = data[key];
+            } else if (typeof data[key] !== 'number') {
+                sanitized[key] = data[key];
+            }
+        }
     }
-  }
-  return sanitized;
+    return sanitized;
 };
 
 
@@ -40,6 +42,7 @@ interface ProjectContextType {
   sprints: Sprint[];
   employees: Employee[];
   testCases: TestCase[];
+  risks: Risk[];
   
   // Story actions
   addStory: (story: Omit<Story, 'id' | 'storyId'>) => Promise<boolean>;
@@ -70,6 +73,11 @@ interface ProjectContextType {
   updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
 
+  // Risk actions
+  addRisk: (risk: Omit<Risk, 'id' | 'riskId'>) => Promise<boolean>;
+  updateRisk: (riskId: string, data: Partial<Omit<Risk, 'id' | 'riskId'>>) => Promise<boolean>;
+  deleteRisk: (riskId: string) => Promise<boolean>;
+
   isLoading: boolean;
   error: string | null;
 }
@@ -82,12 +90,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const [risks, setRisks] = useState<Risk[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!db) {
-        setError("Firebase connection failed. Please ensure your project is configured correctly in your environment settings.");
+        setError(`Firebase is not configured correctly. The application is trying to use the Project ID: "${firebaseConfig.projectId || 'your-project-id'}". This is likely a placeholder. Please check your project setup in the Firebase Studio settings to ensure it's correctly linked to a Firebase project.`);
         setIsLoading(false);
         return;
     }
@@ -98,6 +107,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         { name: 'sprints', setState: setSprints },
         { name: 'employees', setState: setEmployees },
         { name: 'testCases', setState: setTestCases },
+        { name: 'risks', setState: setRisks },
     ];
     
     const unsubscribers = collections.map(({ name, setState }) => {
@@ -151,7 +161,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             : 1;
 
         const payload = { ...story, storyId: `ST-${newIdNumber}` };
-        await addDoc(collection(db, 'stories'), sanitizeData(payload));
+        await addDoc(collection(db, 'stories'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
         console.error("Firebase Error: Failed to add story.", { code: e.code, message: e.message, fullError: e });
@@ -162,7 +172,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await updateDoc(doc(db, 'stories', storyId), sanitizeData(data));
+      await updateDoc(doc(db, 'stories', storyId), sanitizeForFirestore(data));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update story.", { id: storyId, code: e.code, message: e.message, fullError: e });
@@ -189,7 +199,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const addEpic = async (epic: Omit<Epic, 'id'>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await addDoc(collection(db, 'epics'), sanitizeData(epic));
+      await addDoc(collection(db, 'epics'), sanitizeForFirestore(epic));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add epic.", { code: e.code, message: e.message, fullError: e });
@@ -200,7 +210,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await updateDoc(doc(db, 'epics', epicId), sanitizeData(data));
+      await updateDoc(doc(db, 'epics', epicId), sanitizeForFirestore(data));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update epic.", { id: epicId, code: e.code, message: e.message, fullError: e });
@@ -235,7 +245,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       const payload: any = { title: sprint.title, isCurrent: false };
       if (sprint.startDate) payload.startDate = Timestamp.fromDate(sprint.startDate);
       if (sprint.endDate) payload.endDate = Timestamp.fromDate(sprint.endDate);
-      await addDoc(collection(db, 'sprints'), sanitizeData(payload));
+      await addDoc(collection(db, 'sprints'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add sprint.", { code: e.code, message: e.message, fullError: e });
@@ -249,7 +259,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       const payload: any = { title: data.title };
       payload.startDate = data.startDate ? Timestamp.fromDate(data.startDate) : null;
       payload.endDate = data.endDate ? Timestamp.fromDate(data.endDate) : null;
-      await updateDoc(doc(db, 'sprints', sprintId), sanitizeData(payload));
+      await updateDoc(doc(db, 'sprints', sprintId), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update sprint.", { id: sprintId, code: e.code, message: e.message, fullError: e });
@@ -305,7 +315,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
         if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
 
-        await addDoc(collection(db, 'employees'), sanitizeData(payload));
+        await addDoc(collection(db, 'employees'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
         console.error("Firebase Error: Failed to add employee.", { code: e.code, message: e.message, fullError: e });
@@ -322,7 +332,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(onboardingDate) : null;
         if (data.hasOwnProperty('offloadingDate')) payload.offloadingDate = offloadingDate ? Timestamp.fromDate(offloadingDate) : null;
 
-        await updateDoc(doc(db, 'employees', employeeId), sanitizeData(payload));
+        await updateDoc(doc(db, 'employees', employeeId), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update employee.", { id: employeeId, code: e.code, message: e.message, fullError: e });
@@ -355,7 +365,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             : 1;
 
         const payload = { ...testCase, testCaseId: `TC-${newIdNumber}` };
-        await addDoc(collection(db, 'testCases'), sanitizeData(payload));
+        await addDoc(collection(db, 'testCases'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
         console.error("Firebase Error: Failed to add test case.", { code: e.code, message: e.message, fullError: e });
@@ -366,7 +376,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await updateDoc(doc(db, 'testCases', testCaseId), sanitizeData(data));
+      await updateDoc(doc(db, 'testCases', testCaseId), sanitizeForFirestore(data));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
@@ -384,6 +394,50 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       return false;
     }
   };
+
+  // Risk Actions
+  const addRisk = async (risk: Omit<Risk, 'id' | 'riskId'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const risksSnapshot = await getDocs(collection(db, 'risks'));
+      const newIdNumber = risksSnapshot.size > 0
+        ? Math.max(0, ...risksSnapshot.docs
+            .map(doc => doc.data().riskId)
+            .filter((id: string | undefined) => id && typeof id === 'string')
+            .map((id: string) => parseInt(id.replace('R-', ''), 10) || 0)
+        ) + 1
+        : 1;
+
+      const payload = { ...risk, riskId: `R-${newIdNumber}` };
+      await addDoc(collection(db, 'risks'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add risk.", { code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const updateRisk = async (riskId: string, data: Partial<Omit<Risk, 'id' | 'riskId'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await updateDoc(doc(db, 'risks', riskId), sanitizeForFirestore(data));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update risk.", { id: riskId, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const deleteRisk = async (riskId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'risks', riskId));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete risk.", { id: riskId, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
   
   const value: ProjectContextType = {
     epics,
@@ -391,6 +445,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     sprints,
     employees,
     testCases,
+    risks,
     isLoading,
     error,
     addStory,
@@ -412,6 +467,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addTestCase,
     updateTestCase,
     deleteTestCase,
+    addRisk,
+    updateRisk,
+    deleteRisk,
   };
   
     if (isLoading) {
@@ -428,8 +486,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     if (error) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background p-8">
-                <div className="max-w-2xl rounded-lg border border-destructive bg-destructive/10 p-6 text-center">
-                    <h2 className="text-2xl font-bold text-destructive">Database Connection Error</h2>
+                <div className="max-w-2xl rounded-lg border border-destructive bg-destructive/10 p-6 text-center text-destructive">
+                    <h2 className="text-2xl font-bold">Database Connection Error</h2>
                     <p className="mt-2 text-destructive/80">{error}</p>
                 </div>
             </div>

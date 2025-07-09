@@ -1,5 +1,6 @@
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -81,4 +82,18 @@ export type Employee = {
   onshoreOrOffshore?: OnshoreOffshore;
   billedRate?: number;
   availability?: number;
+};
+
+export type RiskSeverity = 1 | 2 | 3;
+export type RiskProbability = 1 | 2 | 3;
+
+export type Risk = {
+  id: string;
+  riskId: string;
+  description: string;
+  severity: RiskSeverity;
+  probability: RiskProbability;
+  mitigationPlan: string;
+  residualRisk: string;
+  contingencyPlan: string;
 };

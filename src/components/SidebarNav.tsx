@@ -25,6 +25,7 @@ import {
   Layers,
   Users,
   Bug,
+  ShieldAlert,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -76,10 +77,19 @@ export function SidebarNav() {
     },
   ];
 
+  const risksMenuItems = [
+    {
+      href: "/risks",
+      label: "Project Risks",
+      icon: ShieldAlert,
+    },
+  ];
+
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
+  const isRisksPath = pathname.startsWith('/risks');
   
-  const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : devMenuItems;
+  const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : isRisksPath ? risksMenuItems : devMenuItems;
 
   return (
     <>
