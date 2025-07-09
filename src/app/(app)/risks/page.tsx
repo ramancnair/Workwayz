@@ -154,7 +154,7 @@ export default function RisksPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Project Risks" description="Manage and track all project risks.">
+        <PageHeader title="Risks" description="Manage and track all project risks.">
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Risk

@@ -84,7 +84,7 @@ export function SidebarNav() {
   const governanceMenuItems = [
     {
       href: "/risks",
-      label: "Project Risks",
+      label: "Risks",
       icon: ShieldAlert,
     },
     {
