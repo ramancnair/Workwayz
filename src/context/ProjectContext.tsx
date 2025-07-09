@@ -454,9 +454,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     if (error) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background p-8">
-                <div className="max-w-2xl rounded-lg border border-destructive bg-destructive/10 p-6 text-center text-destructive-foreground">
-                    <h2 className="text-2xl font-bold">Database Connection Error</h2>
-                    <p className="mt-2 text-destructive-foreground/80">{error}</p>
+                <div className="max-w-2xl rounded-lg border border-destructive bg-destructive/10 p-6 text-center">
+                    <h2 className="text-2xl font-bold text-destructive">Database Connection Error</h2>
+                    <p className="mt-2 text-destructive/80">{error}</p>
                 </div>
             </div>
         );
