@@ -45,6 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useToast } from "@/hooks/use-toast";
 
 const testCaseFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -70,9 +71,11 @@ const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
 export default function TestCasesPage() {
   const { testCases, employees, stories, addTestCase, updateTestCase, deleteTestCase } = useProject();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingTestCase, setDeletingTestCase] = useState<TestCase | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const testers = employees.filter(e => e.role === 'Tester');
 
@@ -81,36 +84,45 @@ export default function TestCasesPage() {
   });
 
   useEffect(() => {
-    if (editingTestCase) {
-      form.reset({
-        ...editingTestCase,
-        assigneeId: editingTestCase.assigneeId || 'unassigned',
-        storyId: editingTestCase.storyId || 'unassigned',
-      });
-    } else {
-      form.reset({
-        title: '',
-        type: 'Functional',
-        description: '',
-        expectedResult: '',
-        status: 'Not Run',
-        assigneeId: 'unassigned',
-        storyId: 'unassigned',
-      });
+    if (isDialogOpen) {
+        if (editingTestCase) {
+        form.reset({
+            ...editingTestCase,
+            assigneeId: editingTestCase.assigneeId || 'unassigned',
+            storyId: editingTestCase.storyId || 'unassigned',
+        });
+        } else {
+        form.reset({
+            title: '',
+            type: 'Functional',
+            description: '',
+            expectedResult: '',
+            status: 'Not Run',
+            assigneeId: 'unassigned',
+            storyId: 'unassigned',
+        });
+        }
     }
-  }, [editingTestCase, form]);
+  }, [isDialogOpen, editingTestCase, form]);
 
   const handleDialogOpen = (testCase: TestCase | null) => {
     setEditingTestCase(testCase);
     setIsDialogOpen(true);
   };
   
-  const handleDelete = async (testCaseId: string) => {
-    await deleteTestCase(testCaseId);
+  const handleDeleteConfirm = async () => {
+    if (!deletingTestCase) return;
+    const success = await deleteTestCase(deletingTestCase.id);
+    if (success) {
+      toast({ title: "Success", description: "Test case deleted." });
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete test case." });
+    }
     setDeletingTestCase(null);
   };
 
   const onSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
+    setIsSubmitting(true);
     const testCaseData = {
         title: values.title,
         type: values.type,
@@ -121,15 +133,21 @@ export default function TestCasesPage() {
         storyId: values.storyId === 'unassigned' ? undefined : values.storyId,
     };
 
+    let success = false;
     if (editingTestCase) {
-      // Update existing test case
-      await updateTestCase(editingTestCase.id, testCaseData);
+      success = await updateTestCase(editingTestCase.id, testCaseData);
     } else {
-      // Add new test case
-      await addTestCase(testCaseData);
+      success = await addTestCase(testCaseData);
     }
-    setIsDialogOpen(false);
-    setEditingTestCase(null);
+
+    if (success) {
+        toast({ title: "Success", description: `Test case ${editingTestCase ? 'updated' : 'added'} successfully.` });
+        setIsDialogOpen(false);
+        setEditingTestCase(null);
+    } else {
+        toast({ variant: "destructive", title: "Error", description: `Could not ${editingTestCase ? 'update' : 'add'} test case.` });
+    }
+    setIsSubmitting(false);
   };
 
   return (
@@ -295,7 +313,9 @@ export default function TestCasesPage() {
                   )} />
               </div>
               <DialogFooter>
-                <Button type="submit">{editingTestCase ? 'Save Changes' : 'Create Test Case'}</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (editingTestCase ? 'Saving...' : 'Creating...') : (editingTestCase ? 'Save Changes' : 'Create Test Case')}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -313,7 +333,7 @@ export default function TestCasesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => deletingTestCase && handleDelete(deletingTestCase.id)}
+              onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue

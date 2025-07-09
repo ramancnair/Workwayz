@@ -44,6 +44,7 @@ import { type Employee, type EmployeeRole } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast"
 
 const employeeRoles: EmployeeRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
 
@@ -66,66 +67,83 @@ const employeeFormSchema = z.object({
 
 export default function ResourcesPage() {
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useProject();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof employeeFormSchema>>({
     resolver: zodResolver(employeeFormSchema),
   });
 
   useEffect(() => {
-    if (editingEmployee) {
-      form.reset({
-        ...editingEmployee,
-        onboardingDate: editingEmployee.onboardingDate ? new Date(editingEmployee.onboardingDate) : undefined,
-        offloadingDate: editingEmployee.offloadingDate ? new Date(editingEmployee.offloadingDate) : undefined,
-      });
-    } else {
-      form.reset({
-        empId: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        clientEmpId: '',
-        clientEmail: '',
-        role: undefined,
-        experience: undefined,
-        onboardingDate: undefined,
-        offloadingDate: undefined,
-        billedRate: undefined,
-        availability: undefined,
-      });
+    if (isDialogOpen) {
+        if (editingEmployee) {
+        form.reset({
+            ...editingEmployee,
+            onboardingDate: editingEmployee.onboardingDate ? new Date(editingEmployee.onboardingDate) : undefined,
+            offloadingDate: editingEmployee.offloadingDate ? new Date(editingEmployee.offloadingDate) : undefined,
+        });
+        } else {
+        form.reset({
+            empId: '',
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            clientEmpId: '',
+            clientEmail: '',
+            role: undefined,
+            experience: undefined,
+            onboardingDate: undefined,
+            offloadingDate: undefined,
+            billedRate: undefined,
+            availability: undefined,
+        });
+        }
     }
-  }, [editingEmployee, form]);
+  }, [isDialogOpen, editingEmployee, form]);
 
   const handleDialogOpen = (employee: Employee | null) => {
     setEditingEmployee(employee);
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (employee: Employee) => {
-    await deleteEmployee(employee.id);
+  const handleDeleteConfirm = async () => {
+    if (!deletingEmployee) return;
+    const success = await deleteEmployee(deletingEmployee.id);
+    if (success) {
+      toast({ title: "Success", description: "Employee record deleted." });
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete employee." });
+    }
     setDeletingEmployee(null);
   };
 
   const onSubmit = async (values: z.infer<typeof employeeFormSchema>) => {
+    setIsSubmitting(true);
     const employeeData = {
       ...values,
       onboardingDate: values.onboardingDate?.toISOString(),
       offloadingDate: values.offloadingDate?.toISOString(),
     };
 
+    let success = false;
     if (editingEmployee) {
-      // Update existing employee
-      await updateEmployee(editingEmployee.id, employeeData);
+      success = await updateEmployee(editingEmployee.id, employeeData);
     } else {
-      // Add new employee
-      await addEmployee(employeeData);
+      success = await addEmployee(employeeData);
     }
-    setIsDialogOpen(false);
-    setEditingEmployee(null);
+
+    if (success) {
+      toast({ title: "Success", description: `Employee ${editingEmployee ? 'updated' : 'added'} successfully.` });
+      setIsDialogOpen(false);
+      setEditingEmployee(null);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingEmployee ? 'update' : 'add'} employee.` });
+    }
+    setIsSubmitting(false);
   };
 
   return (
@@ -310,7 +328,9 @@ export default function ResourcesPage() {
                 )} />
               </div>
               <DialogFooter>
-                <Button type="submit">{editingEmployee ? 'Save Changes' : 'Create Employee'}</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (editingEmployee ? 'Saving...' : 'Creating...') : (editingEmployee ? 'Save Changes' : 'Create Employee')}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -328,7 +348,7 @@ export default function ResourcesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => deletingEmployee && handleDelete(deletingEmployee)}
+              onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue

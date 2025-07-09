@@ -2,15 +2,20 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  writeBatch,
+  query,
+  getDocs,
+  where,
+} from 'firebase/firestore';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase } from '@/types';
-import { 
-    epics as mockEpics, 
-    stories as mockStories, 
-    sprints as mockSprints, 
-    employees as mockEmployees, 
-    testCases as mockTestCases 
-} from '@/lib/mock-data';
-import { v4 as uuidv4 } from 'uuid';
 
 interface ProjectContextType {
   epics: Epic[];
@@ -21,7 +26,7 @@ interface ProjectContextType {
   
   // Story actions
   addStory: (story: Omit<Story, 'id' | 'storyId'>) => Promise<boolean>;
-  updateStory: (storyId: string, data: Partial<Omit<Story, 'id'>>) => Promise<boolean>;
+  updateStory: (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>) => Promise<boolean>;
   deleteStory: (storyId: string) => Promise<boolean>;
   moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<boolean>;
   moveStoryStatus: (storyId: string, newStatus: StoryStatus) => Promise<boolean>;
@@ -45,7 +50,7 @@ interface ProjectContextType {
 
   // TestCase actions
   addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => Promise<boolean>;
-  updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => Promise<boolean>;
+  updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
 
   isLoading: boolean;
@@ -60,191 +65,273 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const storedEpics = localStorage.getItem('epics');
-      const storedStories = localStorage.getItem('stories');
-      const storedSprints = localStorage.getItem('sprints');
-      const storedEmployees = localStorage.getItem('employees');
-      const storedTestCases = localStorage.getItem('testCases');
-
-      setEpics(storedEpics ? JSON.parse(storedEpics) : mockEpics);
-      setStories(storedStories ? JSON.parse(storedStories) : mockStories);
-      setSprints(storedSprints ? JSON.parse(storedSprints) : mockSprints);
-      setEmployees(storedEmployees ? JSON.parse(storedEmployees) : mockEmployees);
-      setTestCases(storedTestCases ? JSON.parse(storedTestCases) : mockTestCases);
-    } catch (error) {
-      console.error("Failed to load data from localStorage, falling back to mock data.", error);
-      setEpics(mockEpics);
-      setStories(mockStories);
-      setSprints(mockSprints);
-      setEmployees(mockEmployees);
-      setTestCases(mockTestCases);
+    if (!db) {
+        setError("Firebase not configured. Please check your .env.local file.");
+        setIsLoading(false);
+        return;
     }
-    setIsLoaded(true);
+
+    const collections: { name: keyof ProjectContextType, setState: React.Dispatch<any> }[] = [
+        { name: 'epics', setState: setEpics },
+        { name: 'stories', setState: setStories },
+        { name: 'sprints', setState: setSprints },
+        { name: 'employees', setState: setEmployees },
+        { name: 'testCases', setState: setTestCases },
+    ];
+    
+    const unsubscribers = collections.map(({ name, setState }) => {
+        const q = query(collection(db, name as string));
+        return onSnapshot(q, 
+            (querySnapshot) => {
+                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setState(data);
+                setIsLoading(false);
+            },
+            (err) => {
+                console.error(`Error fetching ${name}:`, err);
+                setError(`Failed to connect to the database. Please check your Firebase configuration and security rules. (Collection: ${name})`);
+                setIsLoading(false);
+            }
+        );
+    });
+
+    return () => unsubscribers.forEach(unsub => unsub());
   }, []);
 
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('epics', JSON.stringify(epics));
-      localStorage.setItem('stories', JSON.stringify(stories));
-      localStorage.setItem('sprints', JSON.stringify(sprints));
-      localStorage.setItem('employees', JSON.stringify(employees));
-      localStorage.setItem('testCases', JSON.stringify(testCases));
-    }
-  }, [epics, stories, sprints, employees, testCases, isLoaded]);
+  // Story Actions
+  const addStory = async (story: Omit<Story, 'id' | 'storyId'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+        const storiesSnapshot = await getDocs(collection(db, 'stories'));
+        const newIdNumber = storiesSnapshot.size > 0
+            ? Math.max(0, ...storiesSnapshot.docs
+                .map(doc => doc.data().storyId)
+                .filter((id: string | undefined) => id && typeof id === 'string')
+                .map((id: string) => parseInt(id.replace('ST-', ''), 10) || 0)
+            ) + 1
+            : 1;
 
-  const createAsyncCallback = <T extends any[], R>(fn: (...args: T) => R) => {
-    return async (...args: T): Promise<R> => {
-      try {
-        return Promise.resolve(fn(...args));
-      } catch (e) {
-        console.error("Operation failed", e);
-        throw e;
-      }
-    };
+        const newStory = { ...story, storyId: `ST-${newIdNumber}` };
+        await addDoc(collection(db, 'stories'), newStory);
+        return true;
+    } catch (e) {
+        console.error("Error adding story: ", e);
+        return false;
+    }
   };
 
-  // Story Actions
-  const addStory = createAsyncCallback((story: Omit<Story, 'id' | 'storyId'>) => {
-    setStories(prev => {
-        const newIdNumber =
-        prev.length > 0
-            ? Math.max(
-                0,
-                ...prev
-                .map(doc => doc.storyId)
-                .filter(id => id && typeof id === 'string')
-                .map(id => parseInt(id.replace('ST-', ''), 10) || 0)
-            ) + 1
-            : 1;
+  const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const storyRef = doc(db, 'stories', storyId);
+      await updateDoc(storyRef, data);
+      return true;
+    } catch (e) {
+      console.error("Error updating story: ", e);
+      return false;
+    }
+  };
 
-        const newStory: Story = {
-            ...story,
-            id: uuidv4(),
-            storyId: `ST-${newIdNumber}`,
-        };
-        return [...prev, newStory];
-    });
-    return true;
-  });
+  const deleteStory = async (storyId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'stories', storyId));
+      return true;
+    } catch (e) {
+      console.error("Error deleting story: ", e);
+      return false;
+    }
+  };
 
-  const updateStory = createAsyncCallback((storyId: string, data: Partial<Omit<Story, 'id'>>) => {
-    setStories(prev => prev.map(s => s.id === storyId ? { ...s, ...data } : s));
-    return true;
-  });
-
-  const deleteStory = createAsyncCallback((storyId: string) => {
-    setStories(prev => prev.filter(s => s.id !== storyId));
-    return true;
-  });
-
-  const moveStoryToSprint = createAsyncCallback((storyId: string, sprintId: string | null) => {
-    setStories(prev => prev.map(s => s.id === storyId ? { ...s, sprintId } : s));
-    return true;
-  });
-
-  const moveStoryStatus = createAsyncCallback((storyId: string, newStatus: StoryStatus) => {
-    setStories(prev => prev.map(s => s.id === storyId ? { ...s, status: newStatus } : s));
-    return true;
-  });
+  const moveStoryToSprint = (storyId: string, sprintId: string | null) => updateStory(storyId, { sprintId });
+  const moveStoryStatus = (storyId: string, newStatus: StoryStatus) => updateStory(storyId, { status: newStatus });
+  const moveStoryToEpic = (storyId: string, epicId: string | null) => updateStory(storyId, { epicId });
   
-  const moveStoryToEpic = createAsyncCallback((storyId: string, epicId: string | null) => {
-    setStories(prev => prev.map(s => s.id === storyId ? { ...s, epicId: epicId || undefined } : s));
-    return true;
-  });
-
   // Epic Actions
-  const addEpic = createAsyncCallback((epic: Omit<Epic, 'id'>) => {
-    setEpics(prev => [...prev, { ...epic, id: uuidv4() }]);
-    return true;
-  });
+  const addEpic = async (epic: Omit<Epic, 'id'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await addDoc(collection(db, 'epics'), epic);
+      return true;
+    } catch (e) {
+      console.error("Error adding epic: ", e);
+      return false;
+    }
+  };
 
-  const updateEpic = createAsyncCallback((epicId: string, data: Partial<Omit<Epic, 'id'>>) => {
-    setEpics(prev => prev.map(e => e.id === epicId ? { ...e, ...data } : e));
-    return true;
-  });
+  const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await updateDoc(doc(db, 'epics', epicId), data);
+      return true;
+    } catch (e) {
+      console.error("Error updating epic: ", e);
+      return false;
+    }
+  };
 
-  const deleteEpic = createAsyncCallback((epicId: string) => {
-    setEpics(prev => prev.filter(e => e.id !== epicId));
-    setStories(prev => prev.map(s => s.epicId === epicId ? { ...s, epicId: undefined } : s));
-    return true;
-  });
+  const deleteEpic = async (epicId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'epics', epicId));
+      
+      const q = query(collection(db, 'stories'), where('epicId', '==', epicId));
+      const storiesSnapshot = await getDocs(q);
+      storiesSnapshot.forEach(storyDoc => {
+        batch.update(doc(db, 'stories', storyDoc.id), { epicId: null });
+      });
+
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Error deleting epic: ", e);
+      return false;
+    }
+  };
 
   // Sprint Actions
-  const addSprint = createAsyncCallback((sprint: Omit<Sprint, 'id' | 'isCurrent'>) => {
-    const newSprint: Sprint = { ...sprint, id: uuidv4(), isCurrent: false };
-    setSprints(prev => [...prev, newSprint]);
-    return true;
-  });
+  const addSprint = async (sprint: Omit<Sprint, 'id' | 'isCurrent'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await addDoc(collection(db, 'sprints'), { ...sprint, isCurrent: false });
+      return true;
+    } catch (e) {
+      console.error("Error adding sprint: ", e);
+      return false;
+    }
+  };
 
-  const updateSprint = createAsyncCallback((sprintId: string, data: Partial<Omit<Sprint, 'id'>>) => {
-    setSprints(prev => prev.map(s => s.id === sprintId ? { ...s, ...data } : s));
-    return true;
-  });
+  const updateSprint = async (sprintId: string, data: Partial<Omit<Sprint, 'id' | 'isCurrent'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await updateDoc(doc(db, 'sprints', sprintId), data);
+      return true;
+    } catch (e) {
+      console.error("Error updating sprint: ", e);
+      return false;
+    }
+  };
 
-  const deleteSprint = createAsyncCallback((sprintId: string) => {
-    setSprints(prev => prev.filter(s => s.id !== sprintId));
-    setStories(prev => prev.map(s => s.sprintId === sprintId ? { ...s, sprintId: null } : s));
-    return true;
-  });
+  const deleteSprint = async (sprintId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'sprints', sprintId));
+        
+        const q = query(collection(db, 'stories'), where('sprintId', '==', sprintId));
+        const storiesSnapshot = await getDocs(q);
+        storiesSnapshot.forEach(storyDoc => {
+            batch.update(doc(db, 'stories', storyDoc.id), { sprintId: null });
+        });
 
-  const setCurrentSprint = createAsyncCallback((sprintId: string) => {
-    setSprints(prev => prev.map(s => ({ ...s, isCurrent: s.id === sprintId })));
-    return true;
-  });
+        await batch.commit();
+        return true;
+    } catch (e) {
+        console.error("Error deleting sprint: ", e);
+        return false;
+    }
+  };
+
+  const setCurrentSprint = async (sprintId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+        const batch = writeBatch(db);
+        const sprintsSnapshot = await getDocs(collection(db, 'sprints'));
+        
+        sprintsSnapshot.forEach(sprintDoc => {
+            batch.update(doc(db, 'sprints', sprintDoc.id), { isCurrent: sprintDoc.id === sprintId });
+        });
+
+        await batch.commit();
+        return true;
+    } catch (e) {
+        console.error("Error setting current sprint: ", e);
+        return false;
+    }
+  };
 
   // Employee Actions
-  const addEmployee = createAsyncCallback((employee: Omit<Employee, 'id'>) => {
-    setEmployees(prev => [...prev, { ...employee, id: uuidv4() }]);
-    return true;
-  });
+  const addEmployee = async (employee: Omit<Employee, 'id'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+        await addDoc(collection(db, 'employees'), { ...employee, avatar: 'https://placehold.co/40x40.png' });
+        return true;
+    } catch (e) {
+        console.error("Error adding employee: ", e);
+        return false;
+    }
+  };
 
-  const updateEmployee = createAsyncCallback((employeeId: string, data: Partial<Omit<Employee, 'id'>>) => {
-    setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, ...data } : e));
-    return true;
-  });
+  const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await updateDoc(doc(db, 'employees', employeeId), data);
+      return true;
+    } catch (e) {
+      console.error("Error updating employee: ", e);
+      return false;
+    }
+  };
   
-  const deleteEmployee = createAsyncCallback((employeeId: string) => {
-    setEmployees(prev => prev.filter(e => e.id !== employeeId));
-    return true;
-  });
+  const deleteEmployee = async (employeeId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'employees', employeeId));
+      return true;
+    } catch (e) {
+      console.error("Error deleting employee: ", e);
+      return false;
+    }
+  };
 
   // TestCase Actions
-  const addTestCase = createAsyncCallback((testCase: Omit<TestCase, 'id' | 'testCaseId'>) => {
-    setTestCases(prev => {
-        const newIdNumber =
-        prev.length > 0
-            ? Math.max(
-                0,
-                ...prev
-                .map(doc => doc.testCaseId)
-                .filter(id => id && typeof id === 'string')
-                .map(id => parseInt(id.replace('TC-', ''), 10) || 0)
+  const addTestCase = async (testCase: Omit<TestCase, 'id' | 'testCaseId'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+        const testCasesSnapshot = await getDocs(collection(db, 'testCases'));
+        const newIdNumber = testCasesSnapshot.size > 0
+            ? Math.max(0, ...testCasesSnapshot.docs
+                .map(doc => doc.data().testCaseId)
+                .filter((id: string | undefined) => id && typeof id === 'string')
+                .map((id: string) => parseInt(id.replace('TC-', ''), 10) || 0)
             ) + 1
             : 1;
 
-        const newTestCase: TestCase = {
-            ...testCase,
-            id: uuidv4(),
-            testCaseId: `TC-${newIdNumber}`,
-        };
-        return [...prev, newTestCase];
-    });
-    return true;
-  });
+        const newTestCase = { ...testCase, testCaseId: `TC-${newIdNumber}` };
+        await addDoc(collection(db, 'testCases'), newTestCase);
+        return true;
+    } catch (e) {
+        console.error("Error adding test case: ", e);
+        return false;
+    }
+  };
 
-  const updateTestCase = createAsyncCallback((testCaseId: string, data: Partial<Omit<TestCase, 'id'>>) => {
-    setTestCases(prev => prev.map(tc => tc.id === testCaseId ? { ...tc, ...data } : tc));
-    return true;
-  });
+  const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await updateDoc(doc(db, 'testCases', testCaseId), data);
+      return true;
+    } catch (e) {
+      console.error("Error updating test case: ", e);
+      return false;
+    }
+  };
 
-  const deleteTestCase = createAsyncCallback((testCaseId: string) => {
-    setTestCases(prev => prev.filter(tc => tc.id !== testCaseId));
-    return true;
-  });
+  const deleteTestCase = async (testCaseId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'testCases', testCaseId));
+      return true;
+    } catch (e) {
+      console.error("Error deleting test case: ", e);
+      return false;
+    }
+  };
   
   const value: ProjectContextType = {
     epics,
@@ -252,8 +339,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     sprints,
     employees,
     testCases,
-    isLoading: !isLoaded,
-    error: null,
+    isLoading,
+    error,
     addStory,
     updateStory,
     deleteStory,
@@ -274,17 +361,28 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     updateTestCase,
     deleteTestCase,
   };
+  
+    if (isLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-background">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                    <p className="text-muted-foreground">Connecting to database...</p>
+                </div>
+            </div>
+        );
+    }
 
-  if (!isLoaded) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground">Loading project data...</p>
-        </div>
-      </div>
-    );
-  }
+    if (error) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-background p-8">
+                <div className="max-w-2xl rounded-lg border border-destructive bg-destructive/10 p-6 text-center text-destructive-foreground">
+                    <h2 className="text-2xl font-bold">Database Connection Error</h2>
+                    <p className="mt-2 text-destructive-foreground/80">{error}</p>
+                </div>
+            </div>
+        );
+    }
 
   return (
     <ProjectContext.Provider value={value}>
