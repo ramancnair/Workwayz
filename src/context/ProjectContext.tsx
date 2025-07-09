@@ -18,6 +18,17 @@ import {
 } from 'firebase/firestore';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase } from '@/types';
 
+// Helper to remove undefined properties from an object
+const sanitizeData = (data: any) => {
+  const sanitized: any = {};
+  for (const key in data) {
+    if (data[key] !== undefined) {
+      sanitized[key] = data[key];
+    }
+  }
+  return sanitized;
+};
+
 interface ProjectContextType {
   epics: Epic[];
   stories: Story[];
@@ -135,13 +146,11 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             ) + 1
             : 1;
 
-        const payload: any = { ...story, storyId: `ST-${newIdNumber}` };
-        Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
-
-        await addDoc(collection(db, 'stories'), payload);
+        const payload = { ...story, storyId: `ST-${newIdNumber}` };
+        await addDoc(collection(db, 'stories'), sanitizeData(payload));
         return true;
-    } catch (e) {
-        console.error("Error adding story: ", e);
+    } catch (e: any) {
+        console.error("Firebase Error: Failed to add story.", { code: e.code, message: e.message, fullError: e });
         return false;
     }
   };
@@ -149,12 +158,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      const payload: any = { ...data };
-      Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
-      await updateDoc(doc(db, 'stories', storyId), payload);
+      await updateDoc(doc(db, 'stories', storyId), sanitizeData(data));
       return true;
-    } catch (e) {
-      console.error("Error updating story: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update story.", { id: storyId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -164,8 +171,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     try {
       await deleteDoc(doc(db, 'stories', storyId));
       return true;
-    } catch (e) {
-      console.error("Error deleting story: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete story.", { id: storyId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -178,12 +185,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const addEpic = async (epic: Omit<Epic, 'id'>): Promise<boolean> => {
     if (!db) return false;
     try {
-      const payload: any = { ...epic };
-      Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
-      await addDoc(collection(db, 'epics'), payload);
+      await addDoc(collection(db, 'epics'), sanitizeData(epic));
       return true;
-    } catch (e) {
-      console.error("Error adding epic: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add epic.", { code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -191,12 +196,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      const payload: any = { ...data };
-      Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
-      await updateDoc(doc(db, 'epics', epicId), payload);
+      await updateDoc(doc(db, 'epics', epicId), sanitizeData(data));
       return true;
-    } catch (e) {
-      console.error("Error updating epic: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update epic.", { id: epicId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -215,8 +218,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
       await batch.commit();
       return true;
-    } catch (e) {
-      console.error("Error deleting epic: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete epic.", { id: epicId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -228,10 +231,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       const payload: any = { title: sprint.title, isCurrent: false };
       if (sprint.startDate) payload.startDate = Timestamp.fromDate(sprint.startDate);
       if (sprint.endDate) payload.endDate = Timestamp.fromDate(sprint.endDate);
-      await addDoc(collection(db, 'sprints'), payload);
+      await addDoc(collection(db, 'sprints'), sanitizeData(payload));
       return true;
-    } catch (e) {
-      console.error("Error adding sprint: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add sprint.", { code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -242,10 +245,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       const payload: any = { title: data.title };
       payload.startDate = data.startDate ? Timestamp.fromDate(data.startDate) : null;
       payload.endDate = data.endDate ? Timestamp.fromDate(data.endDate) : null;
-      await updateDoc(doc(db, 'sprints', sprintId), payload);
+      await updateDoc(doc(db, 'sprints', sprintId), sanitizeData(payload));
       return true;
-    } catch (e) {
-      console.error("Error updating sprint: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update sprint.", { id: sprintId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -264,8 +267,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
         await batch.commit();
         return true;
-    } catch (e) {
-        console.error("Error deleting sprint: ", e);
+    } catch (e: any) {
+        console.error("Firebase Error: Failed to delete sprint.", { id: sprintId, code: e.code, message: e.message, fullError: e });
         return false;
     }
   };
@@ -282,8 +285,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
         await batch.commit();
         return true;
-    } catch (e) {
-        console.error("Error setting current sprint: ", e);
+    } catch (e: any) {
+        console.error("Firebase Error: Failed to set current sprint.", { id: sprintId, code: e.code, message: e.message, fullError: e });
         return false;
     }
   };
@@ -295,14 +298,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         const { onboardingDate, offloadingDate, ...rest } = employee;
         const payload: any = { ...rest, avatar: 'https://placehold.co/40x40.png' };
         
-        Object.keys(payload).forEach(key => { if (payload[key] === undefined || Number.isNaN(payload[key])) delete payload[key]; });
-
         if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
         if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
-        await addDoc(collection(db, 'employees'), payload);
+
+        await addDoc(collection(db, 'employees'), sanitizeData(payload));
         return true;
-    } catch (e) {
-        console.error("Error adding employee: ", e);
+    } catch (e: any) {
+        console.error("Firebase Error: Failed to add employee.", { code: e.code, message: e.message, fullError: e });
         return false;
     }
   };
@@ -313,15 +315,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         const { onboardingDate, offloadingDate, ...rest } = data;
         const payload: any = { ...rest };
         
-        Object.keys(payload).forEach(key => { if (payload[key] === undefined || Number.isNaN(payload[key])) delete payload[key]; });
-
         if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(onboardingDate) : null;
         if (data.hasOwnProperty('offloadingDate')) payload.offloadingDate = offloadingDate ? Timestamp.fromDate(offloadingDate) : null;
 
-        await updateDoc(doc(db, 'employees', employeeId), payload);
+        await updateDoc(doc(db, 'employees', employeeId), sanitizeData(payload));
         return true;
-    } catch (e) {
-      console.error("Error updating employee: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update employee.", { id: employeeId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -331,8 +331,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     try {
       await deleteDoc(doc(db, 'employees', employeeId));
       return true;
-    } catch (e) {
-      console.error("Error deleting employee: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete employee.", { id: employeeId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -350,13 +350,11 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             ) + 1
             : 1;
 
-        const payload: any = { ...testCase, testCaseId: `TC-${newIdNumber}` };
-        Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
-
-        await addDoc(collection(db, 'testCases'), payload);
+        const payload = { ...testCase, testCaseId: `TC-${newIdNumber}` };
+        await addDoc(collection(db, 'testCases'), sanitizeData(payload));
         return true;
-    } catch (e) {
-        console.error("Error adding test case: ", e);
+    } catch (e: any) {
+        console.error("Firebase Error: Failed to add test case.", { code: e.code, message: e.message, fullError: e });
         return false;
     }
   };
@@ -364,12 +362,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      const payload: any = { ...data };
-      Object.keys(payload).forEach(key => { if (payload[key] === undefined) delete payload[key]; });
-      await updateDoc(doc(db, 'testCases', testCaseId), payload);
+      await updateDoc(doc(db, 'testCases', testCaseId), sanitizeData(data));
       return true;
-    } catch (e) {
-      console.error("Error updating test case: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -379,8 +375,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     try {
       await deleteDoc(doc(db, 'testCases', testCaseId));
       return true;
-    } catch (e) {
-      console.error("Error deleting test case: ", e);
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
