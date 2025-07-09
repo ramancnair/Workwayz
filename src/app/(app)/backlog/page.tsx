@@ -399,7 +399,7 @@ export default function BacklogPage() {
     });
   };
 
-  const backlogStories = stories.filter((story) => story.sprintId === null);
+  const backlogStories = stories.filter((story) => !story.sprintId);
 
   const storiesByEpic = backlogStories.reduce((acc, story) => {
     const epicId = story.epicId || 'unassigned';
