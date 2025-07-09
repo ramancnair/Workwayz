@@ -1,0 +1,300 @@
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useProject } from '@/context/ProjectContext';
+import { PageHeader } from '@/components/PageHeader';
+import { Button, buttonVariants } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/datepicker';
+import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { type Issue, type IssuePriority, type IssueStatus } from '@/types';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast";
+import { format } from 'date-fns';
+
+const issueSchema = z.object({
+  description: z.string().min(1, 'Description is required.'),
+  priority: z.enum(['Low', 'Medium', 'High', 'Critical']),
+  status: z.enum(['Open', 'In Progress', 'Resolved', 'Closed']),
+  assigneeId: z.string().optional(),
+  resolvedDate: z.date().optional(),
+});
+
+const priorities: IssuePriority[] = ['Low', 'Medium', 'High', 'Critical'];
+const statuses: IssueStatus[] = ['Open', 'In Progress', 'Resolved', 'Closed'];
+
+const priorityStyles: Record<IssuePriority, string> = {
+    'Low': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    'Medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'High': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'Critical': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
+
+const statusStyles: Record<IssueStatus, string> = {
+    'Open': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'In Progress': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'Resolved': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'Closed': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+};
+
+
+export default function IssuesPage() {
+  const { issues, employees, addIssue, updateIssue, deleteIssue } = useProject();
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
+  const [deletingIssue, setDeletingIssue] = useState<Issue | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<z.infer<typeof issueSchema>>({
+    resolver: zodResolver(issueSchema),
+  });
+
+  useEffect(() => {
+    if (isDialogOpen) {
+      if (editingIssue) {
+        form.reset({
+            ...editingIssue,
+            assigneeId: editingIssue.assigneeId || 'unassigned',
+            resolvedDate: editingIssue.resolvedDate ? new Date(editingIssue.resolvedDate) : undefined,
+        });
+      } else {
+        form.reset({
+            description: '',
+            priority: 'Medium',
+            status: 'Open',
+            assigneeId: 'unassigned',
+            resolvedDate: undefined,
+        });
+      }
+    }
+  }, [isDialogOpen, editingIssue, form]);
+
+  const handleDialogOpen = (issue: Issue | null) => {
+    setEditingIssue(issue);
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingIssue) return;
+    const success = await deleteIssue(deletingIssue.id);
+    if (success) {
+      toast({ title: "Success", description: "Issue deleted." });
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete issue." });
+    }
+    setDeletingIssue(null);
+  };
+
+  const onSubmit = async (values: z.infer<typeof issueSchema>) => {
+    setIsSubmitting(true);
+    const issueData = {
+      ...values,
+      assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+    };
+
+    let success = false;
+    if (editingIssue) {
+      success = await updateIssue(editingIssue.id, issueData);
+    } else {
+      success = await addIssue({ ...issueData, reportedDate: new Date() });
+    }
+
+    if (success) {
+      toast({ title: "Success", description: `Issue ${editingIssue ? 'updated' : 'added'} successfully.` });
+      setIsDialogOpen(false);
+      setEditingIssue(null);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingIssue ? 'update' : 'add'} issue.` });
+    }
+    setIsSubmitting(false);
+  };
+
+  return (
+    <>
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <PageHeader title="Project Issues" description="Manage and track all project issues.">
+          <Button onClick={() => handleDialogOpen(null)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Issue
+          </Button>
+        </PageHeader>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead className="w-[40%]">Description</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Assignee</TableHead>
+                <TableHead>Reported</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {issues.map((issue) => {
+                const assignee = employees.find(e => e.id === issue.assigneeId);
+                return (
+                    <TableRow key={issue.id}>
+                        <TableCell className="font-medium">{issue.issueId}</TableCell>
+                        <TableCell className="break-words">{issue.description}</TableCell>
+                        <TableCell>
+                            <Badge className={cn('font-semibold', priorityStyles[issue.priority])}>
+                                {issue.priority}
+                            </Badge>
+                        </TableCell>
+                         <TableCell>
+                            <Badge className={cn('font-semibold', statusStyles[issue.status])}>
+                                {issue.status}
+                            </Badge>
+                        </TableCell>
+                        <TableCell>{assignee ? `${assignee.firstName} ${assignee.lastName}` : 'N/A'}</TableCell>
+                        <TableCell>{format(new Date(issue.reportedDate), 'PPP')}</TableCell>
+                        <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(issue)}>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeletingIssue(issue)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </TableCell>
+                    </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingIssue(null); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingIssue ? 'Edit Issue' : 'Add New Issue'}</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField control={form.control} name="description" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Issue Description</FormLabel>
+                        <FormControl><Textarea placeholder="Describe the issue..." {...field} rows={4} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="priority" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Priority</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {priorities.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="status" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {statuses.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="assigneeId" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Assignee</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="resolvedDate" render={({ field }) => (
+                        <FormItem className="flex flex-col pt-2">
+                            <FormLabel>Resolved Date</FormLabel>
+                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (editingIssue ? 'Saving...' : 'Creating...') : (editingIssue ? 'Save Changes' : 'Create Issue')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={!!deletingIssue} onOpenChange={(isOpen) => !isOpen && setDeletingIssue(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the issue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

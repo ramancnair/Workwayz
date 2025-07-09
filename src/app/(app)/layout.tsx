@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -13,9 +14,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
-  const isRisksPath = pathname.startsWith('/risks');
+  const isGovernancePath = ['/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   
-  const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : isRisksPath ? 'risks' : 'development';
+  const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : isGovernancePath ? 'governance' : 'development';
 
   const onTabChange = (value: string) => {
     if (value === 'development') {
@@ -24,7 +25,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/dashboard/testing');
     } else if (value === 'resources') {
       router.push('/resources');
-    } else if (value === 'risks') {
+    } else if (value === 'governance') {
       router.push('/risks');
     }
   };
@@ -43,7 +44,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                         <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
                         <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
-                        <TabsTrigger value="risks" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Risks</TabsTrigger>
+                        <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>

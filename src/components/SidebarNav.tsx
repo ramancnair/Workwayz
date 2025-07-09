@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -26,6 +27,9 @@ import {
   Users,
   Bug,
   ShieldAlert,
+  NotebookText,
+  AlertCircle,
+  Link2,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -77,19 +81,34 @@ export function SidebarNav() {
     },
   ];
 
-  const risksMenuItems = [
+  const governanceMenuItems = [
     {
       href: "/risks",
       label: "Project Risks",
       icon: ShieldAlert,
     },
+    {
+      href: "/assumptions",
+      label: "Assumptions",
+      icon: NotebookText,
+    },
+    {
+      href: "/issues",
+      label: "Issues",
+      icon: AlertCircle,
+    },
+    {
+      href: "/dependencies",
+      label: "Dependencies",
+      icon: Link2,
+    },
   ];
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
-  const isRisksPath = pathname.startsWith('/risks');
+  const isGovernancePath = ['/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   
-  const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : isRisksPath ? risksMenuItems : devMenuItems;
+  const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : isGovernancePath ? governanceMenuItems : devMenuItems;
 
   return (
     <>

@@ -18,7 +18,7 @@ import {
   connectFirestoreEmulator,
   getFirestore,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency } from '@/types';
 
 // Helper to remove undefined values from an object before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
@@ -43,6 +43,9 @@ interface ProjectContextType {
   employees: Employee[];
   testCases: TestCase[];
   risks: Risk[];
+  assumptions: Assumption[];
+  issues: Issue[];
+  dependencies: Dependency[];
   
   // Story actions
   addStory: (story: Omit<Story, 'id' | 'storyId'>) => Promise<boolean>;
@@ -77,6 +80,22 @@ interface ProjectContextType {
   addRisk: (risk: Omit<Risk, 'id' | 'riskId'>) => Promise<boolean>;
   updateRisk: (riskId: string, data: Partial<Omit<Risk, 'id' | 'riskId'>>) => Promise<boolean>;
   deleteRisk: (riskId: string) => Promise<boolean>;
+  
+  // Assumption actions
+  addAssumption: (assumption: Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date }) => Promise<boolean>;
+  updateAssumption: (assumptionId: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId'| 'validationDate'> & { validationDate?: Date }>) => Promise<boolean>;
+  deleteAssumption: (assumptionId: string) => Promise<boolean>;
+
+  // Issue actions
+  addIssue: (issue: Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { reportedDate: Date, resolvedDate?: Date }) => Promise<boolean>;
+  updateIssue: (issueId: string, data: Partial<Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { resolvedDate?: Date }>) => Promise<boolean>;
+  deleteIssue: (issueId: string) => Promise<boolean>;
+
+  // Dependency actions
+  addDependency: (dependency: Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate: Date }) => Promise<boolean>;
+  updateDependency: (dependencyId: string, data: Partial<Omit<Dependency, 'id' | 'dependencyId'| 'expectedByDate'> & { expectedByDate?: Date }>) => Promise<boolean>;
+  deleteDependency: (dependencyId: string) => Promise<boolean>;
+
 
   isLoading: boolean;
   error: string | null;
@@ -91,6 +110,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [risks, setRisks] = useState<Risk[]>([]);
+  const [assumptions, setAssumptions] = useState<Assumption[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [dependencies, setDependencies] = useState<Dependency[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,6 +130,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         { name: 'employees', setState: setEmployees },
         { name: 'testCases', setState: setTestCases },
         { name: 'risks', setState: setRisks },
+        { name: 'assumptions', setState: setAssumptions },
+        { name: 'issues', setState: setIssues },
+        { name: 'dependencies', setState: setDependencies },
     ];
     
     const unsubscribers = collections.map(({ name, setState }) => {
@@ -122,15 +147,21 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                       }
                       return field;
                     }
+                    
+                    const dateFields: Record<string, string[]> = {
+                        sprints: ['startDate', 'endDate'],
+                        employees: ['onboardingDate', 'offloadingDate'],
+                        assumptions: ['validationDate'],
+                        issues: ['reportedDate', 'resolvedDate'],
+                        dependencies: ['expectedByDate']
+                    };
 
-                    if (name === 'sprints') {
-                        docData.startDate = convertTimestamp(docData.startDate);
-                        docData.endDate = convertTimestamp(docData.endDate);
+                    if (dateFields[name]) {
+                        dateFields[name].forEach(field => {
+                            docData[field] = convertTimestamp(docData[field]);
+                        });
                     }
-                     if (name === 'employees') {
-                        docData.onboardingDate = convertTimestamp(docData.onboardingDate);
-                        docData.offloadingDate = convertTimestamp(docData.offloadingDate);
-                    }
+                    
                     return { id: doc.id, ...docData };
                 });
                 setState(data);
@@ -439,6 +470,131 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
   
+  // Assumption Actions
+  const addAssumption = async (assumption: Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date }): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const snapshot = await getDocs(collection(db, 'assumptions'));
+      const newId = `A-${snapshot.size + 1}`;
+      const payload: any = { ...assumption, assumptionId: newId };
+      if (assumption.validationDate) payload.validationDate = Timestamp.fromDate(assumption.validationDate);
+      await addDoc(collection(db, 'assumptions'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add assumption.", { code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const updateAssumption = async (id: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId'| 'validationDate'> & { validationDate?: Date }>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const { validationDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('validationDate')) payload.validationDate = validationDate ? Timestamp.fromDate(validationDate) : null;
+      await updateDoc(doc(db, 'assumptions', id), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update assumption.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const deleteAssumption = async (id: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'assumptions', id));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete assumption.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  // Issue Actions
+  const addIssue = async (issue: Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { reportedDate: Date, resolvedDate?: Date }): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const snapshot = await getDocs(collection(db, 'issues'));
+      const newId = `I-${snapshot.size + 1}`;
+      const payload: any = { ...issue, issueId: newId };
+      payload.reportedDate = Timestamp.fromDate(issue.reportedDate);
+      if (issue.resolvedDate) payload.resolvedDate = Timestamp.fromDate(issue.resolvedDate);
+      await addDoc(collection(db, 'issues'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add issue.", { code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const updateIssue = async (id: string, data: Partial<Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { resolvedDate?: Date }>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const { resolvedDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('resolvedDate')) payload.resolvedDate = resolvedDate ? Timestamp.fromDate(resolvedDate) : null;
+      await updateDoc(doc(db, 'issues', id), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update issue.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+  
+  const deleteIssue = async (id: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'issues', id));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete issue.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  // Dependency Actions
+  const addDependency = async (dependency: Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate: Date }): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const snapshot = await getDocs(collection(db, 'dependencies'));
+      const newId = `D-${snapshot.size + 1}`;
+      const payload: any = { ...dependency, dependencyId: newId };
+      payload.expectedByDate = Timestamp.fromDate(dependency.expectedByDate);
+      await addDoc(collection(db, 'dependencies'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add dependency.", { code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+  
+  const updateDependency = async (id: string, data: Partial<Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate?: Date }>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const { expectedByDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('expectedByDate')) payload.expectedByDate = expectedByDate ? Timestamp.fromDate(expectedByDate) : null;
+      await updateDoc(doc(db, 'dependencies', id), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update dependency.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const deleteDependency = async (id: string): Promise<boolean> => {
+     if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'dependencies', id));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete dependency.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+
   const value: ProjectContextType = {
     epics,
     stories,
@@ -446,6 +602,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     employees,
     testCases,
     risks,
+    assumptions,
+    issues,
+    dependencies,
     isLoading,
     error,
     addStory,
@@ -470,6 +629,15 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addRisk,
     updateRisk,
     deleteRisk,
+    addAssumption,
+    updateAssumption,
+    deleteAssumption,
+    addIssue,
+    updateIssue,
+    deleteIssue,
+    addDependency,
+    updateDependency,
+    deleteDependency,
   };
   
     if (isLoading) {

@@ -1,6 +1,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -96,4 +97,45 @@ export type Risk = {
   mitigationPlan: string;
   residualRisk: string;
   contingencyPlan: string;
+};
+
+export type AssumptionStatus = 'Active' | 'Validated' | 'Invalidated';
+export type AssumptionCategory = 'Technical' | 'Resource' | 'Business' | 'External';
+
+export type Assumption = {
+  id: string;
+  assumptionId: string;
+  description: string;
+  category: AssumptionCategory;
+  status: AssumptionStatus;
+  validationDate?: string; // ISO String
+  ownerId?: string;
+};
+
+export type IssueStatus = 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+export type IssuePriority = 'Low' | 'Medium' | 'High' | 'Critical';
+
+export type Issue = {
+  id: string;
+  issueId: string;
+  description: string;
+  priority: IssuePriority;
+  status: IssueStatus;
+  reportedDate: string; // ISO String
+  resolvedDate?: string; // ISO String
+  assigneeId?: string;
+};
+
+export type DependencyStatus = 'On Track' | 'At Risk' | 'Blocked';
+export type DependencyType = 'Internal' | 'External';
+
+export type Dependency = {
+  id: string;
+  dependencyId: string;
+  description: string;
+  type: DependencyType;
+  dependencyOn: string;
+  expectedByDate: string; // ISO String
+  status: DependencyStatus;
+  ownerId?: string;
 };
