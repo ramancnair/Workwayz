@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -87,6 +87,7 @@ const storyFormSchema = z.object({
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
   assigneeId: z.string().optional(),
+  estimatedHours: z.coerce.number().optional(),
 });
 
 const sprintFormSchema = z.object({
@@ -136,6 +137,12 @@ function StoryCard({ story, epic, assignee, onClick }: { story: Story; epic?: Ep
       <CardContent className="p-4 pt-0">
         <div className="flex justify-between items-center">
           {epic && <Badge variant="secondary">{epic.title}</Badge>}
+          {story.estimatedHours !== undefined && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>{story.estimatedHours}h</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -196,7 +203,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned' },
+    defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0 },
   });
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
@@ -256,6 +263,7 @@ export default function BacklogPage() {
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
         epicId: selectedStory.epicId || 'unassigned',
         assigneeId: selectedStory.assigneeId || 'unassigned',
+        estimatedHours: selectedStory.estimatedHours,
       });
     }
   }, [selectedStory, editStoryForm]);
@@ -335,6 +343,7 @@ export default function BacklogPage() {
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
       status: 'To Do',
+      estimatedHours: values.estimatedHours,
     };
     const success = await addStory(newStory);
     if (success) {
@@ -354,6 +363,7 @@ export default function BacklogPage() {
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+        estimatedHours: values.estimatedHours,
     });
     if (success) {
       setSelectedStory(null);
@@ -602,6 +612,7 @@ export default function BacklogPage() {
                       </FormItem>
                     )}
                   />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {itemTypeToAdd === 'Bug' ? (
                      <FormField
                       control={addStoryForm.control}
@@ -673,6 +684,20 @@ export default function BacklogPage() {
                           <FormMessage />
                           </FormItem>
                       )}
+                  />
+                  </div>
+                  <FormField
+                    control={addStoryForm.control}
+                    name="estimatedHours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estimated Hours</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                   <DialogFooter>
                     <Button type="submit" disabled={isAddStorySubmitting}>
@@ -1021,6 +1046,7 @@ export default function BacklogPage() {
                       </FormItem>
                     )}
                   />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {selectedStory.itemType === 'Bug' ? (
                      <FormField
                       control={editStoryForm.control}
@@ -1093,6 +1119,20 @@ export default function BacklogPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  </div>
+                  <FormField
+                    control={editStoryForm.control}
+                    name="estimatedHours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estimated Hours</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

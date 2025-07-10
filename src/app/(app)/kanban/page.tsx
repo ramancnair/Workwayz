@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, Employee, WorkItemType } from '@/types';
-import { Columns, ChevronDown } from 'lucide-react';
+import { Columns, ChevronDown, Clock } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -47,9 +47,15 @@ function StoryCard({ story, epic, onStatusChange }: { story: Story; epic?: Epic;
         <CardDescription>{story.description}</CardDescription>
       </CardHeader>
       <CardFooter className="flex justify-between items-center">
-        {epic ? (
-            <Badge variant="secondary">{epic.title}</Badge>
-        ) : <div />}
+        <div className="flex items-center gap-4">
+            {epic && <Badge variant="secondary">{epic.title}</Badge>}
+            {story.estimatedHours !== undefined && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{story.estimatedHours}h</span>
+                </div>
+            )}
+        </div>
          <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">

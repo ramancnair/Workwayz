@@ -2,6 +2,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -37,6 +38,7 @@ export type Story = {
   epicId?: string;
   sprintId?: string | null;
   status: StoryStatus;
+  estimatedHours?: number;
 };
 
 export type Sprint = {
