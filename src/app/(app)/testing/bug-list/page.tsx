@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { Story, StoryStatus } from '@/types';
+import type { Story, StoryStatus, BugCriticality } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -47,6 +47,15 @@ const statusStyles: Record<StoryStatus, string> = {
   'Done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
 };
 
+const criticalityStyles: Record<BugCriticality, string> = {
+    'Low': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    'Medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'High': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'Critical': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
+
+const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
+
 const bugFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
@@ -55,6 +64,7 @@ const bugFormSchema = z.object({
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
   sprintId: z.string().optional(),
+  criticality: z.enum(bugCriticalities).optional(),
 });
 
 
@@ -79,6 +89,7 @@ export default function BugListPage() {
         assigneeId: editingBug.assigneeId || 'unassigned',
         status: editingBug.status,
         sprintId: editingBug.sprintId || 'backlog',
+        criticality: editingBug.criticality || 'Medium',
       });
     } else {
       form.reset();
@@ -97,6 +108,7 @@ export default function BugListPage() {
         epicId: values.epicId === 'unassigned' ? undefined : values.epicId, // Related story
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+        criticality: values.criticality,
     });
     
     if (success) {
@@ -120,6 +132,7 @@ export default function BugListPage() {
               <TableHead>ID</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Criticality</TableHead>
               <TableHead>Assignee</TableHead>
               <TableHead>Related Story</TableHead>
             </TableRow>
@@ -143,6 +156,13 @@ export default function BugListPage() {
                     <Badge className={cn('font-semibold', statusStyles[bug.status])}>
                       {bug.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {bug.criticality && (
+                      <Badge className={cn('font-semibold', criticalityStyles[bug.criticality])}>
+                        {bug.criticality}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {assignee ? (
@@ -310,6 +330,30 @@ export default function BugListPage() {
                     )}
                     />
                 </div>
+                 <FormField
+                    control={form.control}
+                    name="criticality"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Criticality</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Set criticality" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {bugCriticalities.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Saving...' : 'Save Changes'}
@@ -323,4 +367,3 @@ export default function BugListPage() {
     </>
   );
 }
-

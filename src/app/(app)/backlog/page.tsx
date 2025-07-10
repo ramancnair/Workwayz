@@ -50,7 +50,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, Employee, WorkItemType } from '@/types';
+import type { Epic, Story, Sprint, Employee, WorkItemType, BugCriticality } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -75,6 +75,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 };
 
 const workItemTypes: WorkItemType[] = ['Story', 'Bug', 'Task', 'Change', 'Improvement'];
+const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 
 const epicFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -88,6 +89,7 @@ const storyFormSchema = z.object({
   epicId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
+  criticality: z.enum(bugCriticalities).optional(),
 });
 
 const sprintFormSchema = z.object({
@@ -203,7 +205,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0 },
+    defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium' },
   });
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
@@ -264,6 +266,7 @@ export default function BacklogPage() {
         epicId: selectedStory.epicId || 'unassigned',
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
+        criticality: selectedStory.criticality || 'Medium',
       });
     }
   }, [selectedStory, editStoryForm]);
@@ -344,6 +347,7 @@ export default function BacklogPage() {
       epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
+      criticality: itemTypeToAdd === 'Bug' ? values.criticality : undefined,
     };
     const success = await addStory(newStory);
     if (success) {
@@ -364,6 +368,7 @@ export default function BacklogPage() {
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
         estimatedHours: values.estimatedHours,
+        criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
     });
     if (success) {
       setSelectedStory(null);
@@ -686,6 +691,32 @@ export default function BacklogPage() {
                       )}
                   />
                   </div>
+                   {itemTypeToAdd === 'Bug' && (
+                    <FormField
+                      control={addStoryForm.control}
+                      name="criticality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Criticality</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Set criticality" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {bugCriticalities.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   <FormField
                     control={addStoryForm.control}
                     name="estimatedHours"
@@ -1124,6 +1155,32 @@ export default function BacklogPage() {
                     )}
                   />
                   </div>
+                  {selectedStory.itemType === 'Bug' && (
+                    <FormField
+                      control={editStoryForm.control}
+                      name="criticality"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Criticality</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Set criticality" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {bugCriticalities.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {c}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   <FormField
                     control={editStoryForm.control}
                     name="estimatedHours"
