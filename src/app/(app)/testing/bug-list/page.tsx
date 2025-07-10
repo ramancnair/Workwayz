@@ -54,11 +54,12 @@ const bugFormSchema = z.object({
   epicId: z.string().optional(), // Represents the related story
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
+  sprintId: z.string().optional(),
 });
 
 
 export default function BugListPage() {
-  const { stories, employees, updateStory } = useProject();
+  const { stories, employees, sprints, updateStory } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,6 +78,7 @@ export default function BugListPage() {
         epicId: editingBug.epicId || 'unassigned',
         assigneeId: editingBug.assigneeId || 'unassigned',
         status: editingBug.status,
+        sprintId: editingBug.sprintId || 'backlog',
       });
     } else {
       form.reset();
@@ -94,6 +96,7 @@ export default function BugListPage() {
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         epicId: values.epicId === 'unassigned' ? undefined : values.epicId, // Related story
         status: values.status,
+        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
     });
     
     if (success) {
@@ -251,7 +254,7 @@ export default function BugListPage() {
                       <FormItem>
                         <FormLabel>Status</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger /></FormControl>
+                          <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                           <SelectContent>
                             {(['To Do', 'In Progress', 'Done'] as StoryStatus[]).map(s => (
                               <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -263,27 +266,50 @@ export default function BugListPage() {
                     )}
                   />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="epicId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Related Story</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                        <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Link to a story" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="unassigned">None</SelectItem>
-                          {stories.filter(s => s.itemType === 'Story').map(story => (
-                            <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                    control={form.control}
+                    name="epicId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Related Story</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Link to a story" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="unassigned">None</SelectItem>
+                            {stories.filter(s => s.itemType === 'Story').map(story => (
+                                <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="sprintId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Sprint</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="backlog">Backlog</SelectItem>
+                            {sprints.map(sprint => (
+                                <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Saving...' : 'Save Changes'}
@@ -297,3 +323,4 @@ export default function BugListPage() {
     </>
   );
 }
+
