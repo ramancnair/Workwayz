@@ -400,7 +400,7 @@ export default function BacklogPage() {
     acc[key].push(story);
     return acc;
   }, {} as Record<string, Story[]>);
-
+  
   const unassignedItems = backlogStories.filter(s => s.itemType !== 'Story' || !s.epicId);
 
   const epicsToDisplay = [...epics];
@@ -793,101 +793,110 @@ export default function BacklogPage() {
             </div>
 
             {/* Sprints Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {sprints.map((sprint) => {
-                const sprintStories = stories.filter((story) => story.sprintId === sprint.id);
-                return (
-                    <div
-                      key={sprint.id}
-                      className="bg-muted/50 rounded-lg p-4 flex flex-col min-h-[300px]"
-                    >
-                      <div className="flex justify-between items-center mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-semibold">{sprint.title}</h3>
-                                {sprint.isCurrent && <Badge>Current</Badge>}
+            <div className="bg-muted/50 rounded-lg p-4 flex flex-col">
+              <h3 className="text-lg font-semibold mb-4">Sprints</h3>
+              <Accordion type="multiple" className="w-full" defaultValue={sprints.map(s => s.id)}>
+                {sprints.map((sprint) => {
+                  const sprintStories = stories.filter((story) => story.sprintId === sprint.id);
+                  return (
+                    <AccordionItem value={sprint.id} key={sprint.id}>
+                      <AccordionTrigger>
+                         <div className="flex-1 text-left pr-2 flex justify-between items-center">
+                            <div className="flex flex-col items-start">
+                               <div className="flex items-center gap-2">
+                                  <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                                  {sprint.isCurrent && <Badge>Current</Badge>}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {sprint.startDate && sprint.endDate
+                                  ? `${format(new Date(sprint.startDate), 'MMM d')} - ${format(new Date(sprint.endDate), 'MMM d, yyyy')}`
+                                  : 'No dates set'}
+                              </p>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {sprint.startDate && sprint.endDate
-                                ? `${format(new Date(sprint.startDate), 'MMM d')} - ${format(new Date(sprint.endDate), 'MMM d, yyyy')}`
-                                : 'No dates set'}
-                            </p>
-                          </div>
-                          <div className="flex items-center">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleSetCurrentSprint(sprint.id)}
-                                        disabled={sprint.isCurrent}
-                                        className="h-8 w-8"
-                                        aria-label="Set as current sprint"
-                                    >
-                                        <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent><p>Set as current sprint</p></TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" onClick={() => setEditingSprint(sprint)} className="h-8 w-8">
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent><p>Edit sprint</p></TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span tabIndex={sprint.isCurrent ? -1 : 0}>
+                            <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
                                       <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setSprintToDelete(sprint)}
-                                        className="h-8 w-8"
-                                        disabled={sprint.isCurrent}
-                                        aria-label="Delete sprint"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleSetCurrentSprint(sprint.id)}
+                                          disabled={sprint.isCurrent}
+                                          className="h-8 w-8"
+                                          aria-label="Set as current sprint"
                                       >
-                                        <Trash2 className="h-4 w-4" />
+                                          <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
                                       </Button>
-                                    </span>
-                                  </TooltipTrigger>
-                                  {sprint.isCurrent ? (
-                                    <TooltipContent>
-                                      <p>Cannot delete the current sprint.</p>
-                                    </TooltipContent>
-                                  ) : (
-                                    <TooltipContent>
-                                      <p>Delete sprint</p>
-                                    </TooltipContent>
-                                  )}
-                                </Tooltip>
-                              </TooltipProvider>
-                          </div>
-                      </div>
-                      <div className="overflow-y-auto flex-1 -mr-4 pr-4 space-y-2">
-                        {sprintStories.map((story) => {
-                            const epic = epics.find((e) => e.id === story.epicId);
-                            const assignee = employees.find((d) => d.id === story.assigneeId);
-                            return (
-                                <StoryCard
-                                    key={story.id}
-                                    story={story}
-                                    epic={epic}
-                                    assignee={assignee}
-                                    onClick={() => setSelectedStory(story)}
-                                />
-                            )
-                          })}
-                      </div>
-                    </div>
-                )
-              })}
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Set as current sprint</p></TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" onClick={() => setEditingSprint(sprint)} className="h-8 w-8">
+                                          <Edit className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Edit sprint</p></TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span tabIndex={sprint.isCurrent ? -1 : 0}>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => setSprintToDelete(sprint)}
+                                          className="h-8 w-8"
+                                          disabled={sprint.isCurrent}
+                                          aria-label="Delete sprint"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </span>
+                                    </TooltipTrigger>
+                                    {sprint.isCurrent ? (
+                                      <TooltipContent>
+                                        <p>Cannot delete the current sprint.</p>
+                                      </TooltipContent>
+                                    ) : (
+                                      <TooltipContent>
+                                        <p>Delete sprint</p>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2">
+                          {sprintStories.map((story) => {
+                              const epic = epics.find((e) => e.id === story.epicId);
+                              const assignee = employees.find((d) => d.id === story.assigneeId);
+                              return (
+                                  <StoryCard
+                                      key={story.id}
+                                      story={story}
+                                      epic={epic}
+                                      assignee={assignee}
+                                      onClick={() => setSelectedStory(story)}
+                                  />
+                              )
+                            })}
+                            {sprintStories.length === 0 && (
+                               <p className="text-sm text-muted-foreground italic px-2">
+                                  No items in this sprint.
+                              </p>
+                            )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
+              </Accordion>
             </div>
         </div>
       </div>
