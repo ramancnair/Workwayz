@@ -1,12 +1,10 @@
+
 'use client';
 
 import { useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { StoryCard } from '@/components/kanban/TaskCard';
-import type { StoryStatus } from '@/types';
-import { Columns, ChevronDown } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+import type { Story, Epic, StoryStatus, Employee } from '@/types';
+import { Columns } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -16,6 +14,59 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { BookOpen, Bug, CheckSquare, GitCommit, TrendingUp } from 'lucide-react';
+
+const workItemIcons: Record<Epic['itemType'], React.ElementType> = {
+  Story: BookOpen,
+  Bug: Bug,
+  Task: CheckSquare,
+  Change: GitCommit,
+  Improvement: TrendingUp,
+};
+
+function SortableStoryCard({ story, epic }: { story: Story; epic?: Epic; }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: story.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 'auto',
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const Icon = workItemIcons[story.itemType];
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Card className="bg-card cursor-grab">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+              {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+              <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+          </div>
+          <CardTitle className="text-base">{story.title}</CardTitle>
+          <CardDescription>{story.description}</CardDescription>
+        </CardHeader>
+        <CardFooter className="flex justify-between items-center">
+          {epic ? (
+              <Badge variant="secondary">{epic.title}</Badge>
+          ) : <div />}
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
 
 const columns: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
@@ -33,6 +84,28 @@ export default function KanbanPage() {
     ? baseSprintStories
     : baseSprintStories.filter(story => story.assigneeId === selectedAssigneeId);
       
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const storyId = active.id as string;
+      const newStatus = over.id as StoryStatus;
+      
+      const story = stories.find(s => s.id === storyId);
+      if (story && story.status !== newStatus) {
+        moveStoryStatus(storyId, newStatus);
+      }
+    }
+  }
+
   if (!currentSprint) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
@@ -67,46 +140,38 @@ export default function KanbanPage() {
           </Select>
         </div>
       </PageHeader>
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-        {columns.map((status) => (
-          <div key={status} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <Columns className="mr-2 h-5 w-5" />
-              {status}
-              <span className="ml-2 bg-primary text-primary-foreground h-6 w-6 rounded-full flex items-center justify-center text-sm">
-                {sprintStories.filter((story) => story.status === status).length}
-              </span>
-            </h3>
-            <div className="flex-1 space-y-4 overflow-y-auto">
-              {sprintStories
-                .filter((story) => story.status === status)
-                .map((story) => {
-                  const epic = epics.find(e => e.id === story.epicId);
-                  return (
-                  <StoryCard key={story.id} story={story} epic={epic}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          Move to
-                          <ChevronDown className="h-4 w-4 ml-1" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {columns
-                          .filter((col) => col !== story.status)
-                          .map((col) => (
-                            <DropdownMenuItem key={col} onClick={() => moveStoryStatus(story.id, col)}>
-                              {col}
-                            </DropdownMenuItem>
-                          ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </StoryCard>
-                )})}
-            </div>
-          </div>
-        ))}
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+          {columns.map((status) => {
+            const storiesInColumn = sprintStories.filter((story) => story.status === status);
+            return (
+            <SortableContext key={status} id={status} items={storiesInColumn.map(s => s.id)} strategy={verticalListSortingStrategy}>
+              <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <Columns className="mr-2 h-5 w-5" />
+                  {status}
+                  <span className="ml-2 bg-primary text-primary-foreground h-6 w-6 rounded-full flex items-center justify-center text-sm">
+                    {storiesInColumn.length}
+                  </span>
+                </h3>
+                <div className="flex-1 space-y-4 overflow-y-auto">
+                  {storiesInColumn.map((story) => {
+                      const epic = epics.find(e => e.id === story.epicId);
+                      return (
+                        <SortableStoryCard key={story.id} story={story} epic={epic} />
+                      );
+                  })}
+                   {storiesInColumn.length === 0 && (
+                      <div className="flex items-center justify-center h-full text-muted-foreground text-sm italic">
+                          Drag items here
+                      </div>
+                  )}
+                </div>
+              </div>
+            </SortableContext>
+          )})}
+        </div>
+      </DndContext>
     </div>
   );
 }

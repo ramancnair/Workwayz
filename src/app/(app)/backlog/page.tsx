@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -63,7 +64,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/datepicker';
 import { format } from 'date-fns';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
+import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Story: BookOpen,
@@ -94,61 +98,71 @@ const sprintFormSchema = z.object({
   endDate: z.date().optional(),
 });
 
-function StoryCard({
-  story,
-  epic,
-  assignee,
-  onClick,
-}: {
-  story: Story;
-  epic?: Epic;
-  assignee?: Employee;
-  onClick: () => void;
-}) {
+function SortableStoryCard({ story, epic, assignee, onClick }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: story.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 'auto',
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   const Icon = workItemIcons[story.itemType];
+
   return (
-    <Card
-      className="bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md"
-      onClick={onClick}
-    >
-      <CardHeader className="p-4">
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-              <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Card
+        className="bg-card cursor-grab transition-all hover:bg-muted/80 hover:shadow-md"
+        onClick={onClick}
+      >
+        <CardHeader className="p-4">
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+              </div>
+              <p className="font-semibold break-words">{story.title}</p>
             </div>
-             <p className="font-semibold break-words">{story.title}</p>
+            {assignee && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={assignee.avatar}
+                        alt={`${assignee.firstName} ${assignee.lastName}`}
+                        data-ai-hint="developer avatar"
+                      />
+                      <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
-          {assignee && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={assignee.avatar}
-                      alt={`${assignee.firstName} ${assignee.lastName}`}
-                      data-ai-hint="developer avatar"
-                    />
-                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <div className="flex justify-between items-center">
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <div className="flex justify-between items-center">
             {epic && <Badge variant="secondary">{epic.title}</Badge>}
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
+
 
 export default function BacklogPage() {
   const { 
@@ -429,6 +443,28 @@ export default function BacklogPage() {
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const storyId = active.id as string;
+      const newSprintId = over.id === 'backlog-column' ? null : over.id as string;
+      
+      const story = stories.find(s => s.id === storyId);
+      if (story && story.sprintId !== newSprintId) {
+        moveStoryToSprint(storyId, newSprintId);
+      }
+    }
+  }
+  
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
@@ -662,206 +698,216 @@ export default function BacklogPage() {
             </DialogContent>
           </Dialog>
         </PageHeader>
-
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
-          {/* Backlog Column */}
-          <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0">
-            <h3 className="text-lg font-semibold mb-4 sticky top-0 bg-muted/50 pt-1 pb-3">
-              Backlog
-            </h3>
-            <div className="overflow-y-auto flex-1 -mr-4 pr-4">
-              <Accordion type="multiple" className="w-full" defaultValue={epicsToDisplay.map(e => e.id)}>
-                 {epicsToDisplay.map((epic) => {
-                  const isUnassignedEpic = epic.id === 'unassigned';
-                  
-                  // For progress calculation (entire epic)
-                  const allStoriesInEpic = isUnassignedEpic 
-                      ? allUnassignedStories 
-                      : stories.filter(story => story.epicId === epic.id);
-                  const totalEpicItemsCount = allStoriesInEpic.length;
-                  const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
-                  const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
+            <SortableContext items={['backlog-column', ...sprints.map(s => s.id)]}>
+              {/* Backlog Column */}
+              <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0">
+                <h3 className="text-lg font-semibold mb-4 sticky top-0 bg-muted/50 pt-1 pb-3">
+                  Backlog
+                </h3>
+                <div className="overflow-y-auto flex-1 -mr-4 pr-4">
+                  <Accordion type="multiple" className="w-full" defaultValue={epicsToDisplay.map(e => e.id)}>
+                    {epicsToDisplay.map((epic) => {
+                      const isUnassignedEpic = epic.id === 'unassigned';
+                      
+                      const allStoriesInEpic = isUnassignedEpic 
+                          ? allUnassignedStories 
+                          : stories.filter(story => story.epicId === epic.id);
+                      const totalEpicItemsCount = allStoriesInEpic.length;
+                      const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
+                      const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
 
-                  // For display (backlog items only)
-                  const backlogStoriesInThisGroup = storiesByEpic[epic.id] || [];
-                  const backlogItemsCount = backlogStoriesInThisGroup.length;
+                      const backlogStoriesInThisGroup = storiesByEpic[epic.id] || [];
+                      const backlogItemsCount = backlogStoriesInThisGroup.length;
 
-                  return (
-                      <AccordionItem value={epic.id} key={epic.id}>
-                      <AccordionTrigger>
-                          <div className="flex-1 text-left pr-2">
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold">{epic.title}</span>
-                                <Badge variant="secondary">{backlogItemsCount} {backlogItemsCount === 1 ? 'item' : 'items'}</Badge>
+                      return (
+                          <AccordionItem value={epic.id} key={epic.id}>
+                          <AccordionTrigger>
+                              <div className="flex-1 text-left pr-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-semibold">{epic.title}</span>
+                                    <Badge variant="secondary">{backlogItemsCount} {backlogItemsCount === 1 ? 'item' : 'items'}</Badge>
+                                  </div>
+                                  {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                                    <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
+                                        <Progress value={donePercentage} className="h-2" />
+                                        <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                                    </div>
+                                  )}
                               </div>
-                              {!isUnassignedEpic && totalEpicItemsCount > 0 && (
-                                <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
-                                    <Progress value={donePercentage} className="h-2" />
-                                    <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
-                                </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-2">
+                            <SortableContext id="backlog-column" items={backlogStoriesInThisGroup.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                              {backlogStoriesInThisGroup.length > 0 ? (
+                              backlogStoriesInThisGroup.map((story) => {
+                                const storyEpic = epics.find((e) => e.id === story.epicId);
+                                const assignee = employees.find((d) => d.id === story.assigneeId);
+                                return (
+                                  <div key={story.id} className="relative group">
+                                    <SortableStoryCard
+                                        story={story}
+                                        epic={storyEpic}
+                                        assignee={assignee}
+                                        onClick={() => setSelectedStory(story)}
+                                    />
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="sm" className="h-7">
+                                                Change Epic <ChevronDown className="ml-1 h-4 w-4" />
+                                              </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
+                                              Unassigned
+                                            </DropdownMenuItem>
+                                            {epics
+                                            .filter((e) => e.id !== story.epicId)
+                                            .map((e) => (
+                                                <DropdownMenuItem
+                                                key={e.id}
+                                                onClick={() => moveStoryToEpic(story.id, e.id)}
+                                                >
+                                                {e.title}
+                                                </DropdownMenuItem>
+                                            ))}
+                                          </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </div>
+                                )
+                              })
+                              ) : (
+                              <p className="text-sm text-muted-foreground italic px-2">
+                                  No items from this group are in the backlog.
+                              </p>
                               )}
+                            </SortableContext>
+                            {!isUnassignedEpic && (
+                                <div className="pt-4 px-4 flex justify-end gap-2">
+                                  <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Epic
+                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Epic
+                                  </Button>
+                                </div>
+                            )}
+                          </AccordionContent>
+                          </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </div>
+              </div>
+
+              {/* Sprint Columns */}
+              {sprints.map((sprint) => {
+                const sprintStories = stories.filter((story) => story.sprintId === sprint.id);
+                return (
+                  <SortableContext key={sprint.id} id={sprint.id} items={sprintStories.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                    <div
+                      className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0"
+                    >
+                      <div className="flex justify-between items-center mb-2 sticky top-0 bg-muted/50 pt-1 pb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                                {sprint.isCurrent && <Badge>Current</Badge>}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {sprint.startDate && sprint.endDate
+                                ? `${format(new Date(sprint.startDate), 'MMM d')} - ${format(new Date(sprint.endDate), 'MMM d, yyyy')}`
+                                : 'No dates set'}
+                            </p>
                           </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-2">
-                          {backlogStoriesInThisGroup.length > 0 ? (
-                          backlogStoriesInThisGroup.map((story) => {
-                            const storyEpic = epics.find((e) => e.id === story.epicId);
+                          <div className="flex items-center">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleSetCurrentSprint(sprint.id)}
+                                        disabled={sprint.isCurrent}
+                                        className="h-8 w-8"
+                                        aria-label="Set as current sprint"
+                                    >
+                                        <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent><p>Set as current sprint</p></TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => setEditingSprint(sprint)} className="h-8 w-8">
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent><p>Edit sprint</p></TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={sprint.isCurrent ? -1 : 0}>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setSprintToDelete(sprint)}
+                                        className="h-8 w-8"
+                                        disabled={sprint.isCurrent}
+                                        aria-label="Delete sprint"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  {sprint.isCurrent ? (
+                                    <TooltipContent>
+                                      <p>Cannot delete the current sprint.</p>
+                                    </TooltipContent>
+                                  ) : (
+                                    <TooltipContent>
+                                      <p>Delete sprint</p>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                          </div>
+                      </div>
+                      <div className="overflow-y-auto flex-1 -mr-4 pr-4 space-y-2">
+                        {sprintStories.map((story) => {
+                            const epic = epics.find((e) => e.id === story.epicId);
                             const assignee = employees.find((d) => d.id === story.assigneeId);
                             return (
-                              <div key={story.id} className="relative group">
-                                <StoryCard
+                                <SortableStoryCard
+                                    key={story.id}
                                     story={story}
-                                    epic={storyEpic}
+                                    epic={epic}
                                     assignee={assignee}
                                     onClick={() => setSelectedStory(story)}
                                 />
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="sm" className="h-7">
-                                            Change Epic <ChevronDown className="ml-1 h-4 w-4" />
-                                          </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
-                                          Unassigned
-                                        </DropdownMenuItem>
-                                        {epics
-                                        .filter((e) => e.id !== story.epicId)
-                                        .map((e) => (
-                                            <DropdownMenuItem
-                                            key={e.id}
-                                            onClick={() => moveStoryToEpic(story.id, e.id)}
-                                            >
-                                            {e.title}
-                                            </DropdownMenuItem>
-                                        ))}
-                                      </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </div>
                             )
-                          })
-                          ) : (
-                          <p className="text-sm text-muted-foreground italic px-2">
-                              No items from this group are in the backlog.
-                          </p>
-                          )}
-                           {!isUnassignedEpic && (
-                            <div className="pt-4 px-4 flex justify-end gap-2">
-                              <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Epic
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Epic
-                              </Button>
+                          })}
+                          {sprintStories.length === 0 && (
+                            <div className="flex items-center justify-center h-full text-muted-foreground text-sm italic">
+                                Drag items here
                             </div>
-                           )}
-                      </AccordionContent>
-                      </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            </div>
-          </div>
-
-          {/* Sprint Columns */}
-          {sprints.map((sprint) => (
-            <div
-              key={sprint.id}
-              className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0"
-            >
-              <div className="flex justify-between items-center mb-2 sticky top-0 bg-muted/50 pt-1 pb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold">{sprint.title}</h3>
-                        {sprint.isCurrent && <Badge>Current</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {sprint.startDate && sprint.endDate
-                        ? `${format(new Date(sprint.startDate), 'MMM d')} - ${format(new Date(sprint.endDate), 'MMM d, yyyy')}`
-                        : 'No dates set'}
-                    </p>
-                  </div>
-                  <div className="flex items-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleSetCurrentSprint(sprint.id)}
-                                disabled={sprint.isCurrent}
-                                className="h-8 w-8"
-                                aria-label="Set as current sprint"
-                            >
-                                <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Set as current sprint</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => setEditingSprint(sprint)} className="h-8 w-8">
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Edit sprint</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                       <TooltipProvider>
-                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span tabIndex={sprint.isCurrent ? -1 : 0}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setSprintToDelete(sprint)}
-                                className="h-8 w-8"
-                                disabled={sprint.isCurrent}
-                                aria-label="Delete sprint"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          {sprint.isCurrent ? (
-                            <TooltipContent>
-                              <p>Cannot delete the current sprint.</p>
-                            </TooltipContent>
-                          ) : (
-                            <TooltipContent>
-                              <p>Delete sprint</p>
-                            </TooltipContent>
                           )}
-                        </Tooltip>
-                       </TooltipProvider>
-                  </div>
-              </div>
-              <div className="overflow-y-auto flex-1 -mr-4 pr-4 space-y-2">
-                {stories
-                  .filter((story) => story.sprintId === sprint.id)
-                  .map((story) => {
-                    const epic = epics.find((e) => e.id === story.epicId);
-                    const assignee = employees.find((d) => d.id === story.assigneeId);
-                    return (
-                        <StoryCard
-                            key={story.id}
-                            story={story}
-                            epic={epic}
-                            assignee={assignee}
-                            onClick={() => setSelectedStory(story)}
-                        />
-                    )
-                  })}
-              </div>
-            </div>
-          ))}
+                      </div>
+                    </div>
+                  </SortableContext>
+                )
+              })}
+            </SortableContext>
         </div>
+      </DndContext>
       </div>
       <AlertDialog open={!!sprintToDelete} onOpenChange={(isOpen) => !isOpen && setSprintToDelete(null)}>
         <AlertDialogContent>
