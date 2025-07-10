@@ -401,7 +401,7 @@ export default function BacklogPage() {
     return acc;
   }, {} as Record<string, Story[]>);
 
-  const unassignedItems = storiesByEpic['unassigned'] || [];
+  const unassignedItems = backlogStories.filter(s => s.itemType !== 'Story' || !s.epicId);
 
   const epicsToDisplay = [...epics];
   if (unassignedItems.length > 0) {
@@ -421,7 +421,7 @@ export default function BacklogPage() {
       if (b.id === 'unassigned') return -1;
       return a.title.localeCompare(b.title);
   });
-
+  
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
@@ -602,29 +602,55 @@ export default function BacklogPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
+                  {itemTypeToAdd === 'Bug' ? (
+                     <FormField
                       control={addStoryForm.control}
-                      name="epicId"
+                      name="epicId" // Re-using epicId to store related storyId for bugs
                       render={({ field }) => (
                           <FormItem>
-                          <FormLabel>Epic</FormLabel>
+                          <FormLabel>Related Story</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                               <FormControl>
                               <SelectTrigger>
-                                  <SelectValue placeholder="Assign to an epic" />
+                                  <SelectValue placeholder="Link to a story" />
                               </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {epics.map(epic => (
-                                  <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                              <SelectItem value="unassigned">None</SelectItem>
+                              {stories.filter(s => s.itemType === 'Story').map(story => (
+                                  <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
                               ))}
                               </SelectContent>
                           </Select>
                           <FormMessage />
                           </FormItem>
                       )}
-                  />
+                    />
+                  ) : (
+                    <FormField
+                        control={addStoryForm.control}
+                        name="epicId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Epic</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Assign to an epic" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {epics.map(epic => (
+                                    <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                  )}
                   <FormField
                       control={addStoryForm.control}
                       name="assigneeId"
@@ -673,10 +699,13 @@ export default function BacklogPage() {
       
                       const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
 
-                      const backlogStoriesInThisGroup = storiesByEpic[epic.id] || [];
-                      const backlogItemsCount = backlogStoriesInThisGroup.length;
+                      const backlogItemsInGroup = isUnassignedEpic
+                        ? unassignedItems
+                        : backlogStories.filter(s => s.epicId === epic.id);
                       
-                      if (backlogItemsCount === 0 && isUnassignedEpic && unassignedItems.length === 0) {
+                      const backlogItemsCount = backlogItemsInGroup.length;
+                      
+                      if (backlogItemsCount === 0 && isUnassignedEpic && !unassignedItems.length) {
                           return null;
                       }
 
@@ -697,8 +726,8 @@ export default function BacklogPage() {
                               </div>
                           </AccordionTrigger>
                           <AccordionContent className="space-y-2">
-                              {backlogStoriesInThisGroup.length > 0 ? (
-                              backlogStoriesInThisGroup.map((story) => {
+                              {backlogItemsInGroup.length > 0 ? (
+                              backlogItemsInGroup.map((story) => {
                                 const storyEpic = epics.find((e) => e.id === story.epicId);
                                 const assignee = employees.find((d) => d.id === story.assigneeId);
                                 return (
@@ -709,30 +738,32 @@ export default function BacklogPage() {
                                         assignee={assignee}
                                         onClick={() => setSelectedStory(story)}
                                     />
-                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                              <Button variant="ghost" size="sm" className="h-7">
-                                                Change Epic <ChevronDown className="ml-1 h-4 w-4" />
-                                              </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
-                                              Unassigned
-                                            </DropdownMenuItem>
-                                            {epics
-                                            .filter((e) => e.id !== story.epicId)
-                                            .map((e) => (
-                                                <DropdownMenuItem
-                                                key={e.id}
-                                                onClick={() => moveStoryToEpic(story.id, e.id)}
-                                                >
-                                                {e.title}
-                                                </DropdownMenuItem>
-                                            ))}
-                                          </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </div>
+                                    {story.itemType === 'Story' && (
+                                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="sm" className="h-7">
+                                                  Change Epic <ChevronDown className="ml-1 h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
+                                                Unassigned
+                                              </DropdownMenuItem>
+                                              {epics
+                                              .filter((e) => e.id !== story.epicId)
+                                              .map((e) => (
+                                                  <DropdownMenuItem
+                                                  key={e.id}
+                                                  onClick={() => moveStoryToEpic(story.id, e.id)}
+                                                  >
+                                                  {e.title}
+                                                  </DropdownMenuItem>
+                                              ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+                                    )}
                                   </div>
                                 )
                               })
@@ -981,38 +1012,64 @@ export default function BacklogPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={editStoryForm.control}
-                    name="epicId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Epic</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Assign to an epic" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {epics.map((epic) => (
-                              <SelectItem key={epic.id} value={epic.id}>
-                                {epic.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {selectedStory.itemType === 'Bug' ? (
+                     <FormField
+                      control={editStoryForm.control}
+                      name="epicId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Related Story</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Link to a story" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="unassigned">None</SelectItem>
+                              {stories.filter(s => s.itemType === 'Story').map(story => (
+                                  <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={editStoryForm.control}
+                      name="epicId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Epic</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Assign to an epic" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {epics.map((epic) => (
+                                <SelectItem key={epic.id} value={epic.id}>
+                                  {epic.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   <FormField
                     control={editStoryForm.control}
                     name="assigneeId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Assignee</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Assign to a resource" />
