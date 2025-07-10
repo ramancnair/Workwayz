@@ -65,9 +65,6 @@ import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/datepicker';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
-import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Story: BookOpen,
@@ -98,68 +95,50 @@ const sprintFormSchema = z.object({
   endDate: z.date().optional(),
 });
 
-function SortableStoryCard({ story, epic, assignee, onClick }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: story.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 100 : 'auto',
-    opacity: isDragging ? 0.5 : 1,
-  };
-
+function StoryCard({ story, epic, assignee, onClick }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; }) {
   const Icon = workItemIcons[story.itemType];
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card
-        className="bg-card cursor-grab transition-all hover:bg-muted/80 hover:shadow-md"
-        onClick={onClick}
-      >
-        <CardHeader className="p-4">
-          <div className="flex justify-between items-start gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
-              </div>
-              <p className="font-semibold break-words">{story.title}</p>
+    <Card
+      className="bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md"
+      onClick={onClick}
+    >
+      <CardHeader className="p-4">
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+              <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
             </div>
-            {assignee && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={assignee.avatar}
-                        alt={`${assignee.firstName} ${assignee.lastName}`}
-                        data-ai-hint="developer avatar"
-                      />
-                      <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            <p className="font-semibold break-words">{story.title}</p>
           </div>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="flex justify-between items-center">
-            {epic && <Badge variant="secondary">{epic.title}</Badge>}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          {assignee && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src={assignee.avatar}
+                      alt={`${assignee.firstName} ${assignee.lastName}`}
+                      data-ai-hint="developer avatar"
+                    />
+                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="p-4 pt-0">
+        <div className="flex justify-between items-center">
+          {epic && <Badge variant="secondary">{epic.title}</Badge>}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -442,28 +421,6 @@ export default function BacklogPage() {
 
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const storyId = active.id as string;
-      const newSprintId = over.id === 'backlog' ? null : over.id as string;
-      
-      const story = stories.find(s => s.id === storyId);
-      if (story && story.sprintId !== newSprintId) {
-        moveStoryToSprint(storyId, newSprintId);
-      }
-    }
-  }
   
   return (
     <>
@@ -698,14 +655,10 @@ export default function BacklogPage() {
             </DialogContent>
           </Dialog>
         </PageHeader>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
-            <SortableContext items={['backlog', ...sprints.map(s => s.id)]} strategy={verticalListSortingStrategy}>
-              {/* Backlog Column */}
-              <div id="backlog" className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0">
-                <h3 className="text-lg font-semibold mb-4 sticky top-0 bg-muted/50 pt-1 pb-3">
-                  Backlog
-                </h3>
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {/* Backlog Column */}
+            <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col xl:col-span-1">
+                <h3 className="text-lg font-semibold mb-4">Backlog</h3>
                 <div className="overflow-y-auto flex-1 -mr-4 pr-4">
                   <Accordion type="multiple" className="w-full" defaultValue={epicsToDisplay.map(e => e.id)}>
                     {epicsToDisplay.map((epic) => {
@@ -738,14 +691,13 @@ export default function BacklogPage() {
                               </div>
                           </AccordionTrigger>
                           <AccordionContent className="space-y-2">
-                            <SortableContext id="backlog" items={backlogStoriesInThisGroup.map(s => s.id)} strategy={verticalListSortingStrategy}>
                               {backlogStoriesInThisGroup.length > 0 ? (
                               backlogStoriesInThisGroup.map((story) => {
                                 const storyEpic = epics.find((e) => e.id === story.epicId);
                                 const assignee = employees.find((d) => d.id === story.assigneeId);
                                 return (
                                   <div key={story.id} className="relative group">
-                                    <SortableStoryCard
+                                    <StoryCard
                                         story={story}
                                         epic={storyEpic}
                                         assignee={assignee}
@@ -783,7 +735,6 @@ export default function BacklogPage() {
                                   No items from this group are in the backlog.
                               </p>
                               )}
-                            </SortableContext>
                             {!isUnassignedEpic && (
                                 <div className="pt-4 px-4 flex justify-end gap-2">
                                   <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
@@ -802,18 +753,18 @@ export default function BacklogPage() {
                     })}
                   </Accordion>
                 </div>
-              </div>
+            </div>
 
-              {/* Sprint Columns */}
+            {/* Sprints Columns */}
+            <div className="lg:col-span-1 xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
               {sprints.map((sprint) => {
                 const sprintStories = stories.filter((story) => story.sprintId === sprint.id);
                 return (
-                  <SortableContext key={sprint.id} id={sprint.id} items={sprintStories.map(s => s.id)} strategy={verticalListSortingStrategy}>
                     <div
-                      id={sprint.id}
-                      className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0"
+                      key={sprint.id}
+                      className="bg-muted/50 rounded-lg p-4 h-full flex flex-col"
                     >
-                      <div className="flex justify-between items-center mb-2 sticky top-0 bg-muted/50 pt-1 pb-3">
+                      <div className="flex justify-between items-center mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                                 <h3 className="text-lg font-semibold">{sprint.title}</h3>
@@ -887,7 +838,7 @@ export default function BacklogPage() {
                             const epic = epics.find((e) => e.id === story.epicId);
                             const assignee = employees.find((d) => d.id === story.assigneeId);
                             return (
-                                <SortableStoryCard
+                                <StoryCard
                                     key={story.id}
                                     story={story}
                                     epic={epic}
@@ -896,19 +847,12 @@ export default function BacklogPage() {
                                 />
                             )
                           })}
-                          {sprintStories.length === 0 && (
-                            <div className="flex items-center justify-center h-full text-muted-foreground text-sm italic">
-                                Drag items here
-                            </div>
-                          )}
                       </div>
                     </div>
-                  </SortableContext>
                 )
               })}
-            </SortableContext>
+            </div>
         </div>
-      </DndContext>
       </div>
       <AlertDialog open={!!sprintToDelete} onOpenChange={(isOpen) => !isOpen && setSprintToDelete(null)}>
         <AlertDialogContent>
