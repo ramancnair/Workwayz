@@ -456,7 +456,7 @@ export default function BacklogPage() {
 
     if (over && active.id !== over.id) {
       const storyId = active.id as string;
-      const newSprintId = over.id === 'backlog-column' ? null : over.id as string;
+      const newSprintId = over.id === 'backlog' ? null : over.id as string;
       
       const story = stories.find(s => s.id === storyId);
       if (story && story.sprintId !== newSprintId) {
@@ -700,9 +700,9 @@ export default function BacklogPage() {
         </PageHeader>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
-            <SortableContext items={['backlog-column', ...sprints.map(s => s.id)]}>
+            <SortableContext items={['backlog', ...sprints.map(s => s.id)]} strategy={verticalListSortingStrategy}>
               {/* Backlog Column */}
-              <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0">
+              <div id="backlog" className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0">
                 <h3 className="text-lg font-semibold mb-4 sticky top-0 bg-muted/50 pt-1 pb-3">
                   Backlog
                 </h3>
@@ -738,7 +738,7 @@ export default function BacklogPage() {
                               </div>
                           </AccordionTrigger>
                           <AccordionContent className="space-y-2">
-                            <SortableContext id="backlog-column" items={backlogStoriesInThisGroup.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                            <SortableContext id="backlog" items={backlogStoriesInThisGroup.map(s => s.id)} strategy={verticalListSortingStrategy}>
                               {backlogStoriesInThisGroup.length > 0 ? (
                               backlogStoriesInThisGroup.map((story) => {
                                 const storyEpic = epics.find((e) => e.id === story.epicId);
@@ -810,6 +810,7 @@ export default function BacklogPage() {
                 return (
                   <SortableContext key={sprint.id} id={sprint.id} items={sprintStories.map(s => s.id)} strategy={verticalListSortingStrategy}>
                     <div
+                      id={sprint.id}
                       className="bg-muted/50 rounded-lg p-4 h-full flex flex-col w-[350px] md:w-[400px] flex-shrink-0"
                     >
                       <div className="flex justify-between items-center mb-2 sticky top-0 bg-muted/50 pt-1 pb-3">
