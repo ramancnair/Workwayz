@@ -390,7 +390,7 @@ export default function BacklogPage() {
     });
   };
 
-  const backlogStories = stories.filter((story) => !story.sprintId);
+  const backlogStories = stories.filter((story) => story.sprintId === null || story.sprintId === undefined);
 
   const storiesByEpic = backlogStories.reduce((acc, story) => {
     const key = (story.itemType === 'Story' && story.epicId) ? story.epicId : 'unassigned';
@@ -684,9 +684,9 @@ export default function BacklogPage() {
             </DialogContent>
           </Dialog>
         </PageHeader>
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {/* Backlog Column */}
-            <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col xl:col-span-1">
+        <div className="flex-1 flex flex-col gap-8">
+            {/* Backlog Section */}
+            <div className="bg-muted/50 rounded-lg p-4 flex flex-col">
                 <h3 className="text-lg font-semibold mb-4">Backlog</h3>
                 <div className="overflow-y-auto flex-1 -mr-4 pr-4">
                   <Accordion type="multiple" className="w-full" defaultValue={epicsToDisplay.map(e => e.id)}>
@@ -792,14 +792,14 @@ export default function BacklogPage() {
                 </div>
             </div>
 
-            {/* Sprints Columns */}
-            <div className="lg:col-span-1 xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Sprints Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {sprints.map((sprint) => {
                 const sprintStories = stories.filter((story) => story.sprintId === sprint.id);
                 return (
                     <div
                       key={sprint.id}
-                      className="bg-muted/50 rounded-lg p-4 h-full flex flex-col"
+                      className="bg-muted/50 rounded-lg p-4 flex flex-col min-h-[300px]"
                     >
                       <div className="flex justify-between items-center mb-4">
                           <div className="flex-1">
