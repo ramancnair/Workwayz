@@ -393,23 +393,26 @@ export default function BacklogPage() {
   const backlogStories = stories.filter((story) => !story.sprintId);
 
   const storiesByEpic = backlogStories.reduce((acc, story) => {
-    const epicId = story.epicId || 'unassigned';
-    if (!acc[epicId]) {
-      acc[epicId] = [];
+    const key = (story.itemType === 'Story' && story.epicId) ? story.epicId : 'unassigned';
+    if (!acc[key]) {
+      acc[key] = [];
     }
-    acc[epicId].push(story);
+    acc[key].push(story);
     return acc;
   }, {} as Record<string, Story[]>);
 
-  const allUnassignedStories = stories.filter(s => !s.epicId);
+  const unassignedItems = storiesByEpic['unassigned'] || [];
 
   const epicsToDisplay = [...epics];
-  if (allUnassignedStories.length > 0) {
-      epicsToDisplay.push({
-          id: 'unassigned',
-          title: 'Unassigned',
-          description: 'Items not assigned to any epic.',
-      });
+  if (unassignedItems.length > 0) {
+      const hasUnassignedEpic = epicsToDisplay.some(e => e.id === 'unassigned');
+      if (!hasUnassignedEpic) {
+          epicsToDisplay.push({
+              id: 'unassigned',
+              title: 'Unassigned',
+              description: 'Items not assigned to any epic.',
+          });
+      }
   }
 
   // Sort epics alphabetically, but keep Unassigned at the end.
@@ -664,15 +667,18 @@ export default function BacklogPage() {
                     {epicsToDisplay.map((epic) => {
                       const isUnassignedEpic = epic.id === 'unassigned';
                       
-                      const allStoriesInEpic = isUnassignedEpic 
-                          ? allUnassignedStories 
-                          : stories.filter(story => story.epicId === epic.id);
+                      const allStoriesInEpic = stories.filter(s => s.epicId === epic.id);
                       const totalEpicItemsCount = allStoriesInEpic.length;
                       const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
+      
                       const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
 
                       const backlogStoriesInThisGroup = storiesByEpic[epic.id] || [];
                       const backlogItemsCount = backlogStoriesInThisGroup.length;
+                      
+                      if (backlogItemsCount === 0 && isUnassignedEpic && unassignedItems.length === 0) {
+                          return null;
+                      }
 
                       return (
                           <AccordionItem value={epic.id} key={epic.id}>
