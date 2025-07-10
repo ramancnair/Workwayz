@@ -724,7 +724,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Estimated Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} />
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1188,7 +1188,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Estimated Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} />
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
