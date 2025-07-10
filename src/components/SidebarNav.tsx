@@ -83,6 +83,11 @@ export function SidebarNav() {
 
   const governanceMenuItems = [
     {
+      href: "/raid-dashboard",
+      label: "RAID Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
       href: "/risks",
       label: "Risks",
       icon: ShieldAlert,
@@ -106,7 +111,7 @@ export function SidebarNav() {
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
-  const isGovernancePath = ['/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
+  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   
   const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : isGovernancePath ? governanceMenuItems : devMenuItems;
 

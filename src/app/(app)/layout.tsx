@@ -14,7 +14,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
-  const isGovernancePath = ['/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
+  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   
   const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : isGovernancePath ? 'governance' : 'development';
 
@@ -26,7 +26,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     } else if (value === 'resources') {
       router.push('/resources');
     } else if (value === 'governance') {
-      router.push('/risks');
+      router.push('/raid-dashboard');
     }
   };
 
