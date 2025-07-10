@@ -50,7 +50,7 @@ export function SidebarNav() {
     },
     {
       href: "/backlog",
-      label: "Backlog",
+      label: "Product Backlog",
       icon: Layers,
     },
   ];
