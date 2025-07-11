@@ -19,6 +19,7 @@ import {
   getFirestore,
 } from 'firebase/firestore';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn } from '@/types';
+import { arrayMove } from '@dnd-kit/sortable';
 
 // Helper to remove undefined values from an object before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
@@ -101,6 +102,7 @@ interface ProjectContextType {
   addKanbanColumn: (column: Omit<KanbanColumn, 'id' | 'isDefault' | 'isDoneColumn'>) => Promise<boolean>;
   updateKanbanColumn: (columnId: string, data: Partial<Omit<KanbanColumn, 'id'>>) => Promise<boolean>;
   deleteKanbanColumn: (columnId: string) => Promise<boolean>;
+  updateKanbanColumnOrder: (oldIndex: number, newIndex: number) => Promise<boolean>;
 
 
   isLoading: boolean;
@@ -689,6 +691,30 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
+  const updateKanbanColumnOrder = async (oldIndex: number, newIndex: number): Promise<boolean> => {
+    if (!db) return false;
+    const sortedColumns = [...kanbanColumns].sort((a, b) => a.order - b.order);
+    const movedColumns = arrayMove(sortedColumns, oldIndex, newIndex);
+    
+    // Optimistically update local state
+    setKanbanColumns(movedColumns.map((col, index) => ({ ...col, order: index })));
+
+    try {
+        const batch = writeBatch(db);
+        movedColumns.forEach((column, index) => {
+            const docRef = doc(db, 'kanbanColumns', column.id);
+            batch.update(docRef, { order: index });
+        });
+        await batch.commit();
+        return true;
+    } catch (e) {
+        console.error("Firebase Error: Failed to update Kanban column order.", e);
+        // Revert local state on error
+        setKanbanColumns(sortedColumns);
+        return false;
+    }
+  };
+
 
   const value: ProjectContextType = {
     epics,
@@ -737,6 +763,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addKanbanColumn,
     updateKanbanColumn,
     deleteKanbanColumn,
+    updateKanbanColumnOrder,
   };
   
     if (isLoading) {
