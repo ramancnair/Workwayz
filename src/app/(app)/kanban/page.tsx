@@ -271,11 +271,11 @@ export default function KanbanPage() {
             </Select>
           </div>
         </PageHeader>
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+        <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
           {sortedColumns.map((column) => {
             const itemsInColumn = sprintStories.filter((story) => story.status === column.name);
             return (
-              <div key={column.id} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+              <div key={column.id} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-1/3">
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
                   <Columns className="mr-2 h-5 w-5" />
                   {column.name}
@@ -286,7 +286,7 @@ export default function KanbanPage() {
                 <div className="flex-1 space-y-4 overflow-y-auto">
                   {itemsInColumn.map((story) => {
                       const epic = epics.find(e => e.id === story.epicId);
-                      const parentStory = story.epicId ? allStoriesById[story.epicId] : undefined;
+                      const parentStory = story.epicId && story.itemType !== 'Story' ? allStoriesById[story.epicId] : undefined;
 
                       const subItems = subItemsByStoryId[story.id] || [];
                       const isMoveToDoneDisabled = story.itemType === 'Story' && subItems.some(sub => sub.status !== doneColumnName);
