@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -65,6 +65,7 @@ import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/datepicker';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
+import { Separator } from '@/components/ui/separator';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Story: BookOpen,
@@ -460,6 +461,8 @@ export default function BacklogPage() {
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
+  const selectedStorySubItems = selectedStory && subItemsByStoryId[selectedStory.id] ? subItemsByStoryId[selectedStory.id] : [];
+
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
@@ -776,12 +779,12 @@ export default function BacklogPage() {
                       const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
 
                       const backlogItemsInGroup = isUnassignedEpic
-                        ? unassignedItems
+                        ? unassignedItems.concat(storiesByEpic['unassigned'] || [])
                         : (storiesByEpic[epic.id] || []);
                       
                       const backlogItemsCount = backlogItemsInGroup.length;
                       
-                      if (backlogItemsCount === 0 && isUnassignedEpic && !unassignedItems.length) {
+                      if (backlogItemsCount === 0 && isUnassignedEpic && !unassignedItems.length && !storiesByEpic['unassigned']?.length) {
                           return null;
                       }
 
@@ -896,7 +899,9 @@ export default function BacklogPage() {
               <h3 className="text-lg font-semibold mb-4">Sprints</h3>
               <Accordion type="multiple" className="w-full" defaultValue={sprints.map(s => s.id)}>
                 {sprints.map((sprint) => {
-                  const sprintStories = stories.filter((story) => story.sprintId === sprint.id);
+                  const sprintStories = stories.filter((story) => story.sprintId === sprint.id && story.itemType === 'Story');
+                  const sprintSubItems = stories.filter((story) => story.sprintId === sprint.id && ['Bug', 'Task'].includes(story.itemType) && !story.epicId);
+
                   return (
                     <AccordionItem value={sprint.id} key={sprint.id}>
                       <div className="flex justify-between items-center py-4">
@@ -972,20 +977,43 @@ export default function BacklogPage() {
                       </div>
                       <AccordionContent>
                         <div className="space-y-2">
-                          {sprintStories.map((story) => {
+                          {[...sprintStories, ...sprintSubItems].map((story) => {
                               const epic = epics.find((e) => e.id === story.epicId);
                               const assignee = employees.find((d) => d.id === story.assigneeId);
+                              const subItems = story.itemType === 'Story' ? (subItemsByStoryId[story.id] || []) : [];
+                              if (story.itemType !== 'Story' && story.epicId) return null; // Render sub-items only under their parent
+                              
                               return (
-                                  <StoryCard
-                                      key={story.id}
-                                      story={story}
-                                      epic={epic}
-                                      assignee={assignee}
-                                      onClick={() => setSelectedStory(story)}
-                                  />
-                              )
+                                <div key={story.id}>
+                                    <StoryCard
+                                        story={story}
+                                        epic={epic}
+                                        assignee={assignee}
+                                        onClick={() => setSelectedStory(story)}
+                                    />
+                                    {subItems.length > 0 && (
+                                    <div className="pl-6 pt-2 space-y-2">
+                                        {subItems.map(subItem => {
+                                            const subItemAssignee = employees.find((d) => d.id === subItem.assigneeId);
+                                            return (
+                                                <div key={subItem.id} className="flex items-start gap-2">
+                                                    <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
+                                                    <div className="flex-1">
+                                                        <StoryCard
+                                                            story={subItem}
+                                                            assignee={subItemAssignee}
+                                                            onClick={() => setSelectedStory(subItem)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                    )}
+                                </div>
+                              );
                             })}
-                            {sprintStories.length === 0 && (
+                            {sprintStories.length === 0 && sprintSubItems.length === 0 && (
                                <p className="text-sm text-muted-foreground italic px-2">
                                   No items in this sprint.
                               </p>
@@ -1064,7 +1092,7 @@ export default function BacklogPage() {
       </AlertDialog>
 
       <Dialog open={!!selectedStory} onOpenChange={setSelectedStory}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           {selectedStory && (
             <>
               <DialogHeader>
@@ -1238,6 +1266,24 @@ export default function BacklogPage() {
                     )}
                   />
 
+                  {selectedStory.itemType === 'Story' && selectedStorySubItems.length > 0 && (
+                    <div>
+                        <Separator className="my-4" />
+                        <h4 className="text-sm font-medium mb-2">Related Items</h4>
+                        <div className="space-y-2 rounded-md border p-2">
+                        {selectedStorySubItems.map(item => (
+                            <div key={item.id} className="flex items-center justify-between text-sm">
+                                <div className='flex items-center gap-2'>
+                                    {workItemIcons[item.itemType] && <item.icon className="h-4 w-4 text-muted-foreground" />}
+                                    <span>{item.storyId}: {item.title}</span>
+                                </div>
+                                <Badge variant="outline">{item.status}</Badge>
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+                  )}
+
                   <DialogFooter className="flex justify-between items-center pt-4">
                     <TooltipProvider>
                       <Tooltip>
@@ -1273,6 +1319,7 @@ export default function BacklogPage() {
                           <DropdownMenuContent align="end">
                               {selectedStory.sprintId !== null && (
                               <DropdownMenuItem onClick={() => {
+                                  if (!selectedStory) return;
                                   moveStoryToSprint(selectedStory.id, null);
                                   setSelectedStory(null);
                               }}>
@@ -1285,6 +1332,7 @@ export default function BacklogPage() {
                                   <DropdownMenuItem
                                   key={sprint.id}
                                   onClick={() => {
+                                      if (!selectedStory) return;
                                       moveStoryToSprint(selectedStory.id, sprint.id);
                                       setSelectedStory(null);
                                   }}

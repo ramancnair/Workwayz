@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, Employee, WorkItemType, BugCriticality } from '@/types';
+import type { Story, Epic, StoryStatus, Employee, WorkItemType, BugCriticality, Sprint } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2 } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -50,6 +50,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Story: BookOpen,
@@ -128,6 +129,17 @@ export default function KanbanPage() {
     resolver: zodResolver(storyFormSchema),
   });
 
+  // Create a map of story IDs to their sub-items (bugs/tasks)
+  const subItemsByStoryId = stories.reduce((acc, story) => {
+    if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
+        if (!acc[story.epicId]) {
+            acc[story.epicId] = [];
+        }
+        acc[story.epicId].push(story);
+    }
+    return acc;
+  }, {} as Record<string, Story[]>);
+
   useEffect(() => {
     if (!selectedStory) {
       setEditStorySubmitting(false);
@@ -184,6 +196,9 @@ export default function KanbanPage() {
   const sprintStories = selectedAssigneeId === 'all'
     ? baseSprintStories
     : baseSprintStories.filter(story => story.assigneeId === selectedAssigneeId);
+
+  const selectedStorySubItems = selectedStory && subItemsByStoryId[selectedStory.id] ? subItemsByStoryId[selectedStory.id] : [];
+
 
   if (!currentSprint) {
     return (
@@ -252,7 +267,7 @@ export default function KanbanPage() {
       </div>
 
       <Dialog open={!!selectedStory} onOpenChange={setSelectedStory}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           {selectedStory && (
             <>
               <DialogHeader>
@@ -426,6 +441,24 @@ export default function KanbanPage() {
                     )}
                   />
 
+                  {selectedStory.itemType === 'Story' && selectedStorySubItems.length > 0 && (
+                    <div>
+                        <Separator className="my-4" />
+                        <h4 className="text-sm font-medium mb-2">Related Items</h4>
+                        <div className="space-y-2 rounded-md border p-2">
+                        {selectedStorySubItems.map(item => (
+                            <div key={item.id} className="flex items-center justify-between text-sm">
+                                <div className='flex items-center gap-2'>
+                                    {workItemIcons[item.itemType] && <item.icon className="h-4 w-4 text-muted-foreground" />}
+                                    <span>{item.storyId}: {item.title}</span>
+                                </div>
+                                <Badge variant="outline">{item.status}</Badge>
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+                  )}
+
                   <DialogFooter className="flex justify-between items-center pt-4">
                     <TooltipProvider>
                       <Tooltip>
@@ -461,6 +494,7 @@ export default function KanbanPage() {
                           <DropdownMenuContent align="end">
                               {selectedStory.sprintId !== null && (
                               <DropdownMenuItem onClick={() => {
+                                  if (!selectedStory) return;
                                   moveStoryToSprint(selectedStory.id, null);
                                   setSelectedStory(null);
                               }}>
@@ -473,6 +507,7 @@ export default function KanbanPage() {
                                   <DropdownMenuItem
                                   key={sprint.id}
                                   onClick={() => {
+                                      if (!selectedStory) return;
                                       moveStoryToSprint(selectedStory.id, sprint.id);
                                       setSelectedStory(null);
                                   }}
