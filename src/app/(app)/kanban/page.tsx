@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, Employee, WorkItemType, BugCriticality, Sprint } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, CornerDownRight } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, CornerDownRight, Ban } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -72,7 +72,7 @@ const storyFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
 });
 
-function StoryCard({ story, epic, onStatusChange, onClick, className }: { story: Story; epic?: Epic; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; }) {
+function StoryCard({ story, epic, parentStory, onStatusChange, onClick, className, isMoveToDoneDisabled }: { story: Story; epic?: Epic; parentStory?: Story; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; isMoveToDoneDisabled?: boolean; }) {
 
   const Icon = workItemIcons[story.itemType];
   return (
@@ -80,7 +80,9 @@ function StoryCard({ story, epic, onStatusChange, onClick, className }: { story:
       <CardHeader>
         <div className="flex items-center gap-2">
             {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-            <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+            <p className="text-xs font-semibold text-muted-foreground">
+              {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
+            </p>
         </div>
         <CardTitle className="text-base">{story.title}</CardTitle>
         <CardDescription>{story.description}</CardDescription>
@@ -103,11 +105,34 @@ function StoryCard({ story, epic, onStatusChange, onClick, className }: { story:
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    {columns.filter(col => col !== story.status).map(col => (
-                        <DropdownMenuItem key={col} onClick={() => onStatusChange(col)}>
-                            Move to {col}
-                        </DropdownMenuItem>
-                    ))}
+                    {columns.filter(col => col !== story.status).map(col => {
+                        const isDoneAndDisabled = col === 'Done' && isMoveToDoneDisabled;
+                        if (isDoneAndDisabled) {
+                            return (
+                                <TooltipProvider key={col}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="w-full">
+                                                <DropdownMenuItem disabled>
+                                                    <Ban className="mr-2 h-4 w-4" />
+                                                    Move to {col}
+                                                </DropdownMenuItem>
+                                            </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Complete all sub-items first.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )
+                        }
+
+                        return (
+                            <DropdownMenuItem key={col} onClick={() => onStatusChange(col)}>
+                                Move to {col}
+                            </DropdownMenuItem>
+                        )
+                    })}
                 </DropdownMenuContent>
             </DropdownMenu>
         )}
@@ -131,6 +156,11 @@ export default function KanbanPage() {
     resolver: zodResolver(storyFormSchema),
   });
 
+  const allStoriesById = stories.reduce((acc, story) => {
+    acc[story.id] = story;
+    return acc;
+  }, {} as Record<string, Story>);
+  
   const subItemsByStoryId = stories.reduce((acc, story) => {
     if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
         if (!acc[story.epicId]) {
@@ -214,22 +244,6 @@ export default function KanbanPage() {
 
   const sprintAssigneeIds = new Set(baseSprintStories.map(story => story.assigneeId).filter(Boolean));
   const sprintAssignees = employees.filter(emp => sprintAssigneeIds.has(emp.id));
-  
-  // Group sub-items by parent ID for easier lookup within the sprint
-  const sprintSubItemsByParentId = sprintStories.reduce((acc, story) => {
-      if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
-          if (!acc[story.epicId]) {
-              acc[story.epicId] = [];
-          }
-          acc[story.epicId].push(story);
-      }
-      return acc;
-  }, {} as Record<string, Story[]>);
-
-  // Get top-level items for the Kanban board (stories or sub-items without a parent in the sprint)
-  const topLevelSprintItems = sprintStories.filter(item => {
-      return item.itemType === 'Story' || !sprintStories.some(parent => parent.id === item.epicId);
-  });
 
   return (
     <>
@@ -254,7 +268,7 @@ export default function KanbanPage() {
         </PageHeader>
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {columns.map((status) => {
-            const itemsInColumn = topLevelSprintItems.filter((story) => story.status === status);
+            const itemsInColumn = sprintStories.filter((story) => story.status === status);
             return (
               <div key={status} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -267,32 +281,21 @@ export default function KanbanPage() {
                 <div className="flex-1 space-y-4 overflow-y-auto">
                   {itemsInColumn.map((story) => {
                       const epic = epics.find(e => e.id === story.epicId);
-                      const subItems = (sprintSubItemsByParentId[story.id] || []).filter(sub => sub.status === status);
-                      
+                      const parentStory = story.epicId ? allStoriesById[story.epicId] : undefined;
+
+                      const subItems = subItemsByStoryId[story.id] || [];
+                      const isMoveToDoneDisabled = story.itemType === 'Story' && subItems.some(sub => sub.status !== 'Done');
+
                       return (
                         <div key={story.id}>
                           <StoryCard 
                             story={story} 
-                            epic={epic} 
+                            epic={epic}
+                            parentStory={parentStory}
                             onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
                             onClick={() => setSelectedStory(story)}
+                            isMoveToDoneDisabled={isMoveToDoneDisabled}
                           />
-                          {subItems.length > 0 && (
-                            <div className="pl-6 pt-2 space-y-2">
-                              {subItems.map(subItem => (
-                                <div key={subItem.id} className="flex items-start gap-2">
-                                  <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
-                                  <div className="flex-1">
-                                    <StoryCard
-                                      story={subItem}
-                                      onClick={() => setSelectedStory(subItem)}
-                                      onStatusChange={(newStatus) => moveStoryStatus(subItem.id, newStatus)}
-                                    />
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       );
                   })}
@@ -590,3 +593,5 @@ export default function KanbanPage() {
     </>
   );
 }
+
+    
