@@ -901,9 +901,9 @@ export default function BacklogPage() {
                 {sprints.map((sprint) => {
                   const sprintItems = stories.filter((story) => story.sprintId === sprint.id);
                   const sprintStories = sprintItems.filter(item => item.itemType === 'Story');
-                  const unparentedSubItems = sprintItems.filter(item => ['Bug', 'Task'].includes(item.itemType) && (!item.epicId || !sprintItems.find(s => s.id === item.epicId)));
+                  const unparentedSubItems = sprintItems.filter(item => ['Bug', 'Task'].includes(item.itemType) && (!item.epicId || !sprintStories.find(s => s.id === item.epicId)));
                   const allTopLevelItems = [...sprintStories, ...unparentedSubItems];
-
+                  
                   return (
                     <AccordionItem value={sprint.id} key={sprint.id}>
                       <div className="flex items-center justify-between py-4">
@@ -1457,5 +1457,3 @@ export default function BacklogPage() {
     </>
   );
 }
-
-    
