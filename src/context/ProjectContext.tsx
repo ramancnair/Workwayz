@@ -235,23 +235,24 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     if (!db) return false;
     try {
       const batch = writeBatch(db);
-
+      const storyRef = doc(db, 'stories', storyId);
+  
       // 1. Move the parent story
-      batch.update(doc(db, 'stories', storyId), { sprintId });
-
+      batch.update(storyRef, { sprintId });
+  
       // 2. Find and move all related sub-items (Bugs and Tasks)
       // Note: `epicId` on a Bug/Task is used to link to the parent Story ID
       const q = query(collection(db, 'stories'), where('epicId', '==', storyId));
       const subItemsSnapshot = await getDocs(q);
-
+  
       subItemsSnapshot.forEach(subItemDoc => {
         batch.update(doc(db, 'stories', subItemDoc.id), { sprintId });
       });
-
+  
       await batch.commit();
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to move story and its sub-items to sprint.", { storyId, sprintId, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to move story and sub-items to sprint.", { storyId, sprintId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };

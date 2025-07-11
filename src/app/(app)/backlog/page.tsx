@@ -747,7 +747,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Estimated Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -809,7 +809,7 @@ export default function BacklogPage() {
                                 backlogItemsInGroup.map((story) => {
                                   const storyEpic = epics.find((e) => e.id === story.epicId);
                                   const assignee = employees.find((d) => d.id === story.assigneeId);
-                                  const subItems = subItemsByStoryId[story.id] || [];
+                                  const subItems = (subItemsByStoryId[story.id] || []).filter(item => !item.sprintId);
                                   
                                   return (
                                     <div key={story.id}>
@@ -900,9 +900,9 @@ export default function BacklogPage() {
               <Accordion type="multiple" className="w-full" defaultValue={sprints.map(s => s.id)}>
                 {sprints.map((sprint) => {
                   const sprintItems = stories.filter((story) => story.sprintId === sprint.id);
-                  const sprintStories = sprintItems.filter(item => item.itemType === 'Story');
-                  const unparentedSubItems = sprintItems.filter(item => ['Bug', 'Task'].includes(item.itemType) && (!item.epicId || !sprintStories.find(s => s.id === item.epicId)));
-                  const allTopLevelItems = [...sprintStories, ...unparentedSubItems];
+                  const topLevelSprintItems = sprintItems.filter(
+                    item => item.itemType === 'Story' || !item.epicId || !sprintItems.find(s => s.id === item.epicId)
+                  );
                   
                   return (
                     <AccordionItem value={sprint.id} key={sprint.id}>
@@ -979,11 +979,11 @@ export default function BacklogPage() {
                       </div>
                       <AccordionContent>
                         <div className="space-y-2">
-                          {allTopLevelItems.length > 0 ? (
-                            allTopLevelItems.map((story) => {
+                          {topLevelSprintItems.length > 0 ? (
+                            topLevelSprintItems.map((story) => {
                               const epic = epics.find((e) => e.id === story.epicId);
                               const assignee = employees.find((d) => d.id === story.assigneeId);
-                              const subItems = story.itemType === 'Story' ? (subItemsByStoryId[story.id] || []).filter(si => si.sprintId === sprint.id) : [];
+                              const subItems = (subItemsByStoryId[story.id] || []).filter(item => item.sprintId === sprint.id);
                               
                               return (
                                 <div key={story.id}>
@@ -1261,7 +1261,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Estimated Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
