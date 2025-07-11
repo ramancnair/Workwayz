@@ -191,7 +191,16 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             ) + 1
             : 1;
 
-        const payload = { ...story, storyId: `ST-${newIdNumber}` };
+        const payload: any = { ...story, storyId: `ST-${newIdNumber}` };
+
+        // If it's a sub-item (Bug/Task) linked to a story, inherit the sprint
+        if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
+            const parentStory = stories.find(s => s.id === story.epicId);
+            if (parentStory && parentStory.sprintId) {
+                payload.sprintId = parentStory.sprintId;
+            }
+        }
+        
         await addDoc(collection(db, 'stories'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {

@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -98,12 +98,12 @@ const sprintFormSchema = z.object({
   endDate: z.date().optional(),
 });
 
-function StoryCard({ story, epic, assignee, onClick }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; }) {
+function StoryCard({ story, epic, assignee, onClick, className }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; className?: string; }) {
   const Icon = workItemIcons[story.itemType];
 
   return (
     <Card
-      className="bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md"
+      className={cn("bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md", className)}
       onClick={onClick}
     >
       <CardHeader className="p-4">
@@ -337,6 +337,9 @@ export default function BacklogPage() {
 
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setAddStorySubmitting(true);
+    const isSubItem = ['Bug', 'Task'].includes(itemTypeToAdd);
+    const relatedStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
+    
     const newStory: Omit<Story, 'id' | 'storyId'> = {
       sprintId: null,
       title: values.title,
@@ -344,7 +347,7 @@ export default function BacklogPage() {
       itemType: itemTypeToAdd,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+      epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : relatedStoryId,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       criticality: itemTypeToAdd === 'Bug' ? values.criticality : undefined,
@@ -361,12 +364,16 @@ export default function BacklogPage() {
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
     setEditStorySubmitting(true);
+    
+    const isSubItem = ['Bug', 'Task'].includes(selectedStory.itemType);
+    const relatedStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
+
     const success = await updateStory(selectedStory.id, {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+        epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : relatedStoryId,
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
     });
@@ -406,20 +413,33 @@ export default function BacklogPage() {
   };
 
   const backlogStories = stories.filter((story) => story.sprintId === null || story.sprintId === undefined);
+  
+  // Create a map of story IDs to their sub-items (bugs/tasks)
+  const subItemsByStoryId = stories.reduce((acc, story) => {
+      if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
+          if (!acc[story.epicId]) {
+              acc[story.epicId] = [];
+          }
+          acc[story.epicId].push(story);
+      }
+      return acc;
+  }, {} as Record<string, Story[]>);
 
   const storiesByEpic = backlogStories.reduce((acc, story) => {
     const key = (story.itemType === 'Story' && story.epicId) ? story.epicId : 'unassigned';
     if (!acc[key]) {
       acc[key] = [];
     }
-    acc[key].push(story);
+    if (story.itemType === 'Story') { // Only add top-level stories here
+      acc[key].push(story);
+    }
     return acc;
   }, {} as Record<string, Story[]>);
   
-  const unassignedItems = backlogStories.filter(s => s.itemType !== 'Story' || !s.epicId);
+  const unassignedItems = backlogStories.filter(s => s.itemType !== 'Story' && !s.epicId);
 
   const epicsToDisplay = [...epics];
-  if (unassignedItems.length > 0) {
+  if (unassignedItems.length > 0 || Object.values(storiesByEpic).some(arr => arr.some(s => s.epicId === 'unassigned'))) {
       const hasUnassignedEpic = epicsToDisplay.some(e => e.id === 'unassigned');
       if (!hasUnassignedEpic) {
           epicsToDisplay.push({
@@ -618,10 +638,10 @@ export default function BacklogPage() {
                     )}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {itemTypeToAdd === 'Bug' ? (
+                  {['Bug', 'Task'].includes(itemTypeToAdd) ? (
                      <FormField
                       control={addStoryForm.control}
-                      name="epicId" // Re-using epicId to store related storyId for bugs
+                      name="epicId" // Re-using epicId to store related storyId for bugs/tasks
                       render={({ field }) => (
                           <FormItem>
                           <FormLabel>Related Story</FormLabel>
@@ -757,7 +777,7 @@ export default function BacklogPage() {
 
                       const backlogItemsInGroup = isUnassignedEpic
                         ? unassignedItems
-                        : backlogStories.filter(s => s.epicId === epic.id);
+                        : (storiesByEpic[epic.id] || []);
                       
                       const backlogItemsCount = backlogItemsInGroup.length;
                       
@@ -783,52 +803,75 @@ export default function BacklogPage() {
                           </AccordionTrigger>
                           <AccordionContent className="space-y-2">
                               {backlogItemsInGroup.length > 0 ? (
-                              backlogItemsInGroup.map((story) => {
-                                const storyEpic = epics.find((e) => e.id === story.epicId);
-                                const assignee = employees.find((d) => d.id === story.assigneeId);
-                                return (
-                                  <div key={story.id} className="relative group">
-                                    <StoryCard
-                                        story={story}
-                                        epic={storyEpic}
-                                        assignee={assignee}
-                                        onClick={() => setSelectedStory(story)}
-                                    />
-                                    {story.itemType === 'Story' && (
-                                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm" className="h-7">
-                                                  Change Epic <ChevronDown className="ml-1 h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                              <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
-                                                Unassigned
-                                              </DropdownMenuItem>
-                                              {epics
-                                              .filter((e) => e.id !== story.epicId)
-                                              .map((e) => (
-                                                  <DropdownMenuItem
-                                                  key={e.id}
-                                                  onClick={() => moveStoryToEpic(story.id, e.id)}
-                                                  >
-                                                  {e.title}
+                                backlogItemsInGroup.map((story) => {
+                                  const storyEpic = epics.find((e) => e.id === story.epicId);
+                                  const assignee = employees.find((d) => d.id === story.assigneeId);
+                                  const subItems = subItemsByStoryId[story.id] || [];
+                                  
+                                  return (
+                                    <div key={story.id}>
+                                      <div className="relative group">
+                                          <StoryCard
+                                              story={story}
+                                              epic={storyEpic}
+                                              assignee={assignee}
+                                              onClick={() => setSelectedStory(story)}
+                                          />
+                                          {story.itemType === 'Story' && (
+                                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                      <Button variant="ghost" size="sm" className="h-7">
+                                                      Change Epic <ChevronDown className="ml-1 h-4 w-4" />
+                                                      </Button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent align="end">
+                                                  <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
+                                                      Unassigned
                                                   </DropdownMenuItem>
-                                              ))}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                                  {epics
+                                                  .filter((e) => e.id !== story.epicId)
+                                                  .map((e) => (
+                                                      <DropdownMenuItem
+                                                      key={e.id}
+                                                      onClick={() => moveStoryToEpic(story.id, e.id)}
+                                                      >
+                                                      {e.title}
+                                                      </DropdownMenuItem>
+                                                  ))}
+                                                  </DropdownMenuContent>
+                                              </DropdownMenu>
+                                          </div>
+                                          )}
                                       </div>
-                                    )}
-                                  </div>
-                                )
-                              })
+                                      {subItems.length > 0 && (
+                                        <div className="pl-6 pt-2 space-y-2">
+                                          {subItems.map(subItem => {
+                                              const subItemAssignee = employees.find((d) => d.id === subItem.assigneeId);
+                                              return (
+                                                  <div key={subItem.id} className="flex items-start gap-2">
+                                                      <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
+                                                      <div className="flex-1">
+                                                          <StoryCard
+                                                              story={subItem}
+                                                              assignee={subItemAssignee}
+                                                              onClick={() => setSelectedStory(subItem)}
+                                                          />
+                                                      </div>
+                                                  </div>
+                                              )
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })
                               ) : (
-                              <p className="text-sm text-muted-foreground italic px-2">
-                                  No items from this group are in the backlog.
-                              </p>
+                                <p className="text-sm text-muted-foreground italic px-2">
+                                    No items from this group are in the backlog.
+                                </p>
                               )}
-                            {!isUnassignedEpic && (
+                              {!isUnassignedEpic && (
                                 <div className="pt-4 px-4 flex justify-end gap-2">
                                   <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
                                     <Edit className="mr-2 h-4 w-4" />
@@ -839,7 +882,7 @@ export default function BacklogPage() {
                                     Delete Epic
                                   </Button>
                                 </div>
-                            )}
+                              )}
                           </AccordionContent>
                           </AccordionItem>
                       );
@@ -1078,7 +1121,7 @@ export default function BacklogPage() {
                     )}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedStory.itemType === 'Bug' ? (
+                  {['Bug', 'Task'].includes(selectedStory.itemType) ? (
                      <FormField
                       control={editStoryForm.control}
                       name="epicId"
