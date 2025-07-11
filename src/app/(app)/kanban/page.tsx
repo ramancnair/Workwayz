@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, Employee, WorkItemType, BugCriticality, Sprint } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2 } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, CornerDownRight } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -72,11 +72,11 @@ const storyFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
 });
 
-function StoryCard({ story, epic, onStatusChange, onClick }: { story: Story; epic?: Epic; onStatusChange: (newStatus: StoryStatus) => void; onClick: () => void; }) {
+function StoryCard({ story, epic, onStatusChange, onClick, className }: { story: Story; epic?: Epic; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; }) {
 
   const Icon = workItemIcons[story.itemType];
   return (
-    <Card className="bg-card cursor-pointer" onClick={onClick}>
+    <Card className={cn("bg-card cursor-pointer", className)} onClick={onClick}>
       <CardHeader>
         <div className="flex items-center gap-2">
             {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
@@ -95,20 +95,22 @@ function StoryCard({ story, epic, onStatusChange, onClick }: { story: Story; epi
                 </div>
             )}
         </div>
-         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                Move <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                {columns.filter(col => col !== story.status).map(col => (
-                    <DropdownMenuItem key={col} onClick={() => onStatusChange(col)}>
-                        Move to {col}
-                    </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+        {onStatusChange && (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                    Move <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    {columns.filter(col => col !== story.status).map(col => (
+                        <DropdownMenuItem key={col} onClick={() => onStatusChange(col)}>
+                            Move to {col}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        )}
       </CardFooter>
     </Card>
   );
@@ -129,7 +131,6 @@ export default function KanbanPage() {
     resolver: zodResolver(storyFormSchema),
   });
 
-  // Create a map of story IDs to their sub-items (bugs/tasks)
   const subItemsByStoryId = stories.reduce((acc, story) => {
     if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
         if (!acc[story.epicId]) {
@@ -213,6 +214,22 @@ export default function KanbanPage() {
 
   const sprintAssigneeIds = new Set(baseSprintStories.map(story => story.assigneeId).filter(Boolean));
   const sprintAssignees = employees.filter(emp => sprintAssigneeIds.has(emp.id));
+  
+  // Group sub-items by parent ID for easier lookup within the sprint
+  const sprintSubItemsByParentId = sprintStories.reduce((acc, story) => {
+      if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
+          if (!acc[story.epicId]) {
+              acc[story.epicId] = [];
+          }
+          acc[story.epicId].push(story);
+      }
+      return acc;
+  }, {} as Record<string, Story[]>);
+
+  // Get top-level items for the Kanban board (stories or sub-items without a parent in the sprint)
+  const topLevelSprintItems = sprintStories.filter(item => {
+      return item.itemType === 'Story' || !sprintStories.some(parent => parent.id === item.epicId);
+  });
 
   return (
     <>
@@ -237,27 +254,46 @@ export default function KanbanPage() {
         </PageHeader>
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {columns.map((status) => {
-            const storiesInColumn = sprintStories.filter((story) => story.status === status);
+            const itemsInColumn = topLevelSprintItems.filter((story) => story.status === status);
             return (
               <div key={status} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
                   <Columns className="mr-2 h-5 w-5" />
                   {status}
                   <span className="ml-2 bg-primary text-primary-foreground h-6 w-6 rounded-full flex items-center justify-center text-sm">
-                    {storiesInColumn.length}
+                    {itemsInColumn.length}
                   </span>
                 </h3>
                 <div className="flex-1 space-y-4 overflow-y-auto">
-                  {storiesInColumn.map((story) => {
+                  {itemsInColumn.map((story) => {
                       const epic = epics.find(e => e.id === story.epicId);
+                      const subItems = (sprintSubItemsByParentId[story.id] || []).filter(sub => sub.status === status);
+                      
                       return (
-                        <StoryCard 
-                          key={story.id} 
-                          story={story} 
-                          epic={epic} 
-                          onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
-                          onClick={() => setSelectedStory(story)}
-                        />
+                        <div key={story.id}>
+                          <StoryCard 
+                            story={story} 
+                            epic={epic} 
+                            onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
+                            onClick={() => setSelectedStory(story)}
+                          />
+                          {subItems.length > 0 && (
+                            <div className="pl-6 pt-2 space-y-2">
+                              {subItems.map(subItem => (
+                                <div key={subItem.id} className="flex items-start gap-2">
+                                  <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
+                                  <div className="flex-1">
+                                    <StoryCard
+                                      story={subItem}
+                                      onClick={() => setSelectedStory(subItem)}
+                                      onStatusChange={(newStatus) => moveStoryStatus(subItem.id, newStatus)}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       );
                   })}
                 </div>
