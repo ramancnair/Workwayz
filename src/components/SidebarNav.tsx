@@ -148,10 +148,12 @@ export function SidebarNav() {
         <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
           <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Settings">
+            <Link href="/settings">
+              <SidebarMenuButton tooltip="Settings" isActive={pathname === '/settings'}>
                 <Settings />
                 <span>Settings</span>
               </SidebarMenuButton>
+            </Link>
           </SidebarMenuItem>
         </SidebarMenu>
         <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:hidden">
