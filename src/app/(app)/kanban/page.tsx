@@ -25,7 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -506,7 +506,7 @@ export default function KanbanPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingStory && handleDeleteStory(deletingStory.id)}
-               className={cn('buttonVariants'({ variant: 'destructive' }))}
+               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
             </AlertDialogAction>
