@@ -231,7 +231,31 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const moveStoryToSprint = (storyId: string, sprintId: string | null) => updateStory(storyId, { sprintId });
+  const moveStoryToSprint = async (storyId: string, sprintId: string | null): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Move the parent story
+      batch.update(doc(db, 'stories', storyId), { sprintId });
+
+      // 2. Find and move all related sub-items (Bugs and Tasks)
+      // Note: `epicId` on a Bug/Task is used to link to the parent Story ID
+      const q = query(collection(db, 'stories'), where('epicId', '==', storyId));
+      const subItemsSnapshot = await getDocs(q);
+
+      subItemsSnapshot.forEach(subItemDoc => {
+        batch.update(doc(db, 'stories', subItemDoc.id), { sprintId });
+      });
+
+      await batch.commit();
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to move story and its sub-items to sprint.", { storyId, sprintId, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+  
   const moveStoryStatus = (storyId: string, newStatus: StoryStatus) => updateStory(storyId, { status: newStatus });
   const moveStoryToEpic = (storyId: string, epicId: string | null) => updateStory(storyId, { epicId });
   
