@@ -899,12 +899,14 @@ export default function BacklogPage() {
               <h3 className="text-lg font-semibold mb-4">Sprints</h3>
               <Accordion type="multiple" className="w-full" defaultValue={sprints.map(s => s.id)}>
                 {sprints.map((sprint) => {
-                  const sprintStories = stories.filter((story) => story.sprintId === sprint.id && story.itemType === 'Story');
-                  const sprintSubItems = stories.filter((story) => story.sprintId === sprint.id && ['Bug', 'Task'].includes(story.itemType) && !story.epicId);
+                  const sprintItems = stories.filter((story) => story.sprintId === sprint.id);
+                  const sprintStories = sprintItems.filter(item => item.itemType === 'Story');
+                  const unparentedSubItems = sprintItems.filter(item => ['Bug', 'Task'].includes(item.itemType) && (!item.epicId || !sprintItems.find(s => s.id === item.epicId)));
+                  const allTopLevelItems = [...sprintStories, ...unparentedSubItems];
 
                   return (
                     <AccordionItem value={sprint.id} key={sprint.id}>
-                      <div className="flex justify-between items-center py-4">
+                      <div className="flex items-center justify-between py-4">
                         <AccordionTrigger className="flex-1 p-0 hover:no-underline">
                           <div className="flex flex-col items-start text-left">
                             <div className="flex items-center gap-2">
@@ -977,11 +979,11 @@ export default function BacklogPage() {
                       </div>
                       <AccordionContent>
                         <div className="space-y-2">
-                          {[...sprintStories, ...sprintSubItems].map((story) => {
+                          {allTopLevelItems.length > 0 ? (
+                            allTopLevelItems.map((story) => {
                               const epic = epics.find((e) => e.id === story.epicId);
                               const assignee = employees.find((d) => d.id === story.assigneeId);
                               const subItems = story.itemType === 'Story' ? (subItemsByStoryId[story.id] || []).filter(si => si.sprintId === sprint.id) : [];
-                              if (story.itemType !== 'Story' && story.epicId) return null; // Render sub-items only under their parent
                               
                               return (
                                 <div key={story.id}>
@@ -1012,12 +1014,12 @@ export default function BacklogPage() {
                                     )}
                                 </div>
                               );
-                            })}
-                            {sprintStories.length === 0 && sprintSubItems.length === 0 && (
+                            })
+                          ) : (
                                <p className="text-sm text-muted-foreground italic px-2">
                                   No items in this sprint.
                               </p>
-                            )}
+                          )}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
@@ -1455,3 +1457,5 @@ export default function BacklogPage() {
     </>
   );
 }
+
+    
