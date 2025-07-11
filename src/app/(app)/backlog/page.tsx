@@ -339,7 +339,7 @@ export default function BacklogPage() {
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setAddStorySubmitting(true);
     const isSubItem = ['Bug', 'Task'].includes(itemTypeToAdd);
-    const relatedStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
+    const parentStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
     
     const newStory: Omit<Story, 'id' | 'storyId'> = {
       sprintId: null,
@@ -348,7 +348,7 @@ export default function BacklogPage() {
       itemType: itemTypeToAdd,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : relatedStoryId,
+      epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : parentStoryId,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       criticality: itemTypeToAdd === 'Bug' ? values.criticality : undefined,
@@ -367,14 +367,14 @@ export default function BacklogPage() {
     setEditStorySubmitting(true);
     
     const isSubItem = ['Bug', 'Task'].includes(selectedStory.itemType);
-    const relatedStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
+    const parentStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
 
     const success = await updateStory(selectedStory.id, {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : relatedStoryId,
+        epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : parentStoryId,
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
     });
@@ -415,8 +415,7 @@ export default function BacklogPage() {
 
   const backlogStories = stories.filter((story) => story.sprintId === null || story.sprintId === undefined);
   
-  // Create a map of story IDs to their sub-items (bugs/tasks)
-  const subItemsByStoryId = stories.reduce((acc, story) => {
+  const subItemsByParentId = stories.reduce((acc, story) => {
       if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
           if (!acc[story.epicId]) {
               acc[story.epicId] = [];
@@ -426,21 +425,21 @@ export default function BacklogPage() {
       return acc;
   }, {} as Record<string, Story[]>);
 
-  const storiesByEpic = backlogStories.reduce((acc, story) => {
-    const key = (story.itemType === 'Story' && story.epicId) ? story.epicId : 'unassigned';
+  const backlogItemsByEpic = backlogStories.reduce((acc, story) => {
+    if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
+        return acc; 
+    }
+    
+    const key = story.epicId || 'unassigned';
     if (!acc[key]) {
       acc[key] = [];
     }
-    if (story.itemType === 'Story') { // Only add top-level stories here
-      acc[key].push(story);
-    }
+    acc[key].push(story);
     return acc;
   }, {} as Record<string, Story[]>);
   
-  const unassignedItems = backlogStories.filter(s => s.itemType !== 'Story' && !s.epicId);
-
   const epicsToDisplay = [...epics];
-  if (unassignedItems.length > 0 || Object.values(storiesByEpic).some(arr => arr.some(s => s.epicId === 'unassigned'))) {
+  if (Object.keys(backlogItemsByEpic).includes('unassigned')) {
       const hasUnassignedEpic = epicsToDisplay.some(e => e.id === 'unassigned');
       if (!hasUnassignedEpic) {
           epicsToDisplay.push({
@@ -451,7 +450,6 @@ export default function BacklogPage() {
       }
   }
 
-  // Sort epics alphabetically, but keep Unassigned at the end.
   epicsToDisplay.sort((a, b) => {
       if (a.id === 'unassigned') return 1;
       if (b.id === 'unassigned') return -1;
@@ -461,7 +459,7 @@ export default function BacklogPage() {
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
-  const selectedStorySubItems = selectedStory && subItemsByStoryId[selectedStory.id] ? subItemsByStoryId[selectedStory.id] : [];
+  const selectedStorySubItems = selectedStory && subItemsByParentId[selectedStory.id] ? subItemsByParentId[selectedStory.id] : [];
 
   return (
     <>
@@ -747,7 +745,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Estimated Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="0" {...field} value={field.value || ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -778,13 +776,10 @@ export default function BacklogPage() {
       
                       const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
 
-                      const backlogItemsInGroup = isUnassignedEpic
-                        ? unassignedItems.concat(storiesByEpic['unassigned'] || [])
-                        : (storiesByEpic[epic.id] || []);
-                      
+                      const backlogItemsInGroup = backlogItemsByEpic[epic.id] || [];
                       const backlogItemsCount = backlogItemsInGroup.length;
                       
-                      if (backlogItemsCount === 0 && isUnassignedEpic && !unassignedItems.length && !storiesByEpic['unassigned']?.length) {
+                      if (backlogItemsCount === 0) {
                           return null;
                       }
 
@@ -809,7 +804,7 @@ export default function BacklogPage() {
                                 backlogItemsInGroup.map((story) => {
                                   const storyEpic = epics.find((e) => e.id === story.epicId);
                                   const assignee = employees.find((d) => d.id === story.assigneeId);
-                                  const subItems = (subItemsByStoryId[story.id] || []).filter(item => !item.sprintId);
+                                  const subItems = (subItemsByParentId[story.id] || []).filter(item => !item.sprintId);
                                   
                                   return (
                                     <div key={story.id}>
@@ -901,7 +896,7 @@ export default function BacklogPage() {
                 {sprints.map((sprint) => {
                   const sprintItems = stories.filter((story) => story.sprintId === sprint.id);
                   const topLevelSprintItems = sprintItems.filter(
-                    item => item.itemType === 'Story' || !item.epicId || !sprintItems.find(s => s.id === item.epicId)
+                      item => !item.epicId || !sprintItems.find(s => s.id === item.epicId)
                   );
                   
                   return (
@@ -983,7 +978,7 @@ export default function BacklogPage() {
                             topLevelSprintItems.map((story) => {
                               const epic = epics.find((e) => e.id === story.epicId);
                               const assignee = employees.find((d) => d.id === story.assigneeId);
-                              const subItems = (subItemsByStoryId[story.id] || []).filter(item => item.sprintId === sprint.id);
+                              const subItems = sprintItems.filter(item => item.epicId === story.id);
                               
                               return (
                                 <div key={story.id}>
@@ -1261,7 +1256,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Estimated Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="0" {...field} value={field.value || ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
