@@ -89,7 +89,7 @@ export default function DevelopmentTasksPage() {
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
       const calculateWorkingEndDate = (startDate: string, effortDays: number): string => {
-        let currentDate = new Date(`${startDate}T00:00:00`);
+        let currentDate = parseISO(startDate);
         let daysAdded = 0;
         
         while (daysAdded < effortDays) {
@@ -124,8 +124,8 @@ export default function DevelopmentTasksPage() {
           status: editingTask.status,
           sprintId: editingTask.sprintId || 'backlog',
           effortDays: editingTask.effortDays,
-          startDate: editingTask.startDate ? format(new Date(`${editingTask.startDate}T00:00:00`), 'yyyy-MM-dd') : '',
-          endDate: editingTask.endDate ? format(new Date(`${editingTask.endDate}T00:00:00`), 'yyyy-MM-dd') : '',
+          startDate: editingTask.startDate ? format(parseISO(editingTask.startDate), 'yyyy-MM-dd') : '',
+          endDate: editingTask.endDate ? format(parseISO(editingTask.endDate), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
@@ -241,8 +241,8 @@ export default function DevelopmentTasksPage() {
                       </div>
                     ) : "Unassigned"}
                   </TableCell>
-                  <TableCell>{task.startDate ? format(new Date(`${task.startDate}T00:00:00`), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell>{task.endDate ? format(new Date(`${task.endDate}T00:00:00`), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A'}</TableCell>
                   <TableCell>{task.effortDays ? `${task.effortDays}d` : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(task)}>
