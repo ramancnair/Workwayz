@@ -86,8 +86,13 @@ export default function DevelopmentTasksPage() {
 
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
-      const newEndDate = addDays(new Date(watchedStartDate), watchedEffortDays);
-      form.setValue('endDate', format(newEndDate, 'yyyy-MM-dd'), { shouldValidate: true });
+      // Create a date object from the yyyy-MM-dd string.
+      // Appending 'T00:00:00' ensures it's parsed in the local time zone, avoiding UTC conversion issues.
+      const startDateObj = new Date(`${watchedStartDate}T00:00:00`);
+      if (!isNaN(startDateObj.getTime())) {
+        const newEndDate = addDays(startDateObj, watchedEffortDays);
+        form.setValue('endDate', format(newEndDate, 'yyyy-MM-dd'), { shouldValidate: true });
+      }
     }
   }, [watchedStartDate, watchedEffortDays, form]);
 
@@ -418,5 +423,3 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
-
-    
