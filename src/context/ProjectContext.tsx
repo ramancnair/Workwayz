@@ -18,8 +18,9 @@ import {
   Timestamp,
   connectFirestoreEmulator,
   getFirestore,
+  getDoc,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 
 // Helper to remove undefined values from an object before sending to Firestore
@@ -49,6 +50,8 @@ interface ProjectContextType {
   issues: Issue[];
   dependencies: Dependency[];
   kanbanColumns: KanbanColumn[];
+  holidays: Holiday[];
+  weeklyOffDays: number[];
   
   // Story actions
   addStory: (story: Omit<Story, 'id' | 'storyId'>) => Promise<boolean>;
@@ -104,7 +107,12 @@ interface ProjectContextType {
   updateKanbanColumn: (columnId: string, data: Partial<Omit<KanbanColumn, 'id'>>) => Promise<boolean>;
   deleteKanbanColumn: (columnId: string) => Promise<boolean>;
   updateKanbanColumnOrder: (oldIndex: number, newIndex: number) => Promise<boolean>;
-
+  
+  // Holiday/Settings actions
+  setWeeklyOffDays: (days: number[]) => Promise<boolean>;
+  addHoliday: (holiday: Omit<Holiday, 'id'>) => Promise<boolean>;
+  updateHoliday: (id: string, data: Partial<Omit<Holiday, 'id'>>) => Promise<boolean>;
+  deleteHoliday: (id: string) => Promise<boolean>;
 
   isLoading: boolean;
   error: string | null;
@@ -129,6 +137,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [projectSettings, setProjectSettings] = useState<ProjectSettings>({ id: 'main', weeklyOffDays: [0, 6] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,8 +160,20 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         { name: 'issues', setState: setIssues },
         { name: 'dependencies', setState: setDependencies },
         { name: 'kanbanColumns', setState: setKanbanColumns },
+        { name: 'holidays', setState: setHolidays },
     ];
     
+    // Listener for project settings
+    const settingsDocRef = doc(db, 'projectSettings', 'main');
+    const unsubSettings = onSnapshot(settingsDocRef, (doc) => {
+      if (doc.exists()) {
+        setProjectSettings({ id: doc.id, ...doc.data() } as ProjectSettings);
+      } else {
+        // Initialize settings if they don't exist
+        updateDoc(settingsDocRef, { weeklyOffDays: [0, 6] }, { merge: true });
+      }
+    });
+
     const unsubscribers = collections.map(({ name, setState }) => {
         const q = query(collection(db, name));
         return onSnapshot(q, 
@@ -182,7 +204,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                         employees: ['onboardingDate', 'offloadingDate'],
                         assumptions: ['validationDate'],
                         issues: ['reportedDate', 'resolvedDate'],
-                        dependencies: ['expectedByDate']
+                        dependencies: ['expectedByDate'],
+                        holidays: ['date'],
                     };
 
                     if (dateFields[name]) {
@@ -204,7 +227,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         );
     });
 
-    return () => unsubscribers.forEach(unsub => unsub());
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+      unsubSettings();
+    }
   }, []);
 
   // Story Actions
@@ -729,6 +755,55 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
+  // Holiday/Settings Actions
+  const setWeeklyOffDays = async (days: number[]): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const settingsRef = doc(db, 'projectSettings', 'main');
+      await updateDoc(settingsRef, { weeklyOffDays: days }, { merge: true });
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to set weekly off days.", e);
+      return false;
+    }
+  };
+
+  const addHoliday = async (holiday: Omit<Holiday, 'id'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const payload: any = { ...holiday };
+      if (holiday.date) payload.date = Timestamp.fromDate(new Date(holiday.date));
+      await addDoc(collection(db, 'holidays'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to add holiday.", e);
+      return false;
+    }
+  };
+
+  const updateHoliday = async (id: string, data: Partial<Omit<Holiday, 'id'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const payload: any = { ...data };
+      if (data.date) payload.date = Timestamp.fromDate(new Date(data.date));
+      await updateDoc(doc(db, 'holidays', id), sanitizeForFirestore(payload));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to update holiday.", e);
+      return false;
+    }
+  };
+
+  const deleteHoliday = async (id: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'holidays', id));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to delete holiday.", e);
+      return false;
+    }
+  };
 
   const value: ProjectContextType = {
     epics,
@@ -741,6 +816,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     issues,
     dependencies,
     kanbanColumns,
+    holidays,
+    weeklyOffDays: projectSettings.weeklyOffDays,
     isLoading,
     error,
     addStory,
@@ -778,6 +855,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     updateKanbanColumn,
     deleteKanbanColumn,
     updateKanbanColumnOrder,
+    setWeeklyOffDays,
+    addHoliday,
+    updateHoliday,
+    deleteHoliday,
   };
   
     if (isLoading) {

@@ -151,3 +151,14 @@ export type KanbanColumn = {
   isDefault: boolean;
   isDoneColumn: boolean;
 };
+
+export type Holiday = {
+    id: string;
+    date: string; // ISO String
+    description: string;
+};
+
+export type ProjectSettings = {
+    id: 'main';
+    weeklyOffDays: number[]; // 0 for Sunday, 6 for Saturday
+};

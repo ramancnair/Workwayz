@@ -31,6 +31,7 @@ import {
   AlertCircle,
   Link2,
   CheckSquare,
+  CalendarDays,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -115,11 +116,20 @@ export function SidebarNav() {
     },
   ];
 
+  const holidayMenuItems = [
+    {
+      href: "/holiday-calendar",
+      label: "Holiday Calendar",
+      icon: CalendarDays,
+    },
+  ];
+
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
+  const isHolidaysPath = pathname.startsWith('/holiday-calendar');
   
-  const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : isGovernancePath ? governanceMenuItems : devMenuItems;
+  const menuItems = isTestingPath ? testMenuItems : isResourcesPath ? resourcesMenuItems : isGovernancePath ? governanceMenuItems : isHolidaysPath ? holidayMenuItems : devMenuItems;
 
   return (
     <>

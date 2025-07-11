@@ -15,10 +15,11 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
+  const isHolidaysPath = pathname.startsWith('/holiday-calendar');
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath;
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath;
 
-  const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : isGovernancePath ? 'governance' : 'development';
+  const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : isGovernancePath ? 'governance' : isHolidaysPath ? 'holidays' : 'development';
 
   const onTabChange = (value: string) => {
     if (value === 'development') {
@@ -29,6 +30,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/resources');
     } else if (value === 'governance') {
       router.push('/raid-dashboard');
+    } else if (value === 'holidays') {
+      router.push('/holiday-calendar');
     }
   };
 
@@ -47,6 +50,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
                         <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                         <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
+                        <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>
