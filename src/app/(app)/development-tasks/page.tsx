@@ -44,12 +44,6 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
 import { DatePicker } from '@/components/ui/datepicker';
 import { format, addDays } from 'date-fns';
@@ -423,3 +417,5 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
+    
