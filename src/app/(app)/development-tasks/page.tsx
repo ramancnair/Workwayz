@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProject } from '@/context/ProjectContext';
@@ -51,6 +51,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
+import { DatePicker } from '@/components/ui/datepicker';
+import { format, addDays } from 'date-fns';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -60,7 +62,9 @@ const taskSchema = z.object({
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
   sprintId: z.string().optional(),
-  estimatedHours: z.coerce.number().optional(),
+  effortDays: z.coerce.number().optional(),
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
 });
 
 const statusStyles: Record<StoryStatus, string> = {
@@ -84,6 +88,16 @@ export default function DevelopmentTasksPage() {
     resolver: zodResolver(taskSchema),
   });
 
+  const watchedStartDate = useWatch({ control: form.control, name: 'startDate' });
+  const watchedEffortDays = useWatch({ control: form.control, name: 'effortDays' });
+
+  useEffect(() => {
+    if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
+      const newEndDate = addDays(watchedStartDate, watchedEffortDays);
+      form.setValue('endDate', newEndDate, { shouldValidate: true });
+    }
+  }, [watchedStartDate, watchedEffortDays, form]);
+
   useEffect(() => {
     if (isDialogOpen) {
       if (editingTask) {
@@ -95,7 +109,9 @@ export default function DevelopmentTasksPage() {
           assigneeId: editingTask.assigneeId || 'unassigned',
           status: editingTask.status,
           sprintId: editingTask.sprintId || 'backlog',
-          estimatedHours: editingTask.estimatedHours,
+          effortDays: editingTask.effortDays,
+          startDate: editingTask.startDate ? new Date(editingTask.startDate) : undefined,
+          endDate: editingTask.endDate ? new Date(editingTask.endDate) : undefined,
         });
       } else {
         form.reset({
@@ -106,7 +122,7 @@ export default function DevelopmentTasksPage() {
           assigneeId: 'unassigned',
           status: 'To Do',
           sprintId: 'backlog',
-          estimatedHours: 0,
+          effortDays: 0,
         });
       }
     }
@@ -140,7 +156,9 @@ export default function DevelopmentTasksPage() {
         epicId: values.epicId === 'unassigned' ? undefined : values.epicId, // Related story
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        estimatedHours: values.estimatedHours,
+        effortDays: values.effortDays,
+        startDate: values.startDate?.toISOString(),
+        endDate: values.endDate?.toISOString(),
     };
 
     let success = false;
@@ -175,19 +193,18 @@ export default function DevelopmentTasksPage() {
           <TableHeader>
             <TableRow>
               <TableHead>ID</TableHead>
-              <TableHead className="w-[40%]">Title</TableHead>
+              <TableHead className="w-[30%]">Title</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Assignee</TableHead>
-              <TableHead>Related Story</TableHead>
-              <TableHead>Sprint</TableHead>
+              <TableHead>Start Date</TableHead>
+              <TableHead>End Date</TableHead>
+              <TableHead>Effort</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tasks.map((task) => {
               const assignee = employees.find(e => e.id === task.assigneeId);
-              const relatedStory = stories.find(s => s.id === task.epicId); // epicId holds related story for tasks
-              const sprint = sprints.find(s => s.id === task.sprintId);
               return (
                 <TableRow key={task.id}>
                   <TableCell className="font-medium">{task.storyId}</TableCell>
@@ -208,27 +225,9 @@ export default function DevelopmentTasksPage() {
                       </div>
                     ) : "Unassigned"}
                   </TableCell>
-                   <TableCell>
-                    {relatedStory ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                              <Badge variant="secondary">{relatedStory.storyId}</Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{relatedStory.title}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ): 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                      {sprint ? (
-                        <Badge variant="outline">{sprint.title}</Badge>
-                      ) : (
-                        <Badge variant="outline">Backlog</Badge>
-                      )}
-                  </TableCell>
+                  <TableCell>{task.startDate ? format(new Date(task.startDate), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{task.endDate ? format(new Date(task.endDate), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{task.effortDays ? `${task.effortDays}d` : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(task)}>
                         <Edit className="h-4 w-4" />
@@ -246,7 +245,7 @@ export default function DevelopmentTasksPage() {
     </div>
 
     <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingTask(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTask ? 'Edit Task' : 'Add New Task'}</DialogTitle>
             <DialogDescription>Make changes to the task details here.</DialogDescription>
@@ -279,19 +278,7 @@ export default function DevelopmentTasksPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="acceptanceCriteria"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Definition of Done</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Define what it means for this task to be done..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -377,19 +364,33 @@ export default function DevelopmentTasksPage() {
                     )}
                     />
                 </div>
-                 <FormField
-                    control={form.control}
-                    name="estimatedHours"
-                    render={({ field }) => (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField control={form.control} name="startDate" render={({ field }) => (
+                        <FormItem className="flex flex-col pt-2">
+                            <FormLabel>Start Date</FormLabel>
+                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="effortDays" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Estimated Hours</FormLabel>
+                        <FormLabel>Effort (days)</FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
+                    )} />
+                    <FormField control={form.control} name="endDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date</FormLabel>
+                        <FormControl>
+                          <Input readOnly value={field.value ? format(field.value, 'PPP') : 'N/A'} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingTask ? 'Saving...' : 'Creating...') : (editingTask ? 'Save Changes' : 'Create Task')}

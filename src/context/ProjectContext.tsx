@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
@@ -176,6 +177,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                     }
                     
                     const dateFields: Record<string, string[]> = {
+                        stories: ['startDate', 'endDate'],
                         sprints: ['startDate', 'endDate'],
                         employees: ['onboardingDate', 'offloadingDate'],
                         assumptions: ['validationDate'],
@@ -214,11 +216,18 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             ? Math.max(0, ...storiesSnapshot.docs
                 .map(doc => doc.data().storyId)
                 .filter((id: string | undefined) => id && typeof id === 'string')
-                .map((id: string) => parseInt(id.replace('ST-', ''), 10) || 0)
+                .map((id: string) => parseInt(id.replace(/^[A-Z]+-/, ''), 10) || 0)
             ) + 1
             : 1;
 
-        const payload: any = { ...story, storyId: `ST-${newIdNumber}` };
+        const prefix = story.itemType === 'Task' ? 'TASK' : 'ST';
+        const storyId = `${prefix}-${newIdNumber}`;
+
+        const { startDate, endDate, ...rest } = story;
+        const payload: any = { ...rest, storyId };
+        if (startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
+        if (endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
+
 
         // If it's a sub-item (Bug/Task) linked to a story, inherit the sprint
         if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
@@ -239,7 +248,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>): Promise<boolean> => {
     if (!db) return false;
     try {
-      await updateDoc(doc(db, 'stories', storyId), sanitizeForFirestore(data));
+      const { startDate, endDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
+      if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
+
+      await updateDoc(doc(db, 'stories', storyId), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update story.", { id: storyId, code: e.code, message: e.message, fullError: e });

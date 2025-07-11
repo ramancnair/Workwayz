@@ -1,4 +1,5 @@
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -37,6 +38,9 @@ export type Story = {
   status: StoryStatus;
   estimatedHours?: number;
   criticality?: BugCriticality;
+  startDate?: string; // ISO String
+  endDate?: string; // ISO String
+  effortDays?: number;
 };
 
 export type Sprint = {
