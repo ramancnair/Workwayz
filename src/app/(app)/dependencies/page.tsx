@@ -38,7 +38,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/datepicker';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { type Dependency, type DependencyType, type DependencyStatus } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -53,7 +52,7 @@ const dependencySchema = z.object({
   dependencyOn: z.string().min(1, 'This field is required.'),
   status: z.enum(['On Track', 'At Risk', 'Blocked']),
   ownerId: z.string().optional(),
-  expectedByDate: z.date({ required_error: "Expected date is required."}),
+  expectedByDate: z.string({ required_error: "Expected date is required."}).min(1, "Expected date is required."),
 });
 
 const types: DependencyType[] = ['Internal', 'External'];
@@ -84,7 +83,7 @@ export default function DependenciesPage() {
         form.reset({
             ...editingDependency,
             ownerId: editingDependency.ownerId || 'unassigned',
-            expectedByDate: new Date(editingDependency.expectedByDate),
+            expectedByDate: format(new Date(editingDependency.expectedByDate), 'yyyy-MM-dd'),
         });
       } else {
         form.reset({
@@ -93,6 +92,7 @@ export default function DependenciesPage() {
             dependencyOn: '',
             status: 'On Track',
             ownerId: 'unassigned',
+            expectedByDate: '',
         });
       }
     }
@@ -119,6 +119,7 @@ export default function DependenciesPage() {
     const dependencyData = {
         ...values,
         ownerId: values.ownerId === 'unassigned' ? undefined : values.ownerId,
+        expectedByDate: new Date(values.expectedByDate),
     };
 
     const success = editingDependency
@@ -252,9 +253,11 @@ export default function DependenciesPage() {
                         </FormItem>
                     )} />
                     <FormField control={form.control} name="expectedByDate" render={({ field }) => (
-                        <FormItem className="flex flex-col pt-2">
+                        <FormItem>
                             <FormLabel>Expected By Date</FormLabel>
-                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormControl>
+                                <Input type="date" {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />

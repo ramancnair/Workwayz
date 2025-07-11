@@ -62,7 +62,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { DatePicker } from '@/components/ui/datepicker';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
@@ -96,8 +95,8 @@ const storyFormSchema = z.object({
 
 const sprintFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 function StoryCard({ story, epic, assignee, onClick, className }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; className?: string; }) {
@@ -278,8 +277,8 @@ export default function BacklogPage() {
     } else {
        editSprintForm.reset({
         title: editingSprint.title,
-        startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
-        endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
+        startDate: editingSprint.startDate ? format(new Date(editingSprint.startDate), 'yyyy-MM-dd') : '',
+        endDate: editingSprint.endDate ? format(new Date(editingSprint.endDate), 'yyyy-MM-dd') : '',
       });
     }
   }, [editingSprint, editSprintForm]);
@@ -318,8 +317,8 @@ export default function BacklogPage() {
     setAddSprintSubmitting(true);
     const success = await addSprint({
       title: values.title,
-      startDate: values.startDate,
-      endDate: values.endDate,
+      startDate: values.startDate ? new Date(values.startDate) : undefined,
+      endDate: values.endDate ? new Date(values.endDate) : undefined,
     });
     if (success) {
       setAddSprintOpen(false);
@@ -334,8 +333,8 @@ export default function BacklogPage() {
     setEditSprintSubmitting(true);
     const success = await updateSprint(editingSprint.id, {
       title: values.title,
-      startDate: values.startDate,
-      endDate: values.endDate,
+      startDate: values.startDate ? new Date(values.startDate) : undefined,
+      endDate: values.endDate ? new Date(values.endDate) : undefined,
     });
     if (success) {
       setEditingSprint(null);
@@ -577,9 +576,11 @@ export default function BacklogPage() {
                         control={addSprintForm.control}
                         name="startDate"
                         render={({ field }) => (
-                        <FormItem className="flex flex-col">
+                        <FormItem>
                             <FormLabel>Start Date</FormLabel>
-                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormControl>
+                                <Input type="date" {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                         )}
@@ -588,9 +589,11 @@ export default function BacklogPage() {
                         control={addSprintForm.control}
                         name="endDate"
                         render={({ field }) => (
-                        <FormItem className="flex flex-col">
+                        <FormItem>
                             <FormLabel>End Date</FormLabel>
-                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormControl>
+                                <Input type="date" {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                         )}
@@ -1415,9 +1418,11 @@ export default function BacklogPage() {
                     control={editSprintForm.control}
                     name="startDate"
                     render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                         <FormLabel>Start Date</FormLabel>
-                        <DatePicker date={field.value} setDate={field.onChange} />
+                        <FormControl>
+                            <Input type="date" {...field} />
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -1426,9 +1431,11 @@ export default function BacklogPage() {
                     control={editSprintForm.control}
                     name="endDate"
                     render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                         <FormLabel>End Date</FormLabel>
-                        <DatePicker date={field.value} setDate={field.onChange} />
+                        <FormControl>
+                            <Input type="date" {...field} />
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -1448,4 +1455,3 @@ export default function BacklogPage() {
 }
 
     
-

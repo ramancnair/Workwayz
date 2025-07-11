@@ -45,7 +45,6 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { DatePicker } from '@/components/ui/datepicker';
 import { format, addDays } from 'date-fns';
 
 const taskSchema = z.object({
@@ -57,8 +56,8 @@ const taskSchema = z.object({
   status: z.enum(['To Do', 'In Progress', 'Done']),
   sprintId: z.string().optional(),
   effortDays: z.coerce.number().optional(),
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 const statusStyles: Record<StoryStatus, string> = {
@@ -87,8 +86,8 @@ export default function DevelopmentTasksPage() {
 
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
-      const newEndDate = addDays(watchedStartDate, watchedEffortDays);
-      form.setValue('endDate', newEndDate, { shouldValidate: true });
+      const newEndDate = addDays(new Date(watchedStartDate), watchedEffortDays);
+      form.setValue('endDate', format(newEndDate, 'yyyy-MM-dd'), { shouldValidate: true });
     }
   }, [watchedStartDate, watchedEffortDays, form]);
 
@@ -104,8 +103,8 @@ export default function DevelopmentTasksPage() {
           status: editingTask.status,
           sprintId: editingTask.sprintId || 'backlog',
           effortDays: editingTask.effortDays,
-          startDate: editingTask.startDate ? new Date(editingTask.startDate) : undefined,
-          endDate: editingTask.endDate ? new Date(editingTask.endDate) : undefined,
+          startDate: editingTask.startDate ? format(new Date(editingTask.startDate), 'yyyy-MM-dd') : '',
+          endDate: editingTask.endDate ? format(new Date(editingTask.endDate), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
@@ -151,8 +150,8 @@ export default function DevelopmentTasksPage() {
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         effortDays: values.effortDays,
-        startDate: values.startDate?.toISOString(),
-        endDate: values.endDate?.toISOString(),
+        startDate: values.startDate,
+        endDate: values.endDate,
     };
 
     let success = false;
@@ -360,9 +359,11 @@ export default function DevelopmentTasksPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField control={form.control} name="startDate" render={({ field }) => (
-                        <FormItem className="flex flex-col pt-2">
+                        <FormItem>
                             <FormLabel>Start Date</FormLabel>
-                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormControl>
+                                <Input type="date" {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
@@ -379,7 +380,7 @@ export default function DevelopmentTasksPage() {
                       <FormItem>
                         <FormLabel>End Date</FormLabel>
                         <FormControl>
-                          <Input readOnly value={field.value ? format(field.value, 'PPP') : 'N/A'} />
+                           <Input type="date" readOnly {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

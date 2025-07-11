@@ -38,13 +38,13 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/datepicker';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { type Employee, type EmployeeRole } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast"
+import { format } from 'date-fns';
 
 const employeeRoles: EmployeeRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
 
@@ -58,8 +58,8 @@ const employeeFormSchema = z.object({
   clientEmail: z.string().email('Invalid email address').optional().or(z.literal('')),
   role: z.enum(employeeRoles).optional(),
   experience: z.coerce.number().optional(),
-  onboardingDate: z.date().optional(),
-  offloadingDate: z.date().optional(),
+  onboardingDate: z.string().optional(),
+  offloadingDate: z.string().optional(),
   onshoreOrOffshore: z.enum(['Onshore', 'Offshore']).optional(),
   billedRate: z.coerce.number().optional(),
   availability: z.coerce.number().min(0).max(100, 'Availability cannot exceed 100%').optional(),
@@ -82,8 +82,8 @@ export default function ResourcesPage() {
         if (editingEmployee) {
         form.reset({
             ...editingEmployee,
-            onboardingDate: editingEmployee.onboardingDate ? new Date(editingEmployee.onboardingDate) : undefined,
-            offloadingDate: editingEmployee.offloadingDate ? new Date(editingEmployee.offloadingDate) : undefined,
+            onboardingDate: editingEmployee.onboardingDate ? format(new Date(editingEmployee.onboardingDate), 'yyyy-MM-dd') : '',
+            offloadingDate: editingEmployee.offloadingDate ? format(new Date(editingEmployee.offloadingDate), 'yyyy-MM-dd') : '',
         });
         } else {
         form.reset({
@@ -96,8 +96,8 @@ export default function ResourcesPage() {
             clientEmail: '',
             role: undefined,
             experience: undefined,
-            onboardingDate: undefined,
-            offloadingDate: undefined,
+            onboardingDate: '',
+            offloadingDate: '',
             billedRate: undefined,
             availability: undefined,
         });
@@ -125,8 +125,16 @@ export default function ResourcesPage() {
     setIsSubmitting(true);
     try {
       const success = editingEmployee
-        ? await updateEmployee(editingEmployee.id, values)
-        : await addEmployee(values);
+        ? await updateEmployee(editingEmployee.id, {
+            ...values,
+            onboardingDate: values.onboardingDate ? new Date(values.onboardingDate) : undefined,
+            offloadingDate: values.offloadingDate ? new Date(values.offloadingDate) : undefined,
+        })
+        : await addEmployee({
+            ...values,
+            onboardingDate: values.onboardingDate ? new Date(values.onboardingDate) : undefined,
+            offloadingDate: values.offloadingDate ? new Date(values.offloadingDate) : undefined,
+        });
 
       if (success) {
         toast({ title: "Success", description: `Employee ${editingEmployee ? 'updated' : 'added'} successfully.` });
@@ -279,16 +287,16 @@ export default function ResourcesPage() {
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="onboardingDate" render={({ field }) => (
-                  <FormItem className="flex flex-col pt-2">
+                  <FormItem>
                     <FormLabel>Onboarding Date</FormLabel>
-                    <DatePicker date={field.value} setDate={field.onChange} />
+                    <FormControl><Input type="date" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="offloadingDate" render={({ field }) => (
-                  <FormItem className="flex flex-col pt-2">
+                  <FormItem>
                     <FormLabel>Offloading Date</FormLabel>
-                    <DatePicker date={field.value} setDate={field.onChange} />
+                    <FormControl><Input type="date" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />

@@ -37,7 +37,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/datepicker';
+import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { type Assumption, type AssumptionCategory, type AssumptionStatus } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -51,7 +51,7 @@ const assumptionSchema = z.object({
   category: z.enum(['Technical', 'Resource', 'Business', 'External']),
   status: z.enum(['Active', 'Validated', 'Invalidated']),
   ownerId: z.string().optional(),
-  validationDate: z.date().optional(),
+  validationDate: z.string().optional(),
 });
 
 const categories: AssumptionCategory[] = ['Technical', 'Resource', 'Business', 'External'];
@@ -82,7 +82,7 @@ export default function AssumptionsPage() {
         form.reset({
             ...editingAssumption,
             ownerId: editingAssumption.ownerId || 'unassigned',
-            validationDate: editingAssumption.validationDate ? new Date(editingAssumption.validationDate) : undefined,
+            validationDate: editingAssumption.validationDate ? format(new Date(editingAssumption.validationDate), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
@@ -90,7 +90,7 @@ export default function AssumptionsPage() {
             category: 'Technical',
             status: 'Active',
             ownerId: 'unassigned',
-            validationDate: undefined,
+            validationDate: '',
         });
       }
     }
@@ -117,6 +117,7 @@ export default function AssumptionsPage() {
     const assumptionData = {
         ...values,
         ownerId: values.ownerId === 'unassigned' ? undefined : values.ownerId,
+        validationDate: values.validationDate ? new Date(values.validationDate) : undefined,
     };
 
     const success = editingAssumption
@@ -243,9 +244,11 @@ export default function AssumptionsPage() {
                         </FormItem>
                     )} />
                     <FormField control={form.control} name="validationDate" render={({ field }) => (
-                        <FormItem className="flex flex-col pt-2">
+                        <FormItem>
                             <FormLabel>Validation Date</FormLabel>
-                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormControl>
+                                <Input type="date" {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />

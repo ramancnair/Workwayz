@@ -35,9 +35,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/datepicker';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { type Issue, type IssuePriority, type IssueStatus } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -51,7 +51,7 @@ const issueSchema = z.object({
   priority: z.enum(['Low', 'Medium', 'High', 'Critical']),
   status: z.enum(['Open', 'In Progress', 'Resolved', 'Closed']),
   assigneeId: z.string().optional(),
-  resolvedDate: z.date().optional(),
+  resolvedDate: z.string().optional(),
 });
 
 const priorities: IssuePriority[] = ['Low', 'Medium', 'High', 'Critical'];
@@ -90,7 +90,7 @@ export default function IssuesPage() {
         form.reset({
             ...editingIssue,
             assigneeId: editingIssue.assigneeId || 'unassigned',
-            resolvedDate: editingIssue.resolvedDate ? new Date(editingIssue.resolvedDate) : undefined,
+            resolvedDate: editingIssue.resolvedDate ? format(new Date(editingIssue.resolvedDate), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
@@ -98,7 +98,7 @@ export default function IssuesPage() {
             priority: 'Medium',
             status: 'Open',
             assigneeId: 'unassigned',
-            resolvedDate: undefined,
+            resolvedDate: '',
         });
       }
     }
@@ -125,6 +125,7 @@ export default function IssuesPage() {
     const issueData = {
       ...values,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+      resolvedDate: values.resolvedDate ? new Date(values.resolvedDate) : undefined,
     };
 
     let success = false;
@@ -258,9 +259,11 @@ export default function IssuesPage() {
                         </FormItem>
                     )} />
                     <FormField control={form.control} name="resolvedDate" render={({ field }) => (
-                        <FormItem className="flex flex-col pt-2">
+                        <FormItem>
                             <FormLabel>Resolved Date</FormLabel>
-                            <DatePicker date={field.value} setDate={field.onChange} />
+                            <FormControl>
+                                <Input type="date" {...field} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
