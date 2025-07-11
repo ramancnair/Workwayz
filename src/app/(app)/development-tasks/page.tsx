@@ -45,7 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { format, addDays } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -68,7 +68,7 @@ const statusStyles: Record<StoryStatus, string> = {
 
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, sprints, addStory, updateStory, deleteStory } = useProject();
+  const { stories, employees, sprints, addStory, updateStory, deleteStory, holidays, weeklyOffDays } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Story | null>(null);
@@ -83,18 +83,34 @@ export default function DevelopmentTasksPage() {
 
   const watchedStartDate = useWatch({ control: form.control, name: 'startDate' });
   const watchedEffortDays = useWatch({ control: form.control, name: 'effortDays' });
+  
+  const holidayDates = new Set(holidays.map(h => format(parseISO(h.date), 'yyyy-MM-dd')));
 
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
-      // Create a date object from the yyyy-MM-dd string.
-      // Appending 'T00:00:00' ensures it's parsed in the local time zone, avoiding UTC conversion issues.
-      const startDateObj = new Date(`${watchedStartDate}T00:00:00`);
-      if (!isNaN(startDateObj.getTime())) {
-        const newEndDate = addDays(startDateObj, watchedEffortDays);
-        form.setValue('endDate', format(newEndDate, 'yyyy-MM-dd'), { shouldValidate: true });
-      }
+      const calculateWorkingEndDate = (startDate: string, effortDays: number): string => {
+        let currentDate = new Date(`${startDate}T00:00:00`);
+        let daysAdded = 0;
+        
+        while (daysAdded < effortDays) {
+            const dayOfWeek = currentDate.getDay(); // 0 (Sun) to 6 (Sat)
+            const formattedDate = format(currentDate, 'yyyy-MM-dd');
+
+            if (!weeklyOffDays.includes(dayOfWeek) && !holidayDates.has(formattedDate)) {
+                daysAdded++;
+            }
+            
+            if (daysAdded < effortDays) {
+               currentDate = addDays(currentDate, 1);
+            }
+        }
+        return format(currentDate, 'yyyy-MM-dd');
+      };
+
+      const newEndDate = calculateWorkingEndDate(watchedStartDate, watchedEffortDays);
+      form.setValue('endDate', newEndDate, { shouldValidate: true });
     }
-  }, [watchedStartDate, watchedEffortDays, form]);
+  }, [watchedStartDate, watchedEffortDays, form, weeklyOffDays, holidayDates]);
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -108,8 +124,8 @@ export default function DevelopmentTasksPage() {
           status: editingTask.status,
           sprintId: editingTask.sprintId || 'backlog',
           effortDays: editingTask.effortDays,
-          startDate: editingTask.startDate ? format(new Date(editingTask.startDate), 'yyyy-MM-dd') : '',
-          endDate: editingTask.endDate ? format(new Date(editingTask.endDate), 'yyyy-MM-dd') : '',
+          startDate: editingTask.startDate ? format(new Date(`${editingTask.startDate}T00:00:00`), 'yyyy-MM-dd') : '',
+          endDate: editingTask.endDate ? format(new Date(`${editingTask.endDate}T00:00:00`), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
@@ -121,6 +137,8 @@ export default function DevelopmentTasksPage() {
           status: 'To Do',
           sprintId: 'backlog',
           effortDays: 0,
+          startDate: '',
+          endDate: '',
         });
       }
     }
@@ -223,8 +241,8 @@ export default function DevelopmentTasksPage() {
                       </div>
                     ) : "Unassigned"}
                   </TableCell>
-                  <TableCell>{task.startDate ? format(new Date(task.startDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell>{task.endDate ? format(new Date(task.endDate), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{task.startDate ? format(new Date(`${task.startDate}T00:00:00`), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{task.endDate ? format(new Date(`${task.endDate}T00:00:00`), 'PPP') : 'N/A'}</TableCell>
                   <TableCell>{task.effortDays ? `${task.effortDays}d` : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(task)}>
@@ -385,7 +403,7 @@ export default function DevelopmentTasksPage() {
                       <FormItem>
                         <FormLabel>End Date</FormLabel>
                         <FormControl>
-                           <Input type="date" readOnly {...field} />
+                           <Input type="date" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -423,3 +441,5 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
+    
