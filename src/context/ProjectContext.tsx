@@ -19,6 +19,7 @@ import {
   connectFirestoreEmulator,
   getFirestore,
   getDoc,
+  setDoc,
 } from 'firebase/firestore';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -170,7 +171,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         setProjectSettings({ id: doc.id, ...doc.data() } as ProjectSettings);
       } else {
         // Initialize settings if they don't exist
-        updateDoc(settingsDocRef, { weeklyOffDays: [0, 6] }, { merge: true });
+        setDoc(settingsDocRef, { weeklyOffDays: [0, 6] });
       }
     });
 
@@ -760,7 +761,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     if (!db) return false;
     try {
       const settingsRef = doc(db, 'projectSettings', 'main');
-      await updateDoc(settingsRef, { weeklyOffDays: days }, { merge: true });
+      await setDoc(settingsRef, { weeklyOffDays: days }, { merge: true });
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to set weekly off days.", e);
