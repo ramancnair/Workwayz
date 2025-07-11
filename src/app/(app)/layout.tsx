@@ -16,6 +16,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath;
+
   const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : isGovernancePath ? 'governance' : 'development';
 
   const onTabChange = (value: string) => {

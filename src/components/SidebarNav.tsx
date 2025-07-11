@@ -30,6 +30,7 @@ import {
   NotebookText,
   AlertCircle,
   Link2,
+  CheckSquare,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -52,6 +53,11 @@ export function SidebarNav() {
       href: "/backlog",
       label: "Product Backlog",
       icon: Layers,
+    },
+     {
+      href: "/development-tasks",
+      label: "Development Tasks",
+      icon: CheckSquare,
     },
   ];
 
