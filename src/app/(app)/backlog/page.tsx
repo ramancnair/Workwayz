@@ -980,7 +980,7 @@ export default function BacklogPage() {
                           {[...sprintStories, ...sprintSubItems].map((story) => {
                               const epic = epics.find((e) => e.id === story.epicId);
                               const assignee = employees.find((d) => d.id === story.assigneeId);
-                              const subItems = story.itemType === 'Story' ? (subItemsByStoryId[story.id] || []) : [];
+                              const subItems = story.itemType === 'Story' ? (subItemsByStoryId[story.id] || []).filter(si => si.sprintId === sprint.id) : [];
                               if (story.itemType !== 'Story' && story.epicId) return null; // Render sub-items only under their parent
                               
                               return (
@@ -1271,15 +1271,18 @@ export default function BacklogPage() {
                         <Separator className="my-4" />
                         <h4 className="text-sm font-medium mb-2">Related Items</h4>
                         <div className="space-y-2 rounded-md border p-2">
-                        {selectedStorySubItems.map(item => (
-                            <div key={item.id} className="flex items-center justify-between text-sm">
-                                <div className='flex items-center gap-2'>
-                                    {workItemIcons[item.itemType] && <item.icon className="h-4 w-4 text-muted-foreground" />}
-                                    <span>{item.storyId}: {item.title}</span>
+                        {selectedStorySubItems.map(item => {
+                            const ItemIcon = workItemIcons[item.itemType];
+                            return (
+                                <div key={item.id} className="flex items-center justify-between text-sm">
+                                    <div className='flex items-center gap-2'>
+                                        {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                        <span>{item.storyId}: {item.title}</span>
+                                    </div>
+                                    <Badge variant="outline">{item.status}</Badge>
                                 </div>
-                                <Badge variant="outline">{item.status}</Badge>
-                            </div>
-                        ))}
+                            )
+                        })}
                         </div>
                     </div>
                   )}
