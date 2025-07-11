@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -66,6 +66,7 @@ import { DatePicker } from '@/components/ui/datepicker';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Story: BookOpen,
@@ -150,6 +151,40 @@ function StoryCard({ story, epic, assignee, onClick, className }: { story: Story
       </CardContent>
     </Card>
   );
+}
+
+function SubItemsDisplay({ items, onCardClick, employees, title }: { items: Story[], onCardClick: (story: Story) => void, employees: Employee[], title: string }) {
+    if (items.length === 0) return null;
+
+    return (
+        <Collapsible>
+            <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-start mt-1 text-xs text-muted-foreground">
+                    <ChevronsRight className="h-4 w-4 mr-2" />
+                    {items.length} {title}
+                </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+                <div className="pl-6 pt-2 space-y-2">
+                    {items.map(subItem => {
+                        const subItemAssignee = employees.find((d) => d.id === subItem.assigneeId);
+                        return (
+                            <div key={subItem.id} className="flex items-start gap-2">
+                                <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
+                                <div className="flex-1">
+                                    <StoryCard
+                                        story={subItem}
+                                        assignee={subItemAssignee}
+                                        onClick={() => onCardClick(subItem)}
+                                    />
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
+    );
 }
 
 
@@ -426,34 +461,29 @@ export default function BacklogPage() {
   }, {} as Record<string, Story[]>);
 
   const backlogItemsByEpic = backlogStories.reduce((acc, story) => {
-    if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
-        return acc; 
+    // Exclude sub-items from top-level grouping if their parent is also in the backlog
+    if (['Bug', 'Task'].includes(story.itemType) && story.epicId && backlogStories.some(s => s.id === story.epicId)) {
+        return acc;
     }
-    
-    const key = story.epicId || 'unassigned';
+
+    const key = story.itemType !== 'Story' ? 'unassigned' : (story.epicId || 'unassigned');
     if (!acc[key]) {
-      acc[key] = [];
+        acc[key] = [];
     }
     acc[key].push(story);
     return acc;
   }, {} as Record<string, Story[]>);
-  
-  const epicsToDisplay = [...epics];
-  if (Object.keys(backlogItemsByEpic).includes('unassigned')) {
-      const hasUnassignedEpic = epicsToDisplay.some(e => e.id === 'unassigned');
-      if (!hasUnassignedEpic) {
-          epicsToDisplay.push({
-              id: 'unassigned',
-              title: 'Unassigned',
-              description: 'Items not assigned to any epic.',
-          });
-      }
+
+  const epicsAndUnassigned = [...epics];
+  const unassignedStories = backlogItemsByEpic['unassigned'] || [];
+  if (unassignedStories.length > 0 && !epicsAndUnassigned.find(e => e.id === 'unassigned')) {
+    epicsAndUnassigned.push({ id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' });
   }
 
-  epicsToDisplay.sort((a, b) => {
-      if (a.id === 'unassigned') return 1;
-      if (b.id === 'unassigned') return -1;
-      return a.title.localeCompare(b.title);
+  epicsAndUnassigned.sort((a, b) => {
+    if (a.id === 'unassigned') return 1;
+    if (b.id === 'unassigned') return -1;
+    return a.title.localeCompare(b.title);
   });
   
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
@@ -745,7 +775,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Estimated Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value || ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="0" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -766,8 +796,8 @@ export default function BacklogPage() {
             <div className="bg-muted/50 rounded-lg p-4 flex flex-col">
                 <h3 className="text-lg font-semibold mb-4">Backlog</h3>
                 <div className="overflow-y-auto flex-1 -mr-4 pr-4">
-                  <Accordion type="multiple" className="w-full" defaultValue={epicsToDisplay.map(e => e.id)}>
-                    {epicsToDisplay.map((epic) => {
+                  <Accordion type="multiple" className="w-full" defaultValue={epicsAndUnassigned.map(e => e.id)}>
+                    {epicsAndUnassigned.map((epic) => {
                       const isUnassignedEpic = epic.id === 'unassigned';
                       
                       const allStoriesInEpic = stories.filter(s => s.epicId === epic.id);
@@ -776,10 +806,9 @@ export default function BacklogPage() {
       
                       const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
 
-                      const backlogItemsInGroup = backlogItemsByEpic[epic.id] || [];
-                      const backlogItemsCount = backlogItemsInGroup.length;
+                      const backlogItemsForGroup = backlogItemsByEpic[epic.id] || [];
                       
-                      if (backlogItemsCount === 0) {
+                      if (backlogItemsForGroup.length === 0) {
                           return null;
                       }
 
@@ -789,7 +818,7 @@ export default function BacklogPage() {
                               <div className="flex-1 text-left pr-2">
                                   <div className="flex items-center justify-between">
                                     <span className="font-semibold">{epic.title}</span>
-                                    <Badge variant="secondary">{backlogItemsCount} {backlogItemsCount === 1 ? 'item' : 'items'}</Badge>
+                                    <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
                                   </div>
                                   {!isUnassignedEpic && totalEpicItemsCount > 0 && (
                                     <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
@@ -800,8 +829,8 @@ export default function BacklogPage() {
                               </div>
                           </AccordionTrigger>
                           <AccordionContent className="space-y-2">
-                              {backlogItemsInGroup.length > 0 ? (
-                                backlogItemsInGroup.map((story) => {
+                              {backlogItemsForGroup.length > 0 ? (
+                                backlogItemsForGroup.map((story) => {
                                   const storyEpic = epics.find((e) => e.id === story.epicId);
                                   const assignee = employees.find((d) => d.id === story.assigneeId);
                                   const subItems = (subItemsByParentId[story.id] || []).filter(item => !item.sprintId);
@@ -842,25 +871,7 @@ export default function BacklogPage() {
                                           </div>
                                           )}
                                       </div>
-                                      {subItems.length > 0 && (
-                                        <div className="pl-6 pt-2 space-y-2">
-                                          {subItems.map(subItem => {
-                                              const subItemAssignee = employees.find((d) => d.id === subItem.assigneeId);
-                                              return (
-                                                  <div key={subItem.id} className="flex items-start gap-2">
-                                                      <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
-                                                      <div className="flex-1">
-                                                          <StoryCard
-                                                              story={subItem}
-                                                              assignee={subItemAssignee}
-                                                              onClick={() => setSelectedStory(subItem)}
-                                                          />
-                                                      </div>
-                                                  </div>
-                                              )
-                                          })}
-                                        </div>
-                                      )}
+                                      <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} employees={employees} title="Related Items" />
                                     </div>
                                   )
                                 })
@@ -894,11 +905,12 @@ export default function BacklogPage() {
               <h3 className="text-lg font-semibold mb-4">Sprints</h3>
               <Accordion type="multiple" className="w-full" defaultValue={sprints.map(s => s.id)}>
                 {sprints.map((sprint) => {
-                  const sprintItems = stories.filter((story) => story.sprintId === sprint.id);
-                  const topLevelSprintItems = sprintItems.filter(
-                      item => !item.epicId || !sprintItems.find(s => s.id === item.epicId)
-                  );
-                  
+                   const sprintItems = stories.filter((story) => story.sprintId === sprint.id);
+                   const topLevelSprintItems = sprintItems.filter(item => 
+                       item.itemType === 'Story' || 
+                       !sprintItems.some(parent => parent.id === item.epicId)
+                   );
+
                   return (
                     <AccordionItem value={sprint.id} key={sprint.id}>
                       <div className="flex items-center justify-between py-4">
@@ -988,25 +1000,7 @@ export default function BacklogPage() {
                                         assignee={assignee}
                                         onClick={() => setSelectedStory(story)}
                                     />
-                                    {subItems.length > 0 && (
-                                    <div className="pl-6 pt-2 space-y-2">
-                                        {subItems.map(subItem => {
-                                            const subItemAssignee = employees.find((d) => d.id === subItem.assigneeId);
-                                            return (
-                                                <div key={subItem.id} className="flex items-start gap-2">
-                                                    <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
-                                                    <div className="flex-1">
-                                                        <StoryCard
-                                                            story={subItem}
-                                                            assignee={subItemAssignee}
-                                                            onClick={() => setSelectedStory(subItem)}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                    )}
+                                    <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} employees={employees} title="Related Items" />
                                 </div>
                               );
                             })
@@ -1256,7 +1250,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Estimated Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value || ''} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1452,3 +1446,5 @@ export default function BacklogPage() {
     </>
   );
 }
+
+    
