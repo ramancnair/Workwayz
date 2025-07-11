@@ -6,8 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, Employee, WorkItemType, BugCriticality, Sprint } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, CornerDownRight, Ban } from 'lucide-react';
+import type { Story, Epic, StoryStatus, Employee, WorkItemType, BugCriticality, KanbanColumn } from '@/types';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -72,9 +72,11 @@ const storyFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
 });
 
-function StoryCard({ story, epic, parentStory, onStatusChange, onClick, className, isMoveToDoneDisabled }: { story: Story; epic?: Epic; parentStory?: Story; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; isMoveToDoneDisabled?: boolean; }) {
+function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick, className, isMoveToDoneDisabled }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; isMoveToDoneDisabled?: boolean; }) {
 
   const Icon = workItemIcons[story.itemType];
+  const doneColumn = columns.find(c => c.isDoneColumn);
+
   return (
     <Card className={cn("bg-card cursor-pointer", className)} onClick={onClick}>
       <CardHeader>
@@ -105,17 +107,18 @@ function StoryCard({ story, epic, parentStory, onStatusChange, onClick, classNam
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    {columns.filter(col => col !== story.status).map(col => {
-                        const isDoneAndDisabled = col === 'Done' && isMoveToDoneDisabled;
+                    {columns.filter(col => col.name !== story.status).map(col => {
+                        const isDoneAndDisabled = doneColumn && col.id === doneColumn.id && isMoveToDoneDisabled;
+
                         if (isDoneAndDisabled) {
                             return (
-                                <TooltipProvider key={col}>
+                                <TooltipProvider key={col.id}>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <span className="w-full">
                                                 <DropdownMenuItem disabled>
                                                     <Ban className="mr-2 h-4 w-4" />
-                                                    Move to {col}
+                                                    Move to {col.name}
                                                 </DropdownMenuItem>
                                             </span>
                                         </TooltipTrigger>
@@ -128,8 +131,8 @@ function StoryCard({ story, epic, parentStory, onStatusChange, onClick, classNam
                         }
 
                         return (
-                            <DropdownMenuItem key={col} onClick={() => onStatusChange(col)}>
-                                Move to {col}
+                            <DropdownMenuItem key={col.id} onClick={() => onStatusChange(col.name)}>
+                                Move to {col.name}
                             </DropdownMenuItem>
                         )
                     })}
@@ -141,10 +144,9 @@ function StoryCard({ story, epic, parentStory, onStatusChange, onClick, classNam
   );
 }
 
-const columns: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, moveStoryStatus, moveStoryToSprint, employees, updateStory, deleteStory } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees, updateStory, deleteStory } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -245,6 +247,9 @@ export default function KanbanPage() {
   const sprintAssigneeIds = new Set(baseSprintStories.map(story => story.assigneeId).filter(Boolean));
   const sprintAssignees = employees.filter(emp => sprintAssigneeIds.has(emp.id));
 
+  const sortedColumns = kanbanColumns.sort((a, b) => a.order - b.order);
+  const doneColumnName = sortedColumns.find(c => c.isDoneColumn)?.name || 'Done';
+
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
@@ -267,13 +272,13 @@ export default function KanbanPage() {
           </div>
         </PageHeader>
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-          {columns.map((status) => {
-            const itemsInColumn = sprintStories.filter((story) => story.status === status);
+          {sortedColumns.map((column) => {
+            const itemsInColumn = sprintStories.filter((story) => story.status === column.name);
             return (
-              <div key={status} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+              <div key={column.id} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
                   <Columns className="mr-2 h-5 w-5" />
-                  {status}
+                  {column.name}
                   <span className="ml-2 bg-primary text-primary-foreground h-6 w-6 rounded-full flex items-center justify-center text-sm">
                     {itemsInColumn.length}
                   </span>
@@ -284,7 +289,7 @@ export default function KanbanPage() {
                       const parentStory = story.epicId ? allStoriesById[story.epicId] : undefined;
 
                       const subItems = subItemsByStoryId[story.id] || [];
-                      const isMoveToDoneDisabled = story.itemType === 'Story' && subItems.some(sub => sub.status !== 'Done');
+                      const isMoveToDoneDisabled = story.itemType === 'Story' && subItems.some(sub => sub.status !== doneColumnName);
 
                       return (
                         <div key={story.id}>
@@ -292,6 +297,7 @@ export default function KanbanPage() {
                             story={story} 
                             epic={epic}
                             parentStory={parentStory}
+                            columns={sortedColumns}
                             onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
                             onClick={() => setSelectedStory(story)}
                             isMoveToDoneDisabled={isMoveToDoneDisabled}
@@ -593,5 +599,3 @@ export default function KanbanPage() {
     </>
   );
 }
-
-    

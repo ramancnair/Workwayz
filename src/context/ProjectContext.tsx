@@ -18,7 +18,7 @@ import {
   connectFirestoreEmulator,
   getFirestore,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn } from '@/types';
 
 // Helper to remove undefined values from an object before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
@@ -46,6 +46,7 @@ interface ProjectContextType {
   assumptions: Assumption[];
   issues: Issue[];
   dependencies: Dependency[];
+  kanbanColumns: KanbanColumn[];
   
   // Story actions
   addStory: (story: Omit<Story, 'id' | 'storyId'>) => Promise<boolean>;
@@ -96,12 +97,23 @@ interface ProjectContextType {
   updateDependency: (dependencyId: string, data: Partial<Omit<Dependency, 'id' | 'dependencyId'| 'expectedByDate'> & { expectedByDate?: Date }>) => Promise<boolean>;
   deleteDependency: (dependencyId: string) => Promise<boolean>;
 
+  // Kanban Column actions
+  addKanbanColumn: (column: Omit<KanbanColumn, 'id' | 'isDefault' | 'isDoneColumn'>) => Promise<boolean>;
+  updateKanbanColumn: (columnId: string, data: Partial<Omit<KanbanColumn, 'id'>>) => Promise<boolean>;
+  deleteKanbanColumn: (columnId: string) => Promise<boolean>;
+
 
   isLoading: boolean;
   error: string | null;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+const defaultKanbanColumns: Omit<KanbanColumn, 'id'>[] = [
+  { name: 'To Do', order: 0, isDefault: true, isDoneColumn: false },
+  { name: 'In Progress', order: 1, isDefault: true, isDoneColumn: false },
+  { name: 'Done', order: 2, isDefault: true, isDoneColumn: true },
+];
 
 export function ProjectProvider({ children }: PropsWithChildren) {
   const [epics, setEpics] = useState<Epic[]>([]);
@@ -113,6 +125,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [assumptions, setAssumptions] = useState<Assumption[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
+  const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,12 +146,24 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         { name: 'assumptions', setState: setAssumptions },
         { name: 'issues', setState: setIssues },
         { name: 'dependencies', setState: setDependencies },
+        { name: 'kanbanColumns', setState: setKanbanColumns },
     ];
     
     const unsubscribers = collections.map(({ name, setState }) => {
         const q = query(collection(db, name));
         return onSnapshot(q, 
             (querySnapshot) => {
+                // Special handling for kanbanColumns to ensure defaults
+                if (name === 'kanbanColumns' && querySnapshot.empty) {
+                    const batch = writeBatch(db);
+                    defaultKanbanColumns.forEach(col => {
+                        const docRef = doc(collection(db, 'kanbanColumns'));
+                        batch.set(docRef, col);
+                    });
+                    batch.commit().catch(e => console.error("Failed to set default Kanban columns", e));
+                    return; // The snapshot listener will re-fire with the new data
+                }
+
                 const data = querySnapshot.docs.map(doc => {
                     const docData = doc.data();
                     const convertTimestamp = (field: any) => {
@@ -628,6 +653,42 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
+  // Kanban Column Actions
+  const addKanbanColumn = async (column: Omit<KanbanColumn, 'id' | 'isDefault' | 'isDoneColumn'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const payload = { ...column, isDefault: false, isDoneColumn: false };
+      await addDoc(collection(db, 'kanbanColumns'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to add Kanban column.", e);
+      return false;
+    }
+  };
+  
+  const updateKanbanColumn = async (columnId: string, data: Partial<Omit<KanbanColumn, 'id'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const columnRef = doc(db, 'kanbanColumns', columnId);
+      await updateDoc(columnRef, sanitizeForFirestore(data));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to update Kanban column.", e);
+      return false;
+    }
+  };
+
+  const deleteKanbanColumn = async (columnId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'kanbanColumns', columnId));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to delete Kanban column.", e);
+      return false;
+    }
+  };
+
 
   const value: ProjectContextType = {
     epics,
@@ -639,6 +700,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     assumptions,
     issues,
     dependencies,
+    kanbanColumns,
     isLoading,
     error,
     addStory,
@@ -672,6 +734,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addDependency,
     updateDependency,
     deleteDependency,
+    addKanbanColumn,
+    updateKanbanColumn,
+    deleteKanbanColumn,
   };
   
     if (isLoading) {

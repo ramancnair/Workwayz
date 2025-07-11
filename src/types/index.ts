@@ -1,9 +1,4 @@
 
-
-
-
-
-
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -25,7 +20,7 @@ export type Epic = {
   description?: string;
 };
 
-export type StoryStatus = 'To Do' | 'In Progress' | 'Done';
+export type StoryStatus = string;
 export type WorkItemType = 'Story' | 'Bug' | 'Task' | 'Change' | 'Improvement';
 export type BugCriticality = 'Low' | 'Medium' | 'High' | 'Critical';
 
@@ -143,4 +138,12 @@ export type Dependency = {
   expectedByDate: string; // ISO String
   status: DependencyStatus;
   ownerId?: string;
+};
+
+export type KanbanColumn = {
+  id: string;
+  name: string;
+  order: number;
+  isDefault: boolean;
+  isDoneColumn: boolean;
 };
