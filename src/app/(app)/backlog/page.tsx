@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
@@ -466,7 +466,7 @@ export default function BacklogPage() {
         return acc;
     }
 
-    const key = story.itemType !== 'Story' ? 'unassigned' : (story.epicId || 'unassigned');
+    const key = story.epicId || 'unassigned';
     if (!acc[key]) {
         acc[key] = [];
     }
@@ -1448,3 +1448,4 @@ export default function BacklogPage() {
 }
 
     
+
