@@ -31,7 +31,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const sortedColumns = kanbanColumns.sort((a, b) => a.order - b.order);
+  const sortedColumns = [...kanbanColumns].sort((a, b) => a.order - b.order);
 
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
@@ -109,14 +109,14 @@ export default function SettingsPage() {
               <h4 className="font-medium">Current Swimlanes</h4>
               <div className="space-y-2">
                 {fields.map((field, index) => {
-                  const originalColumn = sortedColumns.find(c => c.id === field.id);
+                  const originalColumn = sortedColumns[index];
                   return (
                     <div key={field.id} className="flex items-center gap-2">
                       <Input
                         {...form.register(`swimlanes.${index}.name`)}
                         onBlur={(e) => {
-                           if (e.target.value !== originalColumn?.name) {
-                             handleRenameSwimlane(field.id, e.target.value)
+                           if (originalColumn && e.target.value !== originalColumn.name) {
+                             handleRenameSwimlane(originalColumn.id, e.target.value)
                            }
                         }}
                         className="flex-1"
@@ -125,7 +125,7 @@ export default function SettingsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => originalColumn && handleDeleteSwimlane(originalColumn)}
-                        disabled={kanbanColumns.length <= 3 || originalColumn?.isDefault}
+                        disabled={kanbanColumns.length <= 3 || (originalColumn && originalColumn.isDefault)}
                         aria-label="Delete swimlane"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -133,7 +133,10 @@ export default function SettingsPage() {
                     </div>
                 )})}
                  {form.formState.errors.swimlanes && (
-                    <p className="text-sm font-medium text-destructive">{form.formState.errors.swimlanes.message}</p>
+                    <p className="text-sm font-medium text-destructive">{form.formState.errors.swimlanes?.message}</p>
+                )}
+                 {form.formState.errors.swimlanes?.root && (
+                    <p className="text-sm font-medium text-destructive">{form.formState.errors.swimlanes.root.message}</p>
                 )}
               </div>
               <div className="pt-4">
