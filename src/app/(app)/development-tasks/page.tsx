@@ -45,7 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { format, addDays, parseISO } from 'date-fns';
+import { format, addDays, parseISO, isSameDay } from 'date-fns';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -68,7 +68,7 @@ const statusStyles: Record<StoryStatus, string> = {
 
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, sprints, addStory, updateStory, deleteStory } = useProject();
+  const { stories, employees, sprints, holidays, weeklyOffDays, addStory, updateStory, deleteStory } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Story | null>(null);
@@ -84,18 +84,40 @@ export default function DevelopmentTasksPage() {
   const watchedStartDate = useWatch({ control: form.control, name: 'startDate' });
   const watchedEffortDays = useWatch({ control: form.control, name: 'effortDays' });
   
+  const holidayDates = holidays.map(h => new Date(h.date));
+
+  const calculateBusinessEndDate = (startDate: Date, effortDays: number) => {
+    let currentDate = new Date(startDate);
+    let daysAdded = 0;
+    while (daysAdded < effortDays) {
+      if (daysAdded > 0) {
+        currentDate = addDays(currentDate, 1);
+      }
+      
+      const dayOfWeek = currentDate.getDay();
+      const isWeekend = weeklyOffDays.includes(dayOfWeek);
+      const isHoliday = holidayDates.some(holiday => isSameDay(currentDate, holiday));
+
+      if (!isWeekend && !isHoliday) {
+        daysAdded++;
+      }
+    }
+    return currentDate;
+  };
+
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
       try {
         const startDate = parseISO(watchedStartDate);
-        const newEndDate = addDays(startDate, watchedEffortDays -1);
+        const newEndDate = calculateBusinessEndDate(startDate, watchedEffortDays);
         form.setValue('endDate', format(newEndDate, 'yyyy-MM-dd'), { shouldValidate: true });
       } catch (e) {
-        // handle invalid date gracefully
         form.setValue('endDate', '', { shouldValidate: true });
       }
+    } else if (watchedEffortDays === 0) {
+       form.setValue('endDate', watchedStartDate);
     }
-  }, [watchedStartDate, watchedEffortDays, form]);
+  }, [watchedStartDate, watchedEffortDays, form, holidays, weeklyOffDays]);
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -426,3 +448,5 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
+    
