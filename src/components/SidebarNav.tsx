@@ -32,6 +32,7 @@ import {
   Link2,
   CheckSquare,
   CalendarDays,
+  GanttChartSquare,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -44,6 +45,11 @@ export function SidebarNav() {
       href: "/dashboard/development",
       label: "Dev Dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      href: "/project-gantt",
+      label: "Project Gantt",
+      icon: GanttChartSquare,
     },
     {
       href: "/kanban",
