@@ -88,8 +88,8 @@ export default function DevelopmentTasksPage() {
 
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
-      const calculateWorkingEndDate = (startDate: string, effortDays: number): string => {
-        let currentDate = parseISO(startDate);
+      const calculateWorkingEndDate = (startDateStr: string, effortDays: number): string => {
+        let currentDate = parseISO(startDateStr);
         let daysAdded = 0;
         
         while (daysAdded < effortDays) {
@@ -441,5 +441,3 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
-
-    
