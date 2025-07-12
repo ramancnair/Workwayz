@@ -55,7 +55,7 @@ interface ProjectContextType {
   weeklyOffDays: number[];
   
   // Story actions
-  addStory: (story: Omit<Story, 'id' | 'storyId'>) => Promise<boolean>;
+  addStory: (story: Omit<Story, 'id' | 'storyId'>, prefix?: string) => Promise<boolean>;
   updateStory: (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>) => Promise<boolean>;
   deleteStory: (storyId: string) => Promise<boolean>;
   moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<boolean>;
@@ -235,7 +235,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   }, []);
 
   // Story Actions
-  const addStory = async (story: Omit<Story, 'id' | 'storyId'>): Promise<boolean> => {
+  const addStory = async (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string): Promise<boolean> => {
     if (!db) return false;
     try {
         const storiesSnapshot = await getDocs(collection(db, 'stories'));
@@ -247,7 +247,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             ) + 1
             : 1;
 
-        const prefix = story.itemType === 'Task' ? 'TASK' : 'ST';
+        const defaultPrefix = story.itemType === 'Task' ? 'TASK' : 'ST';
+        const prefix = prefixOverride || defaultPrefix;
         const storyId = `${prefix}-${newIdNumber}`;
 
         const { startDate, endDate, ...rest } = story;

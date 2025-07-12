@@ -33,6 +33,7 @@ import {
   CheckSquare,
   CalendarDays,
   GanttChartSquare,
+  ClipboardList,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -73,6 +74,11 @@ export function SidebarNav() {
       href: "/dashboard/testing",
       label: "Test Dashboard",
       icon: TestTube2,
+    },
+    {
+      href: "/testing/test-plan",
+      label: "Test Plan",
+      icon: ClipboardList,
     },
     {
       href: "/testing/test-cases",
@@ -130,7 +136,7 @@ export function SidebarNav() {
     },
   ];
 
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = pathname.startsWith('/holiday-calendar');

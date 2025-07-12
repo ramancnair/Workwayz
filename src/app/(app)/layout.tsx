@@ -12,7 +12,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(p));
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = pathname.startsWith('/holiday-calendar');
