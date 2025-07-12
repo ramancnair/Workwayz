@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -46,6 +47,14 @@ export default function ProjectGanttPage() {
     );
   }, [stories]);
 
+  const resourceColorMapping = useMemo(() => {
+    const mapping: Record<string, string> = {};
+    employees.forEach((emp, index) => {
+        mapping[emp.id] = COLORS[index % COLORS.length];
+    });
+    return mapping;
+  }, [employees]);
+
   const chartData = useMemo(() => {
     const filteredTasks = selectedResourceId === 'all'
       ? tasks
@@ -92,13 +101,7 @@ export default function ProjectGanttPage() {
     }).map(d => d.getTime());
   }, [domain]);
   
-  const resourceColorMapping = useMemo(() => {
-    const mapping: Record<string, string> = {};
-    employees.forEach((emp, index) => {
-        mapping[emp.id] = COLORS[index % COLORS.length];
-    });
-    return mapping;
-  }, [employees]);
+  const singleResourceColor = selectedResourceId !== 'all' ? resourceColorMapping[selectedResourceId] : '#8884d8';
   
 
   return (
@@ -168,7 +171,7 @@ export default function ProjectGanttPage() {
                            )
                         })
                     ) : (
-                         <Bar dataKey="range" fill="#8884d8" barSize={20} />
+                         <Bar dataKey="range" fill={singleResourceColor} barSize={20} />
                     )}
                 </BarChart>
             ) : (
@@ -182,3 +185,4 @@ export default function ProjectGanttPage() {
     </div>
   );
 }
+
