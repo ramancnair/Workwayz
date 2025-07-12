@@ -242,6 +242,29 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
+  // One-time effect to assign random impacted systems to tasks that don't have one
+  useEffect(() => {
+    if (isLoading || impactedSystems.length === 0) return;
+
+    const tasksWithoutSystem = stories.filter(
+      (story) => story.itemType === 'Task' && !story.impactedSystemId
+    );
+
+    if (tasksWithoutSystem.length > 0) {
+      const batch = writeBatch(db);
+      tasksWithoutSystem.forEach((task) => {
+        const randomSystem = impactedSystems[Math.floor(Math.random() * impactedSystems.length)];
+        const taskRef = doc(db, 'stories', task.id);
+        batch.update(taskRef, { impactedSystemId: randomSystem.id });
+      });
+
+      batch.commit().catch((err) => {
+        console.error('Failed to assign random impacted systems to tasks:', err);
+      });
+    }
+  }, [isLoading, stories, impactedSystems]);
+
+
   // Story Actions
   const addStory = async (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string): Promise<boolean> => {
     if (!db) return false;
@@ -946,3 +969,5 @@ export function useProject() {
   }
   return context;
 }
+
+    

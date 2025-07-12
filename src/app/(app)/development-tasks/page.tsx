@@ -58,6 +58,7 @@ const taskSchema = z.object({
   effortDays: z.coerce.number().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  impactedSystemId: z.string().optional(),
 });
 
 const statusStyles: Record<StoryStatus, string> = {
@@ -68,7 +69,7 @@ const statusStyles: Record<StoryStatus, string> = {
 
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, sprints, holidays, weeklyOffDays, addStory, updateStory, deleteStory } = useProject();
+  const { stories, employees, sprints, holidays, weeklyOffDays, addStory, updateStory, deleteStory, impactedSystems } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Story | null>(null);
@@ -133,6 +134,7 @@ export default function DevelopmentTasksPage() {
           effortDays: editingTask.effortDays,
           startDate: editingTask.startDate ? format(parseISO(editingTask.startDate), 'yyyy-MM-dd') : '',
           endDate: editingTask.endDate ? format(parseISO(editingTask.endDate), 'yyyy-MM-dd') : '',
+          impactedSystemId: editingTask.impactedSystemId || 'unassigned',
         });
       } else {
         form.reset({
@@ -146,6 +148,7 @@ export default function DevelopmentTasksPage() {
           effortDays: 0,
           startDate: '',
           endDate: '',
+          impactedSystemId: 'unassigned',
         });
       }
     }
@@ -182,6 +185,7 @@ export default function DevelopmentTasksPage() {
         effortDays: values.effortDays,
         startDate: values.startDate,
         endDate: values.endDate,
+        impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
     };
 
     let success = false;
@@ -219,6 +223,7 @@ export default function DevelopmentTasksPage() {
               <TableHead className="w-[30%]">Title</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Assignee</TableHead>
+              <TableHead>Impacted System</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
               <TableHead>Effort</TableHead>
@@ -228,6 +233,7 @@ export default function DevelopmentTasksPage() {
           <TableBody>
             {tasks.map((task) => {
               const assignee = employees.find(e => e.id === task.assigneeId);
+              const impactedSystem = impactedSystems.find(s => s.id === task.impactedSystemId);
               return (
                 <TableRow key={task.id}>
                   <TableCell className="font-medium">{task.storyId}</TableCell>
@@ -248,6 +254,7 @@ export default function DevelopmentTasksPage() {
                       </div>
                     ) : "Unassigned"}
                   </TableCell>
+                  <TableCell>{impactedSystem?.name || 'N/A'}</TableCell>
                   <TableCell>{task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A'}</TableCell>
                   <TableCell>{task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A'}</TableCell>
                   <TableCell>{task.effortDays ? `${task.effortDays}d` : 'N/A'}</TableCell>
@@ -387,6 +394,27 @@ export default function DevelopmentTasksPage() {
                     )}
                     />
                 </div>
+                 <FormField
+                    control={form.control}
+                    name="impactedSystemId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Impacted System</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select an impacted system" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="unassigned">None</SelectItem>
+                            {impactedSystems.map(system => (
+                                <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField control={form.control} name="startDate" render={({ field }) => (
                         <FormItem>
@@ -448,5 +476,7 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
+    
 
     
