@@ -68,7 +68,7 @@ const statusStyles: Record<StoryStatus, string> = {
 
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, sprints, addStory, updateStory, deleteStory, holidays, weeklyOffDays } = useProject();
+  const { stories, employees, sprints, addStory, updateStory, deleteStory } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Story | null>(null);
@@ -84,33 +84,18 @@ export default function DevelopmentTasksPage() {
   const watchedStartDate = useWatch({ control: form.control, name: 'startDate' });
   const watchedEffortDays = useWatch({ control: form.control, name: 'effortDays' });
   
-  const holidayDates = new Set(holidays.map(h => format(parseISO(h.date), 'yyyy-MM-dd')));
-
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
-      const calculateWorkingEndDate = (startDateStr: string, effortDays: number): string => {
-        let currentDate = parseISO(startDateStr);
-        let daysAdded = 0;
-        
-        while (daysAdded < effortDays) {
-            const dayOfWeek = currentDate.getDay(); // 0 (Sun) to 6 (Sat)
-            const formattedDate = format(currentDate, 'yyyy-MM-dd');
-
-            if (!weeklyOffDays.includes(dayOfWeek) && !holidayDates.has(formattedDate)) {
-                daysAdded++;
-            }
-            
-            if (daysAdded < effortDays) {
-               currentDate = addDays(currentDate, 1);
-            }
-        }
-        return format(currentDate, 'yyyy-MM-dd');
-      };
-
-      const newEndDate = calculateWorkingEndDate(watchedStartDate, watchedEffortDays);
-      form.setValue('endDate', newEndDate, { shouldValidate: true });
+      try {
+        const startDate = parseISO(watchedStartDate);
+        const newEndDate = addDays(startDate, watchedEffortDays -1);
+        form.setValue('endDate', format(newEndDate, 'yyyy-MM-dd'), { shouldValidate: true });
+      } catch (e) {
+        // handle invalid date gracefully
+        form.setValue('endDate', '', { shouldValidate: true });
+      }
     }
-  }, [watchedStartDate, watchedEffortDays, form, weeklyOffDays, holidayDates]);
+  }, [watchedStartDate, watchedEffortDays, form]);
 
   useEffect(() => {
     if (isDialogOpen) {
