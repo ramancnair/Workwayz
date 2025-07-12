@@ -21,7 +21,7 @@ import {
   getDoc,
   setDoc,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 
 // Helper to remove undefined values from an object before sending to Firestore
@@ -53,6 +53,7 @@ interface ProjectContextType {
   kanbanColumns: KanbanColumn[];
   holidays: Holiday[];
   weeklyOffDays: number[];
+  impactedSystems: ImpactedSystem[];
   
   // Story actions
   addStory: (story: Omit<Story, 'id' | 'storyId'>, prefix?: string) => Promise<boolean>;
@@ -115,6 +116,11 @@ interface ProjectContextType {
   updateHoliday: (id: string, data: Partial<Omit<Holiday, 'id'>>) => Promise<boolean>;
   deleteHoliday: (id: string) => Promise<boolean>;
 
+  // Impacted System actions
+  addImpactedSystem: (system: Omit<ImpactedSystem, 'id'>) => Promise<boolean>;
+  updateImpactedSystem: (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => Promise<boolean>;
+  deleteImpactedSystem: (systemId: string) => Promise<boolean>;
+
   isLoading: boolean;
   error: string | null;
 }
@@ -139,6 +145,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>({ id: 'main', weeklyOffDays: [0, 6] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -162,6 +169,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         { name: 'dependencies', setState: setDependencies },
         { name: 'kanbanColumns', setState: setKanbanColumns },
         { name: 'holidays', setState: setHolidays },
+        { name: 'impactedSystems', setState: setImpactedSystems },
     ];
     
     // Listener for project settings
@@ -807,6 +815,41 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
+  // Impacted System Actions
+  const addImpactedSystem = async (system: Omit<ImpactedSystem, 'id'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await addDoc(collection(db, 'impactedSystems'), sanitizeForFirestore(system));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add impacted system.", { code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const updateImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await updateDoc(doc(db, 'impactedSystems', systemId), sanitizeForFirestore(data));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update impacted system.", { id: systemId, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const deleteImpactedSystem = async (systemId: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'impactedSystems', systemId));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete impacted system.", { id: systemId, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+
   const value: ProjectContextType = {
     epics,
     stories,
@@ -820,6 +863,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     kanbanColumns,
     holidays,
     weeklyOffDays: projectSettings.weeklyOffDays,
+    impactedSystems,
     isLoading,
     error,
     addStory,
@@ -861,6 +905,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addHoliday,
     updateHoliday,
     deleteHoliday,
+    addImpactedSystem,
+    updateImpactedSystem,
+    deleteImpactedSystem,
   };
   
     if (isLoading) {

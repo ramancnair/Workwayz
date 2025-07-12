@@ -13,19 +13,22 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const router = useRouter();
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(p));
+  const isArchitecturePath = pathname.startsWith('/architecture');
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = pathname.startsWith('/holiday-calendar');
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath;
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath;
 
-  const tabValue = isTestingPath ? 'testing' : isResourcesPath ? 'resources' : isGovernancePath ? 'governance' : isHolidaysPath ? 'holidays' : 'development';
+  const tabValue = isTestingPath ? 'testing' : isArchitecturePath ? 'architecture' : isResourcesPath ? 'resources' : isGovernancePath ? 'governance' : isHolidaysPath ? 'holidays' : 'development';
 
   const onTabChange = (value: string) => {
     if (value === 'development') {
       router.push('/dashboard/development');
     } else if (value === 'testing') {
       router.push('/dashboard/testing');
+    } else if (value === 'architecture') {
+      router.push('/architecture');
     } else if (value === 'resources') {
       router.push('/resources');
     } else if (value === 'governance') {
@@ -48,6 +51,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                         <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
+                        <TabsTrigger value="architecture" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Architecture</TabsTrigger>
                         <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                         <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
                         <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>

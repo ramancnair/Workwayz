@@ -162,3 +162,12 @@ export type ProjectSettings = {
     id: 'main';
     weeklyOffDays: number[]; // 0 for Sunday, 6 for Saturday
 };
+
+export type ImpactedSystemCategory = 'Technology' | 'Function';
+
+export type ImpactedSystem = {
+  id: string;
+  name: string;
+  description: string;
+  category: ImpactedSystemCategory;
+};
