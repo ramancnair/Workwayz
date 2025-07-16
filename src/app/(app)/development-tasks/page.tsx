@@ -46,7 +46,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays, parseISO, isSameDay } from 'date-fns';
-import { Combobox } from '@/components/ui/combobox';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -207,7 +206,7 @@ export default function DevelopmentTasksPage() {
           title: editingTask.title,
           description: editingTask.description || '',
           acceptanceCriteria: editingTask.acceptanceCriteria || '',
-          epicId: editingTask.epicId || 'unassigned',
+          epicId: editingTask.epicId || '',
           assigneeId: editingTask.assigneeId || 'unassigned',
           status: editingTask.status,
           sprintId: editingTask.sprintId || 'backlog',
@@ -221,7 +220,7 @@ export default function DevelopmentTasksPage() {
           title: '',
           description: '',
           acceptanceCriteria: '',
-          epicId: 'unassigned',
+          epicId: '',
           assigneeId: 'unassigned',
           status: 'To Do',
           sprintId: 'backlog',
@@ -259,7 +258,7 @@ export default function DevelopmentTasksPage() {
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: values.epicId === 'unassigned' ? undefined : values.epicId, // Related story
+        epicId: values.epicId === '' ? undefined : values.epicId, // Related story
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         effortDays: values.effortDays,
@@ -485,16 +484,18 @@ export default function DevelopmentTasksPage() {
                       control={form.control}
                       name="epicId"
                       render={({ field }) => (
-                        <FormItem className="flex flex-col">
+                        <FormItem>
                           <FormLabel>Related Story</FormLabel>
-                          <Combobox
-                            options={storyOptions}
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="Select a story..."
-                            searchPlaceholder="Search stories..."
-                            noResultsText="No story found."
-                          />
+                          <FormControl>
+                            <Input list="story-options" placeholder="Select a story..." {...field} />
+                          </FormControl>
+                          <datalist id="story-options">
+                            {storyOptions.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </datalist>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -603,3 +604,5 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
+    
