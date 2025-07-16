@@ -76,6 +76,7 @@ export default function TestCasesPage() {
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingTestCase, setDeletingTestCase] = useState<TestCase | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
 
   const [filters, setFilters] = useState({
     status: 'all',
@@ -105,6 +106,13 @@ export default function TestCasesPage() {
     }
   };
 
+  const storyOptions = useMemo(() => stories
+    .filter(s => s.itemType === 'Story')
+    .map(story => ({
+      value: story.id,
+      label: `[${story.storyId}] ${story.title}`,
+    })), [stories]);
+
   const filteredAndSortedTestCases = useMemo(() => {
     let filtered = [...testCases];
 
@@ -118,7 +126,11 @@ export default function TestCasesPage() {
       filtered = filtered.filter(tc => tc.assigneeId === filters.assigneeId);
     }
     if (filters.storyId !== 'all') {
-      filtered = filtered.filter(tc => tc.storyId === filters.storyId);
+      if(filters.storyId === 'unassigned') {
+        filtered = filtered.filter(tc => !tc.storyId);
+      } else {
+        filtered = filtered.filter(tc => tc.storyId === filters.storyId);
+      }
     }
 
     if (sorting) {
@@ -149,24 +161,27 @@ export default function TestCasesPage() {
   useEffect(() => {
     if (isDialogOpen) {
         if (editingTestCase) {
-        form.reset({
+          const relatedStory = storyOptions.find(opt => opt.value === editingTestCase.storyId);
+          setRelatedStoryInputText(relatedStory?.label || '');
+          form.reset({
             ...editingTestCase,
             assigneeId: editingTestCase.assigneeId || 'unassigned',
-            storyId: editingTestCase.storyId || 'unassigned',
-        });
+            storyId: editingTestCase.storyId || '',
+          });
         } else {
-        form.reset({
+          setRelatedStoryInputText('');
+          form.reset({
             title: '',
             type: 'Functional',
             description: '',
             expectedResult: '',
             status: 'Not Run',
             assigneeId: 'unassigned',
-            storyId: 'unassigned',
-        });
+            storyId: '',
+          });
         }
     }
-  }, [isDialogOpen, editingTestCase, form]);
+  }, [isDialogOpen, editingTestCase, form, storyOptions]);
 
   const handleDialogOpen = (testCase: TestCase | null) => {
     setEditingTestCase(testCase);
@@ -193,7 +208,7 @@ export default function TestCasesPage() {
         expectedResult: values.expectedResult,
         status: values.status,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        storyId: values.storyId === 'unassigned' ? undefined : values.storyId,
+        storyId: values.storyId === '' ? undefined : values.storyId,
     };
 
     let success = false;
@@ -252,6 +267,7 @@ export default function TestCasesPage() {
                 <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Assignees</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -259,7 +275,8 @@ export default function TestCasesPage() {
                 <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Stories</SelectItem>
-                  {stories.map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {stories.filter(s => s.itemType === 'Story').map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Button variant="ghost" onClick={clearFilters}>
@@ -395,7 +412,7 @@ export default function TestCasesPage() {
                   <FormField control={form.control} name="assigneeId" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Assignee</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Assign to a resource" /></SelectTrigger></FormControl>
                             <SelectContent>
                                 <SelectItem value="unassigned">Unassigned</SelectItem>
@@ -408,13 +425,38 @@ export default function TestCasesPage() {
                    <FormField control={form.control} name="storyId" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Related Story (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Link to a story" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="unassigned">None</SelectItem>
-                                {stories.map(story => <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                          <FormControl>
+                            <Input 
+                                list="story-options-tc" 
+                                placeholder="Select a story..." 
+                                value={relatedStoryInputText}
+                                onChange={(e) => {
+                                    const inputText = e.target.value;
+                                    setRelatedStoryInputText(inputText);
+                                    
+                                    const matchingOption = storyOptions.find(opt => opt.label === inputText);
+                                    if (matchingOption) {
+                                        field.onChange(matchingOption.value);
+                                    } else {
+                                        field.onChange('');
+                                    }
+                                }}
+                                onBlur={() => {
+                                    const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
+                                    if (!matchingOption) {
+                                        setRelatedStoryInputText('');
+                                        field.onChange('');
+                                    }
+                                }}
+                            />
+                          </FormControl>
+                          <datalist id="story-options-tc">
+                            {storyOptions.map(option => (
+                              <option key={option.value} value={option.label}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </datalist>
                         <FormMessage />
                       </FormItem>
                   )} />
