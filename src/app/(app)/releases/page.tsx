@@ -37,22 +37,32 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { type Release, type ReleaseItemType } from '@/types';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 
-const releaseSchema = z.object({
+const releaseSchemaBase = z.object({
   name: z.string().min(1, 'Name is required.'),
   description: z.string().optional(),
   startDate: z.string().min(1, 'Start date is required.'),
   endDate: z.string().min(1, 'End date is required.'),
-}).refine((data) => new Date(data.endDate) > new Date(data.startDate), {
-  message: "End date must be after the start date.",
-  path: ["endDate"],
+  parentReleaseId: z.string().optional(),
 });
+
+const releaseSchema = releaseSchemaBase.superRefine((data, ctx) => {
+    if (new Date(data.endDate) <= new Date(data.startDate)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End date must be after the start date.",
+        path: ["endDate"],
+      });
+    }
+  });
 
 export default function ReleasesPage() {
   const { releasesAndMilestones, addReleaseOrMilestone, updateReleaseOrMilestone, deleteReleaseOrMilestone } = useProject();
@@ -63,11 +73,14 @@ export default function ReleasesPage() {
   const [itemTypeToAdd, setItemTypeToAdd] = useState<ReleaseItemType>('Release');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const releases = releasesAndMilestones.filter(item => item.itemType === 'Release');
+
   const form = useForm<z.infer<typeof releaseSchema>>({
     resolver: zodResolver(releaseSchema),
   });
   
   const dialogTitle = editingItem ? `Edit ${editingItem.itemType}` : `Add New ${itemTypeToAdd}`;
+  const currentItemType = editingItem?.itemType || itemTypeToAdd;
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -77,6 +90,7 @@ export default function ReleasesPage() {
           description: editingItem.description,
           startDate: format(new Date(editingItem.startDate), 'yyyy-MM-dd'),
           endDate: format(new Date(editingItem.endDate), 'yyyy-MM-dd'),
+          parentReleaseId: editingItem.parentReleaseId,
         });
       } else {
         form.reset({
@@ -84,10 +98,35 @@ export default function ReleasesPage() {
           description: '',
           startDate: '',
           endDate: '',
+          parentReleaseId: undefined,
         });
       }
     }
   }, [isDialogOpen, editingItem, form]);
+  
+  // Custom validation refinement for the form based on item type
+  const refinedReleaseSchema = releaseSchema.refine((data) => {
+      if (currentItemType === 'Milestone') {
+        return !!data.parentReleaseId;
+      }
+      return true;
+    }, {
+      message: "A parent release is required for a milestone.",
+      path: ["parentReleaseId"],
+    });
+
+  // Re-initialize form with the refined schema
+  const refinedForm = useForm<z.infer<typeof refinedReleaseSchema>>({
+    resolver: zodResolver(refinedReleaseSchema),
+    defaultValues: form.getValues(), // get existing values
+  });
+  
+  // Sync forms when dialog opens
+  useEffect(() => {
+    if (isDialogOpen) {
+      refinedForm.reset(form.getValues());
+    }
+  }, [isDialogOpen, form, refinedForm]);
 
   const handleDialogOpen = (item: Release | null, type: ReleaseItemType = 'Release') => {
     setEditingItem(item);
@@ -106,20 +145,19 @@ export default function ReleasesPage() {
     setDeletingItem(null);
   };
 
-  const onSubmit = async (values: z.infer<typeof releaseSchema>) => {
+  const onSubmit = async (values: z.infer<typeof refinedReleaseSchema>) => {
     setIsSubmitting(true);
-    const releaseData = {
+    const releaseData: Partial<Release> = {
         name: values.name,
         description: values.description || '',
-        startDate: new Date(values.startDate),
-        endDate: new Date(values.endDate),
+        startDate: new Date(values.startDate).toISOString(),
+        endDate: new Date(values.endDate).toISOString(),
+        parentReleaseId: values.parentReleaseId || undefined,
     };
-
-    const currentItemType = editingItem?.itemType || itemTypeToAdd;
 
     const success = editingItem
       ? await updateReleaseOrMilestone(editingItem.id, releaseData)
-      : await addReleaseOrMilestone({ ...releaseData, itemType: currentItemType });
+      : await addReleaseOrMilestone({ ...releaseData, itemType: currentItemType } as Omit<Release, 'id' | 'releaseId'>);
 
     if (success) {
       toast({ title: "Success", description: `${currentItemType} ${editingItem ? 'updated' : 'added'} successfully.` });
@@ -130,6 +168,13 @@ export default function ReleasesPage() {
     }
     setIsSubmitting(false);
   };
+  
+  const getParentReleaseName = (parentReleaseId?: string) => {
+    if (!parentReleaseId) return 'N/A';
+    const parent = releases.find(r => r.id === parentReleaseId);
+    return parent ? `(${parent.releaseId}) ${parent.name}` : 'N/A';
+  }
+
 
   return (
     <>
@@ -139,7 +184,7 @@ export default function ReleasesPage() {
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Release
           </Button>
-           <Button onClick={() => handleDialogOpen(null, 'Milestone')}>
+           <Button onClick={() => handleDialogOpen(null, 'Milestone')} disabled={releases.length === 0} title={releases.length === 0 ? "Create a Release first" : ""}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Milestone
           </Button>
@@ -150,7 +195,8 @@ export default function ReleasesPage() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead className="w-[40%]">Description</TableHead>
+                <TableHead>Parent Release</TableHead>
+                <TableHead className="w-[30%]">Description</TableHead>
                 <TableHead>Start Date</TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -159,8 +205,13 @@ export default function ReleasesPage() {
             <TableBody>
               {releasesAndMilestones.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.releaseId}</TableCell>
+                  <TableCell className="font-medium">
+                    <Badge variant={item.itemType === 'Release' ? 'default' : 'secondary'}>
+                        {item.releaseId}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{item.name}</TableCell>
+                   <TableCell>{item.itemType === 'Milestone' ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
                   <TableCell className="break-words">{item.description}</TableCell>
                   <TableCell>{format(new Date(item.startDate), 'PPP')}</TableCell>
                   <TableCell>{format(new Date(item.endDate), 'PPP')}</TableCell>
@@ -184,21 +235,43 @@ export default function ReleasesPage() {
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Form {...refinedForm}>
+            <form onSubmit={refinedForm.handleSubmit(onSubmit)} className="space-y-4">
+               {currentItemType === 'Milestone' && (
+                  <FormField
+                    control={refinedForm.control}
+                    name="parentReleaseId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Parent Release</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select a parent release..." /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {releases.map(release => (
+                              <SelectItem key={release.id} value={release.id}>
+                                [{release.releaseId}] {release.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               <FormField
-                control={form.control}
+                control={refinedForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Name</FormLabel>
-                    <FormControl><Input placeholder={`E.g., Q3 2024 ${editingItem?.itemType || itemTypeToAdd}`} {...field} /></FormControl>
+                    <FormControl><Input placeholder={`E.g., Q3 2024 ${currentItemType}`} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
-                control={form.control}
+                control={refinedForm.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -209,7 +282,7 @@ export default function ReleasesPage() {
                 )}
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField control={form.control} name="startDate" render={({ field }) => (
+                 <FormField control={refinedForm.control} name="startDate" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Start Date</FormLabel>
                         <FormControl>
@@ -218,7 +291,7 @@ export default function ReleasesPage() {
                         <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={form.control} name="endDate" render={({ field }) => (
+                <FormField control={refinedForm.control} name="endDate" render={({ field }) => (
                     <FormItem>
                         <FormLabel>End Date</FormLabel>
                         <FormControl>
@@ -230,7 +303,7 @@ export default function ReleasesPage() {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (editingItem ? 'Saving...' : 'Creating...') : (editingItem ? 'Save Changes' : `Create ${itemTypeToAdd}`)}
+                  {isSubmitting ? (editingItem ? 'Saving...' : 'Creating...') : (editingItem ? 'Save Changes' : `Create ${currentItemType}`)}
                 </Button>
               </DialogFooter>
             </form>

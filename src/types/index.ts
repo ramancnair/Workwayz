@@ -186,4 +186,5 @@ export type Release = {
   startDate: string; // ISO String
   endDate: string; // ISO String
   itemType: ReleaseItemType;
+  parentReleaseId?: string;
 };
