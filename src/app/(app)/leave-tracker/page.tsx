@@ -11,6 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
 import type { Employee } from '@/types';
+import { Edit, Save, XCircle } from 'lucide-react';
 
 export default function LeaveTrackerPage() {
   const { employees, holidays, weeklyOffDays, updateEmployeeLeaves, isLoading } = useProject();
@@ -19,6 +20,7 @@ export default function LeaveTrackerPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [leaveDates, setLeaveDates] = useState<Date[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isEditing, setIsEditing] = useState(false);
 
   const today = new Date();
   const startOfCurrentYear = new Date(today.getFullYear(), 0, 1);
@@ -40,9 +42,12 @@ export default function LeaveTrackerPage() {
     } else {
       setLeaveDates([]);
     }
+    setIsEditing(false); // Reset editing mode when employee changes
   }, [selectedEmployee]);
 
   const handleDayClick = (day: Date) => {
+    if (!isEditing) return;
+
     const isPastMonth = startOfMonth(day) < startOfCurrentMonth;
     const isHoliday = holidayDates.some(h => isSameDay(h, day));
     const isWeeklyOff = weeklyOffDays.includes(day.getDay());
@@ -73,15 +78,29 @@ export default function LeaveTrackerPage() {
     const success = await updateEmployeeLeaves(selectedEmployee.id, leaveDateStrings);
     if (success) {
       toast({ title: 'Success', description: 'Leave dates updated successfully.' });
+      setIsEditing(false);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update leave dates.' });
     }
   };
+
+  const handleCancel = () => {
+    if (selectedEmployee?.leaveDates) {
+      setLeaveDates(selectedEmployee.leaveDates.map(d => new Date(d)));
+    } else {
+      setLeaveDates([]);
+    }
+    setIsEditing(false);
+  }
   
   const isDateDisabled = (date: Date) => {
-    return startOfMonth(date) < startOfCurrentMonth || 
-           weeklyOffDays.includes(date.getDay()) || 
-           holidayDates.some(h => isSameDay(h, date));
+    const isPastMonth = startOfMonth(date) < startOfCurrentMonth;
+    const isHoliday = holidayDates.some(h => isSameDay(h, date));
+    const isWeeklyOff = weeklyOffDays.includes(date.getDay());
+
+    if (!isEditing) return true; // Disable all clicks if not editing
+
+    return isPastMonth || isWeeklyOff || isHoliday;
   }
 
   return (
@@ -109,9 +128,19 @@ export default function LeaveTrackerPage() {
       
       {selectedEmployee && (
         <Card>
-          <CardHeader>
-            <CardTitle>Mark Leave Dates for {selectedEmployee.firstName}</CardTitle>
-            <CardDescription>Click on dates to mark them as leave. Click again to unmark.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Leave Calendar for {selectedEmployee.firstName}</CardTitle>
+              <CardDescription>
+                {isEditing ? "Click on dates to mark them as leave. Click again to unmark." : "Viewing scheduled leave days."}
+              </CardDescription>
+            </div>
+             {!isEditing && (
+              <Button onClick={() => setIsEditing(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Leaves
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="flex flex-col items-center">
             <Calendar
@@ -126,13 +155,22 @@ export default function LeaveTrackerPage() {
               className="rounded-md border"
               footer={
                 <p className="text-sm text-center pt-2 text-muted-foreground">
-                  You have selected {leaveDates.length} leave days.
+                  {leaveDates.length} leave days selected.
                 </p>
               }
             />
-            <Button onClick={handleSubmit} className="mt-4">
-              Submit Leaves for {selectedEmployee.firstName}
-            </Button>
+            {isEditing && (
+                <div className="flex gap-4 mt-4">
+                    <Button onClick={handleSubmit}>
+                        <Save className="mr-2 h-4 w-4" />
+                        Submit Leaves
+                    </Button>
+                     <Button variant="outline" onClick={handleCancel}>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Cancel
+                    </Button>
+                </div>
+            )}
           </CardContent>
         </Card>
       )}
