@@ -154,14 +154,21 @@ export default function DevelopmentTasksPage() {
 
     if (sorting) {
       filtered.sort((a, b) => {
-        const valA = (a as any)[sorting.id];
-        const valB = (b as any)[sorting.id];
+        let valA: any, valB: any;
+
+        if (sorting.id === 'sprintId') {
+            valA = sprints.find(s => s.id === a.sprintId)?.title || 'Backlog';
+            valB = sprints.find(s => s.id === b.sprintId)?.title || 'Backlog';
+        } else {
+            valA = (a as any)[sorting.id];
+            valB = (b as any)[sorting.id];
+        }
 
         if (valA === null || valA === undefined) return 1;
         if (valB === null || valB === undefined) return -1;
         
         let comparison = 0;
-        if (['startDate', 'endDate'].includes(sorting.id)) {
+        if (['startDate', 'endDate'].includes(sorting.id) && valA && valB) {
             comparison = new Date(valA).getTime() - new Date(valB).getTime();
         } else if (typeof valA === 'string' && typeof valB === 'string') {
           comparison = valA.localeCompare(valB, undefined, { numeric: true });
@@ -176,7 +183,7 @@ export default function DevelopmentTasksPage() {
     }
 
     return filtered;
-  }, [tasks, filters, sorting]);
+  }, [tasks, filters, sorting, sprints]);
 
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
@@ -338,10 +345,9 @@ export default function DevelopmentTasksPage() {
               <SortableHeader columnId="storyId">ID</SortableHeader>
               <SortableHeader columnId="title" className="w-[30%]">Title</SortableHeader>
               <SortableHeader columnId="status">Status</SortableHeader>
+              <SortableHeader columnId="sprintId">Sprint</SortableHeader>
               <TableHead>Assignee</TableHead>
               <TableHead>Impacted System</TableHead>
-              <SortableHeader columnId="startDate">Start Date</SortableHeader>
-              <SortableHeader columnId="endDate">End Date</SortableHeader>
               <SortableHeader columnId="effortDays">Effort</SortableHeader>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -350,6 +356,7 @@ export default function DevelopmentTasksPage() {
             {filteredAndSortedTasks.map((task) => {
               const assignee = employees.find(e => e.id === task.assigneeId);
               const impactedSystem = impactedSystems.find(s => s.id === task.impactedSystemId);
+              const sprint = sprints.find(s => s.id === task.sprintId);
               return (
                 <TableRow key={task.id}>
                   <TableCell className="font-medium">{task.storyId}</TableCell>
@@ -359,6 +366,7 @@ export default function DevelopmentTasksPage() {
                       {task.status}
                     </Badge>
                   </TableCell>
+                  <TableCell>{sprint?.title || 'Backlog'}</TableCell>
                   <TableCell>
                     {assignee ? (
                       <div className="flex items-center gap-2">
@@ -371,8 +379,6 @@ export default function DevelopmentTasksPage() {
                     ) : "Unassigned"}
                   </TableCell>
                   <TableCell>{impactedSystem?.name || 'N/A'}</TableCell>
-                  <TableCell>{task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell>{task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A'}</TableCell>
                   <TableCell>{task.effortDays ? `${task.effortDays}d` : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(task)}>
