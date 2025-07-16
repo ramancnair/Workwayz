@@ -1,8 +1,4 @@
 
-
-
-
-
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -179,4 +175,11 @@ export type ImpactedSystem = {
   category: ImpactedSystemCategory;
 };
 
-    
+export type Release = {
+  id: string;
+  releaseId: string;
+  name: string;
+  description: string;
+  startDate: string; // ISO String
+  endDate: string; // ISO String
+};

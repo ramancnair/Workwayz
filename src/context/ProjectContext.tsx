@@ -1,7 +1,4 @@
 
-
-
-
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
@@ -23,7 +20,7 @@ import {
   getDoc,
   setDoc,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 
 // Helper to remove undefined values from an object before sending to Firestore
@@ -54,6 +51,7 @@ interface ProjectContextType {
   dependencies: Dependency[];
   kanbanColumns: KanbanColumn[];
   holidays: Holiday[];
+  releases: Release[];
   projectSettings: ProjectSettings | null,
   weeklyOffDays: number[];
   impactedSystems: ImpactedSystem[];
@@ -107,6 +105,11 @@ interface ProjectContextType {
   addDependency: (dependency: Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate: Date }) => Promise<boolean>;
   updateDependency: (dependencyId: string, data: Partial<Omit<Dependency, 'id' | 'dependencyId'| 'expectedByDate'> & { expectedByDate?: Date }>) => Promise<boolean>;
   deleteDependency: (dependencyId: string) => Promise<boolean>;
+  
+  // Release actions
+  addRelease: (release: Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate'> & { startDate: Date, endDate: Date }) => Promise<boolean>;
+  updateRelease: (releaseId: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate' > & { startDate?: Date, endDate?: Date }>) => Promise<boolean>;
+  deleteRelease: (releaseId: string) => Promise<boolean>;
 
   // Kanban Column actions
   addKanbanColumn: (column: Omit<KanbanColumn, 'id' | 'isDefault' | 'isDoneColumn'>) => Promise<boolean>;
@@ -156,6 +159,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [releases, setReleases] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,6 +184,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         { name: 'dependencies', setState: setDependencies },
         { name: 'kanbanColumns', setState: setKanbanColumns },
         { name: 'holidays', setState: setHolidays },
+        { name: 'releases', setState: setReleases },
         { name: 'impactedSystems', setState: setImpactedSystems },
     ];
     
@@ -226,6 +231,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                         issues: ['reportedDate', 'resolvedDate'],
                         dependencies: ['expectedByDate'],
                         holidays: ['date'],
+                        releases: ['startDate', 'endDate'],
                     };
 
                     if (dateFields[name]) {
@@ -816,6 +822,49 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         return false;
     }
   };
+  
+  // Release Actions
+  const addRelease = async (release: Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate'> & { startDate: Date, endDate: Date }): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const snapshot = await getDocs(collection(db, 'releases'));
+      const newId = `REL-${snapshot.size + 1}`;
+      const payload: any = { ...release, releaseId: newId };
+      payload.startDate = Timestamp.fromDate(release.startDate);
+      payload.endDate = Timestamp.fromDate(release.endDate);
+      await addDoc(collection(db, 'releases'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add release.", { code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const updateRelease = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId'| 'startDate' | 'endDate'> & { startDate?: Date, endDate?: Date }>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const { startDate, endDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(startDate) : null;
+      if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(endDate) : null;
+      await updateDoc(doc(db, 'releases', id), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update release.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const deleteRelease = async (id: string): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, 'releases', id));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete release.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
 
   // Settings Actions
   const setWeeklyOffDays = async (days: number[]): Promise<boolean> => {
@@ -926,6 +975,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     dependencies,
     kanbanColumns,
     holidays,
+    releases,
     projectSettings,
     weeklyOffDays: projectSettings?.weeklyOffDays || [0, 6],
     impactedSystems,
@@ -963,6 +1013,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addDependency,
     updateDependency,
     deleteDependency,
+    addRelease,
+    updateRelease,
+    deleteRelease,
     addKanbanColumn,
     updateKanbanColumn,
     deleteKanbanColumn,
@@ -1013,5 +1066,3 @@ export function useProject() {
   }
   return context;
 }
-
-    

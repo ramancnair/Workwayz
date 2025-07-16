@@ -15,16 +15,18 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const isSettingsPath = pathname.startsWith('/settings');
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isArchitecturePath = pathname.startsWith('/architecture');
+  const isReleasesPath = pathname.startsWith('/releases');
   const isResourcesPath = ['/resources', '/project-gantt'].some(p => pathname.startsWith(p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = ['/holiday-calendar', '/leave-tracker'].some(p => pathname.startsWith(p));
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isSettingsPath;
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isReleasesPath && !isSettingsPath;
 
   const getTabValue = () => {
     if (isDevelopmentPath) return 'development';
     if (isTestingPath) return 'testing';
     if (isArchitecturePath) return 'architecture';
+    if (isReleasesPath) return 'releases';
     if (isResourcesPath) return 'resources';
     if (isGovernancePath) return 'governance';
     if (isHolidaysPath) return 'holidays';
@@ -38,6 +40,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/dashboard/testing');
     } else if (value === 'architecture') {
       router.push('/architecture');
+    } else if (value === 'releases') {
+      router.push('/releases');
     } else if (value === 'resources') {
       router.push('/resources');
     } else if (value === 'governance') {
@@ -61,6 +65,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                         <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
                         <TabsTrigger value="architecture" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Architecture</TabsTrigger>
+                        <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
                         <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                         <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
                         <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>

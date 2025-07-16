@@ -36,6 +36,7 @@ import {
   ClipboardList,
   Network,
   CalendarCheck,
+  Package,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -90,6 +91,14 @@ export function SidebarNav() {
       label: "Impacted Systems",
       icon: Network,
     },
+  ];
+  
+  const releasesMenuItems = [
+    {
+      href: "/releases",
+      label: "Project Releases",
+      icon: Package,
+    }
   ];
 
   const resourcesMenuItems = [
@@ -161,6 +170,7 @@ export function SidebarNav() {
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isArchitecturePath = pathname.startsWith('/architecture');
+  const isReleasesPath = pathname.startsWith('/releases');
   const isResourcesPath = ['/resources', '/project-gantt'].some(p => pathname.startsWith(p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = ['/holiday-calendar', '/leave-tracker'].some(p => pathname.startsWith(p));
@@ -169,6 +179,7 @@ export function SidebarNav() {
   const menuItems = isSettingsPath ? settingsMenuItems
     : isTestingPath ? testMenuItems 
     : isArchitecturePath ? architectureMenuItems
+    : isReleasesPath ? releasesMenuItems
     : isResourcesPath ? resourcesMenuItems 
     : isGovernancePath ? governanceMenuItems 
     : isHolidaysPath ? holidayMenuItems 
