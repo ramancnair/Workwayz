@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,9 +38,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
 import { type TestCase, type TestCaseStatus, type TestCaseType } from '@/types';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -77,9 +77,74 @@ export default function TestCasesPage() {
   const [deletingTestCase, setDeletingTestCase] = useState<TestCase | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [filters, setFilters] = useState({
+    status: 'all',
+    type: 'all',
+    assigneeId: 'all',
+    storyId: 'all',
+  });
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
+
   const form = useForm<z.infer<typeof testCaseFormSchema>>({
     resolver: zodResolver(testCaseFormSchema),
   });
+  
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ status: 'all', type: 'all', assigneeId: 'all', storyId: 'all' });
+  };
+  
+  const handleSort = (columnId: string) => {
+    if (sorting?.id === columnId) {
+      setSorting({ ...sorting, desc: !sorting.desc });
+    } else {
+      setSorting({ id: columnId, desc: false });
+    }
+  };
+
+  const filteredAndSortedTestCases = useMemo(() => {
+    let filtered = [...testCases];
+
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(tc => tc.status === filters.status);
+    }
+    if (filters.type !== 'all') {
+      filtered = filtered.filter(tc => tc.type === filters.type);
+    }
+    if (filters.assigneeId !== 'all') {
+      filtered = filtered.filter(tc => tc.assigneeId === filters.assigneeId);
+    }
+    if (filters.storyId !== 'all') {
+      filtered = filtered.filter(tc => tc.storyId === filters.storyId);
+    }
+
+    if (sorting) {
+      filtered.sort((a, b) => {
+        const valA = (a as any)[sorting.id];
+        const valB = (b as any)[sorting.id];
+
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+        
+        let comparison = 0;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB, undefined, { numeric: true });
+        } else if (valA > valB) {
+          comparison = 1;
+        } else if (valA < valB) {
+          comparison = -1;
+        }
+
+        return sorting.desc ? -comparison : comparison;
+      });
+    }
+
+    return filtered;
+  }, [testCases, filters, sorting]);
+
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -148,6 +213,15 @@ export default function TestCasesPage() {
     setIsSubmitting(false);
   };
 
+  const SortableHeader = ({ columnId, children }: { columnId: string, children: React.ReactNode }) => (
+    <TableHead>
+      <Button variant="ghost" onClick={() => handleSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -158,20 +232,55 @@ export default function TestCasesPage() {
           </Button>
         </PageHeader>
         <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {testCaseStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {testCaseTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+               <Select value={filters.assigneeId} onValueChange={(v) => handleFilterChange('assigneeId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Assignees</SelectItem>
+                  {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                </SelectContent>
+              </Select>
+               <Select value={filters.storyId} onValueChange={(v) => handleFilterChange('storyId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stories</SelectItem>
+                  {stories.map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" onClick={clearFilters}>
+                <X className="mr-2 h-4 w-4" /> Clear Filters
+              </Button>
+            </div>
+          </CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
+                <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                <SortableHeader columnId="title">Title</SortableHeader>
+                <SortableHeader columnId="type">Type</SortableHeader>
+                <SortableHeader columnId="status">Status</SortableHeader>
                 <TableHead>Assignee</TableHead>
                 <TableHead>Story</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {testCases.map((tc) => {
+              {filteredAndSortedTestCases.map((tc) => {
                 const assignee = employees.find(e => e.id === tc.assigneeId);
                 const story = stories.find(s => s.id === tc.storyId);
                 return (
