@@ -136,7 +136,7 @@ export default function ReleasesPage() {
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Release
           </Button>
-           <Button onClick={() => handleDialogOpen(null, 'Milestone')} variant="outline">
+           <Button onClick={() => handleDialogOpen(null, 'Milestone')}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Milestone
           </Button>
