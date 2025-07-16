@@ -77,6 +77,7 @@ export default function DevelopmentTasksPage() {
   const [editingTask, setEditingTask] = useState<Story | null>(null);
   const [deletingTask, setDeletingTask] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   
   const tasks = stories.filter(story => story.itemType === 'Task');
 
@@ -199,9 +200,18 @@ export default function DevelopmentTasksPage() {
     }
   }, [watchedStartDate, watchedEffortDays, form, holidays, weeklyOffDays]);
 
+  const storyOptions = useMemo(() => stories
+    .filter(s => s.itemType === 'Story')
+    .map(story => ({
+      value: story.id,
+      label: `[${story.storyId}] ${story.title}`,
+    })), [stories]);
+
   useEffect(() => {
     if (isDialogOpen) {
       if (editingTask) {
+        const relatedStory = storyOptions.find(opt => opt.value === editingTask.epicId);
+        setRelatedStoryInputText(relatedStory?.label || '');
         form.reset({
           title: editingTask.title,
           description: editingTask.description || '',
@@ -216,6 +226,7 @@ export default function DevelopmentTasksPage() {
           impactedSystemId: editingTask.impactedSystemId || 'unassigned',
         });
       } else {
+        setRelatedStoryInputText('');
         form.reset({
           title: '',
           description: '',
@@ -231,7 +242,7 @@ export default function DevelopmentTasksPage() {
         });
       }
     }
-  }, [isDialogOpen, editingTask, form]);
+  }, [isDialogOpen, editingTask, form, storyOptions]);
 
   const handleDialogOpen = (task: Story | null) => {
     setEditingTask(task);
@@ -292,13 +303,6 @@ export default function DevelopmentTasksPage() {
       </Button>
     </TableHead>
   );
-
-  const storyOptions = stories
-    .filter(s => s.itemType === 'Story')
-    .map(story => ({
-      value: story.id,
-      label: `[${story.storyId}] ${story.title}`,
-    }));
 
   return (
     <>
@@ -487,11 +491,34 @@ export default function DevelopmentTasksPage() {
                         <FormItem>
                           <FormLabel>Related Story</FormLabel>
                           <FormControl>
-                            <Input list="story-options" placeholder="Select a story..." {...field} />
+                            <Input 
+                                list="story-options" 
+                                placeholder="Select a story..." 
+                                value={relatedStoryInputText}
+                                onChange={(e) => {
+                                    const inputText = e.target.value;
+                                    setRelatedStoryInputText(inputText);
+                                    
+                                    const matchingOption = storyOptions.find(opt => opt.label === inputText);
+                                    if (matchingOption) {
+                                        field.onChange(matchingOption.value);
+                                    } else {
+                                        field.onChange('');
+                                    }
+                                }}
+                                onBlur={() => {
+                                    // If text doesn't match a valid option, clear it
+                                    const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
+                                    if (!matchingOption) {
+                                        setRelatedStoryInputText('');
+                                        field.onChange('');
+                                    }
+                                }}
+                            />
                           </FormControl>
                           <datalist id="story-options">
                             {storyOptions.map(option => (
-                              <option key={option.value} value={option.value}>
+                              <option key={option.value} value={option.label}>
                                 {option.label}
                               </option>
                             ))}
@@ -604,5 +631,3 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
-
-    
