@@ -312,6 +312,14 @@ export default function DevelopmentTasksPage() {
                   {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sprints</SelectItem>
+                  <SelectItem value="backlog">Backlog</SelectItem>
+                  {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
               <Select value={filters.assigneeId} onValueChange={(v) => handleFilterChange('assigneeId', v)}>
                 <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by assignee..."/></SelectTrigger>
                 <SelectContent>
@@ -324,14 +332,6 @@ export default function DevelopmentTasksPage() {
                 <SelectContent>
                   <SelectItem value="all">All Systems</SelectItem>
                   {impactedSystems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sprints</SelectItem>
-                  <SelectItem value="backlog">Backlog</SelectItem>
-                  {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Button variant="ghost" onClick={clearFilters}>
