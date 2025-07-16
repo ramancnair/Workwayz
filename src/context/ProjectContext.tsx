@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
@@ -53,6 +54,7 @@ interface ProjectContextType {
   dependencies: Dependency[];
   kanbanColumns: KanbanColumn[];
   holidays: Holiday[];
+  projectSettings: ProjectSettings | null,
   weeklyOffDays: number[];
   impactedSystems: ImpactedSystem[];
   
@@ -112,8 +114,9 @@ interface ProjectContextType {
   deleteKanbanColumn: (columnId: string) => Promise<boolean>;
   updateKanbanColumnOrder: (oldIndex: number, newIndex: number) => Promise<boolean>;
   
-  // Holiday/Settings actions
+  // Settings actions
   setWeeklyOffDays: (days: number[]) => Promise<boolean>;
+  updateSprintSettings: (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>) => Promise<boolean>;
   addHoliday: (holiday: Omit<Holiday, 'id'>) => Promise<boolean>;
   updateHoliday: (id: string, data: Partial<Omit<Holiday, 'id'>>) => Promise<boolean>;
   deleteHoliday: (id: string) => Promise<boolean>;
@@ -135,6 +138,12 @@ const defaultKanbanColumns: Omit<KanbanColumn, 'id'>[] = [
   { name: 'Done', order: 2, isDefault: true, isDoneColumn: true },
 ];
 
+const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
+  weeklyOffDays: [0, 6],
+  sprintDurationInWeeks: 2,
+  sprintStartDay: 1, // Monday
+};
+
 export function ProjectProvider({ children }: PropsWithChildren) {
   const [epics, setEpics] = useState<Epic[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
@@ -148,7 +157,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
-  const [projectSettings, setProjectSettings] = useState<ProjectSettings>({ id: 'main', weeklyOffDays: [0, 6] });
+  const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -181,7 +190,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         setProjectSettings({ id: doc.id, ...doc.data() } as ProjectSettings);
       } else {
         // Initialize settings if they don't exist
-        setDoc(settingsDocRef, { weeklyOffDays: [0, 6] }).catch(e => console.error("Failed to set default project settings", e));
+        setDoc(settingsDocRef, defaultProjectSettings).catch(e => console.error("Failed to set default project settings", e));
       }
     });
 
@@ -808,7 +817,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
-  // Holiday/Settings Actions
+  // Settings Actions
   const setWeeklyOffDays = async (days: number[]): Promise<boolean> => {
     if (!db) return false;
     try {
@@ -817,6 +826,18 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to set weekly off days.", e);
+      return false;
+    }
+  };
+  
+  const updateSprintSettings = async (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const settingsRef = doc(db, 'projectSettings', 'main');
+      await setDoc(settingsRef, sanitizeForFirestore(settings), { merge: true });
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to update sprint settings.", e);
       return false;
     }
   };
@@ -905,7 +926,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     dependencies,
     kanbanColumns,
     holidays,
-    weeklyOffDays: projectSettings.weeklyOffDays,
+    projectSettings,
+    weeklyOffDays: projectSettings?.weeklyOffDays || [0, 6],
     impactedSystems,
     isLoading,
     error,
@@ -946,6 +968,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     deleteKanbanColumn,
     updateKanbanColumnOrder,
     setWeeklyOffDays,
+    updateSprintSettings,
     addHoliday,
     updateHoliday,
     deleteHoliday,

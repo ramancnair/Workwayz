@@ -205,6 +205,7 @@ export default function BacklogPage() {
     setCurrentSprint,
     addStory,
     updateStory,
+    projectSettings,
   } = useProject();
   
   const { toast } = useToast();
@@ -284,11 +285,34 @@ export default function BacklogPage() {
   }, [editingSprint, editSprintForm]);
   
   useEffect(() => {
-    if (!addSprintOpen) {
-      addSprintForm.reset({ title: `Sprint ${sprints.length + 1}` });
+    if (addSprintOpen) {
+      const { sprintDurationInWeeks = 2, sprintStartDay = 1 } = projectSettings || {};
+      const latestSprintEnd = sprints.length > 0 
+        ? new Date(Math.max(...sprints.map(s => s.endDate ? new Date(s.endDate).getTime() : 0)))
+        : new Date();
+
+      let nextStartDate = new Date(latestSprintEnd);
+      if (sprints.length > 0) {
+        nextStartDate.setDate(nextStartDate.getDate() + 1);
+      }
+      
+      while (nextStartDate.getDay() !== sprintStartDay) {
+        nextStartDate.setDate(nextStartDate.getDate() + 1);
+      }
+
+      const nextEndDate = new Date(nextStartDate);
+      nextEndDate.setDate(nextStartDate.getDate() + (sprintDurationInWeeks * 7) - 1);
+      
+      addSprintForm.reset({ 
+        title: `Sprint ${sprints.length + 1}`,
+        startDate: format(nextStartDate, 'yyyy-MM-dd'),
+        endDate: format(nextEndDate, 'yyyy-MM-dd'),
+       });
+    } else {
+      addSprintForm.reset();
       setAddSprintSubmitting(false);
     }
-  }, [addSprintOpen, sprints.length, addSprintForm]);
+  }, [addSprintOpen, sprints, projectSettings, addSprintForm]);
 
   useEffect(() => {
     if (!selectedStory) {

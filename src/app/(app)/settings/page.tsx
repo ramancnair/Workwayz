@@ -14,6 +14,7 @@ import { Trash2, PlusCircle, GripVertical } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import type { KanbanColumn } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DndContext,
   closestCenter,
@@ -34,15 +35,20 @@ const swimlaneSchema = z.object({
   name: z.string().min(1, 'Swimlane name is required'),
 });
 
-const settingsSchema = z.object({
-  swimlanes: z.array(z.object({
-    id: z.string(),
-    name: z.string().min(1, 'Name is required'),
-    order: z.number(),
-    isDefault: z.boolean(),
-    isDoneColumn: z.boolean(),
-  })).min(3, 'You must have at least 3 swimlanes.'),
+const sprintSettingsSchema = z.object({
+    sprintDurationInWeeks: z.coerce.number().min(1, 'Duration must be at least 1 week.').max(8, 'Duration cannot exceed 8 weeks.'),
+    sprintStartDay: z.coerce.number().min(0).max(6),
 });
+
+const weekDays = [
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+  { value: 0, label: 'Sunday' },
+];
 
 function SortableItem({ column }: { column: KanbanColumn }) {
     const { kanbanColumns, updateKanbanColumn, deleteKanbanColumn } = useProject();
@@ -118,7 +124,7 @@ function SortableItem({ column }: { column: KanbanColumn }) {
 }
 
 export default function SettingsPage() {
-  const { kanbanColumns, addKanbanColumn, updateKanbanColumnOrder } = useProject();
+  const { kanbanColumns, addKanbanColumn, updateKanbanColumnOrder, projectSettings, updateSprintSettings } = useProject();
   const { toast } = useToast();
 
   const sortedColumns = [...kanbanColumns].sort((a, b) => a.order - b.order);
@@ -126,6 +132,14 @@ export default function SettingsPage() {
   const newSwimlaneForm = useForm<z.infer<typeof swimlaneSchema>>({
     resolver: zodResolver(swimlaneSchema),
     defaultValues: { name: '' },
+  });
+
+  const sprintSettingsForm = useForm<z.infer<typeof sprintSettingsSchema>>({
+    resolver: zodResolver(sprintSettingsSchema),
+    defaultValues: {
+      sprintDurationInWeeks: projectSettings?.sprintDurationInWeeks || 2,
+      sprintStartDay: projectSettings?.sprintStartDay || 1,
+    }
   });
 
   const sensors = useSensors(
@@ -159,6 +173,15 @@ export default function SettingsPage() {
       }
     }
   }
+
+  const onSprintSettingsSubmit = async (values: z.infer<typeof sprintSettingsSchema>) => {
+    const success = await updateSprintSettings(values);
+    if (success) {
+      toast({ title: 'Success', description: 'Sprint settings updated.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update sprint settings.' });
+    }
+  };
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -212,6 +235,62 @@ export default function SettingsPage() {
               </div>
             </div>
           </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Sprint Settings</CardTitle>
+                <CardDescription>
+                    Configure the default duration and start day for new sprints.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...sprintSettingsForm}>
+                    <form
+                        onSubmit={sprintSettingsForm.handleSubmit(onSprintSettingsSubmit)}
+                        className="space-y-4 max-w-md"
+                    >
+                        <FormField
+                            control={sprintSettingsForm.control}
+                            name="sprintDurationInWeeks"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Sprint Duration (in weeks)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={sprintSettingsForm.control}
+                            name="sprintStartDay"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Sprint Start Day</FormLabel>
+                                    <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {weekDays.map(day => (
+                                                <SelectItem key={day.value} value={String(day.value)}>
+                                                    {day.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit">Save Sprint Settings</Button>
+                    </form>
+                </Form>
+            </CardContent>
         </Card>
       </div>
     </div>
