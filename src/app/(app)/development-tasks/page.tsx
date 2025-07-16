@@ -46,6 +46,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays, parseISO, isSameDay } from 'date-fns';
+import { Combobox } from '@/components/ui/combobox';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -293,6 +294,13 @@ export default function DevelopmentTasksPage() {
     </TableHead>
   );
 
+  const storyOptions = stories
+    .filter(s => s.itemType === 'Story')
+    .map(story => ({
+      value: story.id,
+      label: `[${story.storyId}] ${story.title}`,
+    }));
+
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -474,25 +482,22 @@ export default function DevelopmentTasksPage() {
                 </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                    control={form.control}
-                    name="epicId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Related Story</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Link to a story" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="unassigned">None</SelectItem>
-                            {stories.filter(s => s.itemType === 'Story').map(story => (
-                                <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
+                      control={form.control}
+                      name="epicId"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Related Story</FormLabel>
+                          <Combobox
+                            options={storyOptions}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select a story..."
+                            searchPlaceholder="Search stories..."
+                            noResultsText="No story found."
+                          />
+                          <FormMessage />
                         </FormItem>
-                    )}
+                      )}
                     />
                     <FormField
                     control={form.control}
