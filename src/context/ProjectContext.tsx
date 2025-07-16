@@ -107,8 +107,8 @@ interface ProjectContextType {
   deleteDependency: (dependencyId: string) => Promise<boolean>;
   
   // Release & Milestone actions
-  addReleaseOrMilestone: (item: Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate'> & { startDate: Date, endDate: Date }) => Promise<boolean>;
-  updateReleaseOrMilestone: (id: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate' | 'itemType' > & { startDate?: Date, endDate?: Date }>) => Promise<boolean>;
+  addReleaseOrMilestone: (item: Omit<Release, 'id' | 'releaseId'>) => Promise<boolean>;
+  updateReleaseOrMilestone: (id: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'itemType' >>) => Promise<boolean>;
   deleteReleaseOrMilestone: (id: string) => Promise<boolean>;
 
   // Kanban Column actions
@@ -824,16 +824,17 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
   
   // Release & Milestone Actions
-  const addReleaseOrMilestone = async (item: Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate'> & { startDate: Date, endDate: Date }): Promise<boolean> => {
+  const addReleaseOrMilestone = async (item: Omit<Release, 'id' | 'releaseId'>): Promise<boolean> => {
     if (!db) return false;
     try {
+      const { startDate, endDate, ...rest } = item;
       const snapshot = await getDocs(query(collection(db, 'releases'), where('itemType', '==', item.itemType)));
       const prefix = item.itemType === 'Release' ? 'REL' : 'M';
       const newId = `${prefix}-${snapshot.size + 1}`;
       
-      const payload: any = { ...item, releaseId: newId };
-      payload.startDate = Timestamp.fromDate(item.startDate);
-      payload.endDate = Timestamp.fromDate(item.endDate);
+      const payload: any = { ...rest, releaseId: newId };
+      if(startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
+      if(endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
       
       await addDoc(collection(db, 'releases'), sanitizeForFirestore(payload));
       return true;
@@ -843,13 +844,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const updateReleaseOrMilestone = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId'| 'startDate' | 'endDate' | 'itemType'> & { startDate?: Date, endDate?: Date }>): Promise<boolean> => {
+  const updateReleaseOrMilestone = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'itemType' >>): Promise<boolean> => {
     if (!db) return false;
     try {
       const { startDate, endDate, ...rest } = data;
       const payload: any = { ...rest };
-      if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(startDate) : null;
-      if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(endDate) : null;
+      if (data.hasOwnProperty('startDate') && startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
+      if (data.hasOwnProperty('endDate') && endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
       await updateDoc(doc(db, 'releases', id), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {

@@ -147,17 +147,18 @@ export default function ReleasesPage() {
 
   const onSubmit = async (values: z.infer<typeof refinedReleaseSchema>) => {
     setIsSubmitting(true);
-    const releaseData: Partial<Release> = {
+    const releaseData = {
         name: values.name,
         description: values.description || '',
-        startDate: new Date(values.startDate).toISOString(),
-        endDate: new Date(values.endDate).toISOString(),
+        startDate: values.startDate,
+        endDate: values.endDate,
         parentReleaseId: values.parentReleaseId || undefined,
+        itemType: currentItemType,
     };
 
     const success = editingItem
       ? await updateReleaseOrMilestone(editingItem.id, releaseData)
-      : await addReleaseOrMilestone({ ...releaseData, itemType: currentItemType } as Omit<Release, 'id' | 'releaseId'>);
+      : await addReleaseOrMilestone(releaseData);
 
     if (success) {
       toast({ title: "Success", description: `${currentItemType} ${editingItem ? 'updated' : 'added'} successfully.` });
