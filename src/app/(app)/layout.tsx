@@ -13,9 +13,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const router = useRouter();
 
   const isSettingsPath = pathname.startsWith('/settings');
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(p));
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isArchitecturePath = pathname.startsWith('/architecture');
-  const isResourcesPath = pathname.startsWith('/resources');
+  const isResourcesPath = ['/resources', '/project-gantt'].some(p => pathname.startsWith(p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = ['/holiday-calendar', '/leave-tracker'].some(p => pathname.startsWith(p));
   

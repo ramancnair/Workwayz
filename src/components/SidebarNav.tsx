@@ -50,11 +50,6 @@ export function SidebarNav() {
       icon: LayoutDashboard,
     },
     {
-      href: "/project-gantt",
-      label: "Resource Gantt",
-      icon: GanttChartSquare,
-    },
-    {
       href: "/kanban",
       label: "Kanban Board",
       icon: KanbanSquare,
@@ -102,6 +97,11 @@ export function SidebarNav() {
       href: "/resources",
       label: "Employees",
       icon: Users,
+    },
+    {
+      href: "/project-gantt",
+      label: "Resource Gantt",
+      icon: GanttChartSquare,
     },
   ];
 
@@ -161,7 +161,7 @@ export function SidebarNav() {
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isArchitecturePath = pathname.startsWith('/architecture');
-  const isResourcesPath = pathname.startsWith('/resources');
+  const isResourcesPath = ['/resources', '/project-gantt'].some(p => pathname.startsWith(p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = ['/holiday-calendar', '/leave-tracker'].some(p => pathname.startsWith(p));
   const isSettingsPath = pathname.startsWith('/settings');
