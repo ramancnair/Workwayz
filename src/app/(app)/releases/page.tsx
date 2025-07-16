@@ -49,6 +49,9 @@ const releaseSchema = z.object({
   description: z.string().optional(),
   startDate: z.string().min(1, 'Start date is required.'),
   endDate: z.string().min(1, 'End date is required.'),
+}).refine((data) => new Date(data.endDate) > new Date(data.startDate), {
+  message: "End date must be after the start date.",
+  path: ["endDate"],
 });
 
 export default function ReleasesPage() {
@@ -227,7 +230,7 @@ export default function ReleasesPage() {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (editingItem ? 'Saving...' : 'Creating...') : (editingItem ? 'Save Changes' : `Create ${editingItem?.itemType || itemTypeToAdd}`)}
+                  {isSubmitting ? (editingItem ? 'Saving...' : 'Creating...') : (editingItem ? 'Save Changes' : `Create ${itemTypeToAdd}`)}
                 </Button>
               </DialogFooter>
             </form>
