@@ -54,15 +54,6 @@ const releaseSchemaBase = z.object({
   parentReleaseId: z.string().optional(),
 });
 
-const releaseSchema = releaseSchemaBase.superRefine((data, ctx) => {
-    if (new Date(data.endDate) <= new Date(data.startDate)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "End date must be after the start date.",
-        path: ["endDate"],
-      });
-    }
-  });
 
 export default function ReleasesPage() {
   const { releasesAndMilestones, addReleaseOrMilestone, updateReleaseOrMilestone, deleteReleaseOrMilestone } = useProject();
@@ -74,13 +65,66 @@ export default function ReleasesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const releases = releasesAndMilestones.filter(item => item.itemType === 'Release');
-
-  const form = useForm<z.infer<typeof releaseSchema>>({
-    resolver: zodResolver(releaseSchema),
-  });
   
   const dialogTitle = editingItem ? `Edit ${editingItem.itemType}` : `Add New ${itemTypeToAdd}`;
   const currentItemType = editingItem?.itemType || itemTypeToAdd;
+
+  const getParentReleaseName = (parentReleaseId?: string) => {
+    if (!parentReleaseId) return 'N/A';
+    const parent = releases.find(r => r.id === parentReleaseId);
+    return parent ? `(${parent.releaseId}) ${parent.name}` : 'N/A';
+  };
+  
+  const refinedReleaseSchema = releaseSchemaBase.superRefine((data, ctx) => {
+    // Basic date validation
+    if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End date must be on or after the start date.",
+        path: ["endDate"],
+      });
+    }
+
+    // Milestone-specific validation
+    if (currentItemType === 'Milestone') {
+      if (!data.parentReleaseId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "A parent release is required for a milestone.",
+          path: ["parentReleaseId"],
+        });
+      } else {
+        const parentRelease = releases.find(r => r.id === data.parentReleaseId);
+        if (parentRelease && data.startDate && data.endDate) {
+          const milestoneStart = new Date(data.startDate);
+          const milestoneEnd = new Date(data.endDate);
+          const releaseStart = new Date(parentRelease.startDate);
+          const releaseEnd = new Date(parentRelease.endDate);
+
+          if (milestoneStart < releaseStart) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Start date must be on or after the release start date of ${format(releaseStart, 'PPP')}.`,
+              path: ["startDate"],
+            });
+          }
+          if (milestoneEnd > releaseEnd) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `End date must be on or before the release end date of ${format(releaseEnd, 'PPP')}.`,
+              path: ["endDate"],
+            });
+          }
+        }
+      }
+    }
+  });
+  
+  const form = useForm<z.infer<typeof refinedReleaseSchema>>({
+    resolver: zodResolver(refinedReleaseSchema),
+    // We will reset the form in the useEffect hook
+  });
+
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -103,30 +147,6 @@ export default function ReleasesPage() {
       }
     }
   }, [isDialogOpen, editingItem, form]);
-  
-  // Custom validation refinement for the form based on item type
-  const refinedReleaseSchema = releaseSchema.refine((data) => {
-      if (currentItemType === 'Milestone') {
-        return !!data.parentReleaseId;
-      }
-      return true;
-    }, {
-      message: "A parent release is required for a milestone.",
-      path: ["parentReleaseId"],
-    });
-
-  // Re-initialize form with the refined schema
-  const refinedForm = useForm<z.infer<typeof refinedReleaseSchema>>({
-    resolver: zodResolver(refinedReleaseSchema),
-    defaultValues: form.getValues(), // get existing values
-  });
-  
-  // Sync forms when dialog opens
-  useEffect(() => {
-    if (isDialogOpen) {
-      refinedForm.reset(form.getValues());
-    }
-  }, [isDialogOpen, form, refinedForm]);
 
   const handleDialogOpen = (item: Release | null, type: ReleaseItemType = 'Release') => {
     setEditingItem(item);
@@ -169,13 +189,6 @@ export default function ReleasesPage() {
     }
     setIsSubmitting(false);
   };
-  
-  const getParentReleaseName = (parentReleaseId?: string) => {
-    if (!parentReleaseId) return 'N/A';
-    const parent = releases.find(r => r.id === parentReleaseId);
-    return parent ? `(${parent.releaseId}) ${parent.name}` : 'N/A';
-  }
-
 
   return (
     <>
@@ -236,11 +249,11 @@ export default function ReleasesPage() {
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
-          <Form {...refinedForm}>
-            <form onSubmit={refinedForm.handleSubmit(onSubmit)} className="space-y-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                {currentItemType === 'Milestone' && (
                   <FormField
-                    control={refinedForm.control}
+                    control={form.control}
                     name="parentReleaseId"
                     render={({ field }) => (
                       <FormItem>
@@ -261,7 +274,7 @@ export default function ReleasesPage() {
                   />
                 )}
               <FormField
-                control={refinedForm.control}
+                control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -272,7 +285,7 @@ export default function ReleasesPage() {
                 )}
               />
               <FormField
-                control={refinedForm.control}
+                control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -283,7 +296,7 @@ export default function ReleasesPage() {
                 )}
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField control={refinedForm.control} name="startDate" render={({ field }) => (
+                 <FormField control={form.control} name="startDate" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Start Date</FormLabel>
                         <FormControl>
@@ -292,7 +305,7 @@ export default function ReleasesPage() {
                         <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={refinedForm.control} name="endDate" render={({ field }) => (
+                <FormField control={form.control} name="endDate" render={({ field }) => (
                     <FormItem>
                         <FormLabel>End Date</FormLabel>
                         <FormControl>
