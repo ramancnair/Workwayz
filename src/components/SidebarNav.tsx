@@ -78,11 +78,6 @@ export function SidebarNav() {
       icon: TestTube2,
     },
     {
-      href: "/testing/test-plan",
-      label: "Test Plan",
-      icon: ClipboardList,
-    },
-    {
       href: "/testing/test-cases",
       label: "Test Cases",
       icon: ClipboardCheck,
