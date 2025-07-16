@@ -1,6 +1,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -89,6 +90,7 @@ export type Employee = {
   onshoreOrOffshore?: OnshoreOffshore;
   billedRate?: number;
   availability?: number;
+  leaveDates?: string[]; // Array of ISO date strings
 };
 
 export type RiskSeverity = 1 | 2 | 3;

@@ -35,6 +35,7 @@ import {
   GanttChartSquare,
   ClipboardList,
   Network,
+  CalendarCheck,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -143,13 +144,18 @@ export function SidebarNav() {
       label: "Holiday Calendar",
       icon: CalendarDays,
     },
+     {
+      href: "/leave-tracker",
+      label: "Leave Tracker",
+      icon: CalendarCheck,
+    },
   ];
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(p));
   const isArchitecturePath = pathname.startsWith('/architecture');
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
-  const isHolidaysPath = pathname.startsWith('/holiday-calendar');
+  const isHolidaysPath = ['/holiday-calendar', '/leave-tracker'].some(p => pathname.startsWith(p));
   
   const menuItems = isTestingPath ? testMenuItems 
     : isArchitecturePath ? architectureMenuItems

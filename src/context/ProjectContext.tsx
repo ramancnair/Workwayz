@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
@@ -78,6 +79,7 @@ interface ProjectContextType {
   addEmployee: (employee: Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }) => Promise<boolean>;
   updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }>) => Promise<boolean>;
   deleteEmployee: (employeeId: string) => Promise<boolean>;
+  updateEmployeeLeaves: (employeeId: string, leaveDates: string[]) => Promise<boolean>;
 
   // TestCase actions
   addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => Promise<boolean>;
@@ -179,7 +181,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         setProjectSettings({ id: doc.id, ...doc.data() } as ProjectSettings);
       } else {
         // Initialize settings if they don't exist
-        setDoc(settingsDocRef, { weeklyOffDays: [0, 6] });
+        setDoc(settingsDocRef, { weeklyOffDays: [0, 6] }).catch(e => console.error("Failed to set default project settings", e));
       }
     });
 
@@ -210,7 +212,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                     const dateFields: Record<string, string[]> = {
                         stories: ['startDate', 'endDate'],
                         sprints: ['startDate', 'endDate'],
-                        employees: ['onboardingDate', 'offloadingDate'],
+                        employees: ['onboardingDate', 'offloadingDate', 'leaveDates'],
                         assumptions: ['validationDate'],
                         issues: ['reportedDate', 'resolvedDate'],
                         dependencies: ['expectedByDate'],
@@ -219,7 +221,11 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
                     if (dateFields[name]) {
                         dateFields[name].forEach(field => {
-                            docData[field] = convertTimestamp(docData[field]);
+                            if (Array.isArray(docData[field])) {
+                                docData[field] = docData[field].map(convertTimestamp);
+                            } else {
+                                docData[field] = convertTimestamp(docData[field]);
+                            }
                         });
                     }
                     
@@ -513,6 +519,20 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete employee.", { id: employeeId, code: e.code, message: e.message, fullError: e });
       return false;
+    }
+  };
+
+  const updateEmployeeLeaves = async (employeeId: string, leaveDates: string[]): Promise<boolean> => {
+    if (!db) return false;
+    try {
+        const employeeRef = doc(db, 'employees', employeeId);
+        await updateDoc(employeeRef, {
+            leaveDates: leaveDates.map(date => Timestamp.fromDate(new Date(date)))
+        });
+        return true;
+    } catch (e) {
+        console.error("Firebase Error: Failed to update employee leaves.", e);
+        return false;
     }
   };
 
@@ -905,6 +925,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addEmployee,
     updateEmployee,
     deleteEmployee,
+    updateEmployeeLeaves,
     addTestCase,
     updateTestCase,
     deleteTestCase,

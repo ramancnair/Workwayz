@@ -16,7 +16,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const isArchitecturePath = pathname.startsWith('/architecture');
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
-  const isHolidaysPath = pathname.startsWith('/holiday-calendar');
+  const isHolidaysPath = ['/holiday-calendar', '/leave-tracker'].some(p => pathname.startsWith(p));
   
   const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath;
 
