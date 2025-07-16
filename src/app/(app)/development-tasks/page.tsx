@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,9 +38,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
 import { type Story, type StoryStatus } from '@/types';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -61,6 +61,8 @@ const taskSchema = z.object({
   impactedSystemId: z.string().optional(),
 });
 
+const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+
 const statusStyles: Record<StoryStatus, string> = {
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
   'In Progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -77,6 +79,14 @@ export default function DevelopmentTasksPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const tasks = stories.filter(story => story.itemType === 'Task');
+
+  const [filters, setFilters] = useState({
+    status: 'all',
+    assigneeId: 'all',
+    impactedSystemId: 'all',
+    sprintId: 'all',
+  });
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
 
   const form = useForm<z.infer<typeof taskSchema>>({
     resolver: zodResolver(taskSchema),
@@ -105,6 +115,68 @@ export default function DevelopmentTasksPage() {
     }
     return currentDate;
   };
+  
+   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ status: 'all', assigneeId: 'all', impactedSystemId: 'all', sprintId: 'all' });
+  };
+  
+  const handleSort = (columnId: string) => {
+    if (sorting?.id === columnId) {
+      setSorting({ ...sorting, desc: !sorting.desc });
+    } else {
+      setSorting({ id: columnId, desc: false });
+    }
+  };
+  
+  const filteredAndSortedTasks = useMemo(() => {
+    let filtered = [...tasks];
+
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(t => t.status === filters.status);
+    }
+    if (filters.assigneeId !== 'all') {
+      filtered = filtered.filter(t => t.assigneeId === filters.assigneeId);
+    }
+    if (filters.impactedSystemId !== 'all') {
+      filtered = filtered.filter(t => t.impactedSystemId === filters.impactedSystemId);
+    }
+    if (filters.sprintId !== 'all') {
+      if (filters.sprintId === 'backlog') {
+        filtered = filtered.filter(t => !t.sprintId);
+      } else {
+        filtered = filtered.filter(t => t.sprintId === filters.sprintId);
+      }
+    }
+
+    if (sorting) {
+      filtered.sort((a, b) => {
+        const valA = (a as any)[sorting.id];
+        const valB = (b as any)[sorting.id];
+
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+        
+        let comparison = 0;
+        if (['startDate', 'endDate'].includes(sorting.id)) {
+            comparison = new Date(valA).getTime() - new Date(valB).getTime();
+        } else if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB, undefined, { numeric: true });
+        } else if (valA > valB) {
+          comparison = 1;
+        } else if (valA < valB) {
+          comparison = -1;
+        }
+
+        return sorting.desc ? -comparison : comparison;
+      });
+    }
+
+    return filtered;
+  }, [tasks, filters, sorting]);
 
   useEffect(() => {
     if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
@@ -205,6 +277,14 @@ export default function DevelopmentTasksPage() {
     setIsSubmitting(false);
   };
 
+  const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
+    <TableHead className={className}>
+      <Button variant="ghost" onClick={() => handleSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
 
   return (
     <>
@@ -216,22 +296,58 @@ export default function DevelopmentTasksPage() {
         </Button>
       </PageHeader>
       <Card>
+        <CardContent className="p-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by status..."/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filters.assigneeId} onValueChange={(v) => handleFilterChange('assigneeId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by assignee..."/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Assignees</SelectItem>
+                  {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filters.impactedSystemId} onValueChange={(v) => handleFilterChange('impactedSystemId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by system..."/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Systems</SelectItem>
+                  {impactedSystems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sprints</SelectItem>
+                  <SelectItem value="backlog">Backlog</SelectItem>
+                  {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" onClick={clearFilters}>
+                <X className="mr-2 h-4 w-4" /> Clear Filters
+              </Button>
+            </div>
+          </CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead className="w-[30%]">Title</TableHead>
-              <TableHead>Status</TableHead>
+              <SortableHeader columnId="storyId">ID</SortableHeader>
+              <SortableHeader columnId="title" className="w-[30%]">Title</SortableHeader>
+              <SortableHeader columnId="status">Status</SortableHeader>
               <TableHead>Assignee</TableHead>
               <TableHead>Impacted System</TableHead>
-              <TableHead>Start Date</TableHead>
-              <TableHead>End Date</TableHead>
-              <TableHead>Effort</TableHead>
+              <SortableHeader columnId="startDate">Start Date</SortableHeader>
+              <SortableHeader columnId="endDate">End Date</SortableHeader>
+              <SortableHeader columnId="effortDays">Effort</SortableHeader>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tasks.map((task) => {
+            {filteredAndSortedTasks.map((task) => {
               const assignee = employees.find(e => e.id === task.assigneeId);
               const impactedSystem = impactedSystems.find(s => s.id === task.impactedSystemId);
               return (
@@ -476,7 +592,3 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
-
-    
-
-    
