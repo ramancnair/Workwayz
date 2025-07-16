@@ -12,15 +12,24 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const isSettingsPath = pathname.startsWith('/settings');
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(p));
   const isArchitecturePath = pathname.startsWith('/architecture');
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = ['/holiday-calendar', '/leave-tracker'].some(p => pathname.startsWith(p));
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath;
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isSettingsPath;
 
-  const tabValue = isTestingPath ? 'testing' : isArchitecturePath ? 'architecture' : isResourcesPath ? 'resources' : isGovernancePath ? 'governance' : isHolidaysPath ? 'holidays' : 'development';
+  const getTabValue = () => {
+    if (isDevelopmentPath) return 'development';
+    if (isTestingPath) return 'testing';
+    if (isArchitecturePath) return 'architecture';
+    if (isResourcesPath) return 'resources';
+    if (isGovernancePath) return 'governance';
+    if (isHolidaysPath) return 'holidays';
+    return ''; // No active tab for settings
+  };
 
   const onTabChange = (value: string) => {
     if (value === 'development') {
@@ -47,7 +56,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         <SidebarInset>
           <div className="h-screen flex flex-col">
             <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10">
-                <Tabs value={tabValue} onValueChange={onTabChange}>
+                <Tabs value={getTabValue()} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                         <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
