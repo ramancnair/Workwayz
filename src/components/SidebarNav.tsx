@@ -51,7 +51,7 @@ export function SidebarNav() {
     },
     {
       href: "/project-gantt",
-      label: "Project Gantt",
+      label: "Resource Gantt",
       icon: GanttChartSquare,
     },
     {
@@ -159,7 +159,7 @@ export function SidebarNav() {
     }
   ];
 
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(p));
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
   const isArchitecturePath = pathname.startsWith('/architecture');
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
