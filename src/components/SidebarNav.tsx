@@ -151,13 +151,23 @@ export function SidebarNav() {
     },
   ];
 
+  const settingsMenuItems = [
+    {
+      href: "/settings",
+      label: "Board Settings",
+      icon: Settings,
+    }
+  ];
+
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(p));
   const isArchitecturePath = pathname.startsWith('/architecture');
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = ['/holiday-calendar', '/leave-tracker'].some(p => pathname.startsWith(p));
-  
-  const menuItems = isTestingPath ? testMenuItems 
+  const isSettingsPath = pathname.startsWith('/settings');
+
+  const menuItems = isSettingsPath ? settingsMenuItems
+    : isTestingPath ? testMenuItems 
     : isArchitecturePath ? architectureMenuItems
     : isResourcesPath ? resourcesMenuItems 
     : isGovernancePath ? governanceMenuItems 
@@ -195,16 +205,18 @@ export function SidebarNav() {
       </SidebarContent>
       <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
         <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <Link href="/settings">
-              <SidebarMenuButton tooltip="Settings" isActive={pathname === '/settings'}>
-                <Settings />
-                <span>Settings</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {!isSettingsPath && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Link href="/settings">
+                <SidebarMenuButton tooltip="Settings" isActive={pathname === '/settings'}>
+                  <Settings />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
         <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:hidden">
             <Avatar className="h-10 w-10">
                 <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />

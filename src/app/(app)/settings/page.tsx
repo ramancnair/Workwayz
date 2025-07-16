@@ -166,7 +166,7 @@ export default function SettingsPage() {
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Kanban Board Swimlanes</CardTitle>
+            <CardTitle>Board Settings</CardTitle>
             <CardDescription>
               Drag to reorder, edit names, add, or remove columns for your Kanban board.
             </CardDescription>
