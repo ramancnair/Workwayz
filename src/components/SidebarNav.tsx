@@ -153,8 +153,13 @@ export function SidebarNav() {
 
   const settingsMenuItems = [
     {
-      href: "/settings",
+      href: "/settings/board",
       label: "Board Settings",
+      icon: KanbanSquare,
+    },
+    {
+      href: "/settings/sprint",
+      label: "Sprint Settings",
       icon: Settings,
     }
   ];
@@ -208,7 +213,7 @@ export function SidebarNav() {
         <SidebarMenu>
           <SidebarMenuItem>
             <Link href="/settings">
-              <SidebarMenuButton tooltip="Settings" isActive={pathname === '/settings'}>
+              <SidebarMenuButton tooltip="Settings" isActive={pathname.startsWith('/settings')}>
                 <Settings />
                 <span>Settings</span>
               </SidebarMenuButton>
