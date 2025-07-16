@@ -13,7 +13,7 @@ import { format, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
 import type { Employee } from '@/types';
 
 export default function LeaveTrackerPage() {
-  const { employees, updateEmployeeLeaves, isLoading } = useProject();
+  const { employees, holidays, weeklyOffDays, updateEmployeeLeaves, isLoading } = useProject();
   const { toast } = useToast();
   
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -25,6 +25,8 @@ export default function LeaveTrackerPage() {
   const endOfCurrentYear = new Date(today.getFullYear(), 11, 31);
   
   const startOfCurrentMonth = startOfMonth(today);
+
+  const holidayDates = holidays.map(h => new Date(h.date));
 
   useEffect(() => {
     if (employees.length > 0 && !selectedEmployee) {
@@ -41,9 +43,14 @@ export default function LeaveTrackerPage() {
   }, [selectedEmployee]);
 
   const handleDayClick = (day: Date) => {
-    if (startOfMonth(day) < startOfCurrentMonth) {
-        return; // Don't allow changes for past months
+    const isPastMonth = startOfMonth(day) < startOfCurrentMonth;
+    const isHoliday = holidayDates.some(h => isSameDay(h, day));
+    const isWeeklyOff = weeklyOffDays.includes(day.getDay());
+
+    if (isPastMonth || isHoliday || isWeeklyOff) {
+        return;
     }
+
     const alreadySelected = leaveDates.some(d => isSameDay(d, day));
     if (alreadySelected) {
       setLeaveDates(leaveDates.filter(d => !isSameDay(d, day)));
@@ -70,6 +77,12 @@ export default function LeaveTrackerPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update leave dates.' });
     }
   };
+  
+  const isDateDisabled = (date: Date) => {
+    return startOfMonth(date) < startOfCurrentMonth || 
+           weeklyOffDays.includes(date.getDay()) || 
+           holidayDates.some(h => isSameDay(h, date));
+  }
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -109,7 +122,7 @@ export default function LeaveTrackerPage() {
               onMonthChange={setCurrentMonth}
               fromDate={startOfCurrentYear}
               toDate={endOfCurrentYear}
-              disabled={(date) => startOfMonth(date) < startOfCurrentMonth}
+              disabled={isDateDisabled}
               className="rounded-md border"
               footer={
                 <p className="text-sm text-center pt-2 text-muted-foreground">
