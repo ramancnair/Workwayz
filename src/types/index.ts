@@ -1,4 +1,5 @@
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -175,6 +176,8 @@ export type ImpactedSystem = {
   category: ImpactedSystemCategory;
 };
 
+export type ReleaseItemType = 'Release' | 'Milestone';
+
 export type Release = {
   id: string;
   releaseId: string;
@@ -182,4 +185,5 @@ export type Release = {
   description: string;
   startDate: string; // ISO String
   endDate: string; // ISO String
+  itemType: ReleaseItemType;
 };

@@ -51,7 +51,7 @@ interface ProjectContextType {
   dependencies: Dependency[];
   kanbanColumns: KanbanColumn[];
   holidays: Holiday[];
-  releases: Release[];
+  releasesAndMilestones: Release[];
   projectSettings: ProjectSettings | null,
   weeklyOffDays: number[];
   impactedSystems: ImpactedSystem[];
@@ -106,10 +106,10 @@ interface ProjectContextType {
   updateDependency: (dependencyId: string, data: Partial<Omit<Dependency, 'id' | 'dependencyId'| 'expectedByDate'> & { expectedByDate?: Date }>) => Promise<boolean>;
   deleteDependency: (dependencyId: string) => Promise<boolean>;
   
-  // Release actions
-  addRelease: (release: Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate'> & { startDate: Date, endDate: Date }) => Promise<boolean>;
-  updateRelease: (releaseId: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate' > & { startDate?: Date, endDate?: Date }>) => Promise<boolean>;
-  deleteRelease: (releaseId: string) => Promise<boolean>;
+  // Release & Milestone actions
+  addReleaseOrMilestone: (item: Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate'> & { startDate: Date, endDate: Date }) => Promise<boolean>;
+  updateReleaseOrMilestone: (id: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate' | 'itemType' > & { startDate?: Date, endDate?: Date }>) => Promise<boolean>;
+  deleteReleaseOrMilestone: (id: string) => Promise<boolean>;
 
   // Kanban Column actions
   addKanbanColumn: (column: Omit<KanbanColumn, 'id' | 'isDefault' | 'isDoneColumn'>) => Promise<boolean>;
@@ -159,7 +159,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [releases, setReleases] = useState<Release[]>([]);
+  const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -184,7 +184,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         { name: 'dependencies', setState: setDependencies },
         { name: 'kanbanColumns', setState: setKanbanColumns },
         { name: 'holidays', setState: setHolidays },
-        { name: 'releases', setState: setReleases },
+        { name: 'releases', setState: setReleasesAndMilestones },
         { name: 'impactedSystems', setState: setImpactedSystems },
     ];
     
@@ -823,24 +823,27 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
   
-  // Release Actions
-  const addRelease = async (release: Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate'> & { startDate: Date, endDate: Date }): Promise<boolean> => {
+  // Release & Milestone Actions
+  const addReleaseOrMilestone = async (item: Omit<Release, 'id' | 'releaseId' | 'startDate' | 'endDate'> & { startDate: Date, endDate: Date }): Promise<boolean> => {
     if (!db) return false;
     try {
-      const snapshot = await getDocs(collection(db, 'releases'));
-      const newId = `REL-${snapshot.size + 1}`;
-      const payload: any = { ...release, releaseId: newId };
-      payload.startDate = Timestamp.fromDate(release.startDate);
-      payload.endDate = Timestamp.fromDate(release.endDate);
+      const snapshot = await getDocs(query(collection(db, 'releases'), where('itemType', '==', item.itemType)));
+      const prefix = item.itemType === 'Release' ? 'REL' : 'M';
+      const newId = `${prefix}-${snapshot.size + 1}`;
+      
+      const payload: any = { ...item, releaseId: newId };
+      payload.startDate = Timestamp.fromDate(item.startDate);
+      payload.endDate = Timestamp.fromDate(item.endDate);
+      
       await addDoc(collection(db, 'releases'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to add release.", { code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to add release or milestone.", { code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
 
-  const updateRelease = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId'| 'startDate' | 'endDate'> & { startDate?: Date, endDate?: Date }>): Promise<boolean> => {
+  const updateReleaseOrMilestone = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId'| 'startDate' | 'endDate' | 'itemType'> & { startDate?: Date, endDate?: Date }>): Promise<boolean> => {
     if (!db) return false;
     try {
       const { startDate, endDate, ...rest } = data;
@@ -850,18 +853,18 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       await updateDoc(doc(db, 'releases', id), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to update release.", { id, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to update release or milestone.", { id, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
 
-  const deleteRelease = async (id: string): Promise<boolean> => {
+  const deleteReleaseOrMilestone = async (id: string): Promise<boolean> => {
     if (!db) return false;
     try {
       await deleteDoc(doc(db, 'releases', id));
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to delete release.", { id, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to delete release or milestone.", { id, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -975,7 +978,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     dependencies,
     kanbanColumns,
     holidays,
-    releases,
+    releasesAndMilestones,
     projectSettings,
     weeklyOffDays: projectSettings?.weeklyOffDays || [0, 6],
     impactedSystems,
@@ -1013,9 +1016,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addDependency,
     updateDependency,
     deleteDependency,
-    addRelease,
-    updateRelease,
-    deleteRelease,
+    addReleaseOrMilestone,
+    updateReleaseOrMilestone,
+    deleteReleaseOrMilestone,
     addKanbanColumn,
     updateKanbanColumn,
     deleteKanbanColumn,

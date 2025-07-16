@@ -38,39 +38,42 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
-import { type Release } from '@/types';
+import { type Release, type ReleaseItemType } from '@/types';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 
 const releaseSchema = z.object({
-  name: z.string().min(1, 'Release name is required.'),
+  name: z.string().min(1, 'Name is required.'),
   description: z.string().optional(),
   startDate: z.string().min(1, 'Start date is required.'),
   endDate: z.string().min(1, 'End date is required.'),
 });
 
 export default function ReleasesPage() {
-  const { releases, addRelease, updateRelease, deleteRelease } = useProject();
+  const { releasesAndMilestones, addReleaseOrMilestone, updateReleaseOrMilestone, deleteReleaseOrMilestone } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingRelease, setEditingRelease] = useState<Release | null>(null);
-  const [deletingRelease, setDeletingRelease] = useState<Release | null>(null);
+  const [editingItem, setEditingItem] = useState<Release | null>(null);
+  const [deletingItem, setDeletingItem] = useState<Release | null>(null);
+  const [itemTypeToAdd, setItemTypeToAdd] = useState<ReleaseItemType>('Release');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof releaseSchema>>({
     resolver: zodResolver(releaseSchema),
   });
+  
+  const dialogTitle = editingItem ? `Edit ${editingItem.itemType}` : `Add New ${itemTypeToAdd}`;
 
   useEffect(() => {
     if (isDialogOpen) {
-      if (editingRelease) {
+      if (editingItem) {
         form.reset({
-          name: editingRelease.name,
-          description: editingRelease.description,
-          startDate: format(new Date(editingRelease.startDate), 'yyyy-MM-dd'),
-          endDate: format(new Date(editingRelease.endDate), 'yyyy-MM-dd'),
+          name: editingItem.name,
+          description: editingItem.description,
+          startDate: format(new Date(editingItem.startDate), 'yyyy-MM-dd'),
+          endDate: format(new Date(editingItem.endDate), 'yyyy-MM-dd'),
         });
       } else {
         form.reset({
@@ -81,22 +84,23 @@ export default function ReleasesPage() {
         });
       }
     }
-  }, [isDialogOpen, editingRelease, form]);
+  }, [isDialogOpen, editingItem, form]);
 
-  const handleDialogOpen = (release: Release | null) => {
-    setEditingRelease(release);
+  const handleDialogOpen = (item: Release | null, type: ReleaseItemType = 'Release') => {
+    setEditingItem(item);
+    setItemTypeToAdd(type);
     setIsDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deletingRelease) return;
-    const success = await deleteRelease(deletingRelease.id);
+    if (!deletingItem) return;
+    const success = await deleteReleaseOrMilestone(deletingItem.id);
     if (success) {
-      toast({ title: "Success", description: "Release deleted." });
+      toast({ title: "Success", description: `${deletingItem.itemType} deleted.` });
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not delete release." });
+      toast({ variant: "destructive", title: "Error", description: `Could not delete ${deletingItem.itemType}.` });
     }
-    setDeletingRelease(null);
+    setDeletingItem(null);
   };
 
   const onSubmit = async (values: z.infer<typeof releaseSchema>) => {
@@ -108,16 +112,18 @@ export default function ReleasesPage() {
         endDate: new Date(values.endDate),
     };
 
-    const success = editingRelease
-      ? await updateRelease(editingRelease.id, releaseData)
-      : await addRelease(releaseData);
+    const currentItemType = editingItem?.itemType || itemTypeToAdd;
+
+    const success = editingItem
+      ? await updateReleaseOrMilestone(editingItem.id, releaseData)
+      : await addReleaseOrMilestone({ ...releaseData, itemType: currentItemType });
 
     if (success) {
-      toast({ title: "Success", description: `Release ${editingRelease ? 'updated' : 'added'} successfully.` });
+      toast({ title: "Success", description: `${currentItemType} ${editingItem ? 'updated' : 'added'} successfully.` });
       setIsDialogOpen(false);
-      setEditingRelease(null);
+      setEditingItem(null);
     } else {
-      toast({ variant: "destructive", title: "Error", description: `Could not ${editingRelease ? 'update' : 'add'} release.` });
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingItem ? 'update' : 'add'} ${currentItemType}.` });
     }
     setIsSubmitting(false);
   };
@@ -125,17 +131,21 @@ export default function ReleasesPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Project Releases" description="Manage all project release cycles.">
-          <Button onClick={() => handleDialogOpen(null)}>
+        <PageHeader title="Releases & Milestones" description="Manage all project release cycles and key milestones.">
+          <Button onClick={() => handleDialogOpen(null, 'Release')}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Release
+          </Button>
+           <Button onClick={() => handleDialogOpen(null, 'Milestone')} variant="outline">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Milestone
           </Button>
         </PageHeader>
         <Card>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Release ID</TableHead>
+                <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead className="w-[40%]">Description</TableHead>
                 <TableHead>Start Date</TableHead>
@@ -144,18 +154,18 @@ export default function ReleasesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {releases.map((release) => (
-                <TableRow key={release.id}>
-                  <TableCell className="font-medium">{release.releaseId}</TableCell>
-                  <TableCell>{release.name}</TableCell>
-                  <TableCell className="break-words">{release.description}</TableCell>
-                  <TableCell>{format(new Date(release.startDate), 'PPP')}</TableCell>
-                  <TableCell>{format(new Date(release.endDate), 'PPP')}</TableCell>
+              {releasesAndMilestones.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.releaseId}</TableCell>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="break-words">{item.description}</TableCell>
+                  <TableCell>{format(new Date(item.startDate), 'PPP')}</TableCell>
+                  <TableCell>{format(new Date(item.endDate), 'PPP')}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(release)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeletingRelease(release)}>
+                    <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -166,10 +176,10 @@ export default function ReleasesPage() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingRelease(null); }}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingItem(null); }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingRelease ? 'Edit Release' : 'Add New Release'}</DialogTitle>
+            <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -178,8 +188,8 @@ export default function ReleasesPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Release Name</FormLabel>
-                    <FormControl><Input placeholder="E.g., Q3 2024 Release" {...field} /></FormControl>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl><Input placeholder={`E.g., Q3 2024 ${editingItem?.itemType || itemTypeToAdd}`} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -190,7 +200,7 @@ export default function ReleasesPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description</FormLabel>
-                    <FormControl><Textarea placeholder="Describe the main goals of this release..." {...field} rows={4} /></FormControl>
+                    <FormControl><Textarea placeholder="Describe the main goals..." {...field} rows={4} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -217,7 +227,7 @@ export default function ReleasesPage() {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (editingRelease ? 'Saving...' : 'Creating...') : (editingRelease ? 'Save Changes' : 'Create Release')}
+                  {isSubmitting ? (editingItem ? 'Saving...' : 'Creating...') : (editingItem ? 'Save Changes' : `Create ${editingItem?.itemType || itemTypeToAdd}`)}
                 </Button>
               </DialogFooter>
             </form>
@@ -225,12 +235,12 @@ export default function ReleasesPage() {
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={!!deletingRelease} onOpenChange={(isOpen) => !isOpen && setDeletingRelease(null)}>
+      <AlertDialog open={!!deletingItem} onOpenChange={(isOpen) => !isOpen && setDeletingItem(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the release "{deletingRelease?.name}".
+              This action cannot be undone. This will permanently delete the {deletingItem?.itemType} "{deletingItem?.name}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
