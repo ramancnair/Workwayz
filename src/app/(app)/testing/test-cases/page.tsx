@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProject } from '@/context/ProjectContext';
@@ -56,6 +56,7 @@ const testCaseFormSchema = z.object({
   assigneeId: z.string().optional(),
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
+  sprintId: z.string().optional(),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -71,7 +72,7 @@ const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
 
 export default function TestCasesPage() {
-  const { testCases, employees, stories, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones } = useProject();
+  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
@@ -84,6 +85,7 @@ export default function TestCasesPage() {
     type: 'all',
     assigneeId: 'all',
     storyId: 'all',
+    sprintId: 'all',
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
 
@@ -92,13 +94,26 @@ export default function TestCasesPage() {
   });
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
+
+  const watchedStoryId = useWatch({ control: form.control, name: 'storyId' });
   
+  useEffect(() => {
+    if (watchedStoryId) {
+      const story = stories.find(s => s.id === watchedStoryId);
+      if (story && story.sprintId) {
+        form.setValue('sprintId', story.sprintId);
+      } else {
+        form.setValue('sprintId', 'backlog');
+      }
+    }
+  }, [watchedStoryId, stories, form]);
+
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
 
   const clearFilters = () => {
-    setFilters({ status: 'all', type: 'all', assigneeId: 'all', storyId: 'all' });
+    setFilters({ status: 'all', type: 'all', assigneeId: 'all', storyId: 'all', sprintId: 'all' });
   };
   
   const handleSort = (columnId: string) => {
@@ -135,11 +150,25 @@ export default function TestCasesPage() {
         filtered = filtered.filter(tc => tc.storyId === filters.storyId);
       }
     }
+     if (filters.sprintId !== 'all') {
+      if (filters.sprintId === 'backlog') {
+        filtered = filtered.filter(t => !t.sprintId);
+      } else {
+        filtered = filtered.filter(t => t.sprintId === filters.sprintId);
+      }
+    }
 
     if (sorting) {
       filtered.sort((a, b) => {
-        const valA = (a as any)[sorting.id];
-        const valB = (b as any)[sorting.id];
+        let valA: any, valB: any;
+        if (sorting.id === 'sprintId') {
+            valA = sprints.find(s => s.id === a.sprintId)?.title || 'Backlog';
+            valB = sprints.find(s => s.id === b.sprintId)?.title || 'Backlog';
+        } else {
+            valA = (a as any)[sorting.id];
+            valB = (b as any)[sorting.id];
+        }
+
 
         if (valA === null || valA === undefined) return 1;
         if (valB === null || valB === undefined) return -1;
@@ -158,7 +187,7 @@ export default function TestCasesPage() {
     }
 
     return filtered;
-  }, [testCases, filters, sorting]);
+  }, [testCases, filters, sorting, sprints]);
 
 
   useEffect(() => {
@@ -171,6 +200,7 @@ export default function TestCasesPage() {
             assigneeId: editingTestCase.assigneeId || 'unassigned',
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
+            sprintId: editingTestCase.sprintId || 'backlog',
           });
         } else {
           setRelatedStoryInputText('');
@@ -183,6 +213,7 @@ export default function TestCasesPage() {
             assigneeId: 'unassigned',
             storyId: '',
             releaseId: 'unassigned',
+            sprintId: 'backlog',
           });
         }
     }
@@ -215,6 +246,7 @@ export default function TestCasesPage() {
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+        sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
     };
 
     let success = false;
@@ -256,21 +288,21 @@ export default function TestCasesPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-4 flex-wrap">
               <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by type..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   {testCaseTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by status..."/></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   {testCaseStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
                <Select value={filters.assigneeId} onValueChange={(v) => handleFilterChange('assigneeId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by assignee..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Assignees</SelectItem>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
@@ -278,11 +310,19 @@ export default function TestCasesPage() {
                 </SelectContent>
               </Select>
                <Select value={filters.storyId} onValueChange={(v) => handleFilterChange('storyId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by story..."/></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Stories</SelectItem>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {stories.filter(s => s.itemType === 'Story').map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+               <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sprints</SelectItem>
+                  <SelectItem value="backlog">Backlog</SelectItem>
+                  {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Button variant="ghost" onClick={clearFilters}>
@@ -295,11 +335,10 @@ export default function TestCasesPage() {
               <TableRow>
                 <SortableHeader columnId="testCaseId">ID</SortableHeader>
                 <SortableHeader columnId="title">Title</SortableHeader>
-                <SortableHeader columnId="type">Type</SortableHeader>
                 <SortableHeader columnId="status">Status</SortableHeader>
                 <TableHead>Assignee</TableHead>
+                <SortableHeader columnId="sprintId">Sprint</SortableHeader>
                 <TableHead>Story</TableHead>
-                <TableHead>Release</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -307,12 +346,11 @@ export default function TestCasesPage() {
               {filteredAndSortedTestCases.map((tc) => {
                 const assignee = employees.find(e => e.id === tc.assigneeId);
                 const story = stories.find(s => s.id === tc.storyId);
-                const release = releases.find(r => r.id === tc.releaseId);
+                const sprint = sprints.find(s => s.id === tc.sprintId);
                 return (
                     <TableRow key={tc.id}>
                         <TableCell className="font-medium">{tc.testCaseId}</TableCell>
                         <TableCell>{tc.title}</TableCell>
-                        <TableCell>{tc.type}</TableCell>
                         <TableCell>
                             <Badge className={cn('font-semibold', statusStyles[tc.status])}>
                                 {tc.status}
@@ -329,6 +367,7 @@ export default function TestCasesPage() {
                                 </div>
                             ) : "Unassigned"}
                         </TableCell>
+                        <TableCell>{sprint?.title || 'Backlog'}</TableCell>
                         <TableCell>
                           {story ? (
                             <TooltipProvider>
@@ -338,20 +377,6 @@ export default function TestCasesPage() {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{story.title}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ): 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          {release ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                   <Badge variant="outline">{release.releaseId}</Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{release.name}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -483,31 +508,56 @@ export default function TestCasesPage() {
                       </FormItem>
                   )} />
               </div>
-              <FormField
-                control={form.control}
-                name="releaseId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Release</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Assign to a release" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {releases.map((release) => (
-                          <SelectItem key={release.id} value={release.id}>
-                            [{release.releaseId}] {release.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="sprintId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Sprint</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || 'backlog'}
+                            disabled={!!watchedStoryId}
+                          >
+                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                              <SelectContent>
+                              <SelectItem value="backlog">Backlog</SelectItem>
+                              {sprints.map(sprint => (
+                                  <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="releaseId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Release</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Assign to a release" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {releases.map((release) => (
+                                <SelectItem key={release.id} value={release.id}>
+                                  [{release.releaseId}] {release.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingTestCase ? 'Saving...' : 'Creating...') : (editingTestCase ? 'Save Changes' : 'Create Test Case')}

@@ -67,6 +67,7 @@ export type TestCase = {
   assigneeId?: string;
   storyId?: string;
   releaseId?: string;
+  sprintId?: string;
 };
 
 export type OnshoreOffshore = 'Onshore' | 'Offshore';
