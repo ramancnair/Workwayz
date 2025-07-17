@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect, useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
@@ -84,10 +84,12 @@ const epicFormSchema = z.object({
 });
 
 const storyFormSchema = z.object({
+  itemType: z.enum(workItemTypes),
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
+  parentStoryId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
@@ -211,7 +213,7 @@ export default function BacklogPage() {
   const { toast } = useToast();
 
   const [addEpicOpen, setAddEpicOpen] = useState(false);
-  const [addStoryOpen, setAddStoryOpen] = useState(false);
+  const [addRequirementOpen, setAddRequirementOpen] = useState(false);
   const [addSprintOpen, setAddSprintOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
@@ -228,8 +230,6 @@ export default function BacklogPage() {
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
   
-  const [itemTypeToAdd, setItemTypeToAdd] = useState<WorkItemType>('Story');
-
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
     defaultValues: { title: '', description: '' },
@@ -241,8 +241,10 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium' },
+    defaultValues: { itemType: 'Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium' },
   });
+  
+  const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -319,10 +321,12 @@ export default function BacklogPage() {
       setEditStorySubmitting(false);
     } else {
       editStoryForm.reset({
+        itemType: selectedStory.itemType,
         title: selectedStory.title,
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-        epicId: selectedStory.epicId || 'unassigned',
+        epicId: selectedStory.itemType === 'Story' ? selectedStory.epicId || 'unassigned' : undefined,
+        parentStoryId: selectedStory.itemType !== 'Story' ? selectedStory.epicId || 'unassigned' : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
@@ -331,11 +335,11 @@ export default function BacklogPage() {
   }, [selectedStory, editStoryForm]);
   
   useEffect(() => {
-    if (!addStoryOpen) {
+    if (!addRequirementOpen) {
       addStoryForm.reset();
       setAddStorySubmitting(false);
     }
-  }, [addStoryOpen, addStoryForm]);
+  }, [addRequirementOpen, addStoryForm]);
 
   const onAddSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
     setAddSprintSubmitting(true);
@@ -396,26 +400,26 @@ export default function BacklogPage() {
 
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setAddStorySubmitting(true);
-    const isSubItem = ['Bug', 'Task'].includes(itemTypeToAdd);
-    const parentStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
     
     const newStory: Omit<Story, 'id' | 'storyId'> = {
       sprintId: null,
       title: values.title,
       description: values.description || '',
-      itemType: itemTypeToAdd,
+      itemType: values.itemType,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : parentStoryId,
+      epicId: values.itemType === 'Story' 
+        ? (values.epicId === 'unassigned' ? undefined : values.epicId)
+        : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
       status: 'To Do',
       estimatedHours: values.estimatedHours,
-      criticality: itemTypeToAdd === 'Bug' ? values.criticality : undefined,
+      criticality: values.itemType === 'Bug' ? values.criticality : undefined,
     };
     const success = await addStory(newStory);
     if (success) {
-      setAddStoryOpen(false);
+      setAddRequirementOpen(false);
     } else {
-      toast({ variant: "destructive", title: `Error Creating ${itemTypeToAdd}`, description: `Could not save your ${itemTypeToAdd.toLowerCase()}.` });
+      toast({ variant: "destructive", title: `Error Creating ${values.itemType}`, description: `Could not save your ${values.itemType.toLowerCase()}.` });
     }
     setAddStorySubmitting(false);
   };
@@ -424,15 +428,14 @@ export default function BacklogPage() {
     if (!selectedStory) return;
     setEditStorySubmitting(true);
     
-    const isSubItem = ['Bug', 'Task'].includes(selectedStory.itemType);
-    const parentStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
-
     const success = await updateStory(selectedStory.id, {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : parentStoryId,
+        epicId: selectedStory.itemType === 'Story' 
+            ? (values.epicId === 'unassigned' ? undefined : values.epicId) 
+            : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
     });
@@ -474,7 +477,7 @@ export default function BacklogPage() {
   const backlogStories = stories.filter((story) => story.sprintId === null || story.sprintId === undefined);
   
   const subItemsByParentId = stories.reduce((acc, story) => {
-      if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
+      if (['Bug', 'Task', 'Change', 'Improvement'].includes(story.itemType) && story.epicId) {
           if (!acc[story.epicId]) {
               acc[story.epicId] = [];
           }
@@ -485,7 +488,7 @@ export default function BacklogPage() {
 
   const backlogItemsByEpic = backlogStories.reduce((acc, story) => {
     // Exclude sub-items from top-level grouping if their parent is also in the backlog
-    if (['Bug', 'Task'].includes(story.itemType) && story.epicId && backlogStories.some(s => s.id === story.epicId)) {
+    if (['Bug', 'Task', 'Change', 'Improvement'].includes(story.itemType) && story.epicId && backlogStories.some(s => s.id === story.epicId)) {
         return acc;
     }
 
@@ -632,30 +635,43 @@ export default function BacklogPage() {
             </DialogContent>
           </Dialog>
           
-          <Dialog open={addStoryOpen} onOpenChange={setAddStoryOpen}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Requirement
-                  <ChevronDown className="ml-1 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {workItemTypes.map(itemType => (
-                  <DropdownMenuItem key={itemType} onClick={() => { setItemTypeToAdd(itemType); setAddStoryOpen(true); addStoryForm.reset(); }}>
-                    {itemType}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
+          <Dialog open={addRequirementOpen} onOpenChange={setAddRequirementOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Requirement
+              </Button>
+            </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
-                <DialogTitle>Add New {itemTypeToAdd}</DialogTitle>
+                <DialogTitle>Add New Requirement</DialogTitle>
               </DialogHeader>
               <Form {...addStoryForm}>
                 <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="space-y-4">
+                  <FormField
+                    control={addStoryForm.control}
+                    name="itemType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a requirement type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {workItemTypes.map(itemType => (
+                              <SelectItem key={itemType} value={itemType}>
+                                {itemType}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={addStoryForm.control}
                     name="title"
@@ -663,7 +679,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input placeholder={`${itemTypeToAdd} title`} {...field} />
+                          <Input placeholder={`${watchedItemType} title`} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -676,7 +692,7 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea placeholder={`Describe the ${itemTypeToAdd.toLowerCase()}...`} {...field} />
+                          <Textarea placeholder={`Describe the ${watchedItemType.toLowerCase()}...`} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -689,39 +705,15 @@ export default function BacklogPage() {
                       <FormItem>
                         <FormLabel>Acceptance Criteria</FormLabel>
                         <FormControl>
-                          <Textarea placeholder={`Define acceptance criteria for this ${itemTypeToAdd.toLowerCase()}...`} {...field} />
+                          <Textarea placeholder={`Define acceptance criteria for this ${watchedItemType.toLowerCase()}...`} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {['Bug', 'Task'].includes(itemTypeToAdd) ? (
+                  {watchedItemType === 'Story' ? (
                      <FormField
-                      control={addStoryForm.control}
-                      name="epicId" // Re-using epicId to store related storyId for bugs/tasks
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Related Story</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                              <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Link to a story" />
-                              </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                              <SelectItem value="unassigned">None</SelectItem>
-                              {stories.filter(s => s.itemType === 'Story').map(story => (
-                                  <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                              ))}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <FormField
                         control={addStoryForm.control}
                         name="epicId"
                         render={({ field }) => (
@@ -743,6 +735,30 @@ export default function BacklogPage() {
                             <FormMessage />
                             </FormItem>
                         )}
+                    />
+                  ) : (
+                    <FormField
+                      control={addStoryForm.control}
+                      name="parentStoryId" 
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Parent Story</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Link to a story" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="unassigned">None</SelectItem>
+                              {stories.filter(s => s.itemType === 'Story').map(story => (
+                                  <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
                     />
                   )}
                   <FormField
@@ -769,7 +785,7 @@ export default function BacklogPage() {
                       )}
                   />
                   </div>
-                   {itemTypeToAdd === 'Bug' && (
+                   {watchedItemType === 'Bug' && (
                     <FormField
                       control={addStoryForm.control}
                       name="criticality"
@@ -810,7 +826,7 @@ export default function BacklogPage() {
                   />
                   <DialogFooter>
                     <Button type="submit" disabled={isAddStorySubmitting}>
-                      {isAddStorySubmitting ? 'Creating...' : `Create ${itemTypeToAdd}`}
+                      {isAddStorySubmitting ? 'Creating...' : `Create ${watchedItemType}`}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -1167,32 +1183,8 @@ export default function BacklogPage() {
                     )}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {['Bug', 'Task'].includes(selectedStory.itemType) ? (
+                  {selectedStory.itemType === 'Story' ? (
                      <FormField
-                      control={editStoryForm.control}
-                      name="epicId"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Related Story</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                              <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Link to a story" />
-                              </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                              <SelectItem value="unassigned">None</SelectItem>
-                              {stories.filter(s => s.itemType === 'Story').map(story => (
-                                  <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                              ))}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <FormField
                       control={editStoryForm.control}
                       name="epicId"
                       render={({ field }) => (
@@ -1215,6 +1207,30 @@ export default function BacklogPage() {
                           </Select>
                           <FormMessage />
                         </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={editStoryForm.control}
+                      name="parentStoryId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Related Story</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Link to a story" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="unassigned">None</SelectItem>
+                              {stories.filter(s => s.itemType === 'Story').map(story => (
+                                  <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
                       )}
                     />
                   )}
@@ -1477,5 +1493,3 @@ export default function BacklogPage() {
     </>
   );
 }
-
-    
