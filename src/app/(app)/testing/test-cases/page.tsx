@@ -172,7 +172,17 @@ export default function TestCasesPage() {
         if (sorting.id === 'sprintId') {
             valA = sprints.find(s => s.id === a.sprintId)?.title || 'Backlog';
             valB = sprints.find(s => s.id === b.sprintId)?.title || 'Backlog';
-        } else {
+        } else if (sorting.id === 'assigneeId') {
+            valA = employees.find(e => e.id === a.assigneeId)?.firstName || 'Unassigned';
+            valB = employees.find(e => e.id === b.assigneeId)?.firstName || 'Unassigned';
+        } else if (sorting.id === 'storyId') {
+            valA = stories.find(s => s.id === a.storyId)?.storyId || '';
+            valB = stories.find(s => s.id === b.storyId)?.storyId || '';
+        } else if (sorting.id === 'releaseId') {
+            valA = releases.find(r => r.id === a.releaseId)?.releaseId || '';
+            valB = releases.find(r => r.id === b.releaseId)?.releaseId || '';
+        }
+        else {
             valA = (a as any)[sorting.id];
             valB = (b as any)[sorting.id];
         }
@@ -195,7 +205,7 @@ export default function TestCasesPage() {
     }
 
     return filtered;
-  }, [testCases, filters, sorting, sprints]);
+  }, [testCases, filters, sorting, sprints, employees, stories, releases]);
 
 
   useEffect(() => {
@@ -352,10 +362,10 @@ export default function TestCasesPage() {
                 <SortableHeader columnId="testCaseId">ID</SortableHeader>
                 <SortableHeader columnId="title">Title</SortableHeader>
                 <SortableHeader columnId="status">Status</SortableHeader>
-                <TableHead>Assignee</TableHead>
+                <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
                 <SortableHeader columnId="sprintId">Sprint</SortableHeader>
-                <TableHead>Story</TableHead>
-                <TableHead>Release</TableHead>
+                <SortableHeader columnId="storyId">Story</SortableHeader>
+                <SortableHeader columnId="releaseId">Release</SortableHeader>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
