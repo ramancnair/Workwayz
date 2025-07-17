@@ -14,7 +14,7 @@ const COLORS = [
 
 export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] }) {
 
-  const { chartData, months, totalDays, todayOffset, milestones } = useMemo(() => {
+  const { chartData, months, totalDays, todayOffset } = useMemo(() => {
     const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate)
         .sort((a,b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime());
     
@@ -62,21 +62,24 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                 }
             });
 
+        const releaseMilestones = milestones
+            .filter(m => m.parentReleaseId === release.id)
+            .map(milestone => {
+                const milestoneDate = parseISO(milestone.milestoneDate!);
+                const offset = differenceInDays(milestoneDate, chartStartDate);
+                return {
+                    ...milestone,
+                    offset: (offset / totalDays) * 100,
+                }
+            });
+
         return {
             ...release,
             startOffset: (startOffset / totalDays) * 100,
             duration: (duration / totalDays) * 100,
             color: COLORS[index % COLORS.length],
             stages: releaseStages,
-        }
-    });
-
-    const milestoneData = milestones.map(milestone => {
-        const milestoneDate = parseISO(milestone.milestoneDate!);
-        const offset = differenceInDays(milestoneDate, chartStartDate);
-        return {
-            ...milestone,
-            offset: (offset / totalDays) * 100,
+            milestones: releaseMilestones,
         }
     });
 
@@ -96,7 +99,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         currentDate = addDays(monthStart, daysInMonth);
     }
 
-    return { chartData, months: currentMonths, totalDays, todayOffset: (todayOffset / totalDays) * 100, milestones: milestoneData };
+    return { chartData, months: currentMonths, totalDays, todayOffset: (todayOffset / totalDays) * 100 };
   }, [allItems]);
 
 
@@ -126,7 +129,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             )}
 
             {/* Release Rows */}
-            <div className="relative mt-4 space-y-8">
+            <div className="relative mt-4 space-y-12">
                 {chartData.map((release, index) => (
                     <div key={release.id} className="relative h-10">
                         {/* Main Release Bar */}
@@ -164,33 +167,29 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                                 </Tooltip>
                             </TooltipProvider>
                         ))}
+
+                        {/* Milestones for this release */}
+                        {release.milestones.map(milestone => (
+                            <TooltipProvider key={milestone.id}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="absolute" style={{ left: `calc(${milestone.offset}% - 8px)`, top: '3rem' }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary">
+                                                <path d="M12 2L2 12l10 10 10-10L12 2z"/>
+                                            </svg>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p className="font-bold">{milestone.name}</p>
+                                        <p>{format(parseISO(milestone.milestoneDate!), 'PPP')}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        ))}
                     </div>
                 ))}
             </div>
-            
-            {/* Milestones */}
-            <div className="relative mt-12 h-10 border-t">
-                 {milestones.map(milestone => (
-                    <TooltipProvider key={milestone.id}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className="absolute -top-2" style={{ left: `calc(${milestone.offset}% - 8px)`}}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary">
-                                        <path d="M12 2L2 12l10 10 10-10L12 2z"/>
-                                    </svg>
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p className="font-bold">{milestone.name}</p>
-                                <p>{format(parseISO(milestone.milestoneDate!), 'PPP')}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                ))}
-            </div>
-
         </div>
     </div>
   );
 }
-
