@@ -40,11 +40,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { type Release, type ReleaseItemType } from '@/types';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { ReleaseGanttChart } from '@/components/ReleaseGanttChart';
 
 const releaseSchemaBase = z.object({
   name: z.string().min(1, 'Name is required.'),
@@ -179,9 +180,9 @@ export default function ReleasesPage() {
         description: values.description || '',
         parentReleaseId: values.parentReleaseId || undefined,
         itemType: currentItemType,
-        startDate: values.startDate,
-        endDate: values.endDate,
-        milestoneDate: values.milestoneDate,
+        startDate: values.startDate || undefined,
+        endDate: values.endDate || undefined,
+        milestoneDate: values.milestoneDate || undefined,
     };
 
     const success = editingItem
@@ -216,51 +217,64 @@ export default function ReleasesPage() {
           </Button>
         </PageHeader>
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Parent Release</TableHead>
-                <TableHead className="w-[30%]">Description</TableHead>
-                <TableHead>Start/Milestone Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {releasesAndMilestones.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">
-                    <Badge variant={item.itemType === 'Release' ? 'default' : (item.itemType === 'Stage' ? 'secondary' : 'outline')}>
-                        {item.releaseId}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{item.name}</TableCell>
-                   <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
-                  <TableCell className="break-words">{item.description}</TableCell>
-                  <TableCell>
-                    {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
-                        ? format(new Date(item.milestoneDate), 'PPP')
-                        : (item.startDate && !isNaN(new Date(item.startDate).getTime()) ? format(new Date(item.startDate), 'PPP') : 'N/A')}
-                  </TableCell>
-                  <TableCell>
-                    {item.itemType === 'Milestone'
-                        ? 'N/A'
-                        : (item.endDate && !isNaN(new Date(item.endDate).getTime()) ? format(new Date(item.endDate), 'PPP') : 'N/A')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+            <CardHeader>
+                <CardTitle>Timeline</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ReleaseGanttChart releases={releasesAndMilestones} />
+            </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Project Releases</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Parent Release</TableHead>
+                  <TableHead className="w-[30%]">Description</TableHead>
+                  <TableHead>Start/Milestone Date</TableHead>
+                  <TableHead>End Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {releasesAndMilestones.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">
+                      <Badge variant={item.itemType === 'Release' ? 'default' : (item.itemType === 'Stage' ? 'secondary' : 'outline')}>
+                          {item.releaseId}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
+                    <TableCell className="break-words">{item.description}</TableCell>
+                    <TableCell>
+                      {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
+                          ? format(new Date(item.milestoneDate), 'PPP')
+                          : (item.startDate && !isNaN(new Date(item.startDate).getTime()) ? format(new Date(item.startDate), 'PPP') : 'N/A')}
+                    </TableCell>
+                    <TableCell>
+                      {item.itemType === 'Milestone'
+                          ? 'N/A'
+                          : (item.endDate && !isNaN(new Date(item.endDate).getTime()) ? format(new Date(item.endDate), 'PPP') : 'N/A')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
         </Card>
       </div>
 
