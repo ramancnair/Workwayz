@@ -2,177 +2,195 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LabelList,
-  ReferenceLine,
-} from 'recharts';
 import { type Release } from '@/types';
-import { differenceInDays, format, parseISO, startOfDay, addDays } from 'date-fns';
+import { eachDayOfInterval, format, differenceInDays, parseISO, startOfDay, addDays, getDaysInMonth, startOfMonth } from 'date-fns';
+import { Card, CardContent } from './ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 const COLORS = [
-  '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', 
-  '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57'
+  '#dc2626', '#f59e0b', '#16a34a', '#3b82f6', '#9333ea', 
+  '#db2777', '#f43f5e', '#ea580c', '#65a30d', '#2563eb'
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const item = payload[0];
-    const stageName = item.dataKey;
-    const duration = data[stageName];
-    
-    // Find stage start date
-    let stageStart = data.startDate;
-    for (const key in data) {
-      if (key === stageName) break;
-      if (key !== 'name' && key !== 'startDate' && typeof data[key] === 'number') {
-        stageStart = addDays(stageStart, data[key]);
-      }
-    }
-    const stageEnd = addDays(stageStart, duration - 1);
-    
-    return (
-      <div className="bg-background border rounded-md p-2 shadow-md text-sm">
-        <p className="font-bold">{data.name}</p>
-        <p className="font-semibold text-muted-foreground">{stageName}</p>
-        <p>
-          {format(stageStart, 'MMM d')} - {format(stageEnd, 'MMM d, yyyy')}
-        </p>
-        <p>Duration: {duration} {duration === 1 ? 'day' : 'days'}</p>
-      </div>
-    );
-  }
-  return null;
-};
-
-const MilestoneLabel = ({ viewBox, value, name }: any) => {
-    const { x, y } = viewBox;
-    return (
-        <g transform={`translate(${x},${y})`}>
-            <text x={0} y={-10} dy={0} textAnchor="middle" fill="#666" fontSize="12" transform="rotate(-45)">
-                {name}
-            </text>
-        </g>
-    );
-};
-
 export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] }) {
-  const chartData = useMemo(() => {
-    const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate);
-    const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate);
+
+  const { chartData, months, totalDays, todayOffset, milestones } = useMemo(() => {
+    const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate)
+        .sort((a,b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime());
     
-    return releases.map(release => {
-      const releaseStart = parseISO(release.startDate!);
-      const releaseEnd = parseISO(release.endDate!);
+    if (releases.length === 0) {
+      return { chartData: [], months: [], totalDays: 0, todayOffset: 0, milestones: [] };
+    }
 
-      const releaseStages = stages
-        .filter(s => s.parentReleaseId === release.id)
-        .sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime());
-      
-      const chartItem: any = { 
-        name: `[${release.releaseId}] ${release.name}`,
-        startDate: releaseStart,
-      };
+    const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate);
+    const milestones = allItems.filter(item => item.itemType === 'Milestone' && item.milestoneDate);
 
-      let lastStageEnd = releaseStart;
+    const allDates = [
+        ...releases.map(r => parseISO(r.startDate!)),
+        ...releases.map(r => parseISO(r.endDate!)),
+        ...milestones.map(m => parseISO(m.milestoneDate!)),
+    ];
+    
+    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
-      releaseStages.forEach(stage => {
-        const stageStart = parseISO(stage.startDate!);
-        const stageEnd = parseISO(stage.endDate!);
+    const chartStartDate = startOfDay(addDays(startOfMonth(minDate), -7));
+    const chartEndDate = startOfDay(addDays(startOfMonth(maxDate), 37));
 
-        // Add blank space if there is a gap between stages
-        const gap = differenceInDays(stageStart, lastStageEnd);
-        if (gap > 0) {
-            chartItem[`gap_${stage.id}`] = gap;
+    const totalDays = differenceInDays(chartEndDate, chartStartDate);
+    const today = startOfDay(new Date());
+    const todayOffset = differenceInDays(today, chartStartDate);
+
+    const chartData = releases.map((release, index) => {
+        const releaseStart = parseISO(release.startDate!);
+        const releaseEnd = parseISO(release.endDate!);
+
+        const startOffset = differenceInDays(releaseStart, chartStartDate);
+        const duration = differenceInDays(releaseEnd, releaseStart) + 1;
+        
+        const releaseStages = stages.filter(s => s.parentReleaseId === release.id)
+            .map(stage => {
+                const stageStart = parseISO(stage.startDate!);
+                const stageEnd = parseISO(stage.endDate!);
+                const stageStartOffset = differenceInDays(stageStart, chartStartDate);
+                const stageDuration = differenceInDays(stageEnd, stageStart) + 1;
+                return {
+                    ...stage,
+                    startOffset: (stageStartOffset / totalDays) * 100,
+                    duration: (stageDuration / totalDays) * 100,
+                    color: COLORS[(index + 1) % COLORS.length]
+                }
+            });
+
+        return {
+            ...release,
+            startOffset: (startOffset / totalDays) * 100,
+            duration: (duration / totalDays) * 100,
+            color: COLORS[index % COLORS.length],
+            stages: releaseStages,
         }
-
-        chartItem[stage.name] = differenceInDays(stageEnd, stageStart) + 1;
-        lastStageEnd = stageEnd;
-      });
-
-      return chartItem;
     });
+
+    const milestoneData = milestones.map(milestone => {
+        const milestoneDate = parseISO(milestone.milestoneDate!);
+        const offset = differenceInDays(milestoneDate, chartStartDate);
+        return {
+            ...milestone,
+            offset: (offset / totalDays) * 100,
+        }
+    });
+
+    let currentMonths = [];
+    let currentDate = chartStartDate;
+    while(currentDate <= chartEndDate) {
+        const monthStart = startOfMonth(currentDate);
+        const daysInMonth = getDaysInMonth(monthStart);
+        const startOffset = differenceInDays(monthStart, chartStartDate);
+
+        currentMonths.push({
+            name: format(monthStart, 'MMMM yyyy'),
+            offset: (startOffset / totalDays) * 100,
+            width: (daysInMonth / totalDays) * 100,
+        });
+
+        currentDate = addDays(monthStart, daysInMonth);
+    }
+
+    return { chartData, months: currentMonths, totalDays, todayOffset: (todayOffset / totalDays) * 100, milestones: milestoneData };
   }, [allItems]);
 
-  const milestones = useMemo(() => {
-    return allItems.filter(item => item.itemType === 'Milestone' && item.milestoneDate && item.parentReleaseId);
-  }, [allItems]);
 
   if (chartData.length === 0) {
     return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
   }
-  
-  const allKeys = chartData.reduce((keys, item) => {
-    Object.keys(item).forEach(key => {
-        if (key !== 'name' && key !== 'startDate' && !keys.includes(key)) {
-            keys.push(key);
-        }
-    });
-    return keys;
-  }, [] as string[]);
-
 
   return (
-    <div className="w-full h-[500px] overflow-x-auto overflow-y-hidden">
-        <div style={{ width: `${Math.max(100, chartData.length * 10)}%`, height: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                layout="vertical"
-                margin={{ top: 20, right: 30, left: 20, bottom: 30 }}
-                barCategoryGap="30%"
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" domain={['dataMin', 'dataMax']} hide />
-                <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend formatter={(value, entry, index) => <span style={{ color: '#333' }}>{value.startsWith('gap_') ? null : value}</span>} />
+    <div className="w-full overflow-x-auto">
+        <div className="relative pt-12 pb-4 min-w-[1200px]" style={{ minHeight: `${chartData.length * 6 + 10}rem` }}>
+            {/* Months Header */}
+            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm">
+                <div className="relative h-8 flex border-b">
+                    {months.map(month => (
+                        <div key={month.name} className="flex-shrink-0 border-l flex items-center justify-center" style={{ left: `${month.offset}%`, width: `${month.width}%`}}>
+                            <span className="font-semibold text-sm">{month.name}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
-                {milestones.map(milestone => {
-                    const parentRelease = chartData.find(d => d.name.startsWith(`[${allItems.find(r => r.id === milestone.parentReleaseId)?.releaseId}]`));
-                    if (!parentRelease) return null;
+            {/* Today Marker */}
+            {todayOffset >= 0 && todayOffset <= 100 && (
+                <div className="absolute top-8 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `${todayOffset}%` }}>
+                    <div className="absolute -top-6 -translate-x-1/2 px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">TODAY</div>
+                </div>
+            )}
 
-                    const daysFromStart = differenceInDays(parseISO(milestone.milestoneDate!), parentRelease.startDate);
-                    return (
-                        <ReferenceLine 
-                            key={milestone.id} 
-                            x={daysFromStart} 
-                            stroke="red" 
-                            strokeDasharray="3 3"
-                            isFront={true}
-                        >
-                             <LabelList
-                                content={<MilestoneLabel name={`[${milestone.releaseId}] ${milestone.name}`} />}
-                                position="insideTop"
-                            />
-                        </ReferenceLine>
-                    )
-                })}
-                
-                {allKeys.map((key, index) => {
-                    if (key.startsWith('gap_')) {
-                        return <Bar key={key} dataKey={key} stackId="a" fill="transparent" />;
-                    }
-                    return (
-                        <Bar key={key} dataKey={key} stackId="a" fill={COLORS[index % COLORS.length]}>
-                            <LabelList dataKey={key} position="center" content={({ value, width }) => {
-                                if (width < 30) return null;
-                                return <tspan dy={-5}>{key}</tspan>
-                            }} />
-                        </Bar>
-                    )
-                })}
-              </BarChart>
-            </ResponsiveContainer>
+            {/* Release Rows */}
+            <div className="relative mt-4 space-y-8">
+                {chartData.map((release, index) => (
+                    <div key={release.id} className="relative h-10">
+                        {/* Main Release Bar */}
+                         <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div 
+                                        className="absolute h-8 rounded-md flex items-center opacity-30" 
+                                        style={{ left: `${release.startOffset}%`, width: `${release.duration}%`, backgroundColor: release.color, top: 4 }}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="font-bold">{release.name}</p>
+                                    <p>{format(parseISO(release.startDate!), 'PPP')} - {format(parseISO(release.endDate!), 'PPP')}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
+                        {/* Stages */}
+                        {release.stages.map(stage => (
+                             <TooltipProvider key={stage.id}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div 
+                                            className="absolute h-8 rounded-md flex items-center justify-center px-2 text-white text-xs font-semibold overflow-hidden" 
+                                            style={{ left: `${stage.startOffset}%`, width: `${stage.duration}%`, backgroundColor: stage.color, top: 4 }}
+                                        >
+                                           <span className="truncate">{stage.name}</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p className="font-bold">{stage.name}</p>
+                                        <p>{format(parseISO(stage.startDate!), 'PPP')} - {format(parseISO(stage.endDate!), 'PPP')}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        ))}
+                    </div>
+                ))}
+            </div>
+            
+            {/* Milestones */}
+            <div className="relative mt-12 h-10 border-t">
+                 {milestones.map(milestone => (
+                    <TooltipProvider key={milestone.id}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="absolute -top-2" style={{ left: `calc(${milestone.offset}% - 8px)`}}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary">
+                                        <path d="M12 2L2 12l10 10 10-10L12 2z"/>
+                                    </svg>
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="font-bold">{milestone.name}</p>
+                                <p>{format(parseISO(milestone.milestoneDate!), 'PPP')}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                ))}
+            </div>
+
         </div>
     </div>
   );
 }
+
