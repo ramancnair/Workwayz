@@ -86,6 +86,7 @@ export default function TestCasesPage() {
     assigneeId: 'all',
     storyId: 'all',
     sprintId: 'all',
+    releaseId: 'all',
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
 
@@ -113,7 +114,7 @@ export default function TestCasesPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ status: 'all', type: 'all', assigneeId: 'all', storyId: 'all', sprintId: 'all' });
+    setFilters({ status: 'all', type: 'all', assigneeId: 'all', storyId: 'all', sprintId: 'all', releaseId: 'all' });
   };
   
   const handleSort = (columnId: string) => {
@@ -156,6 +157,13 @@ export default function TestCasesPage() {
       } else {
         filtered = filtered.filter(t => t.sprintId === filters.sprintId);
       }
+    }
+    if (filters.releaseId !== 'all') {
+        if(filters.releaseId === 'unassigned') {
+            filtered = filtered.filter(tc => !tc.releaseId);
+        } else {
+            filtered = filtered.filter(tc => tc.releaseId === filters.releaseId);
+        }
     }
 
     if (sorting) {
@@ -325,6 +333,14 @@ export default function TestCasesPage() {
                   {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                 </SelectContent>
               </Select>
+               <Select value={filters.releaseId} onValueChange={(v) => handleFilterChange('releaseId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by release..."/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Releases</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
               <Button variant="ghost" onClick={clearFilters}>
                 <X className="mr-2 h-4 w-4" /> Clear Filters
               </Button>
@@ -339,6 +355,7 @@ export default function TestCasesPage() {
                 <TableHead>Assignee</TableHead>
                 <SortableHeader columnId="sprintId">Sprint</SortableHeader>
                 <TableHead>Story</TableHead>
+                <TableHead>Release</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -347,6 +364,7 @@ export default function TestCasesPage() {
                 const assignee = employees.find(e => e.id === tc.assigneeId);
                 const story = stories.find(s => s.id === tc.storyId);
                 const sprint = sprints.find(s => s.id === tc.sprintId);
+                const release = releases.find(r => r.id === tc.releaseId);
                 return (
                     <TableRow key={tc.id}>
                         <TableCell className="font-medium">{tc.testCaseId}</TableCell>
@@ -381,6 +399,20 @@ export default function TestCasesPage() {
                               </Tooltip>
                             </TooltipProvider>
                           ): 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          {release ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Badge variant="outline">{release.releaseId}</Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{release.name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
