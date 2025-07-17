@@ -10,12 +10,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let db: any = null;
-
-// Only initialize Firebase if a project ID is provided.
-if (firebaseConfig.projectId) {
-    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-    db = getFirestore(app);
+let app;
+if (firebaseConfig.projectId && getApps().length === 0) {
+  try {
+    app = initializeApp(firebaseConfig);
+  } catch (e) {
+    console.error("Firebase initialization error", e);
+  }
+} else {
+  app = getApp();
 }
+
+const db = app ? getFirestore(app) : null;
 
 export { db, firebaseConfig };
