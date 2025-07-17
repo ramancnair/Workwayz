@@ -96,7 +96,7 @@ export function SidebarNav() {
   const releasesMenuItems = [
     {
       href: "/releases",
-      label: "Releases & Milestones",
+      label: "Project Releases",
       icon: Package,
     }
   ];
