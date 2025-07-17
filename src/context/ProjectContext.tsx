@@ -231,7 +231,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                         issues: ['reportedDate', 'resolvedDate'],
                         dependencies: ['expectedByDate'],
                         holidays: ['date'],
-                        releases: ['startDate', 'endDate'],
+                        releases: ['startDate', 'endDate', 'milestoneDate'],
                     };
 
                     if (dateFields[name]) {
@@ -827,14 +827,21 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const addReleaseOrMilestone = async (item: Omit<Release, 'id' | 'releaseId'>): Promise<boolean> => {
     if (!db) return false;
     try {
-      const { startDate, endDate, ...rest } = item;
-      const snapshot = await getDocs(query(collection(db, 'releases'), where('itemType', '==', item.itemType)));
-      const prefix = item.itemType === 'Release' ? 'REL' : 'M';
-      const newId = `${prefix}-${snapshot.size + 1}`;
+      const { startDate, endDate, milestoneDate, ...rest } = item;
+      const snapshot = await getDocs(query(collection(db, 'releases')));
+      const prefixMap: Record<string, string> = {
+        'Release': 'REL',
+        'Stage': 'S',
+        'Milestone': 'M',
+      }
+      const prefix = prefixMap[item.itemType] || 'ITEM';
+      const itemsOfType = releasesAndMilestones.filter(i => i.itemType === item.itemType);
+      const newId = `${prefix}-${itemsOfType.length + 1}`;
       
       const payload: any = { ...rest, releaseId: newId };
       if(startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
       if(endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
+      if(milestoneDate) payload.milestoneDate = Timestamp.fromDate(new Date(milestoneDate));
       
       await addDoc(collection(db, 'releases'), sanitizeForFirestore(payload));
       return true;
@@ -847,10 +854,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const updateReleaseOrMilestone = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'itemType' >>): Promise<boolean> => {
     if (!db) return false;
     try {
-      const { startDate, endDate, ...rest } = data;
+      const { startDate, endDate, milestoneDate, ...rest } = data;
       const payload: any = { ...rest };
       if (data.hasOwnProperty('startDate') && startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
       if (data.hasOwnProperty('endDate') && endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
+      if (data.hasOwnProperty('milestoneDate') && milestoneDate) payload.milestoneDate = Timestamp.fromDate(new Date(milestoneDate));
+
       await updateDoc(doc(db, 'releases', id), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {

@@ -97,9 +97,9 @@ export const stories: Story[] = [
 ];
 
 export const testCases: TestCase[] = [
-    { id: 'tc1', testCaseId: 'TC-1', title: 'Verify successful login', type: 'Functional', description: 'Enter valid credentials and click login.', expectedResult: 'User is redirected to dashboard.', status: 'Passed', assigneeId: 'tester1', storyId: 'story1' },
-    { id: 'tc2', testCaseId: 'TC-2', title: 'Verify failed login', type: 'Functional', description: 'Enter invalid credentials and click login.', expectedResult: 'Error message is displayed.', status: 'Passed', assigneeId: 'tester1', storyId: 'story1' },
-    { id: 'tc3', testCaseId: 'TC-3', title: 'Dashboard loading performance', type: 'Non-functional', description: 'Measure time to load dashboard with 100+ tasks.', expectedResult: 'Dashboard loads in under 2 seconds.', status: 'Not Run', assigneeId: 'tester2', storyId: 'story2' },
+    { id: 'tc1', testCaseId: 'TC-1', title: 'Verify successful login', type: 'Functional', description: 'Enter valid credentials and click login.', expectedResult: 'User is redirected to dashboard.', status: 'Passed', assigneeId: 'tester1', storyId: 'story1', releaseId: 'rel1' },
+    { id: 'tc2', testCaseId: 'TC-2', title: 'Verify failed login', type: 'Functional', description: 'Enter invalid credentials and click login.', expectedResult: 'Error message is displayed.', status: 'Passed', assigneeId: 'tester1', storyId: 'story1', releaseId: 'rel1' },
+    { id: 'tc3', testCaseId: 'TC-3', title: 'Dashboard loading performance', type: 'Non-functional', description: 'Measure time to load dashboard with 100+ tasks.', expectedResult: 'Dashboard loads in under 2 seconds.', status: 'Not Run', assigneeId: 'tester2', storyId: 'story2', releaseId: 'rel1' },
 ];
 
 
