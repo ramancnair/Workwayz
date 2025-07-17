@@ -100,7 +100,7 @@ export default function ReleasesPage() {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A parent release is required.", path: ["parentReleaseId"]});
       } else {
         const parentRelease = releases.find(r => r.id === data.parentReleaseId);
-        if (parentRelease) {
+        if (parentRelease && parentRelease.startDate && parentRelease.endDate) {
           const releaseStart = new Date(parentRelease.startDate);
           const releaseEnd = new Date(parentRelease.endDate);
 
@@ -155,7 +155,7 @@ export default function ReleasesPage() {
     }
   }, [isDialogOpen, editingItem, form]);
 
-  const handleDialogOpen = (item: Release | null, type: ReleaseItemType = 'Release') => {
+  const handleDialogOpen = (item: Release | null, type: ReleaseItemType) => {
     setEditingItem(item);
     setItemTypeToAdd(type);
     setIsDialogOpen(true);
@@ -240,14 +240,14 @@ export default function ReleasesPage() {
                    <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
                   <TableCell className="break-words">{item.description}</TableCell>
                   <TableCell>
-                    {item.itemType === 'Milestone' && item.milestoneDate
+                    {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
                         ? format(new Date(item.milestoneDate), 'PPP')
-                        : (item.startDate ? format(new Date(item.startDate), 'PPP') : 'N/A')}
+                        : (item.startDate && !isNaN(new Date(item.startDate).getTime()) ? format(new Date(item.startDate), 'PPP') : 'N/A')}
                   </TableCell>
                   <TableCell>
                     {item.itemType === 'Milestone'
                         ? 'N/A'
-                        : (item.endDate ? format(new Date(item.endDate), 'PPP') : 'N/A')}
+                        : (item.endDate && !isNaN(new Date(item.endDate).getTime()) ? format(new Date(item.endDate), 'PPP') : 'N/A')}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
