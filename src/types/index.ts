@@ -42,6 +42,7 @@ export type Story = {
   endDate?: string; // ISO String
   effortDays?: number;
   impactedSystemId?: string;
+  releaseId?: string;
 };
 
 export type Sprint = {
@@ -65,6 +66,7 @@ export type TestCase = {
   status: TestCaseStatus;
   assigneeId?: string;
   storyId?: string;
+  releaseId?: string;
 };
 
 export type OnshoreOffshore = 'Onshore' | 'Offshore';
@@ -176,15 +178,16 @@ export type ImpactedSystem = {
   category: ImpactedSystemCategory;
 };
 
-export type ReleaseItemType = 'Release' | 'Milestone';
+export type ReleaseItemType = 'Release' | 'Stage' | 'Milestone';
 
 export type Release = {
   id: string;
   releaseId: string;
   name: string;
   description: string;
-  startDate: string; // ISO String
-  endDate: string; // ISO String
+  startDate?: string; // ISO String
+  endDate?: string; // ISO String
+  milestoneDate?: string; // ISO String
   itemType: ReleaseItemType;
   parentReleaseId?: string;
 };

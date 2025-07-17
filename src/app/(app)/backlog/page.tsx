@@ -93,6 +93,7 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
+  releaseId: z.string().optional(),
 });
 
 const sprintFormSchema = z.object({
@@ -195,6 +196,7 @@ export default function BacklogPage() {
     stories, 
     sprints, 
     employees, 
+    releasesAndMilestones,
     moveStoryToSprint, 
     moveStoryToEpic, 
     deleteStory, 
@@ -229,6 +231,8 @@ export default function BacklogPage() {
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
+
+  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
@@ -241,7 +245,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium' },
+    defaultValues: { itemType: 'Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned' },
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -330,6 +334,7 @@ export default function BacklogPage() {
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
+        releaseId: selectedStory.releaseId || 'unassigned',
       });
     }
   }, [selectedStory, editStoryForm]);
@@ -414,6 +419,7 @@ export default function BacklogPage() {
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       criticality: values.itemType === 'Bug' ? values.criticality : undefined,
+      releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     };
     const success = await addStory(newStory);
     if (success) {
@@ -438,6 +444,7 @@ export default function BacklogPage() {
             : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
+        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     });
     if (success) {
       setSelectedStory(null);
@@ -785,6 +792,44 @@ export default function BacklogPage() {
                       )}
                   />
                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={addStoryForm.control}
+                      name="releaseId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Release</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Assign to a release" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {releases.map(release => (
+                                  <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={addStoryForm.control}
+                      name="estimatedHours"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estimated Hours</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                    {watchedItemType === 'Bug' && (
                     <FormField
                       control={addStoryForm.control}
@@ -811,19 +856,6 @@ export default function BacklogPage() {
                       )}
                     />
                   )}
-                  <FormField
-                    control={addStoryForm.control}
-                    name="estimatedHours"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Estimated Hours</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <DialogFooter>
                     <Button type="submit" disabled={isAddStorySubmitting}>
                       {isAddStorySubmitting ? 'Creating...' : `Create ${watchedItemType}`}
@@ -1260,6 +1292,44 @@ export default function BacklogPage() {
                     )}
                   />
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField
+                      control={editStoryForm.control}
+                      name="releaseId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Release</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Assign to a release" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {releases.map(release => (
+                                  <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={editStoryForm.control}
+                      name="estimatedHours"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estimated Hours</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   {selectedStory.itemType === 'Bug' && (
                     <FormField
                       control={editStoryForm.control}
@@ -1286,19 +1356,6 @@ export default function BacklogPage() {
                       )}
                     />
                   )}
-                  <FormField
-                    control={editStoryForm.control}
-                    name="estimatedHours"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Estimated Hours</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   {selectedStory.itemType === 'Story' && selectedStorySubItems.length > 0 && (
                     <div>

@@ -55,6 +55,7 @@ const testCaseFormSchema = z.object({
   status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
   assigneeId: z.string().optional(),
   storyId: z.string().optional(),
+  releaseId: z.string().optional(),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -70,7 +71,7 @@ const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
 
 export default function TestCasesPage() {
-  const { testCases, employees, stories, addTestCase, updateTestCase, deleteTestCase } = useProject();
+  const { testCases, employees, stories, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
@@ -89,6 +90,8 @@ export default function TestCasesPage() {
   const form = useForm<z.infer<typeof testCaseFormSchema>>({
     resolver: zodResolver(testCaseFormSchema),
   });
+
+  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -167,6 +170,7 @@ export default function TestCasesPage() {
             ...editingTestCase,
             assigneeId: editingTestCase.assigneeId || 'unassigned',
             storyId: editingTestCase.storyId || '',
+            releaseId: editingTestCase.releaseId || 'unassigned',
           });
         } else {
           setRelatedStoryInputText('');
@@ -178,6 +182,7 @@ export default function TestCasesPage() {
             status: 'Not Run',
             assigneeId: 'unassigned',
             storyId: '',
+            releaseId: 'unassigned',
           });
         }
     }
@@ -209,6 +214,7 @@ export default function TestCasesPage() {
         status: values.status,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         storyId: values.storyId === '' ? undefined : values.storyId,
+        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     };
 
     let success = false;
@@ -293,6 +299,7 @@ export default function TestCasesPage() {
                 <SortableHeader columnId="status">Status</SortableHeader>
                 <TableHead>Assignee</TableHead>
                 <TableHead>Story</TableHead>
+                <TableHead>Release</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -300,6 +307,7 @@ export default function TestCasesPage() {
               {filteredAndSortedTestCases.map((tc) => {
                 const assignee = employees.find(e => e.id === tc.assigneeId);
                 const story = stories.find(s => s.id === tc.storyId);
+                const release = releases.find(r => r.id === tc.releaseId);
                 return (
                     <TableRow key={tc.id}>
                         <TableCell className="font-medium">{tc.testCaseId}</TableCell>
@@ -330,6 +338,20 @@ export default function TestCasesPage() {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{story.title}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ): 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          {release ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                   <Badge variant="outline">{release.releaseId}</Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{release.name}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -461,6 +483,31 @@ export default function TestCasesPage() {
                       </FormItem>
                   )} />
               </div>
+              <FormField
+                control={form.control}
+                name="releaseId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Release</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Assign to a release" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {releases.map((release) => (
+                          <SelectItem key={release.id} value={release.id}>
+                            [{release.releaseId}] {release.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingTestCase ? 'Saving...' : 'Creating...') : (editingTestCase ? 'Save Changes' : 'Create Test Case')}
