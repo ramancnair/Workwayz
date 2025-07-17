@@ -49,8 +49,9 @@ import { format } from 'date-fns';
 const releaseSchemaBase = z.object({
   name: z.string().min(1, 'Name is required.'),
   description: z.string().optional(),
-  startDate: z.string().min(1, 'Start date is required.'),
-  endDate: z.string().min(1, 'End date is required.'),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  milestoneDate: z.string().optional(),
   parentReleaseId: z.string().optional(),
 });
 
@@ -76,44 +77,49 @@ export default function ReleasesPage() {
   };
   
   const refinedReleaseSchema = releaseSchemaBase.superRefine((data, ctx) => {
-    // Basic date validation
-    if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "End date must be on or after the start date.",
-        path: ["endDate"],
-      });
+    if (currentItemType === 'Release' || currentItemType === 'Stage') {
+        if (!data.startDate) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Start date is required.", path: ["startDate"]});
+        }
+        if (!data.endDate) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "End date is required.", path: ["endDate"]});
+        }
+        if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "End date must be on or after the start date.", path: ["endDate"]});
+        }
     }
 
-    // Milestone-specific validation
     if (currentItemType === 'Milestone') {
+         if (!data.milestoneDate) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Milestone date is required.", path: ["milestoneDate"]});
+        }
+    }
+
+    if (currentItemType === 'Stage' || currentItemType === 'Milestone') {
       if (!data.parentReleaseId) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "A parent release is required for a milestone.",
-          path: ["parentReleaseId"],
-        });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A parent release is required.", path: ["parentReleaseId"]});
       } else {
         const parentRelease = releases.find(r => r.id === data.parentReleaseId);
-        if (parentRelease && data.startDate && data.endDate) {
-          const milestoneStart = new Date(data.startDate);
-          const milestoneEnd = new Date(data.endDate);
+        if (parentRelease) {
           const releaseStart = new Date(parentRelease.startDate);
           const releaseEnd = new Date(parentRelease.endDate);
 
-          if (milestoneStart < releaseStart) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: `Start date must be on or after the release start date of ${format(releaseStart, 'PPP')}.`,
-              path: ["startDate"],
-            });
+          if (currentItemType === 'Stage' && data.startDate && data.endDate) {
+            const stageStart = new Date(data.startDate);
+            const stageEnd = new Date(data.endDate);
+            if (stageStart < releaseStart) {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Start date must be on or after the release start date of ${format(releaseStart, 'PPP')}.`, path: ["startDate"]});
+            }
+            if (stageEnd > releaseEnd) {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, message: `End date must be on or before the release end date of ${format(releaseEnd, 'PPP')}.`, path: ["endDate"]});
+            }
           }
-          if (milestoneEnd > releaseEnd) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: `End date must be on or before the release end date of ${format(releaseEnd, 'PPP')}.`,
-              path: ["endDate"],
-            });
+          
+          if (currentItemType === 'Milestone' && data.milestoneDate) {
+              const milestoneDate = new Date(data.milestoneDate);
+              if (milestoneDate < releaseStart || milestoneDate > releaseEnd) {
+                  ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Milestone date must be between the release dates of ${format(releaseStart, 'PPP')} and ${format(releaseEnd, 'PPP')}.`, path: ["milestoneDate"]});
+              }
           }
         }
       }
@@ -122,7 +128,6 @@ export default function ReleasesPage() {
   
   const form = useForm<z.infer<typeof refinedReleaseSchema>>({
     resolver: zodResolver(refinedReleaseSchema),
-    // We will reset the form in the useEffect hook
   });
 
 
@@ -132,8 +137,9 @@ export default function ReleasesPage() {
         form.reset({
           name: editingItem.name,
           description: editingItem.description,
-          startDate: format(new Date(editingItem.startDate), 'yyyy-MM-dd'),
-          endDate: format(new Date(editingItem.endDate), 'yyyy-MM-dd'),
+          startDate: editingItem.startDate ? format(new Date(editingItem.startDate), 'yyyy-MM-dd') : '',
+          endDate: editingItem.endDate ? format(new Date(editingItem.endDate), 'yyyy-MM-dd') : '',
+          milestoneDate: editingItem.milestoneDate ? format(new Date(editingItem.milestoneDate), 'yyyy-MM-dd') : '',
           parentReleaseId: editingItem.parentReleaseId,
         });
       } else {
@@ -142,6 +148,7 @@ export default function ReleasesPage() {
           description: '',
           startDate: '',
           endDate: '',
+          milestoneDate: '',
           parentReleaseId: undefined,
         });
       }
@@ -167,18 +174,19 @@ export default function ReleasesPage() {
 
   const onSubmit = async (values: z.infer<typeof refinedReleaseSchema>) => {
     setIsSubmitting(true);
-    const releaseData = {
+    const releaseData: Partial<Release> = {
         name: values.name,
         description: values.description || '',
-        startDate: values.startDate,
-        endDate: values.endDate,
         parentReleaseId: values.parentReleaseId || undefined,
         itemType: currentItemType,
+        startDate: values.startDate,
+        endDate: values.endDate,
+        milestoneDate: values.milestoneDate,
     };
 
     const success = editingItem
       ? await updateReleaseOrMilestone(editingItem.id, releaseData)
-      : await addReleaseOrMilestone(releaseData);
+      : await addReleaseOrMilestone(releaseData as Omit<Release, 'id' | 'releaseId'>);
 
     if (success) {
       toast({ title: "Success", description: `${currentItemType} ${editingItem ? 'updated' : 'added'} successfully.` });
@@ -193,12 +201,16 @@ export default function ReleasesPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Releases & Milestones" description="Manage all project release cycles and key milestones.">
+        <PageHeader title="Releases, Stages & Milestones" description="Manage all project release cycles and key milestones.">
           <Button onClick={() => handleDialogOpen(null, 'Release')}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Release
           </Button>
-           <Button onClick={() => handleDialogOpen(null, 'Milestone')} disabled={releases.length === 0} title={releases.length === 0 ? "Create a Release first" : ""}>
+           <Button onClick={() => handleDialogOpen(null, 'Stage')} disabled={releases.length === 0} title={releases.length === 0 ? "Create a Release first" : ""}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Stage
+          </Button>
+          <Button onClick={() => handleDialogOpen(null, 'Milestone')} disabled={releases.length === 0} title={releases.length === 0 ? "Create a Release first" : ""}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Milestone
           </Button>
@@ -211,7 +223,7 @@ export default function ReleasesPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Parent Release</TableHead>
                 <TableHead className="w-[30%]">Description</TableHead>
-                <TableHead>Start Date</TableHead>
+                <TableHead>Start/Milestone Date</TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -220,17 +232,25 @@ export default function ReleasesPage() {
               {releasesAndMilestones.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">
-                    <Badge variant={item.itemType === 'Release' ? 'default' : 'secondary'}>
+                    <Badge variant={item.itemType === 'Release' ? 'default' : (item.itemType === 'Stage' ? 'secondary' : 'outline')}>
                         {item.releaseId}
                     </Badge>
                   </TableCell>
                   <TableCell>{item.name}</TableCell>
-                   <TableCell>{item.itemType === 'Milestone' ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
+                   <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
                   <TableCell className="break-words">{item.description}</TableCell>
-                  <TableCell>{format(new Date(item.startDate), 'PPP')}</TableCell>
-                  <TableCell>{format(new Date(item.endDate), 'PPP')}</TableCell>
+                  <TableCell>
+                    {item.itemType === 'Milestone' && item.milestoneDate
+                        ? format(new Date(item.milestoneDate), 'PPP')
+                        : (item.startDate ? format(new Date(item.startDate), 'PPP') : 'N/A')}
+                  </TableCell>
+                  <TableCell>
+                    {item.itemType === 'Milestone'
+                        ? 'N/A'
+                        : (item.endDate ? format(new Date(item.endDate), 'PPP') : 'N/A')}
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)}>
@@ -251,7 +271,7 @@ export default function ReleasesPage() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-               {currentItemType === 'Milestone' && (
+               {(currentItemType === 'Stage' || currentItemType === 'Milestone') && (
                   <FormField
                     control={form.control}
                     name="parentReleaseId"
@@ -295,26 +315,40 @@ export default function ReleasesPage() {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField control={form.control} name="startDate" render={({ field }) => (
+
+              {currentItemType === 'Milestone' ? (
+                <FormField control={form.control} name="milestoneDate" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Start Date</FormLabel>
+                        <FormLabel>Milestone Date</FormLabel>
                         <FormControl>
                             <Input type="date" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={form.control} name="endDate" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>End Date</FormLabel>
-                        <FormControl>
-                            <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="startDate" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Start Date</FormLabel>
+                            <FormControl>
+                                <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="endDate" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>End Date</FormLabel>
+                            <FormControl>
+                                <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+              )}
+
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (editingItem ? 'Saving...' : 'Creating...') : (editingItem ? 'Save Changes' : `Create ${currentItemType}`)}
