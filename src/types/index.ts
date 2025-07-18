@@ -4,6 +4,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -78,6 +79,12 @@ export type OnshoreOffshore = 'Onshore' | 'Offshore';
 
 export type EmployeeRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM';
 
+export type LeavePeriod = {
+  id: string; // uuid on the client
+  startDate: string; // ISO String
+  endDate: string; // ISO String
+};
+
 export type Employee = {
   id: string;
   empId: string;
@@ -95,7 +102,7 @@ export type Employee = {
   onshoreOrOffshore?: OnshoreOffshore;
   billedRate?: number;
   availability?: number;
-  leaveDates?: string[]; // Array of ISO date strings
+  leavePeriods?: LeavePeriod[];
 };
 
 export type RiskSeverity = 1 | 2 | 3;

@@ -19,9 +19,12 @@ import {
   getFirestore,
   getDoc,
   setDoc,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
+import { v4 as uuidv4 } from 'uuid';
 
 // Helper to remove undefined values from an object before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
@@ -81,7 +84,8 @@ interface ProjectContextType {
   addEmployee: (employee: Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }) => Promise<boolean>;
   updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }>) => Promise<boolean>;
   deleteEmployee: (employeeId: string) => Promise<boolean>;
-  updateEmployeeLeaves: (employeeId: string, leaveDates: string[]) => Promise<boolean>;
+  addLeavePeriod: (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>) => Promise<boolean>;
+  deleteLeavePeriod: (employeeId: string, leavePeriodId: string) => Promise<boolean>;
 
   // TestCase actions
   addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => Promise<boolean>;
@@ -236,7 +240,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                     const dateFields: Record<string, string[]> = {
                         stories: ['startDate', 'endDate'],
                         sprints: ['startDate', 'endDate'],
-                        employees: ['onboardingDate', 'offloadingDate', 'leaveDates'],
+                        employees: ['onboardingDate', 'offloadingDate'],
                         assumptions: ['validationDate'],
                         issues: ['reportedDate', 'resolvedDate'],
                         dependencies: ['expectedByDate'],
@@ -254,6 +258,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                                 docData[field] = convertTimestamp(docData[field]);
                             }
                         });
+                    }
+
+                    if(name === 'employees' && docData.leavePeriods) {
+                        docData.leavePeriods = docData.leavePeriods.map((lp: any) => ({
+                            ...lp,
+                            startDate: convertTimestamp(lp.startDate),
+                            endDate: convertTimestamp(lp.endDate)
+                        }))
                     }
                     
                     return { id: doc.id, ...docData };
@@ -549,17 +561,44 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const updateEmployeeLeaves = async (employeeId: string, leaveDates: string[]): Promise<boolean> => {
+  const addLeavePeriod = async (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>): Promise<boolean> => {
     if (!db) return false;
     try {
-        const employeeRef = doc(db, 'employees', employeeId);
-        await updateDoc(employeeRef, {
-            leaveDates: leaveDates.map(date => Timestamp.fromDate(new Date(date)))
-        });
-        return true;
+      const newLeavePeriod: LeavePeriod = {
+        ...leavePeriod,
+        id: uuidv4(),
+        startDate: new Date(leavePeriod.startDate).toISOString(),
+        endDate: new Date(leavePeriod.endDate).toISOString(),
+      };
+      
+      const employeeRef = doc(db, 'employees', employeeId);
+      await updateDoc(employeeRef, {
+        leavePeriods: arrayUnion(newLeavePeriod)
+      });
+      return true;
     } catch (e) {
-        console.error("Firebase Error: Failed to update employee leaves.", e);
-        return false;
+      console.error("Firebase Error: Failed to add leave period.", e);
+      return false;
+    }
+  };
+
+  const deleteLeavePeriod = async (employeeId: string, leavePeriodId: string): Promise<boolean> => {
+    if (!db) return false;
+    const employee = employees.find(e => e.id === employeeId);
+    if (!employee || !employee.leavePeriods) return false;
+
+    const leavePeriodToDelete = employee.leavePeriods.find(p => p.id === leavePeriodId);
+    if (!leavePeriodToDelete) return false;
+    
+    try {
+      const employeeRef = doc(db, 'employees', employeeId);
+      await updateDoc(employeeRef, {
+        leavePeriods: arrayRemove(leavePeriodToDelete)
+      });
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to delete leave period.", e);
+      return false;
     }
   };
 
@@ -1066,7 +1105,8 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addEmployee,
     updateEmployee,
     deleteEmployee,
-    updateEmployeeLeaves,
+    addLeavePeriod,
+    deleteLeavePeriod,
     addTestCase,
     updateTestCase,
     deleteTestCase,
