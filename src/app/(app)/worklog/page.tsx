@@ -261,10 +261,7 @@ function WorkItemCombobox({ options, value, onChange }: { options: {value: strin
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
-        <Command
-          value={value}
-          onValueChange={onChange}
-        >
+        <Command>
           <CommandInput placeholder="Search work item..." />
           <CommandList>
             <CommandEmpty>No work item found.</CommandEmpty>
