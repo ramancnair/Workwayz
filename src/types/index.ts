@@ -3,6 +3,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -210,4 +211,11 @@ export type Worklog = {
   date: string; // ISO String
   items: Omit<WorklogItem, 'id'>[];
   totalHours: number;
+};
+
+export type WorklogSubmission = {
+  id: string; // employeeId-weekStartDate (e.g., 'emp1-2024-07-21')
+  employeeId: string;
+  weekStartDate: string; // ISO String for Sunday of that week
+  submittedAt: string; // ISO string
 };
