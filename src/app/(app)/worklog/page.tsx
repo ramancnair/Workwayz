@@ -4,9 +4,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,17 @@ import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO, eachDayOfIn
 import type { Employee, Story, WorklogItem } from '@/types';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 export default function WorklogPage() {
   const { employees, stories, worklogs, saveWorklog, isLoading } = useProject();
@@ -24,6 +35,8 @@ export default function WorklogPage() {
   const [logItems, setLogItems] = useState<WorklogItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [workItemInputValues, setWorkItemInputValues] = useState<Record<string, string>>({});
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [totalWeeklyHours, setTotalWeeklyHours] = useState(0);
 
 
   const today = new Date();
@@ -106,7 +119,7 @@ export default function WorklogPage() {
      }
   };
   
-  const handleSubmit = async () => {
+  const handleSave = async () => {
     if (!selectedEmployee || !selectedDate) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select an employee and date.' });
       return;
@@ -138,13 +151,43 @@ export default function WorklogPage() {
     setIsSubmitting(false);
   };
 
+  const handleValidateAndSubmit = () => {
+    if (!selectedEmployee) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select an employee first.' });
+        return;
+    }
+    const weeklyLogs = worklogs.filter(log => 
+        log.employeeId === selectedEmployee.id &&
+        isWithinInterval(parseISO(log.date), { start: weekStart, end: weekEnd })
+    );
+
+    const hours = weeklyLogs.reduce((sum, log) => sum + log.totalHours, 0);
+    setTotalWeeklyHours(hours);
+
+    if (hours < 40) {
+        setIsSubmitDialogOpen(true);
+    } else {
+        // Here you would add your actual submission logic, e.g., to an approvals system.
+        toast({ title: 'Success', description: 'Weekly worklog submitted successfully!' });
+    }
+  };
+
+  const confirmSubmit = () => {
+    // Here you would add your actual submission logic.
+    toast({ title: 'Submitted', description: 'Worklog submitted with less than 40 hours.' });
+    setIsSubmitDialogOpen(false);
+  };
+
   const totalHours = useMemo(() => {
     return logItems.reduce((sum, item) => sum + Number(item.hours || 0), 0);
   }, [logItems]);
   
   return (
+    <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Worklog" description="Log daily work for project resources." />
+      <PageHeader title="Worklog" description="Log daily work for project resources.">
+        <Button onClick={handleValidateAndSubmit}>Submit Week's Worklog</Button>
+      </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
@@ -247,13 +290,34 @@ export default function WorklogPage() {
                 <Button variant="outline" onClick={handleAddItem}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                 </Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting || logItems.length === 0}>
-                  {isSubmitting ? 'Saving...' : 'Save Worklog'}
+                <Button onClick={handleSave} disabled={isSubmitting || logItems.length === 0}>
+                  {isSubmitting ? 'Saving...' : 'Save Daily Log'}
                 </Button>
             </div>
           </CardContent>
         </Card>
       )}
     </div>
+
+    <AlertDialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submit Worklog?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have logged {totalWeeklyHours.toFixed(1)} hours for this week, which is less than the standard 40 hours. Do you still want to submit?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmSubmit}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue & Submit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
