@@ -97,9 +97,7 @@ export default function LeaveTrackerPage() {
     const isPastMonth = startOfMonth(date) < startOfCurrentMonth;
     const isHoliday = holidayDates.some(h => isSameDay(h, date));
     const isWeeklyOff = weeklyOffDays.includes(date.getDay());
-
-    if (!isEditing) return true; // Disable all clicks if not editing
-
+    
     return isPastMonth || isWeeklyOff || isHoliday;
   }
 
@@ -151,7 +149,7 @@ export default function LeaveTrackerPage() {
               onMonthChange={setCurrentMonth}
               fromDate={startOfCurrentYear}
               toDate={endOfCurrentYear}
-              disabled={isDateDisabled}
+              disabled={isEditing ? isDateDisabled : () => true}
               className="rounded-md border"
               footer={
                 <p className="text-sm text-center pt-2 text-muted-foreground">
