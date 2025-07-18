@@ -88,6 +88,17 @@ export default function WorklogPage() {
     }
   }, [selectedEmployee, selectedDate, worklogs, workItemOptions]);
 
+  const dailyHoursMap = useMemo(() => {
+    if (!selectedEmployee) return {};
+    return worklogs.reduce((acc, log) => {
+      if (log.employeeId === selectedEmployee.id) {
+        const dateKey = format(parseISO(log.date), 'yyyy-MM-dd');
+        acc[dateKey] = log.totalHours;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+  }, [worklogs, selectedEmployee]);
+
   const handleAddItem = () => {
     const newId = uuidv4();
     setLogItems([...logItems, { id: newId, itemId: '', itemType: 'WorkItem', hours: 0 }]);
@@ -177,10 +188,6 @@ export default function WorklogPage() {
     toast({ title: 'Submitted', description: 'Worklog submitted with less than 40 hours.' });
     setIsSubmitDialogOpen(false);
   };
-
-  const totalHours = useMemo(() => {
-    return logItems.reduce((sum, item) => sum + Number(item.hours || 0), 0);
-  }, [logItems]);
   
   return (
     <>
@@ -211,21 +218,23 @@ export default function WorklogPage() {
                <div>
                   <label className="text-sm font-medium">Date</label>
                   <div className="grid grid-cols-7 gap-2 rounded-md border p-2">
-                    {weekDays.map(day => (
-                      <Button
-                        key={day.toISOString()}
-                        variant={isSameDay(day, selectedDate || new Date(0)) ? 'default' : 'outline'}
-                        onClick={() => setSelectedDate(day)}
-                        className="flex flex-col h-auto p-2"
-                      >
-                        <span className="text-xs">{format(day, 'EEE')}</span>
-                        <span className="text-lg font-bold">{format(day, 'd')}</span>
-                      </Button>
-                    ))}
+                    {weekDays.map(day => {
+                        const dateKey = format(day, 'yyyy-MM-dd');
+                        const hours = dailyHoursMap[dateKey] || 0;
+                        return (
+                            <Button
+                                key={day.toISOString()}
+                                variant={isSameDay(day, selectedDate || new Date(0)) ? 'default' : 'outline'}
+                                onClick={() => setSelectedDate(day)}
+                                className="flex flex-col h-auto p-2"
+                            >
+                                <span className="text-xs">{format(day, 'EEE')}</span>
+                                <span className="text-lg font-bold">{format(day, 'd')}</span>
+                                <span className="text-xs text-muted-foreground font-semibold">{hours.toFixed(1)}h</span>
+                            </Button>
+                        )
+                    })}
                   </div>
-                  <p className="text-sm text-muted-foreground text-center mt-2">
-                    Total hours logged for selected day: <span className="font-bold text-foreground">{totalHours.toFixed(1)}</span>
-                  </p>
                </div>
             </CardContent>
         </Card>
