@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { format, startOfWeek, endOfWeek, isSameDay, parseISO, addWeeks, subWeeks, getMonth, getYear, setMonth, setYear } from 'date-fns';
+import { format, startOfWeek, isSameDay, parseISO, addWeeks, subWeeks, getMonth, getYear, setMonth, setYear } from 'date-fns';
 import type { Employee, Story, WorklogItem } from '@/types';
 import { PlusCircle, Trash2, Edit, Save, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
