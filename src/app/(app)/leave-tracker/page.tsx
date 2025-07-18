@@ -68,6 +68,17 @@ export default function LeaveTrackerPage() {
     }
   }, [employees, selectedEmployee]);
 
+  // This effect ensures the selectedEmployee state is updated when the master list changes
+  useEffect(() => {
+    if (selectedEmployee) {
+      const updatedEmployee = employees.find(e => e.id === selectedEmployee.id);
+      if (updatedEmployee) {
+        setSelectedEmployee(updatedEmployee);
+      }
+    }
+  }, [employees]);
+
+
   const handleEmployeeChange = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
     setSelectedEmployee(employee || null);
