@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/datepicker';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -34,13 +34,12 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { type Employee, type LeavePeriod } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 
 const leaveSchema = z.object({
-  startDate: z.date({ required_error: 'Start date is required.' }),
-  endDate: z.date({ required_error: 'End date is required.' }),
-}).refine(data => data.endDate >= data.startDate, {
+  startDate: z.string().min(1, 'Start date is required.'),
+  endDate: z.string().min(1, 'End date is required.'),
+}).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
   message: 'End date cannot be before start date.',
   path: ['endDate'],
 });
@@ -54,6 +53,10 @@ export default function LeaveTrackerPage() {
 
   const form = useForm<z.infer<typeof leaveSchema>>({
     resolver: zodResolver(leaveSchema),
+    defaultValues: {
+      startDate: '',
+      endDate: ''
+    }
   });
 
   useEffect(() => {
@@ -74,8 +77,8 @@ export default function LeaveTrackerPage() {
       return;
     }
     const newLeavePeriod: Omit<LeavePeriod, 'id'> = {
-      startDate: values.startDate.toISOString(),
-      endDate: values.endDate.toISOString(),
+      startDate: new Date(values.startDate).toISOString(),
+      endDate: new Date(values.endDate).toISOString(),
     };
 
     const success = await addLeavePeriod(selectedEmployee.id, newLeavePeriod);
@@ -116,7 +119,7 @@ export default function LeaveTrackerPage() {
                 </CardHeader>
                 <CardContent>
                 <Select onValueChange={handleEmployeeChange} value={selectedEmployee?.id}>
-                    <SelectTrigger className="w-[280px]">
+                    <SelectTrigger className="w-full md:w-[280px]">
                     <SelectValue placeholder="Select an employee" />
                     </SelectTrigger>
                     <SelectContent>
@@ -144,7 +147,7 @@ export default function LeaveTrackerPage() {
                                     <FormItem className="flex-1">
                                         <FormLabel>Start Date</FormLabel>
                                         <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
+                                            <Input type="date" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -157,7 +160,7 @@ export default function LeaveTrackerPage() {
                                     <FormItem className="flex-1">
                                         <FormLabel>End Date</FormLabel>
                                         <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
+                                            <Input type="date" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
