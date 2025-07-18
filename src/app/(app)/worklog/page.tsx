@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function WorklogPage() {
   const { employees, stories, worklogs, saveWorklog, worklogSubmissions, submitWorklogForWeek, isLoading } = useProject();
@@ -205,9 +205,9 @@ export default function WorklogPage() {
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Worklog" description="Log daily work for project resources.">
-        <Button onClick={handleValidateAndSubmit} disabled={isWeekSubmitted}>
+        <Button onClick={handleValidateAndSubmit} disabled={isWeekSubmitted || isLoading}>
           {isWeekSubmitted ? <Lock className="mr-2 h-4 w-4" /> : null}
-          Submit Week's Worklog
+          {isWeekSubmitted ? 'Week Submitted' : 'Submit Week\'s Worklog'}
         </Button>
       </PageHeader>
 
@@ -257,7 +257,7 @@ export default function WorklogPage() {
       </div>
 
        {isWeekSubmitted && selectedEmployee && (
-        <Alert>
+        <Alert variant="default" className="border-yellow-500/50 text-yellow-500 dark:border-yellow-500 [&>svg]:text-yellow-500">
           <Lock className="h-4 w-4" />
           <AlertTitle>Worklog Submitted</AlertTitle>
           <AlertDescription>
@@ -266,7 +266,7 @@ export default function WorklogPage() {
         </Alert>
       )}
       
-      {selectedEmployee && selectedDate && !isWeekSubmitted && (
+      {selectedEmployee && selectedDate && (
         <Card>
           <CardHeader>
             <CardTitle>Log for {selectedEmployee.firstName} on {format(selectedDate, 'PPP')}</CardTitle>
@@ -288,6 +288,7 @@ export default function WorklogPage() {
                                 handleWorkItemInputChange(item.id, '');
                             }
                         }}
+                        disabled={isWeekSubmitted}
                       />
                   </div>
                    <div className="space-y-1">
@@ -299,6 +300,7 @@ export default function WorklogPage() {
                         onChange={(e) => handleItemChange(item.id, 'hours', parseFloat(e.target.value) || 0)}
                         min="0.5"
                         step="0.5"
+                        disabled={isWeekSubmitted}
                       />
                   </div>
                   <div className="space-y-1">
@@ -309,12 +311,13 @@ export default function WorklogPage() {
                                 placeholder="Describe other work..."
                                 value={item.description}
                                 onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                                disabled={isWeekSubmitted}
                             />
                         </>
                     )}
                   </div>
                  
-                  <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                  <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} disabled={isWeekSubmitted}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
               </div>
@@ -325,10 +328,10 @@ export default function WorklogPage() {
                 ))}
             </datalist>
              <div className="flex justify-between items-center pt-4">
-                <Button variant="outline" onClick={handleAddItem}>
+                <Button variant="outline" onClick={handleAddItem} disabled={isWeekSubmitted}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                 </Button>
-                <Button onClick={handleSave} disabled={isSubmitting || logItems.length === 0}>
+                <Button onClick={handleSave} disabled={isSubmitting || logItems.length === 0 || isWeekSubmitted}>
                   {isSubmitting ? 'Saving...' : 'Save Daily Log'}
                 </Button>
             </div>
