@@ -67,6 +67,8 @@ export default function WorklogPage() {
     saveWorklog,
     submitWorklogForWeek,
     worklogSubmissions,
+    holidays,
+    weeklyOffDays,
     isLoading,
   } = useProject();
   const { toast } = useToast();
@@ -128,6 +130,8 @@ export default function WorklogPage() {
     const specialItems = [
       { value: 'meeting', label: 'Meeting', group: 'General' },
       { value: 'other', label: 'Other', group: 'General' },
+      { value: 'holiday', label: 'Holiday', group: 'General' },
+      { value: 'weekend', label: 'Weekend', group: 'General' },
     ];
     return [...specialItems, ...storyItems];
   }, [stories]);
@@ -157,6 +161,7 @@ export default function WorklogPage() {
           log.employeeId === selectedEmployee.id &&
           format(parseISO(log.date), 'yyyy-MM-dd') === dateString
       );
+
       if (existingLog && existingLog.items.length > 0) {
         const newLogItems = existingLog.items.map((item) => ({
           ...item,
@@ -176,12 +181,37 @@ export default function WorklogPage() {
         setWorkItemInputValues(newInputValues);
         setIsEditing(false);
       } else {
-        setLogItems([]);
-        setWorkItemInputValues({});
-        setIsEditing(true);
+        const holiday = holidays.find(h => isSameDay(new Date(h.date), selectedDate));
+        const isWeekend = weeklyOffDays.includes(selectedDate.getDay());
+        
+        let autoPopulatedItem: WorklogItem | null = null;
+
+        if(holiday) {
+             autoPopulatedItem = { id: uuidv4(), itemId: 'holiday', itemType: 'Other', hours: 8, description: holiday.description };
+        } else if (isWeekend) {
+             autoPopulatedItem = { id: uuidv4(), itemId: 'weekend', itemType: 'Other', hours: 8, description: 'Weekend' };
+        }
+
+        if(autoPopulatedItem) {
+            const autoPopulatedLog = {
+                employeeId: selectedEmployee.id,
+                date: dateString,
+                items: [autoPopulatedItem].map(({id, ...rest}) => rest),
+                totalHours: 8,
+            };
+            saveWorklog(autoPopulatedLog).then(() => {
+                setLogItems([autoPopulatedItem!]);
+                setWorkItemInputValues({ [autoPopulatedItem!.id]: autoPopulatedItem!.description! });
+                setIsEditing(false);
+            });
+        } else {
+            setLogItems([]);
+            setWorkItemInputValues({});
+            setIsEditing(true);
+        }
       }
     }
-  }, [selectedEmployee, selectedDate, worklogs, workItemOptions]);
+  }, [selectedEmployee, selectedDate, worklogs, workItemOptions, holidays, weeklyOffDays]);
 
   const handleAddItem = () => {
     const newId = uuidv4();
@@ -218,7 +248,7 @@ export default function WorklogPage() {
     if (matchingOption) {
       let itemType: 'WorkItem' | 'Meeting' | 'Other' = 'WorkItem';
       if (matchingOption.value === 'meeting') itemType = 'Meeting';
-      if (matchingOption.value === 'other') itemType = 'Other';
+      if (['other', 'holiday', 'weekend'].includes(matchingOption.value)) itemType = 'Other';
       setLogItems(
         logItems.map((item) =>
           item.id === id
@@ -313,7 +343,7 @@ export default function WorklogPage() {
   };
 
   const handleSubmitWeek = async () => {
-    if (isEditing) {
+    if (isEditing && logItems.length > 0) {
       toast({
         variant: 'destructive',
         title: 'Unsaved Changes',
@@ -489,7 +519,7 @@ export default function WorklogPage() {
                 </CardDescription>
               </div>
               {!isEditing && !isWeekSubmitted && (
-                <Button onClick={() => setIsEditing(true)}>
+                <Button onClick={() => setIsEditing(true)} disabled={isSubmitting}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </Button>
@@ -522,6 +552,7 @@ export default function WorklogPage() {
                               handleWorkItemInputChange(item.id, '');
                             }
                           }}
+                          disabled={isSubmitting}
                         />
                       </div>
                       <div className="space-y-1">
@@ -541,6 +572,7 @@ export default function WorklogPage() {
                           }
                           min="0.5"
                           step="0.5"
+                          disabled={isSubmitting}
                         />
                       </div>
                       <div className="space-y-1">
@@ -561,6 +593,7 @@ export default function WorklogPage() {
                                   e.target.value
                                 )
                               }
+                              disabled={isSubmitting}
                             />
                           </>
                         )}
@@ -570,6 +603,7 @@ export default function WorklogPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveItem(item.id)}
+                        disabled={isSubmitting}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -581,12 +615,12 @@ export default function WorklogPage() {
                     ))}
                   </datalist>
                   <div className="flex justify-between items-center pt-4">
-                    <Button variant="outline" onClick={handleAddItem}>
+                    <Button variant="outline" onClick={handleAddItem} disabled={isSubmitting}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                     </Button>
                     <div className="flex gap-2">
                       {logItems.length > 0 && (
-                        <Button variant="ghost" onClick={handleCancel}>
+                        <Button variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
                           <XCircle className="mr-2 h-4 w-4" /> Cancel
                         </Button>
                       )}
@@ -611,20 +645,31 @@ export default function WorklogPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {logItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>{workItemInputValues[item.id]}</TableCell>
-                          <TableCell>{item.hours}</TableCell>
-                          <TableCell>{item.description || 'N/A'}</TableCell>
+                      {logItems.length > 0 ? logItems.map((item) => {
+                        const workItemLabel = workItemOptions.find(opt => opt.value === item.itemId)?.label || item.itemId;
+                        return (
+                            <TableRow key={item.id}>
+                            <TableCell>{workItemLabel}</TableCell>
+                            <TableCell>{item.hours}</TableCell>
+                            <TableCell>{item.description || 'N/A'}</TableCell>
+                            </TableRow>
+                        );
+                        }) : (
+                        <TableRow>
+                            <TableCell colSpan={3} className="text-center text-muted-foreground">
+                            No work logged for this day.
+                            </TableCell>
                         </TableRow>
-                      ))}
-                      <TableRow className="font-bold bg-muted/50">
-                        <TableCell>Total Hours</TableCell>
-                        <TableCell>
-                          {logItems.reduce((sum, item) => sum + item.hours, 0).toFixed(1)}
-                        </TableCell>
-                        <TableCell></TableCell>
-                      </TableRow>
+                        )}
+                      {logItems.length > 0 && (
+                        <TableRow className="font-bold bg-muted/50">
+                          <TableCell>Total Hours</TableCell>
+                          <TableCell>
+                            {logItems.reduce((sum, item) => sum + item.hours, 0).toFixed(1)}
+                          </TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </>
