@@ -45,7 +45,7 @@ export default function LeaveTrackerPage() {
     setIsEditing(false); // Reset editing mode when employee changes
   }, [selectedEmployee]);
 
-  const handleDayClick = (day: Date, modifiers: { disabled?: boolean }) => {
+  const handleDayClick = (day: Date, modifiers: { selected?: boolean, disabled?: boolean }) => {
     if (!isEditing || modifiers.disabled) return;
 
     const alreadySelected = leaveDates.some(d => isSameDay(d, day));
