@@ -45,16 +45,8 @@ export default function LeaveTrackerPage() {
     setIsEditing(false); // Reset editing mode when employee changes
   }, [selectedEmployee]);
 
-  const handleDayClick = (day: Date) => {
-    if (!isEditing) return;
-
-    const isPastMonth = startOfMonth(day) < startOfCurrentMonth;
-    const isHoliday = holidayDates.some(h => isSameDay(h, day));
-    const isWeeklyOff = weeklyOffDays.includes(day.getDay());
-
-    if (isPastMonth || isHoliday || isWeeklyOff) {
-        return;
-    }
+  const handleDayClick = (day: Date, modifiers: { disabled?: boolean }) => {
+    if (!isEditing || modifiers.disabled) return;
 
     const alreadySelected = leaveDates.some(d => isSameDay(d, day));
     if (alreadySelected) {
@@ -93,13 +85,11 @@ export default function LeaveTrackerPage() {
     setIsEditing(false);
   }
   
-  const isDateDisabled = (date: Date) => {
-    const isPastMonth = startOfMonth(date) < startOfCurrentMonth;
-    const isHoliday = holidayDates.some(h => isSameDay(h, date));
-    const isWeeklyOff = weeklyOffDays.includes(date.getDay());
-    
-    return isPastMonth || isWeeklyOff || isHoliday;
-  }
+  const disabledDays = [
+      ...holidayDates,
+      { dayOfWeek: weeklyOffDays },
+      { before: startOfCurrentMonth }
+  ];
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -149,7 +139,7 @@ export default function LeaveTrackerPage() {
               onMonthChange={setCurrentMonth}
               fromDate={startOfCurrentYear}
               toDate={endOfCurrentYear}
-              disabled={isDateDisabled}
+              disabled={disabledDays}
               className="rounded-md border"
               footer={
                 <p className="text-sm text-center pt-2 text-muted-foreground">
