@@ -76,7 +76,7 @@ export default function LeaveTrackerPage() {
         setSelectedEmployee(updatedEmployee);
       }
     }
-  }, [employees]);
+  }, [employees, selectedEmployee]);
 
 
   const handleEmployeeChange = (employeeId: string) => {
