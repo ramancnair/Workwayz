@@ -153,6 +153,47 @@ export default function WorklogPage() {
     }, {} as Record<string, number>);
   }, [worklogs, selectedEmployee]);
 
+  // Effect to auto-populate holidays and weekends for the displayed week
+  useEffect(() => {
+    if (!selectedEmployee || isWeekSubmitted) return;
+  
+    const autoPopulateWeek = async () => {
+      for (const day of weekDays) {
+        const dateString = format(day, 'yyyy-MM-dd');
+        const existingLog = worklogs.find(
+          (log) =>
+            log.employeeId === selectedEmployee.id &&
+            format(parseISO(log.date), 'yyyy-MM-dd') === dateString
+        );
+
+        if (!existingLog) {
+          const holiday = holidays.find((h) => isSameDay(new Date(h.date), day));
+          const isWeekend = weeklyOffDays.includes(day.getDay());
+
+          let autoPopulatedItem: Omit<WorklogItem, 'id'> | null = null;
+          if (holiday) {
+            autoPopulatedItem = { itemId: 'holiday', itemType: 'Other', hours: 8, description: holiday.description };
+          } else if (isWeekend) {
+            autoPopulatedItem = { itemId: 'weekend', itemType: 'Other', hours: 8, description: 'Weekend' };
+          }
+
+          if (autoPopulatedItem) {
+            const autoPopulatedLog = {
+              employeeId: selectedEmployee.id,
+              date: dateString,
+              items: [autoPopulatedItem],
+              totalHours: 8,
+            };
+            await saveWorklog(autoPopulatedLog);
+          }
+        }
+      }
+    };
+
+    autoPopulateWeek();
+  }, [selectedEmployee, weekStartDate, worklogs, holidays, weeklyOffDays, isWeekSubmitted, saveWorklog]);
+
+
   useEffect(() => {
     if (selectedEmployee && selectedDate) {
       const dateString = format(selectedDate, 'yyyy-MM-dd');
@@ -181,37 +222,12 @@ export default function WorklogPage() {
         setWorkItemInputValues(newInputValues);
         setIsEditing(false);
       } else {
-        const holiday = holidays.find(h => isSameDay(new Date(h.date), selectedDate));
-        const isWeekend = weeklyOffDays.includes(selectedDate.getDay());
-        
-        let autoPopulatedItem: WorklogItem | null = null;
-
-        if(holiday) {
-             autoPopulatedItem = { id: uuidv4(), itemId: 'holiday', itemType: 'Other', hours: 8, description: holiday.description };
-        } else if (isWeekend) {
-             autoPopulatedItem = { id: uuidv4(), itemId: 'weekend', itemType: 'Other', hours: 8, description: 'Weekend' };
-        }
-
-        if(autoPopulatedItem) {
-            const autoPopulatedLog = {
-                employeeId: selectedEmployee.id,
-                date: dateString,
-                items: [autoPopulatedItem].map(({id, ...rest}) => rest),
-                totalHours: 8,
-            };
-            saveWorklog(autoPopulatedLog).then(() => {
-                setLogItems([autoPopulatedItem!]);
-                setWorkItemInputValues({ [autoPopulatedItem!.id]: autoPopulatedItem!.description! });
-                setIsEditing(false);
-            });
-        } else {
-            setLogItems([]);
-            setWorkItemInputValues({});
-            setIsEditing(true);
-        }
+        setLogItems([]);
+        setWorkItemInputValues({});
+        setIsEditing(true);
       }
     }
-  }, [selectedEmployee, selectedDate, worklogs, workItemOptions, holidays, weeklyOffDays]);
+  }, [selectedEmployee, selectedDate, worklogs, workItemOptions]);
 
   const handleAddItem = () => {
     const newId = uuidv4();
