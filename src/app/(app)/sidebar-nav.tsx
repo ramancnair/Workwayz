@@ -178,7 +178,7 @@ export function SidebarNav() {
   const isReleasesPath = pathname.startsWith('/releases');
   const isResourcesPath = pathname.startsWith('/resources');
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
-  const isHolidaysPath = ['/holiday-calendar'].some(p => pathname.startsWith(p));
+  const isHolidaysPath = pathname.startsWith('/holiday-calendar');
   const isSettingsPath = pathname.startsWith('/settings');
 
   const menuItems = isSettingsPath ? settingsMenuItems
