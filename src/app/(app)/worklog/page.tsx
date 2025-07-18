@@ -223,6 +223,9 @@ export default function WorklogPage() {
                       </Button>
                     ))}
                   </div>
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    Total hours logged for selected day: <span className="font-bold text-foreground">{totalHours.toFixed(1)}</span>
+                  </p>
                </div>
             </CardContent>
         </Card>
@@ -232,7 +235,7 @@ export default function WorklogPage() {
         <Card>
           <CardHeader>
             <CardTitle>Log for {selectedEmployee.firstName} on {format(selectedDate, 'PPP')}</CardTitle>
-            <CardDescription>Add items and hours worked. The total for the day is {totalHours} hours.</CardDescription>
+            <CardDescription>Add items and hours worked.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {logItems.map((item, index) => (
@@ -304,7 +307,7 @@ export default function WorklogPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Submit Worklog?</AlertDialogTitle>
             <AlertDialogDescription>
-              You have logged {totalWeeklyHours.toFixed(1)} hours for this week, which is less than the standard 40 hours. Do you still want to submit?
+              You have logged {totalWeeklyHours.toFixed(1)} hours for this week, which is less than the standard 40 hours. Do you still want to continue?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
