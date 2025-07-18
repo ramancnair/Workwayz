@@ -106,6 +106,46 @@ export default function LeaveTrackerPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select an employee.' });
       return;
     }
+
+    const holidayDates = holidays.map(h => new Date(h.date));
+
+    const checkIsNonWorkingDay = (date: Date): string | null => {
+        if (weeklyOffDays.includes(date.getDay())) {
+            return "a weekend";
+        }
+        const holiday = holidays.find(h => isSameDay(new Date(h.date), date));
+        if (holiday) {
+            return `a holiday (${holiday.description})`;
+        }
+        return null;
+    }
+    
+    // add a day to make the date correct from a UI perspective
+    const startDate = new Date(values.startDate);
+    startDate.setDate(startDate.getDate() + 1);
+    const endDate = new Date(values.endDate);
+    endDate.setDate(endDate.getDate() + 1);
+
+    const startDayReason = checkIsNonWorkingDay(startDate);
+    if(startDayReason) {
+        toast({
+            variant: "destructive",
+            title: "Invalid Start Date",
+            description: `The selected start date (${format(startDate, "PPP")}) is ${startDayReason}. Please select a working day.`
+        });
+        return;
+    }
+    
+    const endDayReason = checkIsNonWorkingDay(endDate);
+    if(endDayReason) {
+        toast({
+            variant: "destructive",
+            title: "Invalid End Date",
+            description: `The selected end date (${format(endDate, "PPP")}) is ${endDayReason}. Please select a working day.`
+        });
+        return;
+    }
+
     const newLeavePeriod: Omit<LeavePeriod, 'id'> = {
       startDate: new Date(values.startDate).toISOString(),
       endDate: new Date(values.endDate).toISOString(),
