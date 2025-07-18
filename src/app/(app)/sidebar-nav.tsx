@@ -117,11 +117,6 @@ export function SidebarNav() {
       label: "Worklog",
       icon: ClipboardList,
     },
-    {
-      href: "/resources/leave-tracker",
-      label: "Leave Tracker",
-      icon: CalendarCheck,
-    },
   ];
 
   const governanceMenuItems = [
@@ -160,6 +155,14 @@ export function SidebarNav() {
     },
   ];
 
+  const leaveTrackerMenuItems = [
+    {
+      href: "/leave-tracker",
+      label: "Leave Tracker",
+      icon: CalendarCheck,
+    },
+  ];
+
   const settingsMenuItems = [
     {
       href: "/settings/board",
@@ -179,6 +182,7 @@ export function SidebarNav() {
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog'].some(p => pathname.startsWith(p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = pathname.startsWith('/holiday-calendar');
+  const isLeaveTrackerPath = pathname.startsWith('/leave-tracker');
   const isSettingsPath = pathname.startsWith('/settings');
 
   const menuItems = isSettingsPath ? settingsMenuItems
@@ -187,7 +191,8 @@ export function SidebarNav() {
     : isReleasesPath ? releasesMenuItems
     : isResourcesPath ? resourcesMenuItems 
     : isGovernancePath ? governanceMenuItems 
-    : isHolidaysPath ? holidayMenuItems 
+    : isHolidaysPath ? holidayMenuItems
+    : isLeaveTrackerPath ? leaveTrackerMenuItems
     : devMenuItems;
 
   return (

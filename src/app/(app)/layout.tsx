@@ -19,8 +19,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog'].some(p => pathname.startsWith(p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
   const isHolidaysPath = pathname.startsWith('/holiday-calendar');
+  const isLeaveTrackerPath = pathname.startsWith('/leave-tracker');
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isReleasesPath && !isSettingsPath;
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isReleasesPath && !isSettingsPath && !isLeaveTrackerPath;
 
   const getTabValue = () => {
     if (isDevelopmentPath) return 'development';
@@ -30,6 +31,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (isResourcesPath) return 'resources';
     if (isGovernancePath) return 'governance';
     if (isHolidaysPath) return 'holidays';
+    if (isLeaveTrackerPath) return 'leave-tracker';
     return ''; // No active tab for settings
   };
 
@@ -48,6 +50,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/raid-dashboard');
     } else if (value === 'holidays') {
       router.push('/holiday-calendar');
+    } else if (value === 'leave-tracker') {
+      router.push('/leave-tracker');
     }
   };
 
@@ -69,6 +73,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                         <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
                         <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                        <TabsTrigger value="leave-tracker" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Leave Tracker</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>
