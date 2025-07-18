@@ -114,7 +114,7 @@ export default function LeaveTrackerPage() {
     const success = await addLeavePeriod(selectedEmployee.id, newLeavePeriod);
     if (success) {
       toast({ title: 'Success', description: 'Leave period added successfully.' });
-      form.reset();
+      form.reset({ startDate: '', endDate: '' });
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not add leave period.' });
     }
