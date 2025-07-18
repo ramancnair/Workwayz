@@ -10,9 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { format, startOfWeek, endOfWeek, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, endOfWeek, isSameDay, parseISO, addWeeks, subWeeks, getMonth, getYear, setMonth, setYear } from 'date-fns';
 import type { Employee, Story, WorklogItem } from '@/types';
-import { PlusCircle, Trash2, Edit, Save, XCircle } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Save, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -22,24 +22,24 @@ export default function WorklogPage() {
   
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [displayDate, setDisplayDate] = useState<Date>(new Date()); // For navigating weeks
   const [logItems, setLogItems] = useState<WorklogItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [workItemInputValues, setWorkItemInputValues] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(true);
 
-  const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
-  const weekEnd = endOfWeek(today, { weekStartsOn: 1 }); // Sunday
+  const months = Array.from({ length: 12 }, (_, i) => ({ value: i, label: format(new Date(0, i), 'MMMM') }));
+  const currentYear = getYear(new Date());
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
   
   const weekDays = useMemo(() => {
-    const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
-    const end = endOfWeek(start, { weekStartsOn: 1 });
+    const start = startOfWeek(displayDate, { weekStartsOn: 1 });
     return Array.from({ length: 7 }, (_, i) => {
       const day = new Date(start);
       day.setDate(day.getDate() + i);
       return day;
     });
-  }, [selectedDate]);
+  }, [displayDate]);
 
   const workItemOptions = useMemo(() => {
     const storyItems = stories.map(s => ({
@@ -87,6 +87,8 @@ export default function WorklogPage() {
             const option = workItemOptions.find(opt => opt.value === item.itemId);
             if (option) {
                 newInputValues[item.id] = option.label;
+            } else if (item.itemType === 'Other') {
+                newInputValues[item.id] = 'Other';
             }
         });
         setWorkItemInputValues(newInputValues);
@@ -169,7 +171,7 @@ export default function WorklogPage() {
     const existingLog = worklogs.find(
       log => log.employeeId === selectedEmployee?.id && format(parseISO(log.date), 'yyyy-MM-dd') === dateString
     );
-    if (existingLog) {
+    if (existingLog && existingLog.items.length > 0) {
       const newLogItems = existingLog.items.map(item => ({...item, id: uuidv4()}));
       setLogItems(newLogItems);
        const newInputValues: Record<string, string> = {};
@@ -184,7 +186,11 @@ export default function WorklogPage() {
       setLogItems([]);
       setWorkItemInputValues({});
     }
-    setIsEditing(false);
+    if(logItems.length > 0) {
+        setIsEditing(false);
+    } else {
+        setIsEditing(true);
+    }
   };
   
   return (
@@ -211,6 +217,32 @@ export default function WorklogPage() {
                </div>
                <div>
                   <label className="text-sm font-medium">Date</label>
+                   <div className="flex items-center gap-4 my-2">
+                        <Button variant="outline" size="icon" onClick={() => setDisplayDate(subWeeks(displayDate, 1))}>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="flex gap-2">
+                            <Select value={String(getMonth(displayDate))} onValueChange={(m) => setDisplayDate(setMonth(displayDate, Number(m)))}>
+                                <SelectTrigger className="w-[120px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {months.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                             <Select value={String(getYear(displayDate))} onValueChange={(y) => setDisplayDate(setYear(displayDate, Number(y)))}>
+                                <SelectTrigger className="w-[80px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button variant="outline" size="icon" onClick={() => setDisplayDate(addWeeks(displayDate, 1))}>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
                   <div className="grid grid-cols-7 gap-2 rounded-md border p-2">
                     {weekDays.map(day => {
                         const dateKey = format(day, 'yyyy-MM-dd');
@@ -308,7 +340,7 @@ export default function WorklogPage() {
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                     </Button>
                     <div className="flex gap-2">
-                        {logItems.length > 0 && <Button variant="ghost" onClick={handleCancel}><XCircle className="mr-2 h-4 w-4" /> Cancel</Button>}
+                         {logItems.length > 0 && <Button variant="ghost" onClick={handleCancel}><XCircle className="mr-2 h-4 w-4" /> Cancel</Button>}
                         <Button onClick={handleSave} disabled={isSubmitting || logItems.length === 0}>
                           <Save className="mr-2 h-4 w-4" />
                           {isSubmitting ? 'Saving...' : 'Save Daily Log'}
@@ -317,29 +349,31 @@ export default function WorklogPage() {
                 </div>
               </>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Work Item</TableHead>
-                    <TableHead>Hours</TableHead>
-                    <TableHead>Description</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logItems.map(item => (
-                    <TableRow key={item.id}>
-                      <TableCell>{workItemInputValues[item.id]}</TableCell>
-                      <TableCell>{item.hours}</TableCell>
-                      <TableCell>{item.description || 'N/A'}</TableCell>
-                    </TableRow>
-                  ))}
-                   <TableRow className="font-bold bg-muted/50">
-                        <TableCell>Total Hours</TableCell>
-                        <TableCell>{logItems.reduce((sum, item) => sum + item.hours, 0).toFixed(1)}</TableCell>
-                        <TableCell></TableCell>
-                    </TableRow>
-                </TableBody>
-              </Table>
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Work Item</TableHead>
+                        <TableHead>Hours</TableHead>
+                        <TableHead>Description</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {logItems.map(item => (
+                        <TableRow key={item.id}>
+                          <TableCell>{workItemInputValues[item.id]}</TableCell>
+                          <TableCell>{item.hours}</TableCell>
+                          <TableCell>{item.description || 'N/A'}</TableCell>
+                        </TableRow>
+                      ))}
+                       <TableRow className="font-bold bg-muted/50">
+                            <TableCell>Total Hours</TableCell>
+                            <TableCell>{logItems.reduce((sum, item) => sum + item.hours, 0).toFixed(1)}</TableCell>
+                            <TableCell></TableCell>
+                        </TableRow>
+                    </TableBody>
+                  </Table>
+                </>
             )}
           </CardContent>
         </Card>
