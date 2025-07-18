@@ -20,7 +20,7 @@ import {
   getDoc,
   setDoc,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 
 // Helper to remove undefined values from an object before sending to Firestore
@@ -52,6 +52,7 @@ interface ProjectContextType {
   kanbanColumns: KanbanColumn[];
   holidays: Holiday[];
   releasesAndMilestones: Release[];
+  worklogs: Worklog[];
   projectSettings: ProjectSettings | null,
   weeklyOffDays: number[];
   impactedSystems: ImpactedSystem[];
@@ -129,6 +130,9 @@ interface ProjectContextType {
   updateImpactedSystem: (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => Promise<boolean>;
   deleteImpactedSystem: (systemId: string) => Promise<boolean>;
 
+  // Worklog actions
+  saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
+
   isLoading: boolean;
   error: string | null;
 }
@@ -161,6 +165,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
+  const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +191,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         { name: 'holidays', setState: setHolidays },
         { name: 'releases', setState: setReleasesAndMilestones },
         { name: 'impactedSystems', setState: setImpactedSystems },
+        { name: 'worklogs', setState: setWorklogs },
     ];
     
     // Listener for project settings
@@ -232,6 +238,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
                         dependencies: ['expectedByDate'],
                         holidays: ['date'],
                         releases: ['startDate', 'endDate', 'milestoneDate'],
+                        worklogs: ['date'],
                     };
 
                     if (dateFields[name]) {
@@ -975,6 +982,28 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     }
   };
 
+  // Worklog Actions
+  const saveWorklog = async (worklog: Omit<Worklog, 'id'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+        const { date, employeeId, ...rest } = worklog;
+        const worklogId = `${employeeId}-${date}`;
+        const worklogRef = doc(db, 'worklogs', worklogId);
+
+        const payload = {
+            ...rest,
+            employeeId,
+            date: Timestamp.fromDate(new Date(date)),
+        };
+
+        await setDoc(worklogRef, sanitizeForFirestore(payload), { merge: true });
+        return true;
+    } catch(e) {
+        console.error("Firebase Error: Failed to save worklog.", e);
+        return false;
+    }
+  };
+
 
   const value: ProjectContextType = {
     epics,
@@ -989,6 +1018,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     kanbanColumns,
     holidays,
     releasesAndMilestones,
+    worklogs,
     projectSettings,
     weeklyOffDays: projectSettings?.weeklyOffDays || [0, 6],
     impactedSystems,
@@ -1041,6 +1071,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     addImpactedSystem,
     updateImpactedSystem,
     deleteImpactedSystem,
+    saveWorklog,
   };
   
     if (isLoading) {

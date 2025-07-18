@@ -1,5 +1,6 @@
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -191,4 +192,20 @@ export type Release = {
   milestoneDate?: string; // ISO String
   itemType: ReleaseItemType;
   parentReleaseId?: string;
+};
+
+export type WorklogItem = {
+  id: string; // Client-side UUID
+  itemId: string; // Story ID, or special values like 'meeting'
+  itemType: 'WorkItem' | 'Meeting' | 'Other';
+  hours: number;
+  description?: string; // Only for 'Other'
+};
+
+export type Worklog = {
+  id: string; // employeeId-date (e.g., 'emp1-2024-07-25')
+  employeeId: string;
+  date: string; // ISO String
+  items: WorklogItem[];
+  totalHours: number;
 };
