@@ -50,6 +50,10 @@ export function DatePicker({ date, setDate, className }: DatePickerProps) {
           onSelect={handleDateSelect}
           initialFocus
         />
+        <div className="flex justify-between p-3 border-t">
+            <Button variant="ghost" onClick={() => handleDateSelect(undefined)}>Clear</Button>
+            <Button variant="ghost" onClick={() => handleDateSelect(new Date())}>Today</Button>
+        </div>
       </PopoverContent>
     </Popover>
   )
