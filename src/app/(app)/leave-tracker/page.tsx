@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, isSameDay, eachDayOfInterval } from 'date-fns';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { type Employee, type LeavePeriod } from '@/types';
 import { cn } from '@/lib/utils';
@@ -39,13 +39,16 @@ import { cn } from '@/lib/utils';
 const leaveSchema = z.object({
   startDate: z.string().min(1, 'Start date is required.'),
   endDate: z.string().min(1, 'End date is required.'),
-}).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
+}).refine(data => {
+    if (!data.startDate || !data.endDate) return true;
+    return new Date(data.endDate) >= new Date(data.startDate);
+}, {
   message: 'End date cannot be before start date.',
   path: ['endDate'],
 });
 
 export default function LeaveTrackerPage() {
-  const { employees, addLeavePeriod, deleteLeavePeriod, isLoading } = useProject();
+  const { employees, addLeavePeriod, deleteLeavePeriod, isLoading, holidays, weeklyOffDays } = useProject();
   const { toast } = useToast();
   
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -69,6 +72,33 @@ export default function LeaveTrackerPage() {
     const employee = employees.find(e => e.id === employeeId);
     setSelectedEmployee(employee || null);
     form.reset();
+  };
+
+  const calculateBusinessDays = (startDateStr: string, endDateStr: string): number => {
+    try {
+        const start = new Date(startDateStr);
+        const end = new Date(endDateStr);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+            return 0;
+        }
+
+        const holidayDates = holidays.map(h => new Date(h.date));
+
+        const interval = eachDayOfInterval({ start, end });
+        
+        const businessDays = interval.filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+            return !isWeekend && !isHoliday;
+        });
+
+        return businessDays.length;
+    } catch(e) {
+        console.error("Error calculating business days", e);
+        return 0;
+    }
   };
 
   const onSubmit = async (values: z.infer<typeof leaveSchema>) => {
@@ -188,6 +218,7 @@ export default function LeaveTrackerPage() {
                             <TableRow>
                                 <TableHead>Start Date</TableHead>
                                 <TableHead>End Date</TableHead>
+                                <TableHead>Number of Days</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -196,6 +227,7 @@ export default function LeaveTrackerPage() {
                                 <TableRow key={period.id}>
                                     <TableCell>{format(new Date(period.startDate), 'PPP')}</TableCell>
                                     <TableCell>{format(new Date(period.endDate), 'PPP')}</TableCell>
+                                    <TableCell>{calculateBusinessDays(period.startDate, period.endDate)}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => setDeletingLeavePeriod(period)}>
                                             <Trash2 className="h-4 w-4" />
@@ -204,7 +236,7 @@ export default function LeaveTrackerPage() {
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
                                         No leave periods logged for this employee.
                                     </TableCell>
                                 </TableRow>
