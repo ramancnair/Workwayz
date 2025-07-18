@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import type { Employee, Story, WorklogItem } from '@/types';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Lock } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import {
   AlertDialog,
@@ -25,9 +25,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 
 export default function WorklogPage() {
-  const { employees, stories, worklogs, saveWorklog, isLoading } = useProject();
+  const { employees, stories, worklogs, saveWorklog, worklogSubmissions, submitWorklogForWeek, isLoading } = useProject();
   const { toast } = useToast();
   
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -38,11 +39,17 @@ export default function WorklogPage() {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [totalWeeklyHours, setTotalWeeklyHours] = useState(0);
 
-
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 }); // Sunday
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  const weekStartDateString = format(weekStart, 'yyyy-MM-dd');
+
+  const isWeekSubmitted = useMemo(() => {
+    if (!selectedEmployee) return false;
+    return worklogSubmissions.some(s => s.employeeId === selectedEmployee.id && s.weekStartDate === weekStartDateString);
+  }, [selectedEmployee, worklogSubmissions, weekStartDateString]);
+
 
   const workItemOptions = useMemo(() => {
     const storyItems = stories.map(s => ({
@@ -178,14 +185,19 @@ export default function WorklogPage() {
     if (hours < 40) {
         setIsSubmitDialogOpen(true);
     } else {
-        // Here you would add your actual submission logic, e.g., to an approvals system.
-        toast({ title: 'Success', description: 'Weekly worklog submitted successfully!' });
+        confirmSubmit();
     }
   };
 
-  const confirmSubmit = () => {
-    // Here you would add your actual submission logic.
-    toast({ title: 'Submitted', description: 'Worklog submitted with less than 40 hours.' });
+  const confirmSubmit = async () => {
+    if (!selectedEmployee) return;
+
+    const success = await submitWorklogForWeek(selectedEmployee.id, weekStartDateString);
+    if(success) {
+        toast({ title: 'Success', description: 'Weekly worklog submitted successfully!' });
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to submit worklog.' });
+    }
     setIsSubmitDialogOpen(false);
   };
   
@@ -193,7 +205,10 @@ export default function WorklogPage() {
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Worklog" description="Log daily work for project resources.">
-        <Button onClick={handleValidateAndSubmit}>Submit Week's Worklog</Button>
+        <Button onClick={handleValidateAndSubmit} disabled={isWeekSubmitted}>
+          {isWeekSubmitted ? <Lock className="mr-2 h-4 w-4" /> : null}
+          Submit Week's Worklog
+        </Button>
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -227,6 +242,7 @@ export default function WorklogPage() {
                                 variant={isSameDay(day, selectedDate || new Date(0)) ? 'default' : 'outline'}
                                 onClick={() => setSelectedDate(day)}
                                 className="flex flex-col h-auto p-2"
+                                disabled={isWeekSubmitted}
                             >
                                 <span className="text-xs">{format(day, 'EEE')}</span>
                                 <span className="text-lg font-bold">{format(day, 'd')}</span>
@@ -239,8 +255,18 @@ export default function WorklogPage() {
             </CardContent>
         </Card>
       </div>
+
+       {isWeekSubmitted && selectedEmployee && (
+        <Alert>
+          <Lock className="h-4 w-4" />
+          <AlertTitle>Worklog Submitted</AlertTitle>
+          <AlertDescription>
+            The worklog for {selectedEmployee.firstName} for this week has been submitted and is now locked for editing.
+          </AlertDescription>
+        </Alert>
+      )}
       
-      {selectedEmployee && selectedDate && (
+      {selectedEmployee && selectedDate && !isWeekSubmitted && (
         <Card>
           <CardHeader>
             <CardTitle>Log for {selectedEmployee.firstName} on {format(selectedDate, 'PPP')}</CardTitle>
