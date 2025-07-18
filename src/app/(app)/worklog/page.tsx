@@ -32,8 +32,15 @@ export default function WorklogPage() {
   const currentYear = getYear(new Date());
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
   
+  useEffect(() => {
+    // Set initial date on mount
+    const today = new Date();
+    setSelectedDate(today);
+    setDisplayDate(today);
+  }, []);
+
   const weekDays = useMemo(() => {
-    const start = startOfWeek(displayDate, { weekStartsOn: 1 });
+    const start = startOfWeek(displayDate, { weekStartsOn: 0 });
     return Array.from({ length: 7 }, (_, i) => {
       const day = new Date(start);
       day.setDate(day.getDate() + i);
