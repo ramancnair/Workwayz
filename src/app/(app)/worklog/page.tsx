@@ -14,17 +14,6 @@ import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO, eachDayOfIn
 import type { Employee, Story, WorklogItem } from '@/types';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronsUpDown, Check } from "lucide-react";
-import { cn } from '@/lib/utils';
 
 export default function WorklogPage() {
   const { employees, stories, worklogs, saveWorklog, isLoading } = useProject();
@@ -34,6 +23,8 @@ export default function WorklogPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [logItems, setLogItems] = useState<WorklogItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [workItemInputValues, setWorkItemInputValues] = useState<Record<string, string>>({});
+
 
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
@@ -66,32 +57,53 @@ export default function WorklogPage() {
         log => log.employeeId === selectedEmployee.id && format(parseISO(log.date), 'yyyy-MM-dd') === dateString
       );
       if (existingLog) {
-        setLogItems(existingLog.items.map(item => ({...item, id: uuidv4()})));
+        const newLogItems = existingLog.items.map(item => ({...item, id: uuidv4()}));
+        setLogItems(newLogItems);
+        
+        const newInputValues: Record<string, string> = {};
+        newLogItems.forEach(item => {
+            const option = workItemOptions.find(opt => opt.value === item.itemId);
+            if (option) {
+                newInputValues[item.id] = option.label;
+            }
+        });
+        setWorkItemInputValues(newInputValues);
       } else {
         setLogItems([]);
+        setWorkItemInputValues({});
       }
     }
-  }, [selectedEmployee, selectedDate, worklogs]);
+  }, [selectedEmployee, selectedDate, worklogs, workItemOptions]);
 
   const handleAddItem = () => {
-    setLogItems([...logItems, { id: uuidv4(), itemId: '', itemType: 'WorkItem', hours: 0 }]);
+    const newId = uuidv4();
+    setLogItems([...logItems, { id: newId, itemId: '', itemType: 'WorkItem', hours: 0 }]);
+    setWorkItemInputValues(prev => ({...prev, [newId]: ''}));
   };
 
   const handleRemoveItem = (id: string) => {
     setLogItems(logItems.filter(item => item.id !== id));
+    const newInputs = {...workItemInputValues};
+    delete newInputs[id];
+    setWorkItemInputValues(newInputs);
   };
 
   const handleItemChange = (id: string, field: keyof WorklogItem, value: any) => {
     setLogItems(logItems.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
-  const handleItemSelect = (id: string, value: string) => {
-      const selectedOption = workItemOptions.find(opt => opt.value === value);
-      let itemType: 'WorkItem' | 'Meeting' | 'Other' = 'WorkItem';
-      if (value === 'meeting') itemType = 'Meeting';
-      if (value === 'other') itemType = 'Other';
+  const handleWorkItemInputChange = (id: string, inputValue: string) => {
+     setWorkItemInputValues(prev => ({...prev, [id]: inputValue}));
 
-      setLogItems(logItems.map(item => item.id === id ? { ...item, itemId: value, itemType } : item));
+     const matchingOption = workItemOptions.find(opt => opt.label === inputValue);
+     if (matchingOption) {
+        let itemType: 'WorkItem' | 'Meeting' | 'Other' = 'WorkItem';
+        if (matchingOption.value === 'meeting') itemType = 'Meeting';
+        if (matchingOption.value === 'other') itemType = 'Other';
+        setLogItems(logItems.map(item => item.id === id ? { ...item, itemId: matchingOption.value, itemType } : item));
+     } else {
+        setLogItems(logItems.map(item => item.id === id ? { ...item, itemId: '', itemType: 'WorkItem' } : item));
+     }
   };
   
   const handleSubmit = async () => {
@@ -184,10 +196,17 @@ export default function WorklogPage() {
               <div key={item.id} className="grid grid-cols-[1fr_120px_1fr_auto] gap-4 items-end">
                   <div className="space-y-1">
                       {index === 0 && <label className="text-sm font-medium">Work Item</label>}
-                      <WorkItemCombobox 
-                        options={workItemOptions} 
-                        value={item.itemId}
-                        onChange={(value) => handleItemSelect(item.id, value)}
+                      <Input
+                        list="work-item-options"
+                        placeholder="Search work item..."
+                        value={workItemInputValues[item.id] || ''}
+                        onChange={(e) => handleWorkItemInputChange(item.id, e.target.value)}
+                        onBlur={(e) => {
+                            const matchingOption = workItemOptions.find(opt => opt.label === e.target.value);
+                            if (!matchingOption) {
+                                handleWorkItemInputChange(item.id, '');
+                            }
+                        }}
                       />
                   </div>
                    <div className="space-y-1">
@@ -219,6 +238,11 @@ export default function WorklogPage() {
                   </Button>
               </div>
             ))}
+             <datalist id="work-item-options">
+                {workItemOptions.map(option => (
+                    <option key={option.value} value={option.label} />
+                ))}
+            </datalist>
              <div className="flex justify-between items-center pt-4">
                 <Button variant="outline" onClick={handleAddItem}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Item
@@ -232,64 +256,4 @@ export default function WorklogPage() {
       )}
     </div>
   );
-}
-
-
-function WorkItemCombobox({ options, value, onChange }: { options: {value: string, label: string, group: string}[], value: string, onChange: (value: string) => void }) {
-  const [open, setOpen] = useState(false)
-
-  const groupedOptions = useMemo(() => {
-    return options.reduce((acc, option) => {
-        (acc[option.group] = acc[option.group] || []).push(option);
-        return acc;
-    }, {} as Record<string, typeof options>);
-  }, [options]);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-        >
-          {value
-            ? options.find((option) => option.value === value)?.label
-            : "Select work item..."}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0">
-        <Command>
-          <CommandInput placeholder="Search work item..." />
-          <CommandList>
-            <CommandEmpty>No work item found.</CommandEmpty>
-            {Object.entries(groupedOptions).map(([group, groupOptions]) => (
-                <CommandGroup key={group} heading={group}>
-                    {groupOptions.map((option) => (
-                    <CommandItem
-                        key={option.value}
-                        value={option.value}
-                        onSelect={(currentValue) => {
-                          onChange(currentValue === value ? "" : currentValue)
-                          setOpen(false)
-                        }}
-                    >
-                        <Check
-                        className={cn(
-                            "mr-2 h-4 w-4",
-                            value === option.value ? "opacity-100" : "opacity-0"
-                        )}
-                        />
-                        {option.label}
-                    </CommandItem>
-                    ))}
-                </CommandGroup>
-            ))}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
 }
