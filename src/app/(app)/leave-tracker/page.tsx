@@ -149,7 +149,7 @@ export default function LeaveTrackerPage() {
               onMonthChange={setCurrentMonth}
               fromDate={startOfCurrentYear}
               toDate={endOfCurrentYear}
-              disabled={isEditing ? isDateDisabled : () => true}
+              disabled={isDateDisabled}
               className="rounded-md border"
               footer={
                 <p className="text-sm text-center pt-2 text-muted-foreground">
