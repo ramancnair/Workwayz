@@ -6,12 +6,11 @@ import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/datepicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
+import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import type { Employee, Story, WorklogItem } from '@/types';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -39,6 +38,7 @@ export default function WorklogPage() {
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 }); // Sunday
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   const workItemOptions = useMemo(() => {
     const storyItems = stories.map(s => ({
@@ -155,16 +155,19 @@ export default function WorklogPage() {
                </div>
                <div>
                   <label className="text-sm font-medium">Date</label>
-                  <DatePicker
-                    date={selectedDate}
-                    setDate={(date) => {
-                      if (date && isWithinInterval(date, { start: weekStart, end: weekEnd })) {
-                        setSelectedDate(date);
-                      } else {
-                        toast({ variant: 'destructive', title: 'Invalid Date', description: 'You can only log work for the current week.'})
-                      }
-                    }}
-                  />
+                  <div className="grid grid-cols-7 gap-2 rounded-md border p-2">
+                    {weekDays.map(day => (
+                      <Button
+                        key={day.toISOString()}
+                        variant={isSameDay(day, selectedDate || new Date(0)) ? 'default' : 'outline'}
+                        onClick={() => setSelectedDate(day)}
+                        className="flex flex-col h-auto p-2"
+                      >
+                        <span className="text-xs">{format(day, 'EEE')}</span>
+                        <span className="text-lg font-bold">{format(day, 'd')}</span>
+                      </Button>
+                    ))}
+                  </div>
                </div>
             </CardContent>
         </Card>
