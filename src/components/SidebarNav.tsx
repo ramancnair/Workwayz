@@ -208,7 +208,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       <div className="p-4 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
             <SidebarMenuItem>
-              <Link href="/">
+              <Link href="/pmdashboard">
                 <SidebarMenuButton
                   tooltip="PM Dashboard"
                 >
