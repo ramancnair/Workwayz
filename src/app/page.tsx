@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,9 +21,11 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PlusCircle, ArrowUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface Project {
   id: string;
@@ -40,6 +42,8 @@ export default function ProjectsDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [filterText, setFilterText] = useState('');
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'name', desc: false });
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof projectSchema>>({
@@ -64,7 +68,6 @@ export default function ProjectsDashboard() {
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
     if (!db) return;
     try {
-      // Generate a unique project ID
       const projectId = `P${Date.now()}`;
       const projectRef = doc(db, 'projects', projectId);
       
@@ -78,6 +81,42 @@ export default function ProjectsDashboard() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not create project.' });
     }
   };
+
+  const handleSort = (columnId: string) => {
+    if (sorting?.id === columnId) {
+      setSorting({ ...sorting, desc: !sorting.desc });
+    } else {
+      setSorting({ id: columnId, desc: false });
+    }
+  };
+
+  const filteredAndSortedProjects = useMemo(() => {
+    let filtered = projects.filter(p => 
+      p.name.toLowerCase().includes(filterText.toLowerCase()) ||
+      p.id.toLowerCase().includes(filterText.toLowerCase()) ||
+      (p.description && p.description.toLowerCase().includes(filterText.toLowerCase()))
+    );
+
+    if (sorting) {
+      filtered.sort((a, b) => {
+        const valA = (a as any)[sorting.id] || '';
+        const valB = (b as any)[sorting.id] || '';
+        
+        const comparison = valA.localeCompare(valB, undefined, { numeric: true });
+        return sorting.desc ? -comparison : comparison;
+      });
+    }
+    return filtered;
+  }, [projects, filterText, sorting]);
+  
+  const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
+    <TableHead className={className}>
+      <Button variant="ghost" onClick={() => handleSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -134,22 +173,51 @@ export default function ProjectsDashboard() {
             </DialogContent>
           </Dialog>
         </div>
-        {isLoading ? (
-          <p>Loading projects...</p>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {projects.map((project) => (
-              <Link href={`/projects/${project.id}/dashboard/development`} key={project.id}>
-                <Card className="h-full hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-                  <CardHeader>
-                    <CardTitle>{project.name}</CardTitle>
-                    <CardDescription className="truncate">{project.description || 'No description'}</CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
+        
+        <Card>
+            <CardContent className="p-4">
+                <Input 
+                    placeholder="Filter projects by ID, name, or description..."
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                    className="max-w-sm"
+                />
+            </CardContent>
+             {isLoading ? (
+              <p className="p-4 text-center">Loading projects...</p>
+            ) : (
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
+                    <SortableHeader columnId="name">Project Name</SortableHeader>
+                    <SortableHeader columnId="description">Description</SortableHeader>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {filteredAndSortedProjects.map((project) => (
+                    <TableRow key={project.id} className="cursor-pointer">
+                        <TableCell className="font-medium">
+                          <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                            {project.id}
+                          </Link>
+                        </TableCell>
+                         <TableCell>
+                           <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                            {project.name}
+                          </Link>
+                        </TableCell>
+                         <TableCell>
+                           <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                            {project.description}
+                          </Link>
+                        </TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+            )}
+        </Card>
       </main>
     </div>
   );
