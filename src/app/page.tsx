@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, addDoc, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect } from 'react';
 import Link from 'next/link';
@@ -64,7 +64,12 @@ export default function ProjectsDashboard() {
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
     if (!db) return;
     try {
-      await addDoc(collection(db, 'projects'), values);
+      // Generate a unique project ID
+      const projectId = `P${Date.now()}`;
+      const projectRef = doc(db, 'projects', projectId);
+      
+      await setDoc(projectRef, values);
+
       toast({ title: 'Success', description: 'Project created successfully.' });
       setIsDialogOpen(false);
       form.reset();
