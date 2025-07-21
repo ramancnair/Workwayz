@@ -6,6 +6,7 @@ import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { type PropsWithChildren } from "react";
 import { ProjectProvider, useProject } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SidebarNav } from '@/components/SidebarNav';
 
 function ProjectLayoutContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
