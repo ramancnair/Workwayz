@@ -88,10 +88,9 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   );
 }
 
-export default async function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
-  const { projectId } = await params;
+export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
   return (
-    <ProjectProvider projectId={projectId}>
+    <ProjectProvider projectId={params.projectId}>
       <ProjectLayoutContent>{children}</ProjectLayoutContent>
     </ProjectProvider>
   )
