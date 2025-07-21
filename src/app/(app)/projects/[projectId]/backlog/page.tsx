@@ -120,7 +120,7 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className }: { st
           onDelete();
         }}
       >
-        <X className="h-4 w-4" />
+        <Trash2 className="h-4 w-4" />
       </Button>
       <CardHeader className="p-4">
         <div className="flex justify-between items-start gap-4">
