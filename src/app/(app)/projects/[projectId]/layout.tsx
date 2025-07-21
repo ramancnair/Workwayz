@@ -2,13 +2,11 @@
 'use client';
 
 import { usePathname, useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
 import { type PropsWithChildren } from "react";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 
 export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
   const pathname = usePathname();
@@ -18,7 +16,6 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   const basePath = `/projects/${projectId}`;
 
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
-  const isCtoPath = pathname.startsWith(`${basePath}/dashboard/cto`);
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(basePath + p));
   const isArchitecturePath = pathname.startsWith(`${basePath}/architecture`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
@@ -26,10 +23,9 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isHolidaysPath = pathname.startsWith(`${basePath}/holiday-calendar`);
   
-  const isDevelopmentPath = !isCtoPath && !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isReleasesPath && !isSettingsPath;
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isReleasesPath && !isSettingsPath;
 
   const getTabValue = () => {
-    if (isCtoPath) return 'cto';
     if (isDevelopmentPath) return 'development';
     if (isTestingPath) return 'testing';
     if (isArchitecturePath) return 'architecture';
@@ -41,9 +37,7 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   };
 
   const onTabChange = (value: string) => {
-    if (value === 'cto') {
-      router.push(`${basePath}/dashboard/cto`);
-    } else if (value === 'development') {
+    if (value === 'development') {
       router.push(`${basePath}/dashboard/development`);
     } else if (value === 'testing') {
       router.push(`${basePath}/dashboard/testing`);
@@ -69,12 +63,8 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
         <SidebarInset>
           <div className="h-screen flex flex-col">
             <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center gap-4">
-                <Button variant="outline" asChild>
-                    <Link href="/">Projects</Link>
-                </Button>
                 <Tabs value={getTabValue()} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                        <TabsTrigger value="cto" className="data-[state=active]:bg-background data-[state=active]:text-foreground">CTO Dashboard</TabsTrigger>
                         <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                         <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
                         <TabsTrigger value="architecture" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Architecture</TabsTrigger>
