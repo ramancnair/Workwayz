@@ -40,28 +40,30 @@ import {
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
-export function SidebarNav() {
+export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
+  
+  const basePath = `/projects/${projectId}`;
 
   const devMenuItems = [
     {
-      href: "/dashboard/development",
+      href: `${basePath}/dashboard/development`,
       label: "Dev Dashboard",
       icon: LayoutDashboard,
     },
     {
-      href: "/kanban",
+      href: `${basePath}/kanban`,
       label: "Kanban Board",
       icon: KanbanSquare,
     },
     {
-      href: "/backlog",
+      href: `${basePath}/backlog`,
       label: "Product Backlog",
       icon: Layers,
     },
      {
-      href: "/development-tasks",
+      href: `${basePath}/development-tasks`,
       label: "Development Tasks",
       icon: CheckSquare,
     },
@@ -69,17 +71,17 @@ export function SidebarNav() {
 
   const testMenuItems = [
     {
-      href: "/dashboard/testing",
+      href: `${basePath}/dashboard/testing`,
       label: "Test Dashboard",
       icon: TestTube2,
     },
     {
-      href: "/testing/test-cases",
+      href: `${basePath}/testing/test-cases`,
       label: "Test Cases",
       icon: ClipboardCheck,
     },
     {
-      href: "/testing/bug-list",
+      href: `${basePath}/testing/bug-list`,
       label: "Bug List",
       icon: Bug,
     },
@@ -87,7 +89,7 @@ export function SidebarNav() {
 
   const architectureMenuItems = [
     {
-      href: "/architecture",
+      href: `${basePath}/architecture`,
       label: "Impacted Systems",
       icon: Network,
     },
@@ -95,7 +97,7 @@ export function SidebarNav() {
   
   const releasesMenuItems = [
     {
-      href: "/releases",
+      href: `${basePath}/releases`,
       label: "Project Releases",
       icon: Package,
     }
@@ -103,22 +105,22 @@ export function SidebarNav() {
 
   const resourcesMenuItems = [
     {
-      href: "/resources",
+      href: `${basePath}/resources`,
       label: "Employees",
       icon: Users,
     },
     {
-      href: "/project-gantt",
+      href: `${basePath}/project-gantt`,
       label: "Resource Gantt",
       icon: GanttChartSquare,
     },
     {
-      href: "/worklog",
+      href: `${basePath}/worklog`,
       label: "Worklog",
       icon: ClipboardList,
     },
     {
-      href: "/leave-tracker",
+      href: `${basePath}/leave-tracker`,
       label: "Leave Tracker",
       icon: CalendarCheck,
     },
@@ -126,27 +128,27 @@ export function SidebarNav() {
 
   const governanceMenuItems = [
     {
-      href: "/raid-dashboard",
+      href: `${basePath}/raid-dashboard`,
       label: "RAID Dashboard",
       icon: LayoutDashboard,
     },
     {
-      href: "/risks",
+      href: `${basePath}/risks`,
       label: "Risks",
       icon: ShieldAlert,
     },
     {
-      href: "/assumptions",
+      href: `${basePath}/assumptions`,
       label: "Assumptions",
       icon: NotebookText,
     },
     {
-      href: "/issues",
+      href: `${basePath}/issues`,
       label: "Issues",
       icon: AlertCircle,
     },
     {
-      href: "/dependencies",
+      href: `${basePath}/dependencies`,
       label: "Dependencies",
       icon: Link2,
     },
@@ -154,7 +156,7 @@ export function SidebarNav() {
 
   const holidayMenuItems = [
     {
-      href: "/holiday-calendar",
+      href: `${basePath}/holiday-calendar`,
       label: "Holiday Calendar",
       icon: CalendarDays,
     },
@@ -162,24 +164,24 @@ export function SidebarNav() {
 
   const settingsMenuItems = [
     {
-      href: "/settings/board",
+      href: `${basePath}/settings/board`,
       label: "Board Settings",
       icon: KanbanSquare,
     },
     {
-      href: "/settings/sprint",
+      href: `${basePath}/settings/sprint`,
       label: "Sprint Settings",
       icon: Settings,
     }
   ];
 
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
-  const isArchitecturePath = pathname.startsWith('/architecture');
-  const isReleasesPath = pathname.startsWith('/releases');
-  const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(p));
-  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
-  const isHolidaysPath = pathname.startsWith('/holiday-calendar');
-  const isSettingsPath = pathname.startsWith('/settings');
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(basePath + p));
+  const isArchitecturePath = pathname.startsWith(`${basePath}/architecture`);
+  const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
+  const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
+  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
+  const isHolidaysPath = pathname.startsWith(`${basePath}/holiday-calendar`);
+  const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
 
   const menuItems = isSettingsPath ? settingsMenuItems
     : isTestingPath ? testMenuItems 
@@ -197,8 +199,10 @@ export function SidebarNav() {
             <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
                 <ChevronLeft />
             </Button>
-            <Flame className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
+            <Link href="/" className="flex items-center gap-2">
+              <Flame className="w-8 h-8 text-primary" />
+              <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
+            </Link>
         </div>
         <SidebarTrigger className="hidden md:flex" />
       </SidebarHeader>
@@ -223,8 +227,8 @@ export function SidebarNav() {
         <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link href="/settings">
-              <SidebarMenuButton tooltip="Settings" isActive={pathname.startsWith('/settings')}>
+            <Link href={`${basePath}/settings`}>
+              <SidebarMenuButton tooltip="Settings" isActive={pathname.startsWith(`${basePath}/settings`)}>
                 <Settings />
                 <span>Settings</span>
               </SidebarMenuButton>

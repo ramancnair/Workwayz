@@ -15,8 +15,6 @@ import {
   getDocs,
   where,
   Timestamp,
-  connectFirestoreEmulator,
-  getFirestore,
   getDoc,
   setDoc,
   arrayUnion,
@@ -157,7 +155,7 @@ const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
   sprintStartDay: 1, // Monday
 };
 
-export function ProjectProvider({ children }: PropsWithChildren) {
+export function ProjectProvider({ children, projectId }: PropsWithChildren<{ projectId: string }>) {
   const [epics, setEpics] = useState<Epic[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -178,11 +176,15 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!db) {
+    if (!db || !projectId) {
+      if (!db) {
         setError(`Firebase is not configured correctly. The application is trying to use the Project ID: "${firebaseConfig.projectId || 'your-project-id'}". This is likely a placeholder. Please check your project setup in the Firebase Studio settings to ensure it's correctly linked to a Firebase project.`);
-        setIsLoading(false);
-        return;
+      }
+      setIsLoading(false);
+      return;
     }
+    
+    const projectDocRef = doc(db, 'projects', projectId);
 
     const collections: { name: string, setState: React.Dispatch<any> }[] = [
         { name: 'epics', setState: setEpics },
@@ -203,7 +205,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     ];
     
     // Listener for project settings
-    const settingsDocRef = doc(db, 'projectSettings', 'main');
+    const settingsDocRef = doc(projectDocRef, 'settings', 'main');
     const unsubSettings = onSnapshot(settingsDocRef, (doc) => {
       if (doc.exists()) {
         setProjectSettings({ id: doc.id, ...doc.data() } as ProjectSettings);
@@ -214,14 +216,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     });
 
     const unsubscribers = collections.map(({ name, setState }) => {
-        const q = query(collection(db, name));
+        const q = query(collection(projectDocRef, name));
         return onSnapshot(q, 
             (querySnapshot) => {
                 // Special handling for kanbanColumns to ensure defaults
                 if (name === 'kanbanColumns' && querySnapshot.empty) {
                     const batch = writeBatch(db);
                     defaultKanbanColumns.forEach(col => {
-                        const docRef = doc(collection(db, 'kanbanColumns'));
+                        const docRef = doc(collection(projectDocRef, 'kanbanColumns'));
                         batch.set(docRef, col);
                     });
                     batch.commit().catch(e => console.error("Failed to set default Kanban columns", e));
@@ -285,21 +287,22 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       unsubscribers.forEach(unsub => unsub());
       unsubSettings();
     }
-  }, []);
+  }, [projectId]);
 
   // One-time effect to assign random impacted systems to tasks that don't have one
   useEffect(() => {
-    if (isLoading || impactedSystems.length === 0) return;
+    if (isLoading || impactedSystems.length === 0 || !db || !projectId) return;
 
     const tasksWithoutSystem = stories.filter(
       (story) => story.itemType === 'Task' && !story.impactedSystemId
     );
+    const projectDocRef = doc(db, 'projects', projectId);
 
     if (tasksWithoutSystem.length > 0) {
       const batch = writeBatch(db);
       tasksWithoutSystem.forEach((task) => {
         const randomSystem = impactedSystems[Math.floor(Math.random() * impactedSystems.length)];
-        const taskRef = doc(db, 'stories', task.id);
+        const taskRef = doc(projectDocRef, 'stories', task.id);
         batch.update(taskRef, { impactedSystemId: randomSystem.id });
       });
 
@@ -307,14 +310,15 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         console.error('Failed to assign random impacted systems to tasks:', err);
       });
     }
-  }, [isLoading, stories, impactedSystems]);
+  }, [isLoading, stories, impactedSystems, projectId]);
 
 
   // Story Actions
   const addStory = async (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
+    const projectDocRef = doc(db, 'projects', projectId);
     try {
-        const storiesSnapshot = await getDocs(collection(db, 'stories'));
+        const storiesSnapshot = await getDocs(collection(projectDocRef, 'stories'));
         const newIdNumber = storiesSnapshot.size > 0
             ? Math.max(0, ...storiesSnapshot.docs
                 .map(doc => doc.data().storyId)
@@ -341,7 +345,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             }
         }
         
-        await addDoc(collection(db, 'stories'), sanitizeForFirestore(payload));
+        await addDoc(collection(projectDocRef, 'stories'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
         console.error("Firebase Error: Failed to add story.", { code: e.code, message: e.message, fullError: e });
@@ -350,14 +354,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const { startDate, endDate, ...rest } = data;
       const payload: any = { ...rest };
       if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
       if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
 
-      await updateDoc(doc(db, 'stories', storyId), sanitizeForFirestore(payload));
+      await updateDoc(doc(db, 'projects', projectId, 'stories', storyId), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update story.", { id: storyId, code: e.code, message: e.message, fullError: e });
@@ -366,9 +370,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteStory = async (storyId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'stories', storyId));
+      await deleteDoc(doc(db, 'projects', projectId, 'stories', storyId));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete story.", { id: storyId, code: e.code, message: e.message, fullError: e });
@@ -377,21 +381,21 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const moveStoryToSprint = async (storyId: string, sprintId: string | null): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
-      const storyRef = doc(db, 'stories', storyId);
+      const storyRef = doc(db, 'projects', projectId, 'stories', storyId);
   
       // 1. Move the parent story
       batch.update(storyRef, { sprintId });
   
       // 2. Find and move all related sub-items (Bugs and Tasks)
       // Note: `epicId` on a Bug/Task is used to link to the parent Story ID
-      const q = query(collection(db, 'stories'), where('epicId', '==', storyId));
+      const q = query(collection(db, 'projects', projectId, 'stories'), where('epicId', '==', storyId));
       const subItemsSnapshot = await getDocs(q);
   
       subItemsSnapshot.forEach(subItemDoc => {
-        batch.update(doc(db, 'stories', subItemDoc.id), { sprintId });
+        batch.update(doc(db, 'projects', projectId, 'stories', subItemDoc.id), { sprintId });
       });
   
       await batch.commit();
@@ -407,9 +411,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   
   // Epic Actions
   const addEpic = async (epic: Omit<Epic, 'id'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await addDoc(collection(db, 'epics'), sanitizeForFirestore(epic));
+      await addDoc(collection(db, 'projects', projectId, 'epics'), sanitizeForFirestore(epic));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add epic.", { code: e.code, message: e.message, fullError: e });
@@ -418,9 +422,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'epics', epicId), sanitizeForFirestore(data));
+      await updateDoc(doc(db, 'projects', projectId, 'epics', epicId), sanitizeForFirestore(data));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update epic.", { id: epicId, code: e.code, message: e.message, fullError: e });
@@ -429,15 +433,15 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteEpic = async (epicId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
-      batch.delete(doc(db, 'epics', epicId));
+      batch.delete(doc(db, 'projects', projectId, 'epics', epicId));
       
-      const q = query(collection(db, 'stories'), where('epicId', '==', epicId));
+      const q = query(collection(db, 'projects', projectId, 'stories'), where('epicId', '==', epicId));
       const storiesSnapshot = await getDocs(q);
       storiesSnapshot.forEach(storyDoc => {
-        batch.update(doc(db, 'stories', storyDoc.id), { epicId: null });
+        batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { epicId: null });
       });
 
       await batch.commit();
@@ -450,12 +454,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Sprint Actions
   const addSprint = async (sprint: { title: string, startDate?: Date, endDate?: Date }): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const payload: any = { title: sprint.title, isCurrent: false };
       if (sprint.startDate) payload.startDate = Timestamp.fromDate(sprint.startDate);
       if (sprint.endDate) payload.endDate = Timestamp.fromDate(sprint.endDate);
-      await addDoc(collection(db, 'sprints'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'sprints'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add sprint.", { code: e.code, message: e.message, fullError: e });
@@ -464,12 +468,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateSprint = async (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date }): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const payload: any = { title: data.title };
       payload.startDate = data.startDate ? Timestamp.fromDate(data.startDate) : null;
       payload.endDate = data.endDate ? Timestamp.fromDate(data.endDate) : null;
-      await updateDoc(doc(db, 'sprints', sprintId), sanitizeForFirestore(payload));
+      await updateDoc(doc(db, 'projects', projectId, 'sprints', sprintId), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update sprint.", { id: sprintId, code: e.code, message: e.message, fullError: e });
@@ -478,15 +482,15 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteSprint = async (sprintId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
         const batch = writeBatch(db);
-        batch.delete(doc(db, 'sprints', sprintId));
+        batch.delete(doc(db, 'projects', projectId, 'sprints', sprintId));
         
-        const q = query(collection(db, 'stories'), where('sprintId', '==', sprintId));
+        const q = query(collection(db, 'projects', projectId, 'stories'), where('sprintId', '==', sprintId));
         const storiesSnapshot = await getDocs(q);
         storiesSnapshot.forEach(storyDoc => {
-            batch.update(doc(db, 'stories', storyDoc.id), { sprintId: null });
+            batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { sprintId: null });
         });
 
         await batch.commit();
@@ -498,13 +502,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const setCurrentSprint = async (sprintId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
         const batch = writeBatch(db);
-        const sprintsSnapshot = await getDocs(collection(db, 'sprints'));
+        const sprintsSnapshot = await getDocs(collection(db, 'projects', projectId, 'sprints'));
         
         sprintsSnapshot.forEach(sprintDoc => {
-            batch.update(doc(db, 'sprints', sprintDoc.id), { isCurrent: sprintDoc.id === sprintId });
+            batch.update(doc(db, 'projects', projectId, 'sprints', sprintDoc.id), { isCurrent: sprintDoc.id === sprintId });
         });
 
         await batch.commit();
@@ -517,7 +521,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Employee Actions
   const addEmployee = async (employee: Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
         const { onboardingDate, offloadingDate, ...rest } = employee;
         const payload: any = { ...rest, avatar: 'https://placehold.co/40x40.png' };
@@ -525,7 +529,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
         if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
 
-        await addDoc(collection(db, 'employees'), sanitizeForFirestore(payload));
+        await addDoc(collection(db, 'projects', projectId, 'employees'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
         console.error("Firebase Error: Failed to add employee.", { code: e.code, message: e.message, fullError: e });
@@ -534,7 +538,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
         const { onboardingDate, offloadingDate, ...rest } = data;
         const payload: any = { ...rest };
@@ -542,7 +546,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(onboardingDate) : null;
         if (data.hasOwnProperty('offloadingDate')) payload.offloadingDate = offloadingDate ? Timestamp.fromDate(offloadingDate) : null;
 
-        await updateDoc(doc(db, 'employees', employeeId), sanitizeForFirestore(payload));
+        await updateDoc(doc(db, 'projects', projectId, 'employees', employeeId), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update employee.", { id: employeeId, code: e.code, message: e.message, fullError: e });
@@ -551,9 +555,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
   
   const deleteEmployee = async (employeeId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'employees', employeeId));
+      await deleteDoc(doc(db, 'projects', projectId, 'employees', employeeId));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete employee.", { id: employeeId, code: e.code, message: e.message, fullError: e });
@@ -562,7 +566,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const addLeavePeriod = async (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const newLeavePeriod: LeavePeriod = {
         ...leavePeriod,
@@ -571,7 +575,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         endDate: new Date(leavePeriod.endDate).toISOString(),
       };
       
-      const employeeRef = doc(db, 'employees', employeeId);
+      const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
       await updateDoc(employeeRef, {
         leavePeriods: arrayUnion(newLeavePeriod)
       });
@@ -583,7 +587,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteLeavePeriod = async (employeeId: string, leavePeriodId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     const employee = employees.find(e => e.id === employeeId);
     if (!employee || !employee.leavePeriods) return false;
 
@@ -591,7 +595,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     if (!leavePeriodToDelete) return false;
     
     try {
-      const employeeRef = doc(db, 'employees', employeeId);
+      const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
       await updateDoc(employeeRef, {
         leavePeriods: arrayRemove(leavePeriodToDelete)
       });
@@ -604,9 +608,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // TestCase Actions
   const addTestCase = async (testCase: Omit<TestCase, 'id' | 'testCaseId'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-        const testCasesSnapshot = await getDocs(collection(db, 'testCases'));
+        const testCasesSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCases'));
         const newIdNumber = testCasesSnapshot.size > 0
             ? Math.max(0, ...testCasesSnapshot.docs
                 .map(doc => doc.data().testCaseId)
@@ -616,7 +620,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             : 1;
 
         const payload = { ...testCase, testCaseId: `TC-${newIdNumber}` };
-        await addDoc(collection(db, 'testCases'), sanitizeForFirestore(payload));
+        await addDoc(collection(db, 'projects', projectId, 'testCases'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
         console.error("Firebase Error: Failed to add test case.", { code: e.code, message: e.message, fullError: e });
@@ -625,9 +629,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'testCases', testCaseId), sanitizeForFirestore(data));
+      await updateDoc(doc(db, 'projects', projectId, 'testCases', testCaseId), sanitizeForFirestore(data));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
@@ -636,9 +640,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteTestCase = async (testCaseId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'testCases', testCaseId));
+      await deleteDoc(doc(db, 'projects', projectId, 'testCases', testCaseId));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
@@ -648,9 +652,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Risk Actions
   const addRisk = async (risk: Omit<Risk, 'id' | 'riskId'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      const risksSnapshot = await getDocs(collection(db, 'risks'));
+      const risksSnapshot = await getDocs(collection(db, 'projects', projectId, 'risks'));
       const newIdNumber = risksSnapshot.size > 0
         ? Math.max(0, ...risksSnapshot.docs
             .map(doc => doc.data().riskId)
@@ -660,7 +664,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
         : 1;
 
       const payload = { ...risk, riskId: `R-${newIdNumber}` };
-      await addDoc(collection(db, 'risks'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'risks'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add risk.", { code: e.code, message: e.message, fullError: e });
@@ -669,9 +673,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateRisk = async (riskId: string, data: Partial<Omit<Risk, 'id' | 'riskId'>>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'risks', riskId), sanitizeForFirestore(data));
+      await updateDoc(doc(db, 'projects', projectId, 'risks', riskId), sanitizeForFirestore(data));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update risk.", { id: riskId, code: e.code, message: e.message, fullError: e });
@@ -680,9 +684,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteRisk = async (riskId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'risks', riskId));
+      await deleteDoc(doc(db, 'projects', projectId, 'risks', riskId));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete risk.", { id: riskId, code: e.code, message: e.message, fullError: e });
@@ -692,13 +696,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   
   // Assumption Actions
   const addAssumption = async (assumption: Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date }): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      const snapshot = await getDocs(collection(db, 'assumptions'));
+      const snapshot = await getDocs(collection(db, 'projects', projectId, 'assumptions'));
       const newId = `A-${snapshot.size + 1}`;
       const payload: any = { ...assumption, assumptionId: newId };
       if (assumption.validationDate) payload.validationDate = Timestamp.fromDate(assumption.validationDate);
-      await addDoc(collection(db, 'assumptions'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'assumptions'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add assumption.", { code: e.code, message: e.message, fullError: e });
@@ -707,12 +711,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateAssumption = async (id: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId'| 'validationDate'> & { validationDate?: Date }>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const { validationDate, ...rest } = data;
       const payload: any = { ...rest };
       if (data.hasOwnProperty('validationDate')) payload.validationDate = validationDate ? Timestamp.fromDate(validationDate) : null;
-      await updateDoc(doc(db, 'assumptions', id), sanitizeForFirestore(payload));
+      await updateDoc(doc(db, 'projects', projectId, 'assumptions', id), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update assumption.", { id, code: e.code, message: e.message, fullError: e });
@@ -721,9 +725,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteAssumption = async (id: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'assumptions', id));
+      await deleteDoc(doc(db, 'projects', projectId, 'assumptions', id));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete assumption.", { id, code: e.code, message: e.message, fullError: e });
@@ -733,14 +737,14 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Issue Actions
   const addIssue = async (issue: Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { reportedDate: Date, resolvedDate?: Date }): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      const snapshot = await getDocs(collection(db, 'issues'));
+      const snapshot = await getDocs(collection(db, 'projects', projectId, 'issues'));
       const newId = `I-${snapshot.size + 1}`;
       const payload: any = { ...issue, issueId: newId };
       payload.reportedDate = Timestamp.fromDate(issue.reportedDate);
       if (issue.resolvedDate) payload.resolvedDate = Timestamp.fromDate(issue.resolvedDate);
-      await addDoc(collection(db, 'issues'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'issues'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add issue.", { code: e.code, message: e.message, fullError: e });
@@ -749,12 +753,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateIssue = async (id: string, data: Partial<Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { resolvedDate?: Date }>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const { resolvedDate, ...rest } = data;
       const payload: any = { ...rest };
       if (data.hasOwnProperty('resolvedDate')) payload.resolvedDate = resolvedDate ? Timestamp.fromDate(resolvedDate) : null;
-      await updateDoc(doc(db, 'issues', id), sanitizeForFirestore(payload));
+      await updateDoc(doc(db, 'projects', projectId, 'issues', id), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update issue.", { id, code: e.code, message: e.message, fullError: e });
@@ -763,9 +767,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
   
   const deleteIssue = async (id: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'issues', id));
+      await deleteDoc(doc(db, 'projects', projectId, 'issues', id));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete issue.", { id, code: e.code, message: e.message, fullError: e });
@@ -775,13 +779,13 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Dependency Actions
   const addDependency = async (dependency: Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate: Date }): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      const snapshot = await getDocs(collection(db, 'dependencies'));
+      const snapshot = await getDocs(collection(db, 'projects', projectId, 'dependencies'));
       const newId = `D-${snapshot.size + 1}`;
       const payload: any = { ...dependency, dependencyId: newId };
       payload.expectedByDate = Timestamp.fromDate(dependency.expectedByDate);
-      await addDoc(collection(db, 'dependencies'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'dependencies'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add dependency.", { code: e.code, message: e.message, fullError: e });
@@ -790,12 +794,12 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
   
   const updateDependency = async (id: string, data: Partial<Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate?: Date }>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const { expectedByDate, ...rest } = data;
       const payload: any = { ...rest };
       if (data.hasOwnProperty('expectedByDate')) payload.expectedByDate = expectedByDate ? Timestamp.fromDate(expectedByDate) : null;
-      await updateDoc(doc(db, 'dependencies', id), sanitizeForFirestore(payload));
+      await updateDoc(doc(db, 'projects', projectId, 'dependencies', id), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update dependency.", { id, code: e.code, message: e.message, fullError: e });
@@ -804,9 +808,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteDependency = async (id: string): Promise<boolean> => {
-     if (!db) return false;
+     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'dependencies', id));
+      await deleteDoc(doc(db, 'projects', projectId, 'dependencies', id));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete dependency.", { id, code: e.code, message: e.message, fullError: e });
@@ -816,10 +820,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Kanban Column Actions
   const addKanbanColumn = async (column: Omit<KanbanColumn, 'id' | 'isDefault' | 'isDoneColumn'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const payload = { ...column, isDefault: false, isDoneColumn: false };
-      await addDoc(collection(db, 'kanbanColumns'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'kanbanColumns'), sanitizeForFirestore(payload));
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to add Kanban column.", e);
@@ -828,9 +832,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
   
   const updateKanbanColumn = async (columnId: string, data: Partial<Omit<KanbanColumn, 'id'>>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      const columnRef = doc(db, 'kanbanColumns', columnId);
+      const columnRef = doc(db, 'projects', projectId, 'kanbanColumns', columnId);
       await updateDoc(columnRef, sanitizeForFirestore(data));
       return true;
     } catch (e) {
@@ -840,9 +844,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteKanbanColumn = async (columnId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'kanbanColumns', columnId));
+      await deleteDoc(doc(db, 'projects', projectId, 'kanbanColumns', columnId));
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to delete Kanban column.", e);
@@ -851,7 +855,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateKanbanColumnOrder = async (oldIndex: number, newIndex: number): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     const sortedColumns = [...kanbanColumns].sort((a, b) => a.order - b.order);
     const movedColumns = arrayMove(sortedColumns, oldIndex, newIndex);
     
@@ -861,7 +865,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
     try {
         const batch = writeBatch(db);
         movedColumns.forEach((column, index) => {
-            const docRef = doc(db, 'kanbanColumns', column.id);
+            const docRef = doc(db, 'projects', projectId, 'kanbanColumns', column.id);
             batch.update(docRef, { order: index });
         });
         await batch.commit();
@@ -876,10 +880,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   
   // Release & Milestone Actions
   const addReleaseOrMilestone = async (item: Omit<Release, 'id' | 'releaseId'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const { startDate, endDate, milestoneDate, ...rest } = item;
-      const snapshot = await getDocs(query(collection(db, 'releases')));
       const prefixMap: Record<string, string> = {
         'Release': 'REL',
         'Stage': 'S',
@@ -894,7 +897,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       if(endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
       if(milestoneDate) payload.milestoneDate = Timestamp.fromDate(new Date(milestoneDate));
       
-      await addDoc(collection(db, 'releases'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'releases'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add release or milestone.", { code: e.code, message: e.message, fullError: e });
@@ -903,7 +906,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateReleaseOrMilestone = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'itemType' >>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const { startDate, endDate, milestoneDate, ...rest } = data;
       const payload: any = { ...rest };
@@ -911,7 +914,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
       if (data.hasOwnProperty('endDate') && endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
       if (data.hasOwnProperty('milestoneDate') && milestoneDate) payload.milestoneDate = Timestamp.fromDate(new Date(milestoneDate));
 
-      await updateDoc(doc(db, 'releases', id), sanitizeForFirestore(payload));
+      await updateDoc(doc(db, 'projects', projectId, 'releases', id), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update release or milestone.", { id, code: e.code, message: e.message, fullError: e });
@@ -920,9 +923,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteReleaseOrMilestone = async (id: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'releases', id));
+      await deleteDoc(doc(db, 'projects', projectId, 'releases', id));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete release or milestone.", { id, code: e.code, message: e.message, fullError: e });
@@ -932,9 +935,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Settings Actions
   const setWeeklyOffDays = async (days: number[]): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      const settingsRef = doc(db, 'projectSettings', 'main');
+      const settingsRef = doc(db, 'projects', projectId, 'settings', 'main');
       await setDoc(settingsRef, { weeklyOffDays: days }, { merge: true });
       return true;
     } catch (e) {
@@ -944,9 +947,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
   
   const updateSprintSettings = async (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      const settingsRef = doc(db, 'projectSettings', 'main');
+      const settingsRef = doc(db, 'projects', projectId, 'settings', 'main');
       await setDoc(settingsRef, sanitizeForFirestore(settings), { merge: true });
       return true;
     } catch (e) {
@@ -956,11 +959,11 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const addHoliday = async (holiday: Omit<Holiday, 'id'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const payload: any = { ...holiday };
       if (holiday.date) payload.date = Timestamp.fromDate(new Date(holiday.date));
-      await addDoc(collection(db, 'holidays'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'holidays'), sanitizeForFirestore(payload));
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to add holiday.", e);
@@ -969,11 +972,11 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateHoliday = async (id: string, data: Partial<Omit<Holiday, 'id'>>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
       const payload: any = { ...data };
       if (data.date) payload.date = Timestamp.fromDate(new Date(data.date));
-      await updateDoc(doc(db, 'holidays', id), sanitizeForFirestore(payload));
+      await updateDoc(doc(db, 'projects', projectId, 'holidays', id), sanitizeForFirestore(payload));
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to update holiday.", e);
@@ -982,9 +985,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteHoliday = async (id: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'holidays', id));
+      await deleteDoc(doc(db, 'projects', projectId, 'holidays', id));
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to delete holiday.", e);
@@ -994,9 +997,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Impacted System Actions
   const addImpactedSystem = async (system: Omit<ImpactedSystem, 'id'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await addDoc(collection(db, 'impactedSystems'), sanitizeForFirestore(system));
+      await addDoc(collection(db, 'projects', projectId, 'impactedSystems'), sanitizeForFirestore(system));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add impacted system.", { code: e.code, message: e.message, fullError: e });
@@ -1005,9 +1008,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const updateImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'impactedSystems', systemId), sanitizeForFirestore(data));
+      await updateDoc(doc(db, 'projects', projectId, 'impactedSystems', systemId), sanitizeForFirestore(data));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update impacted system.", { id: systemId, code: e.code, message: e.message, fullError: e });
@@ -1016,9 +1019,9 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const deleteImpactedSystem = async (systemId: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'impactedSystems', systemId));
+      await deleteDoc(doc(db, 'projects', projectId, 'impactedSystems', systemId));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete impacted system.", { id: systemId, code: e.code, message: e.message, fullError: e });
@@ -1028,11 +1031,11 @@ export function ProjectProvider({ children }: PropsWithChildren) {
 
   // Worklog Actions
   const saveWorklog = async (worklog: Omit<Worklog, 'id'>): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
         const { date, employeeId, ...rest } = worklog;
         const worklogId = `${employeeId}-${date}`;
-        const worklogRef = doc(db, 'worklogs', worklogId);
+        const worklogRef = doc(db, 'projects', projectId, 'worklogs', worklogId);
 
         const payload = {
             ...rest,
@@ -1049,10 +1052,10 @@ export function ProjectProvider({ children }: PropsWithChildren) {
   };
 
   const submitWorklogForWeek = async (employeeId: string, weekStartDate: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !projectId) return false;
     try {
         const submissionId = `${employeeId}-${weekStartDate}`;
-        const submissionRef = doc(db, 'worklogSubmissions', submissionId);
+        const submissionRef = doc(db, 'projects', projectId, 'worklogSubmissions', submissionId);
 
         const payload = {
             employeeId,
@@ -1146,7 +1149,7 @@ export function ProjectProvider({ children }: PropsWithChildren) {
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
                     <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-muted-foreground">Connecting to database...</p>
+                    <p className="text-muted-foreground">Connecting to project database...</p>
                 </div>
             </div>
         );

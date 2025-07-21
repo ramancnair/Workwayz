@@ -8,17 +8,23 @@ import { type PropsWithChildren } from "react";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export default function AppLayout({ children }: PropsWithChildren) {
+export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isSettingsPath = pathname.startsWith('/settings');
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(p));
-  const isArchitecturePath = pathname.startsWith('/architecture');
-  const isReleasesPath = pathname.startsWith('/releases');
-  const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(p));
-  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(p));
-  const isHolidaysPath = pathname.startsWith('/holiday-calendar');
+  if (!params.projectId) {
+    return <div>Loading project...</div>;
+  }
+  
+  const basePath = `/projects/${params.projectId}`;
+
+  const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(basePath + p));
+  const isArchitecturePath = pathname.startsWith(`${basePath}/architecture`);
+  const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
+  const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
+  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
+  const isHolidaysPath = pathname.startsWith(`${basePath}/holiday-calendar`);
   
   const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isReleasesPath && !isSettingsPath;
 
@@ -35,27 +41,27 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   const onTabChange = (value: string) => {
     if (value === 'development') {
-      router.push('/dashboard/development');
+      router.push(`${basePath}/dashboard/development`);
     } else if (value === 'testing') {
-      router.push('/dashboard/testing');
+      router.push(`${basePath}/dashboard/testing`);
     } else if (value === 'architecture') {
-      router.push('/architecture');
+      router.push(`${basePath}/architecture`);
     } else if (value === 'releases') {
-      router.push('/releases');
+      router.push(`${basePath}/releases`);
     } else if (value === 'resources') {
-      router.push('/resources');
+      router.push(`${basePath}/resources`);
     } else if (value === 'governance') {
-      router.push('/raid-dashboard');
+      router.push(`${basePath}/raid-dashboard`);
     } else if (value === 'holidays') {
-      router.push('/holiday-calendar');
+      router.push(`${basePath}/holiday-calendar`);
     }
   };
 
   return (
-    <ProjectProvider>
+    <ProjectProvider projectId={params.projectId}>
       <SidebarProvider>
         <Sidebar collapsible="icon">
-          <SidebarNav />
+          <SidebarNav projectId={params.projectId} />
         </Sidebar>
         <SidebarInset>
           <div className="h-screen flex flex-col">
