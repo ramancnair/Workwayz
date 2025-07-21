@@ -424,6 +424,9 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   // Epic Actions
   const addEpic = async (epic: Omit<Epic, 'id'>): Promise<boolean> => {
     if (!db || !projectId) return false;
+    if (epics.some(e => e.title.toLowerCase() === epic.title.toLowerCase())) {
+        return false; // Name must be unique
+    }
     try {
       await addDoc(collection(db, 'projects', projectId, 'epics'), sanitizeForFirestore(epic));
       return true;
@@ -435,6 +438,9 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
   const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
+    if (data.title && epics.some(e => e.id !== epicId && e.title.toLowerCase() === data.title!.toLowerCase())) {
+        return false; // Name must be unique
+    }
     try {
       await updateDoc(doc(db, 'projects', projectId, 'epics', epicId), sanitizeForFirestore(data));
       return true;

@@ -387,7 +387,7 @@ export default function BacklogPage() {
     if (success) {
       setAddEpicOpen(false);
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not create epic." });
+      toast({ variant: "destructive", title: "Error", description: `Epic "${values.title}" already exists.` });
     }
     setAddEpicSubmitting(false);
   };
@@ -399,7 +399,7 @@ export default function BacklogPage() {
     if (success) {
       setEditingEpic(null);
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not update epic." });
+      toast({ variant: "destructive", title: "Error", description: `Epic "${values.title}" already exists.` });
     }
     setEditEpicSubmitting(false);
   };
@@ -507,18 +507,24 @@ export default function BacklogPage() {
     acc[key].push(story);
     return acc;
   }, {} as Record<string, Story[]>);
+  
+  const epicsAndUnassigned = useMemo(() => {
+    const epicMap: Record<string, Epic> = {};
+    epics.forEach(e => {
+        epicMap[e.id] = e;
+    });
 
-  const epicsAndUnassigned = [...epics];
-  const unassignedStories = backlogItemsByEpic['unassigned'] || [];
-  if (unassignedStories.length > 0 && !epicsAndUnassigned.find(e => e.id === 'unassigned')) {
-    epicsAndUnassigned.push({ id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' });
-  }
+    const unassignedStories = backlogItemsByEpic['unassigned'] || [];
+    if (unassignedStories.length > 0) {
+        epicMap['unassigned'] = { id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' };
+    }
 
-  epicsAndUnassigned.sort((a, b) => {
-    if (a.id === 'unassigned') return 1;
-    if (b.id === 'unassigned') return -1;
-    return a.title.localeCompare(b.title);
-  });
+    return Object.values(epicMap).sort((a, b) => {
+        if (a.id === 'unassigned') return 1;
+        if (b.id === 'unassigned') return -1;
+        return a.title.localeCompare(b.title);
+    });
+  }, [epics, backlogItemsByEpic]);
   
   const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
@@ -883,10 +889,6 @@ export default function BacklogPage() {
                       const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
 
                       const backlogItemsForGroup = backlogItemsByEpic[epic.id] || [];
-                      
-                      if (backlogItemsForGroup.length === 0) {
-                          return null;
-                      }
 
                       return (
                           <AccordionItem value={epic.id} key={epic.id}>
@@ -953,7 +955,7 @@ export default function BacklogPage() {
                                 })
                               ) : (
                                 <p className="text-sm text-muted-foreground italic px-2">
-                                    No items from this group are in the backlog.
+                                    No items for this epic in the backlog.
                                 </p>
                               )}
                               {!isUnassignedEpic && (
