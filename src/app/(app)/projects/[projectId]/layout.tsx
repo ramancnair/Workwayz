@@ -18,6 +18,7 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   const basePath = `/projects/${projectId}`;
 
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
+  const isCtoPath = pathname.startsWith(`${basePath}/dashboard/cto`);
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(basePath + p));
   const isArchitecturePath = pathname.startsWith(`${basePath}/architecture`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
@@ -25,9 +26,10 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isHolidaysPath = pathname.startsWith(`${basePath}/holiday-calendar`);
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isReleasesPath && !isSettingsPath;
+  const isDevelopmentPath = !isCtoPath && !isTestingPath && !isResourcesPath && !isGovernancePath && !isHolidaysPath && !isArchitecturePath && !isReleasesPath && !isSettingsPath;
 
   const getTabValue = () => {
+    if (isCtoPath) return 'cto';
     if (isDevelopmentPath) return 'development';
     if (isTestingPath) return 'testing';
     if (isArchitecturePath) return 'architecture';
@@ -39,7 +41,9 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   };
 
   const onTabChange = (value: string) => {
-    if (value === 'development') {
+    if (value === 'cto') {
+      router.push(`${basePath}/dashboard/cto`);
+    } else if (value === 'development') {
       router.push(`${basePath}/dashboard/development`);
     } else if (value === 'testing') {
       router.push(`${basePath}/dashboard/testing`);
@@ -70,6 +74,7 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
                 </Button>
                 <Tabs value={getTabValue()} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
+                        <TabsTrigger value="cto" className="data-[state=active]:bg-background data-[state=active]:text-foreground">CTO Dashboard</TabsTrigger>
                         <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                         <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
                         <TabsTrigger value="architecture" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Architecture</TabsTrigger>
