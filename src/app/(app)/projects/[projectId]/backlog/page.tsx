@@ -231,7 +231,7 @@ export default function BacklogPage() {
 
   const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
-  const [deletingStory, setDeletingStory] = useState<Story | null>(null);
+  const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   
@@ -455,11 +455,13 @@ export default function BacklogPage() {
     setEditStorySubmitting(false);
   };
   
-  const handleDeleteStory = (storyId: string) => {
-    setDeletingStory(null);
-    deleteStory(storyId).then(success => {
+  const handleDeleteStory = () => {
+    if (!storyToDelete) return;
+    deleteStory(storyToDelete.id).then(success => {
         if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
+        else toast({ title: "Success", description: "Story deleted." });
     });
+    setStoryToDelete(null);
   };
     
   const handleDeleteSprint = (sprintId: string) => {
@@ -515,11 +517,16 @@ export default function BacklogPage() {
     });
 
     const unassignedStories = backlogItemsByEpic['unassigned'] || [];
-    if (unassignedStories.length > 0) {
-        epicMap['unassigned'] = { id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' };
+    if (unassignedStories.length > 0 || epics.length === 0) {
+      epicMap['unassigned'] = { id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' };
     }
-
-    return Object.values(epicMap).sort((a, b) => {
+    
+    const allEpicIds = new Set(Object.keys(backlogItemsByEpic));
+    epics.forEach(epic => allEpicIds.add(epic.id));
+    
+    return Array.from(allEpicIds).map(id => {
+        return epicMap[id] || { id, title: 'Unassigned', description: 'Items not assigned to any epic.' };
+    }).sort((a, b) => {
         if (a.id === 'unassigned') return 1;
         if (b.id === 'unassigned') return -1;
         return a.title.localeCompare(b.title);
@@ -1140,18 +1147,18 @@ export default function BacklogPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!deletingStory} onOpenChange={(isOpen) => !isOpen && setDeletingStory(null)}>
+      <AlertDialog open={!!storyToDelete} onOpenChange={(isOpen) => !isOpen && setStoryToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the story "{deletingStory?.title}".
+              This action cannot be undone. This will permanently delete the story "{storyToDelete?.title}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deletingStory && handleDeleteStory(deletingStory.id)}
+              onClick={handleDeleteStory}
                className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
@@ -1391,7 +1398,7 @@ export default function BacklogPage() {
                             size="icon"
                             onClick={() => {
                               if (selectedStory) {
-                                  setDeletingStory(selectedStory);
+                                  setStoryToDelete(selectedStory);
                                   setSelectedStory(null);
                               }
                             }}
