@@ -37,6 +37,7 @@ import {
   Network,
   CalendarCheck,
   Package,
+  Home,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -204,6 +205,20 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         </div>
         <SidebarTrigger className="hidden md:flex" />
       </SidebarHeader>
+      <div className="p-4 group-data-[collapsible=icon]:p-2">
+        <SidebarMenu>
+            <SidebarMenuItem>
+              <Link href="/">
+                <SidebarMenuButton
+                  tooltip="PM Dashboard"
+                >
+                  <Home />
+                  <span>PM Dashboard</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+        </SidebarMenu>
+      </div>
       <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
           {menuItems.map((item) => (
