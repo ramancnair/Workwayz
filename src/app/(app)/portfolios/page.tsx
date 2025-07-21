@@ -91,8 +91,8 @@ export default function PortfoliosPage() {
         await addDoc(collection(db, 'portfolios'), values);
         toast({ title: 'Success', description: 'Portfolio created successfully.' });
       }
-      setIsDialogOpen(false);
       setEditingPortfolio(null);
+      setIsDialogOpen(false);
     } catch (error) {
       console.error('Error saving portfolio:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not save portfolio.' });
@@ -132,7 +132,7 @@ export default function PortfoliosPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Manage Portfolios" description="Create, edit, and organize your project portfolios.">
-          <Button onClick={() => setIsDialogOpen(true)}>
+          <Button onClick={() => { setEditingPortfolio(null); setIsDialogOpen(true); }}>
             <PlusCircle className="mr-2 h-4 w-4" />
             New Portfolio
           </Button>
@@ -173,7 +173,7 @@ export default function PortfoliosPage() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => { setIsDialogOpen(isOpen); if (!isOpen) setEditingPortfolio(null); }}>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingPortfolio ? 'Edit Portfolio' : 'Create New Portfolio'}</DialogTitle>
