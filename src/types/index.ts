@@ -5,6 +5,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -225,4 +226,10 @@ export type WorklogSubmission = {
   employeeId: string;
   weekStartDate: string; // ISO String for Sunday of that week
   submittedAt: string; // ISO string
+};
+
+export type Portfolio = {
+  id: string;
+  name: string;
+  description?: string;
 };

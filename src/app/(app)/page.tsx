@@ -1,13 +1,12 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, setDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -28,29 +27,40 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2 } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
+import { type Portfolio } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Project {
   id: string;
   name: string;
   description?: string;
+  portfolioId: string;
 }
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required.'),
   description: z.string().optional(),
+  portfolioId: z.string().min(1, 'Portfolio is required.'),
 });
 
 export default function ProjectsDashboard() {
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -61,21 +71,32 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', description: '' },
+    defaultValues: { name: '', description: '', portfolioId: '' },
   });
-
+  
   useEffect(() => {
     if (!db) return;
-    const q = collection(db, 'projects');
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const projectsData = querySnapshot.docs.map((doc) => ({
+    const portfolioUnsubscribe = onSnapshot(collection(db, 'portfolios'), (snapshot) => {
+      const portfoliosData = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...(doc.data() as Omit<Project, 'id'>),
+        ...(doc.data() as Omit<Portfolio, 'id'>),
       }));
-      setProjects(projectsData);
-      setIsLoading(false);
+      setPortfolios(portfoliosData);
     });
-    return () => unsubscribe();
+    
+    const projectUnsubscribe = onSnapshot(collection(db, 'projects'), (snapshot) => {
+        const projectsData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Project, 'id'>),
+        }));
+        setProjects(projectsData);
+        setIsLoading(false);
+    });
+
+    return () => {
+        portfolioUnsubscribe();
+        projectUnsubscribe();
+    };
   }, []);
 
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
@@ -108,7 +129,6 @@ export default function ProjectsDashboard() {
     }
   };
 
-
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
       setSorting({ ...sorting, desc: !sorting.desc });
@@ -117,24 +137,27 @@ export default function ProjectsDashboard() {
     }
   };
 
-  const filteredAndSortedProjects = useMemo(() => {
-    let filtered = projects.filter(p => 
-      p.name.toLowerCase().includes(filterText.toLowerCase()) ||
-      p.id.toLowerCase().includes(filterText.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(filterText.toLowerCase()))
-    );
+  const projectsByPortfolio = useMemo(() => {
+    return portfolios.map(portfolio => {
+        let filtered = projects.filter(p => 
+            p.portfolioId === portfolio.id && (
+                p.name.toLowerCase().includes(filterText.toLowerCase()) ||
+                p.id.toLowerCase().includes(filterText.toLowerCase()) ||
+                (p.description && p.description.toLowerCase().includes(filterText.toLowerCase()))
+            )
+        );
 
-    if (sorting) {
-      filtered.sort((a, b) => {
-        const valA = (a as any)[sorting.id] || '';
-        const valB = (b as any)[sorting.id] || '';
-        
-        const comparison = valA.localeCompare(valB, undefined, { numeric: true });
-        return sorting.desc ? -comparison : comparison;
-      });
-    }
-    return filtered;
-  }, [projects, filterText, sorting]);
+        if (sorting) {
+            filtered.sort((a, b) => {
+                const valA = (a as any)[sorting.id] || '';
+                const valB = (b as any)[sorting.id] || '';
+                const comparison = valA.localeCompare(valB, undefined, { numeric: true });
+                return sorting.desc ? -comparison : comparison;
+            });
+        }
+        return { ...portfolio, projects: filtered };
+    }).filter(p => p.projects.length > 0);
+  }, [projects, portfolios, filterText, sorting]);
   
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>
@@ -148,7 +171,13 @@ export default function ProjectsDashboard() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="PM Dashboard" description="Manage all your projects.">
+        <PageHeader title="PM Dashboard" description="Manage all your portfolios and projects.">
+           <Link href="/portfolios">
+              <Button variant="outline">
+                <Briefcase className="mr-2 h-4 w-4" />
+                Manage Portfolios
+              </Button>
+            </Link>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -162,6 +191,26 @@ export default function ProjectsDashboard() {
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="portfolioId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Portfolio</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a portfolio" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {portfolios.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="name"
@@ -207,44 +256,58 @@ export default function ProjectsDashboard() {
                 />
             </CardContent>
              {isLoading ? (
-              <p className="p-4 text-center">Loading projects...</p>
+              <p className="p-4 text-center">Loading...</p>
             ) : (
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
-                    <SortableHeader columnId="name">Project Name</SortableHeader>
-                    <SortableHeader columnId="description">Description</SortableHeader>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {filteredAndSortedProjects.map((project) => (
-                    <TableRow key={project.id}>
-                        <TableCell className="font-medium">
-                          <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                            {project.id}
-                          </Link>
-                        </TableCell>
-                         <TableCell>
-                           <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                            {project.name}
-                          </Link>
-                        </TableCell>
-                         <TableCell>
-                           <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                            {project.description}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                    </TableRow>
+             <Accordion type="multiple" defaultValue={portfolios.map(p => p.id)} className="w-full">
+                {projectsByPortfolio.map(portfolio => (
+                   <AccordionItem value={portfolio.id} key={portfolio.id}>
+                     <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80">
+                       <div className="flex items-center gap-2">
+                         <Folder className="h-5 w-5" />
+                         <span className="font-semibold">{portfolio.name}</span>
+                       </div>
+                     </AccordionTrigger>
+                     <AccordionContent className="p-0">
+                       <Table>
+                         <TableHeader>
+                           <TableRow>
+                             <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
+                             <SortableHeader columnId="name">Project Name</SortableHeader>
+                             <SortableHeader columnId="description">Description</SortableHeader>
+                             <TableHead className="text-right">Actions</TableHead>
+                           </TableRow>
+                         </TableHeader>
+                         <TableBody>
+                           {portfolio.projects.map((project) => (
+                             <TableRow key={project.id}>
+                               <TableCell className="font-medium">
+                                 <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                   {project.id}
+                                 </Link>
+                               </TableCell>
+                               <TableCell>
+                                 <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                   {project.name}
+                                 </Link>
+                               </TableCell>
+                               <TableCell>
+                                 <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                   {project.description}
+                                 </Link>
+                               </TableCell>
+                               <TableCell className="text-right">
+                                 <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                   <Trash2 className="h-4 w-4" />
+                                 </Button>
+                               </TableCell>
+                             </TableRow>
+                           ))}
+                         </TableBody>
+                       </Table>
+                     </AccordionContent>
+                   </AccordionItem>
                 ))}
-                </TableBody>
-            </Table>
+             </Accordion>
             )}
         </Card>
       </div>
