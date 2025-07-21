@@ -11,6 +11,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const isProjectPage = pathname.startsWith('/projects/');
+
   const getTabValue = () => {
     if (pathname.startsWith('/pmdashboard')) return 'projects';
     if (pathname.startsWith('/portfolios')) return 'portfolios';
@@ -24,6 +26,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/portfolios');
     }
   };
+
+  if (isProjectPage) {
+    return <>{children}</>;
+  }
 
   return (
     <SidebarProvider>
