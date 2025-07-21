@@ -148,7 +148,7 @@ export default function ProjectsDashboard() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Projects Dashboard" description="Manage all your projects.">
+        <PageHeader title="PM Dashboard" description="Manage all your projects.">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
