@@ -384,10 +384,24 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const deleteStory = async (storyId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'stories', storyId));
+      const batch = writeBatch(db);
+      const storyRef = doc(db, 'projects', projectId, 'stories', storyId);
+  
+      // 1. Find all sub-items whose epicId points to the story being deleted
+      const q = query(collection(db, 'projects', projectId, 'stories'), where('epicId', '==', storyId));
+      const subItemsSnapshot = await getDocs(q);
+      subItemsSnapshot.forEach(subItemDoc => {
+        batch.update(subItemDoc.ref, { epicId: null });
+      });
+  
+      // 2. Delete the main story
+      batch.delete(storyRef);
+  
+      // 3. Commit the batch
+      await batch.commit();
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to delete story.", { id: storyId, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to delete story and its references.", { id: storyId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
