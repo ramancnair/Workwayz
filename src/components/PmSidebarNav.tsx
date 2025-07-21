@@ -27,7 +27,7 @@ export function PmSidebarNav() {
 
   const menuItems = [
     {
-      href: `/app`,
+      href: `/`,
       label: "Projects",
       icon: FolderKanban,
     },
