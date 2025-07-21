@@ -9,10 +9,11 @@ import { ProjectProvider } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
+  const { projectId } = params;
   const pathname = usePathname();
   const router = useRouter();
 
-  const basePath = `/projects/${params.projectId}`;
+  const basePath = `/projects/${projectId}`;
 
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(basePath + p));
@@ -54,10 +55,10 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   };
 
   return (
-    <ProjectProvider projectId={params.projectId}>
+    <ProjectProvider projectId={projectId}>
       <SidebarProvider>
         <Sidebar collapsible="icon">
-          <SidebarNav projectId={params.projectId} />
+          <SidebarNav projectId={projectId} />
         </Sidebar>
         <SidebarInset>
           <div className="h-screen flex flex-col">
