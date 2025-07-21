@@ -3,7 +3,6 @@
 
 import { usePathname, useRouter, useParams } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { SidebarNav } from "@/components/SidebarNav";
 import { type PropsWithChildren } from "react";
 import { ProjectProvider, useProject } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -88,9 +87,10 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   );
 }
 
-export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
+export default async function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
+  const { projectId } = await params;
   return (
-    <ProjectProvider projectId={params.projectId}>
+    <ProjectProvider projectId={projectId}>
       <ProjectLayoutContent>{children}</ProjectLayoutContent>
     </ProjectProvider>
   )
