@@ -12,10 +12,6 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   const pathname = usePathname();
   const router = useRouter();
 
-  if (!params.projectId) {
-    return <div>Loading project...</div>;
-  }
-  
   const basePath = `/projects/${params.projectId}`;
 
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
