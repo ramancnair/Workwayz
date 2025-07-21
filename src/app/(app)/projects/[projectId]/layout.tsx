@@ -2,11 +2,13 @@
 'use client';
 
 import { usePathname, useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
 import { type PropsWithChildren } from "react";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 
 export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
   const pathname = usePathname();
@@ -62,7 +64,10 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
         </Sidebar>
         <SidebarInset>
           <div className="h-screen flex flex-col">
-            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10">
+            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center gap-4">
+                <Button variant="outline" asChild>
+                    <Link href="/">Projects</Link>
+                </Button>
                 <Tabs value={getTabValue()} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
