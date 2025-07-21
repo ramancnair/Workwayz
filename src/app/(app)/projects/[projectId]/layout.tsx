@@ -1,7 +1,7 @@
 
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useParams } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
 import { type PropsWithChildren } from "react";
@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
   const pathname = usePathname();
   const router = useRouter();
-  const projectId = params.projectId;
+  const { projectId } = useParams() as { projectId: string };
 
   const basePath = `/projects/${projectId}`;
 
