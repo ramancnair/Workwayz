@@ -172,12 +172,6 @@ export default function ProjectsDashboard() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="PM Dashboard" description="Manage all your portfolios and projects.">
-           <Link href="/portfolios">
-              <Button variant="outline">
-                <Briefcase className="mr-2 h-4 w-4" />
-                Manage Portfolios
-              </Button>
-            </Link>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
