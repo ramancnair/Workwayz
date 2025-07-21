@@ -43,15 +43,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
-import { type Portfolio } from '@/types';
+import { type Portfolio, type Project } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  portfolioId: string;
-}
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required.'),

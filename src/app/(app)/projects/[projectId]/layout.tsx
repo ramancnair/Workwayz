@@ -5,13 +5,14 @@ import { usePathname, useRouter, useParams } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
 import { type PropsWithChildren } from "react";
-import { ProjectProvider } from "@/context/ProjectContext";
+import { ProjectProvider, useProject } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
+function ProjectLayoutContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
   const { projectId } = useParams() as { projectId: string };
+  const { project, isLoading } = useProject();
 
   const basePath = `/projects/${projectId}`;
 
@@ -55,25 +56,28 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
   };
 
   return (
-    <ProjectProvider projectId={projectId}>
       <SidebarProvider>
         <Sidebar collapsible="icon">
           <SidebarNav projectId={projectId} />
         </Sidebar>
         <SidebarInset>
           <div className="h-screen flex flex-col">
-            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center gap-4">
-                <Tabs value={getTabValue()} onValueChange={onTabChange}>
-                    <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                        <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
-                        <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
-                        <TabsTrigger value="architecture" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Architecture</TabsTrigger>
-                        <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
-                        <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
-                        <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
-                        <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-bold">{project?.name || 'Loading Project...'}</h1>
+                <p className="text-xs text-muted-foreground">{project?.id}</p>
+              </div>
+              <Tabs value={getTabValue()} onValueChange={onTabChange}>
+                  <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
+                      <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
+                      <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
+                      <TabsTrigger value="architecture" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Architecture</TabsTrigger>
+                      <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
+                      <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
+                      <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
+                      <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                  </TabsList>
+              </Tabs>
             </div>
             <div className="flex-1 overflow-y-auto">
                 {children}
@@ -81,6 +85,13 @@ export default function AppLayout({ children, params }: PropsWithChildren<{ para
           </div>
         </SidebarInset>
       </SidebarProvider>
-    </ProjectProvider>
   );
+}
+
+export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
+  return (
+    <ProjectProvider projectId={params.projectId}>
+      <ProjectLayoutContent>{children}</ProjectLayoutContent>
+    </ProjectProvider>
+  )
 }

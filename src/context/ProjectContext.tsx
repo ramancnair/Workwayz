@@ -20,7 +20,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -41,6 +41,7 @@ const sanitizeForFirestore = (data: any) => {
 
 
 interface ProjectContextType {
+  project: Project | null;
   epics: Epic[];
   stories: Story[];
   sprints: Sprint[];
@@ -156,6 +157,7 @@ const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
 };
 
 export function ProjectProvider({ children, projectId }: PropsWithChildren<{ projectId: string }>) {
+  const [project, setProject] = useState<Project | null>(null);
   const [epics, setEpics] = useState<Epic[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -184,7 +186,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return;
     }
     
-    const projectDocRef = doc(db, 'projects', projectId);
+    const rootProjectDocRef = doc(db, 'projects', projectId);
+    
+    // Listener for project document itself
+    const unsubProject = onSnapshot(rootProjectDocRef, (doc) => {
+        if (doc.exists()) {
+            setProject({ id: doc.id, ...doc.data() } as Project);
+        } else {
+            setError(`Project with ID "${projectId}" not found.`);
+        }
+    });
 
     const collections: { name: string, setState: React.Dispatch<any> }[] = [
         { name: 'epics', setState: setEpics },
@@ -205,7 +216,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     ];
     
     // Listener for project settings
-    const settingsDocRef = doc(projectDocRef, 'settings', 'main');
+    const settingsDocRef = doc(rootProjectDocRef, 'settings', 'main');
     const unsubSettings = onSnapshot(settingsDocRef, (doc) => {
       if (doc.exists()) {
         setProjectSettings({ id: doc.id, ...doc.data() } as ProjectSettings);
@@ -216,14 +227,14 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     });
 
     const unsubscribers = collections.map(({ name, setState }) => {
-        const q = query(collection(projectDocRef, name));
+        const q = query(collection(rootProjectDocRef, name));
         return onSnapshot(q, 
             (querySnapshot) => {
                 // Special handling for kanbanColumns to ensure defaults
                 if (name === 'kanbanColumns' && querySnapshot.empty) {
                     const batch = writeBatch(db);
                     defaultKanbanColumns.forEach(col => {
-                        const docRef = doc(collection(projectDocRef, 'kanbanColumns'));
+                        const docRef = doc(collection(rootProjectDocRef, 'kanbanColumns'));
                         batch.set(docRef, col);
                     });
                     batch.commit().catch(e => console.error("Failed to set default Kanban columns", e));
@@ -284,6 +295,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     });
 
     return () => {
+      unsubProject();
       unsubscribers.forEach(unsub => unsub());
       unsubSettings();
     }
@@ -1073,6 +1085,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
 
   const value: ProjectContextType = {
+    project,
     epics,
     stories,
     sprints,

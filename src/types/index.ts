@@ -6,6 +6,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -232,4 +233,11 @@ export type Portfolio = {
   id: string;
   name: string;
   description?: string;
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  description?: string;
+  portfolioId: string;
 };
