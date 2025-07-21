@@ -8,8 +8,7 @@ import { type PropsWithChildren } from "react";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
-  const { projectId } = params;
+export default function AppLayout({ children, params: { projectId } }: PropsWithChildren<{ params: { projectId: string } }>) {
   const pathname = usePathname();
   const router = useRouter();
 
