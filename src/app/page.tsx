@@ -9,7 +9,7 @@ import { collection, onSnapshot, setDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -18,14 +18,25 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 
 interface Project {
   id: string;
@@ -42,6 +53,7 @@ export default function ProjectsDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [filterText, setFilterText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'name', desc: false });
   const { toast } = useToast();
@@ -82,6 +94,20 @@ export default function ProjectsDashboard() {
     }
   };
 
+  const handleDeleteProject = async () => {
+    if (!deletingProject) return;
+    try {
+      await deleteProjectAndSubcollections(deletingProject.id);
+      toast({ title: 'Success', description: `Project "${deletingProject.name}" has been deleted.` });
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete project.' });
+    } finally {
+      setDeletingProject(null);
+    }
+  };
+
+
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
       setSorting({ ...sorting, desc: !sorting.desc });
@@ -119,6 +145,7 @@ export default function ProjectsDashboard() {
   );
 
   return (
+    <>
     <div className="min-h-screen bg-background text-foreground">
       <header className="p-4 border-b">
         <h1 className="text-2xl font-bold">Project Dashboard</h1>
@@ -192,11 +219,12 @@ export default function ProjectsDashboard() {
                     <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
                     <SortableHeader columnId="name">Project Name</SortableHeader>
                     <SortableHeader columnId="description">Description</SortableHeader>
+                    <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
                 {filteredAndSortedProjects.map((project) => (
-                    <TableRow key={project.id} className="cursor-pointer">
+                    <TableRow key={project.id}>
                         <TableCell className="font-medium">
                           <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
                             {project.id}
@@ -212,6 +240,11 @@ export default function ProjectsDashboard() {
                             {project.description}
                           </Link>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                     </TableRow>
                 ))}
                 </TableBody>
@@ -220,5 +253,25 @@ export default function ProjectsDashboard() {
         </Card>
       </main>
     </div>
+    <AlertDialog open={!!deletingProject} onOpenChange={(isOpen) => !isOpen && setDeletingProject(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the project "{deletingProject?.name}" and all of its associated data (stories, tasks, test cases, etc.).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteProject}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
