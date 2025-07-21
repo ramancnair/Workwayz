@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -103,14 +103,25 @@ const sprintFormSchema = z.object({
   endDate: z.string().optional(),
 });
 
-function StoryCard({ story, epic, assignee, onClick, className }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; className?: string; }) {
+function StoryCard({ story, epic, assignee, onClick, onDelete, className }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; onDelete: () => void; className?: string; }) {
   const Icon = workItemIcons[story.itemType];
 
   return (
     <Card
-      className={cn("bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md", className)}
+      className={cn("bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md relative group", className)}
       onClick={onClick}
     >
+       <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+      >
+        <X className="h-4 w-4" />
+      </Button>
       <CardHeader className="p-4">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
@@ -156,7 +167,7 @@ function StoryCard({ story, epic, assignee, onClick, className }: { story: Story
   );
 }
 
-function SubItemsDisplay({ items, onCardClick, employees, title }: { items: Story[], onCardClick: (story: Story) => void, employees: Employee[], title: string }) {
+function SubItemsDisplay({ items, onCardClick, onDelete, employees, title }: { items: Story[], onCardClick: (story: Story) => void, onDelete: (story: Story) => void, employees: Employee[], title: string }) {
     if (items.length === 0) return null;
 
     return (
@@ -179,6 +190,7 @@ function SubItemsDisplay({ items, onCardClick, employees, title }: { items: Stor
                                         story={subItem}
                                         assignee={subItemAssignee}
                                         onClick={() => onCardClick(subItem)}
+                                        onDelete={() => onDelete(subItem)}
                                     />
                                 </div>
                             </div>
@@ -924,15 +936,16 @@ export default function BacklogPage() {
                                   
                                   return (
                                     <div key={story.id}>
-                                      <div className="relative group">
+                                      <div className="relative">
                                           <StoryCard
                                               story={story}
                                               epic={storyEpic}
                                               assignee={assignee}
                                               onClick={() => setSelectedStory(story)}
+                                              onDelete={() => setStoryToDelete(story)}
                                           />
                                           {story.itemType === 'Story' && (
-                                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <div className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
                                               <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
                                                       <Button variant="ghost" size="sm" className="h-7">
@@ -958,7 +971,7 @@ export default function BacklogPage() {
                                           </div>
                                           )}
                                       </div>
-                                      <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} employees={employees} title="Related Items" />
+                                      <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} employees={employees} title="Related Items" />
                                     </div>
                                   )
                                 })
@@ -1086,8 +1099,9 @@ export default function BacklogPage() {
                                         epic={epic}
                                         assignee={assignee}
                                         onClick={() => setSelectedStory(story)}
+                                        onDelete={() => setStoryToDelete(story)}
                                     />
-                                    <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} employees={employees} title="Related Items" />
+                                    <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} employees={employees} title="Related Items" />
                                 </div>
                               );
                             })
@@ -1154,7 +1168,7 @@ export default function BacklogPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the story "{storyToDelete?.title}".
+              This action cannot be undone. This will permanently delete the item "{storyToDelete?.title}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1390,31 +1404,7 @@ export default function BacklogPage() {
                     </div>
                   )}
 
-                  <DialogFooter className="flex justify-between items-center pt-4">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                           <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => {
-                              if (selectedStory) {
-                                  setStoryToDelete(selectedStory);
-                                  setSelectedStory(null);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete {selectedStory.itemType}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Delete {selectedStory.itemType}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
+                  <DialogFooter className="flex justify-end items-center pt-4">
                     <div className="flex items-center gap-2">
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
