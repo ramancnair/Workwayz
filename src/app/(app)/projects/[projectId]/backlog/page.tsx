@@ -455,12 +455,14 @@ export default function BacklogPage() {
     setEditStorySubmitting(false);
   };
   
-  const handleDeleteStory = () => {
+  const handleDeleteStory = async () => {
     if (!storyToDelete) return;
-    deleteStory(storyToDelete.id).then(success => {
-        if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
-        else toast({ title: "Success", description: "Story deleted." });
-    });
+    const success = await deleteStory(storyToDelete.id);
+    if (!success) {
+        toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
+    } else {
+        toast({ title: "Success", description: "Story deleted." });
+    }
     setStoryToDelete(null);
   };
     
@@ -1392,7 +1394,7 @@ export default function BacklogPage() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
+                           <Button
                             type="button"
                             variant="destructive"
                             size="icon"
