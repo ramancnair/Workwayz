@@ -18,20 +18,33 @@ import {
   Flame,
   ChevronLeft,
   FolderKanban,
+  Briefcase,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
 export function PmSidebarNav() {
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
-
-  const menuItems = [
+  
+  const isPortfolioSection = pathname.startsWith('/portfolios');
+  
+  const projectMenuItems = [
     {
-      href: `/`,
+      href: `/pmdashboard`,
       label: "PM Dashboard",
       icon: FolderKanban,
     },
   ];
+
+  const portfolioMenuItems = [
+    {
+      href: `/portfolios`,
+      label: "Manage Portfolios",
+      icon: Briefcase,
+    },
+  ];
+  
+  const menuItems = isPortfolioSection ? portfolioMenuItems : projectMenuItems;
 
   return (
     <>
