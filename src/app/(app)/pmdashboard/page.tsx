@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -38,7 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
@@ -64,6 +64,7 @@ export default function ProjectsDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [filterText, setFilterText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'name', desc: false });
@@ -98,21 +99,38 @@ export default function ProjectsDashboard() {
         projectUnsubscribe();
     };
   }, []);
+  
+  useEffect(() => {
+    if (isDialogOpen) {
+      if (editingProject) {
+        form.reset(editingProject);
+      } else {
+        form.reset({ name: '', description: '', portfolioId: '' });
+      }
+    }
+  }, [isDialogOpen, editingProject, form]);
+
 
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
     if (!db) return;
     try {
-      const projectId = `P${Date.now()}`;
-      const projectRef = doc(db, 'projects', projectId);
-      
-      await setDoc(projectRef, values);
+      if (editingProject) {
+        const projectRef = doc(db, 'projects', editingProject.id);
+        await updateDoc(projectRef, values);
+        toast({ title: 'Success', description: 'Project updated successfully.' });
+      } else {
+        const projectId = `P${Date.now()}`;
+        const projectRef = doc(db, 'projects', projectId);
+        await setDoc(projectRef, { ...values, id: projectId });
+        toast({ title: 'Success', description: 'Project created successfully.' });
+      }
 
-      toast({ title: 'Success', description: 'Project created successfully.' });
       setIsDialogOpen(false);
+      setEditingProject(null);
       form.reset();
     } catch (error) {
-      console.error('Error creating project:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not create project.' });
+      console.error('Error saving project:', error);
+      toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingProject ? 'update' : 'create'} project.` });
     }
   };
 
@@ -128,6 +146,12 @@ export default function ProjectsDashboard() {
       setDeletingProject(null);
     }
   };
+  
+  const handleOpenDialog = (project: Project | null) => {
+    setEditingProject(project);
+    setIsDialogOpen(true);
+  };
+
 
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
@@ -172,16 +196,16 @@ export default function ProjectsDashboard() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="PM Dashboard" description="Manage all your portfolios and projects.">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                New Project
-              </Button>
-            </DialogTrigger>
+          <Button onClick={() => handleOpenDialog(null)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            New Project
+          </Button>
+        </PageHeader>
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
+                <DialogTitle>{editingProject ? 'Edit Project' : 'Create New Project'}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -191,7 +215,7 @@ export default function ProjectsDashboard() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Portfolio</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a portfolio" />
@@ -225,21 +249,20 @@ export default function ProjectsDashboard() {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Describe the project's goals..." {...field} />
+                          <Textarea placeholder="Describe the project's goals..." {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <DialogFooter>
-                    <Button type="submit">Create Project</Button>
+                    <Button type="submit">{editingProject ? 'Save Changes' : 'Create Project'}</Button>
                   </DialogFooter>
                 </form>
               </Form>
             </DialogContent>
-          </Dialog>
-        </PageHeader>
-        
+        </Dialog>
+
         <Card>
             <CardContent className="p-4">
                 <Input 
@@ -290,9 +313,12 @@ export default function ProjectsDashboard() {
                                  </Link>
                                </TableCell>
                                <TableCell className="text-right">
-                                 <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                   <Trash2 className="h-4 w-4" />
-                                 </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                </TableCell>
                              </TableRow>
                            ))}
