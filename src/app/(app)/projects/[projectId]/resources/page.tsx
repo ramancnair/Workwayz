@@ -2,15 +2,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -31,23 +35,48 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { type Employee } from '@/types';
+import { type Employee, type OnshoreOffshore, type EmployeeRole } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { buttonVariants } from '@/components/ui/button';
+import { format } from 'date-fns';
+
+const addResourceSchema = z.object({
+  employeeId: z.string().min(1, 'Please select an employee.'),
+  role: z.string().optional(),
+  availability: z.coerce.number().min(0).max(100).optional(),
+  onshoreOrOffshore: z.enum(['Onshore', 'Offshore']).optional(),
+  onboardingDate: z.string().optional(),
+});
+
+const roles: EmployeeRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
+const onshoreOffshoreOptions: OnshoreOffshore[] = ['Onshore', 'Offshore'];
 
 export default function ResourcesPage() {
   const { employees: projectEmployees, addEmployee, deleteEmployee: removeEmployeeFromProject } = useProject();
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [employeeInputText, setEmployeeInputText] = useState('');
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+
+  const form = useForm<z.infer<typeof addResourceSchema>>({
+    resolver: zodResolver(addResourceSchema),
+    defaultValues: {
+      employeeId: '',
+      role: undefined,
+      availability: 100,
+      onshoreOrOffshore: undefined,
+      onboardingDate: format(new Date(), 'yyyy-MM-dd'),
+    },
+  });
 
   useEffect(() => {
     if (!db) return;
@@ -62,25 +91,28 @@ export default function ResourcesPage() {
     return () => unsubscribe();
   }, []);
 
-  const handleAddEmployeeToProject = async () => {
-    if (!selectedEmployeeId) {
-      toast({ variant: "destructive", title: "Error", description: "Please select a valid employee to add." });
-      return;
-    }
-    
-    const employeeToAdd = allEmployees.find(emp => emp.id === selectedEmployeeId);
+  const handleAddEmployeeToProject = async (values: z.infer<typeof addResourceSchema>) => {
+    const employeeToAdd = allEmployees.find(emp => emp.id === values.employeeId);
     if (!employeeToAdd) {
         toast({ variant: "destructive", title: "Error", description: "Selected employee not found." });
         return;
     }
     
-    const success = await addEmployee(employeeToAdd);
+    const projectEmployeeData: Employee = {
+      ...employeeToAdd,
+      role: values.role as EmployeeRole,
+      availability: values.availability,
+      onshoreOrOffshore: values.onshoreOrOffshore,
+      onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
+    };
+    
+    const success = await addEmployee(projectEmployeeData);
 
     if (success) {
       toast({ title: "Success", description: `${employeeToAdd.firstName} added to the project.` });
       setIsDialogOpen(false);
-      setSelectedEmployeeId('');
       setEmployeeInputText('');
+      form.reset();
     } else {
       toast({ variant: "destructive", title: "Error", description: `Could not add employee to project. They may already be on the team.` });
     }
@@ -96,7 +128,7 @@ export default function ResourcesPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Resources" description="Manage employees assigned to this project.">
-           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) { form.reset(); setEmployeeInputText(''); }}}>
             <DialogTrigger asChild>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -107,40 +139,96 @@ export default function ResourcesPage() {
               <DialogHeader>
                 <DialogTitle>Add Employee to Project</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <Input 
-                    list="employee-options"
-                    placeholder="Search for an employee..."
-                    value={employeeInputText}
-                    onChange={(e) => {
-                        const inputText = e.target.value;
-                        setEmployeeInputText(inputText);
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleAddEmployeeToProject)} className="space-y-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="employeeId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Employee</FormLabel>
+                         <FormControl>
+                           <Input 
+                              list="employee-options"
+                              placeholder="Search for an employee..."
+                              value={employeeInputText}
+                              onChange={(e) => {
+                                  const inputText = e.target.value;
+                                  setEmployeeInputText(inputText);
 
-                        const matchingOption = availableEmployeeOptions.find(opt => opt.label === inputText);
-                        if (matchingOption) {
-                            setSelectedEmployeeId(matchingOption.value);
-                        } else {
-                            setSelectedEmployeeId('');
-                        }
-                    }}
-                    onBlur={(e) => {
-                        const matchingOption = availableEmployeeOptions.find(opt => opt.label === e.target.value);
-                        if(!matchingOption) {
-                            setEmployeeInputText('');
-                            setSelectedEmployeeId('');
-                        }
-                    }}
-                />
-                <datalist id="employee-options">
-                    {availableEmployeeOptions.map(emp => (
-                        <option key={emp.value} value={emp.label} />
-                    ))}
-                </datalist>
+                                  const matchingOption = availableEmployeeOptions.find(opt => opt.label === inputText);
+                                  field.onChange(matchingOption ? matchingOption.value : '');
+                              }}
+                              onBlur={(e) => {
+                                  const matchingOption = availableEmployeeOptions.find(opt => opt.label === e.target.value);
+                                  if(!matchingOption) {
+                                      setEmployeeInputText('');
+                                      field.onChange('');
+                                  }
+                              }}
+                           />
+                          </FormControl>
+                          <datalist id="employee-options">
+                              {availableEmployeeOptions.map(emp => (
+                                  <option key={emp.value} value={emp.label} />
+                              ))}
+                          </datalist>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="role" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                     <FormField control={form.control} name="availability" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Availability (%)</FormLabel>
+                        <FormControl><Input type="number" placeholder="100" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
 
-                <Button onClick={handleAddEmployeeToProject} className="w-full" disabled={!selectedEmployeeId}>
-                  Add to Project
-                </Button>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField control={form.control} name="onshoreOrOffshore" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select location type" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {onshoreOffshoreOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                     <FormField control={form.control} name="onboardingDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Onboarding Date</FormLabel>
+                        <FormControl><Input type="date" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="submit">
+                      Add to Project
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </PageHeader>
