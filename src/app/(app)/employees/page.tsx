@@ -146,15 +146,27 @@ export default function EmployeesPage() {
         toast({ title: "Success", description: `Employee updated successfully.` });
       } else {
         const snapshot = await getDocs(collection(db, 'employees'));
-        const newIdNumber = snapshot.size > 0
-            ? Math.max(0, ...snapshot.docs
-                .map(doc => doc.data().empId)
+        const existingEmployeesData = snapshot.docs.map(doc => doc.data() as Employee);
+        
+        const newIdNumber = existingEmployeesData.length > 0
+            ? Math.max(0, ...existingEmployeesData
+                .map(emp => emp.empId)
                 .filter((id: string | undefined): id is string => id && typeof id === 'string')
                 .map((id: string) => parseInt(id.replace('E', ''), 10) || 0)
             ) + 1
             : 1;
 
-        const email = `${values.firstName.toLowerCase()}.${values.lastName.toLowerCase()}@example.com`;
+        let email = `${values.firstName.toLowerCase()}.${values.lastName.toLowerCase()}@example.com`;
+        const existingEmails = new Set(existingEmployeesData.map(e => e.email));
+        if (existingEmails.has(email)) {
+            let counter = 1;
+            let baseEmail = `${values.firstName.toLowerCase()}.${values.lastName.toLowerCase()}`;
+            while(existingEmails.has(`${baseEmail}${counter}@example.com`)) {
+                counter++;
+            }
+            email = `${baseEmail}${counter}@example.com`;
+        }
+
         await addDoc(collection(db, 'employees'), { 
             ...sanitizedValues, 
             email, 
