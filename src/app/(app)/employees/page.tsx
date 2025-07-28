@@ -145,11 +145,8 @@ export default function EmployeesPage() {
         await updateDoc(doc(db, 'employees', editingEmployee.id), sanitizedValues);
         toast({ title: "Success", description: `Employee updated successfully.` });
       } else {
-        const snapshot = await getDocs(collection(db, 'employees'));
-        const existingEmployeesData = snapshot.docs.map(doc => doc.data() as Employee);
-        
-        const newIdNumber = existingEmployeesData.length > 0
-            ? Math.max(0, ...existingEmployeesData
+        const newIdNumber = employees.length > 0
+            ? Math.max(0, ...employees
                 .map(emp => emp.empId)
                 .filter((id: string | undefined): id is string => id && typeof id === 'string')
                 .map((id: string) => parseInt(id.replace('E', ''), 10) || 0)
@@ -157,7 +154,7 @@ export default function EmployeesPage() {
             : 1;
 
         let email = `${values.firstName.toLowerCase()}.${values.lastName.toLowerCase()}@example.com`;
-        const existingEmails = new Set(existingEmployeesData.map(e => e.email));
+        const existingEmails = new Set(employees.map(e => e.email));
         if (existingEmails.has(email)) {
             let counter = 1;
             let baseEmail = `${values.firstName.toLowerCase()}.${values.lastName.toLowerCase()}`;
