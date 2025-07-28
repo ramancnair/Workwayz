@@ -34,15 +34,17 @@ export default function AppLayout({ children }: PropsWithChildren) {
     return <>{children}</>;
   }
 
+  const activeTab = getTabValue();
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
-        <PmSidebarNav />
+        <PmSidebarNav activeTab={activeTab} />
       </Sidebar>
       <SidebarInset>
         <div className="h-screen flex flex-col">
           <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center gap-4">
-              <Tabs value={getTabValue()} onValueChange={onTabChange}>
+              <Tabs value={activeTab} onValueChange={onTabChange}>
                   <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                       <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio</TabsTrigger>
                       <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>

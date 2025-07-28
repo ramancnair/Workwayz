@@ -23,29 +23,36 @@ import {
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
-export function PmSidebarNav() {
+type PmSidebarNavProps = {
+  activeTab: 'portfolios' | 'projects' | 'employees';
+};
+
+export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
   
-  const isPortfolioSection = pathname.startsWith('/portfolios');
-  
-  const menuItems = [
+  const allMenuItems = [
     {
+      id: 'portfolios',
       href: `/portfolios`,
       label: "Manage Portfolios",
       icon: Briefcase,
     },
     {
+      id: 'projects',
       href: `/pmdashboard`,
       label: "Projects Dashboard",
       icon: FolderKanban,
     },
     {
+      id: 'employees',
       href: `/employees`,
       label: "Employees",
       icon: Users,
     },
   ];
+
+  const menuItems = allMenuItems.filter(item => item.id === activeTab);
 
   return (
     <>
