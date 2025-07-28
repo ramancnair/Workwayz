@@ -149,7 +149,7 @@ export default function EmployeesPage() {
         const newIdNumber = snapshot.size > 0
             ? Math.max(0, ...snapshot.docs
                 .map(doc => doc.data().empId)
-                .filter((id: string | undefined) => id && typeof id === 'string')
+                .filter((id: string | undefined): id is string => id && typeof id === 'string')
                 .map((id: string) => parseInt(id.replace('E', ''), 10) || 0)
             ) + 1
             : 1;
