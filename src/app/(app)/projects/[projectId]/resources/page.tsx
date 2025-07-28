@@ -37,7 +37,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Edit } from 'lucide-react';
 import { type Employee, type OnshoreOffshore, type EmployeeRole } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +48,7 @@ import { db } from '@/lib/firebase';
 import { buttonVariants } from '@/components/ui/button';
 import { format } from 'date-fns';
 
-const addResourceSchema = z.object({
+const resourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select an employee.'),
   role: z.string().optional(),
   availability: z.coerce.number().min(0).max(100).optional(),
@@ -60,22 +60,21 @@ const roles: EmployeeRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
 const onshoreOffshoreOptions: OnshoreOffshore[] = ['Onshore', 'Offshore'];
 
 export default function ResourcesPage() {
-  const { employees: projectEmployees, addEmployee, deleteEmployee: removeEmployeeFromProject } = useProject();
+  const { 
+    employees: projectEmployees, 
+    addEmployee: addEmployeeToProject, 
+    updateEmployee: updateProjectEmployee,
+    deleteEmployee: removeEmployeeFromProject 
+  } = useProject();
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [employeeInputText, setEmployeeInputText] = useState('');
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
 
-  const form = useForm<z.infer<typeof addResourceSchema>>({
-    resolver: zodResolver(addResourceSchema),
-    defaultValues: {
-      employeeId: '',
-      role: undefined,
-      availability: 100,
-      onshoreOrOffshore: undefined,
-      onboardingDate: format(new Date(), 'yyyy-MM-dd'),
-    },
+  const form = useForm<z.infer<typeof resourceSchema>>({
+    resolver: zodResolver(resourceSchema),
   });
 
   useEffect(() => {
@@ -90,33 +89,78 @@ export default function ResourcesPage() {
     });
     return () => unsubscribe();
   }, []);
-
-  const handleAddEmployeeToProject = async (values: z.infer<typeof addResourceSchema>) => {
-    const employeeToAdd = allEmployees.find(emp => emp.id === values.employeeId);
-    if (!employeeToAdd) {
-        toast({ variant: "destructive", title: "Error", description: "Selected employee not found." });
-        return;
+  
+  useEffect(() => {
+    if(isDialogOpen) {
+      if (editingEmployee) {
+        form.reset({
+          employeeId: editingEmployee.id,
+          role: editingEmployee.role,
+          availability: editingEmployee.availability,
+          onshoreOrOffshore: editingEmployee.onshoreOrOffshore,
+          onboardingDate: editingEmployee.onboardingDate ? format(new Date(editingEmployee.onboardingDate), 'yyyy-MM-dd') : '',
+        });
+      } else {
+        form.reset({
+          employeeId: '',
+          role: undefined,
+          availability: 100,
+          onshoreOrOffshore: undefined,
+          onboardingDate: format(new Date(), 'yyyy-MM-dd'),
+        });
+        setEmployeeInputText('');
+      }
     }
-    
-    const projectEmployeeData: Employee = {
-      ...employeeToAdd,
-      role: values.role as EmployeeRole,
-      availability: values.availability,
-      onshoreOrOffshore: values.onshoreOrOffshore,
-      onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
-    };
-    
-    const success = await addEmployee(projectEmployeeData);
+  }, [isDialogOpen, editingEmployee, form]);
 
-    if (success) {
-      toast({ title: "Success", description: `${employeeToAdd.firstName} added to the project.` });
-      setIsDialogOpen(false);
-      setEmployeeInputText('');
-      form.reset();
+  const handleFormSubmit = async (values: z.infer<typeof resourceSchema>) => {
+    if (editingEmployee) {
+      // Update existing employee
+      const success = await updateProjectEmployee(editingEmployee.id, {
+        role: values.role as EmployeeRole,
+        availability: values.availability,
+        onshoreOrOffshore: values.onshoreOrOffshore,
+        onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
+      });
+
+      if (success) {
+        toast({ title: "Success", description: `${editingEmployee.firstName}'s details updated.` });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: `Could not update employee.` });
+      }
     } else {
-      toast({ variant: "destructive", title: "Error", description: `Could not add employee to project. They may already be on the team.` });
+      // Add new employee
+      const employeeToAdd = allEmployees.find(emp => emp.id === values.employeeId);
+      if (!employeeToAdd) {
+          toast({ variant: "destructive", title: "Error", description: "Selected employee not found." });
+          return;
+      }
+      
+      const projectEmployeeData: Employee = {
+        ...employeeToAdd,
+        role: values.role as EmployeeRole,
+        availability: values.availability,
+        onshoreOrOffshore: values.onshoreOrOffshore,
+        onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
+      };
+      
+      const success = await addEmployeeToProject(projectEmployeeData);
+
+      if (success) {
+        toast({ title: "Success", description: `${employeeToAdd.firstName} added to the project.` });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: `Could not add employee to project. They may already be on the team.` });
+      }
     }
+    
+    setIsDialogOpen(false);
+    setEditingEmployee(null);
   };
+  
+  const handleOpenDialog = (employee: Employee | null) => {
+    setEditingEmployee(employee);
+    setIsDialogOpen(true);
+  }
 
   const availableEmployees = allEmployees.filter(emp => !projectEmployees.some(pe => pe.id === emp.id));
   const availableEmployeeOptions = availableEmployees.map(emp => ({
@@ -128,19 +172,19 @@ export default function ResourcesPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Resources" description="Manage employees assigned to this project.">
-           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) { form.reset(); setEmployeeInputText(''); }}}>
+           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) setEditingEmployee(null); }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => handleOpenDialog(null)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Employee
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Employee to Project</DialogTitle>
+                <DialogTitle>{editingEmployee ? 'Edit Resource' : 'Add Employee to Project'}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleAddEmployeeToProject)} className="space-y-4 py-4">
+                <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
                   <FormField
                     control={form.control}
                     name="employeeId"
@@ -151,8 +195,10 @@ export default function ResourcesPage() {
                            <Input 
                               list="employee-options"
                               placeholder="Search for an employee..."
-                              value={employeeInputText}
+                              value={editingEmployee ? `${editingEmployee.firstName} ${editingEmployee.lastName}` : employeeInputText}
+                              readOnly={!!editingEmployee}
                               onChange={(e) => {
+                                  if (editingEmployee) return;
                                   const inputText = e.target.value;
                                   setEmployeeInputText(inputText);
 
@@ -160,6 +206,7 @@ export default function ResourcesPage() {
                                   field.onChange(matchingOption ? matchingOption.value : '');
                               }}
                               onBlur={(e) => {
+                                  if (editingEmployee) return;
                                   const matchingOption = availableEmployeeOptions.find(opt => opt.label === e.target.value);
                                   if(!matchingOption) {
                                       setEmployeeInputText('');
@@ -182,7 +229,7 @@ export default function ResourcesPage() {
                     <FormField control={form.control} name="role" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                           <SelectContent>
                             {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -204,7 +251,7 @@ export default function ResourcesPage() {
                      <FormField control={form.control} name="onshoreOrOffshore" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Location</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select location type" /></SelectTrigger></FormControl>
                           <SelectContent>
                             {onshoreOffshoreOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
@@ -224,7 +271,7 @@ export default function ResourcesPage() {
 
                   <DialogFooter>
                     <Button type="submit">
-                      Add to Project
+                      {editingEmployee ? 'Save Changes' : 'Add to Project'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -257,6 +304,9 @@ export default function ResourcesPage() {
                     {employee.onshoreOrOffshore && <Badge variant={employee.onshoreOrOffshore === 'Onshore' ? 'default' : 'secondary'}>{employee.onshoreOrOffshore}</Badge>}
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(employee)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeletingEmployee(employee)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>

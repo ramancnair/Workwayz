@@ -81,6 +81,7 @@ interface ProjectContextType {
 
   // Employee actions
   addEmployee: (employee: Employee) => Promise<boolean>;
+  updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>) => Promise<boolean>;
   deleteEmployee: (employeeId: string) => Promise<boolean>;
   addLeavePeriod: (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>) => Promise<boolean>;
   deleteLeavePeriod: (employeeId: string, leavePeriodId: string) => Promise<boolean>;
@@ -569,6 +570,22 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return false;
     }
   };
+  
+  const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const { onboardingDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(new Date(onboardingDate)) : null;
+
+      const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
+      await updateDoc(employeeRef, sanitizeForFirestore(payload));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to update project employee.", e);
+      return false;
+    }
+  }
 
   const deleteEmployee = async (employeeId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1123,6 +1140,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     deleteSprint,
     setCurrentSprint,
     addEmployee,
+    updateEmployee,
     deleteEmployee,
     addLeavePeriod,
     deleteLeavePeriod,
