@@ -128,11 +128,17 @@ export default function EmployeesPage() {
     if (!db) return;
     setIsSubmitting(true);
     
-    const sanitizedValues: any = {
-        ...values,
-        employmentStartDate: values.employmentStartDate ? new Date(values.employmentStartDate) : undefined,
-        employmentEndDate: values.employmentEndDate ? new Date(values.employmentEndDate) : undefined,
-    };
+    const sanitizedValues: any = { ...values };
+    if (values.employmentStartDate) {
+        sanitizedValues.employmentStartDate = new Date(values.employmentStartDate);
+    } else {
+        delete sanitizedValues.employmentStartDate;
+    }
+    if (values.employmentEndDate) {
+        sanitizedValues.employmentEndDate = new Date(values.employmentEndDate);
+    } else {
+        delete sanitizedValues.employmentEndDate;
+    }
     
     try {
       if (editingEmployee) {
