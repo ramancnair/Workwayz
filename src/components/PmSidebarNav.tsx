@@ -18,8 +18,8 @@ import {
   Flame,
   ChevronLeft,
   FolderKanban,
+  Building2,
   Briefcase,
-  Users,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -48,7 +48,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       id: 'employees',
       href: `/employees`,
       label: "Employees",
-      icon: Users,
+      icon: Building2,
     },
   ];
 
@@ -64,7 +64,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
             <Flame className="w-8 h-8 text-primary" />
             <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
         </div>
-        <SidebarTrigger className="hidden md:flex" />
+        
       </SidebarHeader>
       <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>

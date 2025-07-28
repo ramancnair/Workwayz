@@ -203,7 +203,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
             <Flame className="w-8 h-8 text-primary" />
             <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
         </div>
-        <SidebarTrigger className="hidden md:flex" />
+        
       </SidebarHeader>
       <div className="p-4 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
