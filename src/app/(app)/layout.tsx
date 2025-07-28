@@ -16,7 +16,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const getTabValue = () => {
     if (pathname.startsWith('/pmdashboard')) return 'projects';
     if (pathname.startsWith('/portfolios')) return 'portfolios';
-    return '';
+    return 'portfolios'; // Default to portfolios
   };
 
   const onTabChange = (value: string) => {
@@ -41,8 +41,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
           <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center gap-4">
               <Tabs value={getTabValue()} onValueChange={onTabChange}>
                   <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                      <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
                       <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio</TabsTrigger>
+                      <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
                   </TabsList>
               </Tabs>
           </div>

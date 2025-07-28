@@ -28,23 +28,18 @@ export function PmSidebarNav() {
   
   const isPortfolioSection = pathname.startsWith('/portfolios');
   
-  const projectMenuItems = [
+  const menuItems = [
+    {
+      href: `/portfolios`,
+      label: "Manage Portfolios",
+      icon: Briefcase,
+    },
     {
       href: `/pmdashboard`,
       label: "PM Dashboard",
       icon: FolderKanban,
     },
   ];
-
-  const portfolioMenuItems = [
-    {
-      href: `/portfolios`,
-      label: "Manage Portfolios",
-      icon: Briefcase,
-    },
-  ];
-  
-  const menuItems = isPortfolioSection ? portfolioMenuItems : projectMenuItems;
 
   return (
     <>
