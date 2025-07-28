@@ -173,7 +173,7 @@ export default function ProjectsDashboard() {
             });
         }
         return { ...portfolio, projects: filtered };
-    }).filter(p => p.projects.length > 0);
+    });
   }, [projects, portfolios, filterText, sorting]);
   
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
@@ -278,45 +278,51 @@ export default function ProjectsDashboard() {
                        </div>
                      </AccordionTrigger>
                      <AccordionContent className="p-0">
-                       <Table>
-                         <TableHeader>
-                           <TableRow>
-                             <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
-                             <SortableHeader columnId="name">Project Name</SortableHeader>
-                             <SortableHeader columnId="description">Description</SortableHeader>
-                             <TableHead className="text-right">Actions</TableHead>
-                           </TableRow>
-                         </TableHeader>
-                         <TableBody>
-                           {portfolio.projects.map((project) => (
-                             <TableRow key={project.id}>
-                               <TableCell className="font-medium">
-                                 <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                                   {project.id}
-                                 </Link>
-                               </TableCell>
-                               <TableCell>
-                                 <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                                   {project.name}
-                                 </Link>
-                               </TableCell>
-                               <TableCell>
-                                 <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                                   {project.description}
-                                 </Link>
-                               </TableCell>
-                               <TableCell className="text-right">
-                                  <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                               </TableCell>
-                             </TableRow>
-                           ))}
-                         </TableBody>
-                       </Table>
+                       {portfolio.projects.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
+                              <SortableHeader columnId="name">Project Name</SortableHeader>
+                              <SortableHeader columnId="description">Description</SortableHeader>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {portfolio.projects.map((project) => (
+                              <TableRow key={project.id}>
+                                <TableCell className="font-medium">
+                                  <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                    {project.id}
+                                  </Link>
+                                </TableCell>
+                                <TableCell>
+                                  <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                    {project.name}
+                                  </Link>
+                                </TableCell>
+                                <TableCell>
+                                  <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                    {project.description}
+                                  </Link>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                   <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
+                                     <Edit className="h-4 w-4" />
+                                   </Button>
+                                   <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                     <Trash2 className="h-4 w-4" />
+                                   </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                       ) : (
+                        <div className="text-center p-4 text-sm text-muted-foreground">
+                            No projects found for this portfolio.
+                        </div>
+                       )}
                      </AccordionContent>
                    </AccordionItem>
                 ))}
