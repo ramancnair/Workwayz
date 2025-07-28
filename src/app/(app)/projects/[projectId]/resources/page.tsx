@@ -30,14 +30,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { type Employee } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function ResourcesPage() {
@@ -46,6 +46,7 @@ export default function ResourcesPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [employeeInputText, setEmployeeInputText] = useState('');
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function ResourcesPage() {
 
   const handleAddEmployeeToProject = async () => {
     if (!selectedEmployeeId) {
-      toast({ variant: "destructive", title: "Error", description: "Please select an employee to add." });
+      toast({ variant: "destructive", title: "Error", description: "Please select a valid employee to add." });
       return;
     }
     
@@ -73,19 +74,23 @@ export default function ResourcesPage() {
         return;
     }
     
-    // The addEmployee function in context now handles adding a resource *to the project*
     const success = await addEmployee(employeeToAdd);
 
     if (success) {
       toast({ title: "Success", description: `${employeeToAdd.firstName} added to the project.` });
       setIsDialogOpen(false);
       setSelectedEmployeeId('');
+      setEmployeeInputText('');
     } else {
       toast({ variant: "destructive", title: "Error", description: `Could not add employee to project. They may already be on the team.` });
     }
   };
 
   const availableEmployees = allEmployees.filter(emp => !projectEmployees.some(pe => pe.id === emp.id));
+  const availableEmployeeOptions = availableEmployees.map(emp => ({
+      value: emp.id,
+      label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
+  }));
 
   return (
     <>
@@ -103,19 +108,36 @@ export default function ResourcesPage() {
                 <DialogTitle>Add Employee to Project</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <Select onValueChange={setSelectedEmployeeId} value={selectedEmployeeId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an employee from the global list..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableEmployees.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName} ({emp.empId})
-                      </SelectItem>
+                <Input 
+                    list="employee-options"
+                    placeholder="Search for an employee..."
+                    value={employeeInputText}
+                    onChange={(e) => {
+                        const inputText = e.target.value;
+                        setEmployeeInputText(inputText);
+
+                        const matchingOption = availableEmployeeOptions.find(opt => opt.label === inputText);
+                        if (matchingOption) {
+                            setSelectedEmployeeId(matchingOption.value);
+                        } else {
+                            setSelectedEmployeeId('');
+                        }
+                    }}
+                    onBlur={(e) => {
+                        const matchingOption = availableEmployeeOptions.find(opt => opt.label === e.target.value);
+                        if(!matchingOption) {
+                            setEmployeeInputText('');
+                            setSelectedEmployeeId('');
+                        }
+                    }}
+                />
+                <datalist id="employee-options">
+                    {availableEmployeeOptions.map(emp => (
+                        <option key={emp.value} value={emp.label} />
                     ))}
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleAddEmployeeToProject} className="w-full">
+                </datalist>
+
+                <Button onClick={handleAddEmployeeToProject} className="w-full" disabled={!selectedEmployeeId}>
                   Add to Project
                 </Button>
               </div>
