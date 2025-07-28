@@ -80,8 +80,7 @@ interface ProjectContextType {
   setCurrentSprint: (sprintId: string) => Promise<boolean>;
 
   // Employee actions
-  addEmployee: (employee: Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }) => Promise<boolean>;
-  updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }>) => Promise<boolean>;
+  addEmployee: (employee: Employee) => Promise<boolean>;
   deleteEmployee: (employeeId: string) => Promise<boolean>;
   addLeavePeriod: (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>) => Promise<boolean>;
   deleteLeavePeriod: (employeeId: string, leavePeriodId: string) => Promise<boolean>;
@@ -253,7 +252,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     const dateFields: Record<string, string[]> = {
                         stories: ['startDate', 'endDate'],
                         sprints: ['startDate', 'endDate'],
-                        employees: ['onboardingDate', 'offloadingDate'],
+                        employees: ['onboardingDate', 'offloadingDate', 'employmentStartDate', 'employmentEndDate'],
                         assumptions: ['validationDate'],
                         issues: ['reportedDate', 'resolvedDate'],
                         dependencies: ['expectedByDate'],
@@ -552,47 +551,32 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Employee Actions
-  const addEmployee = async (employee: Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }): Promise<boolean> => {
+  const addEmployee = async (employee: Employee): Promise<boolean> => {
     if (!db || !projectId) return false;
-    try {
-        const { onboardingDate, offloadingDate, ...rest } = employee;
-        const payload: any = { ...rest, avatar: 'https://placehold.co/40x40.png' };
-        
-        if (onboardingDate) payload.onboardingDate = Timestamp.fromDate(onboardingDate);
-        if (offloadingDate) payload.offloadingDate = Timestamp.fromDate(offloadingDate);
-
-        await addDoc(collection(db, 'projects', projectId, 'employees'), sanitizeForFirestore(payload));
-        return true;
-    } catch (e: any) {
-        console.error("Firebase Error: Failed to add employee.", { code: e.code, message: e.message, fullError: e });
-        return false;
+    
+    // Check if employee is already in the project
+    if (employees.some(e => e.id === employee.id)) {
+      return false;
     }
-  };
-
-  const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'onboardingDate' | 'offloadingDate'> & { onboardingDate?: Date, offloadingDate?: Date }>): Promise<boolean> => {
-    if (!db || !projectId) return false;
+    
     try {
-        const { onboardingDate, offloadingDate, ...rest } = data;
-        const payload: any = { ...rest };
-        
-        if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(onboardingDate) : null;
-        if (data.hasOwnProperty('offloadingDate')) payload.offloadingDate = offloadingDate ? Timestamp.fromDate(offloadingDate) : null;
-
-        await updateDoc(doc(db, 'projects', projectId, 'employees', employeeId), sanitizeForFirestore(payload));
-        return true;
+      // Add the employee document to the project's subcollection
+      // We use setDoc with the global employee ID to keep them in sync
+      await setDoc(doc(db, 'projects', projectId, 'employees', employee.id), employee);
+      return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to update employee.", { id: employeeId, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to add employee to project.", { code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
-  
+
   const deleteEmployee = async (employeeId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       await deleteDoc(doc(db, 'projects', projectId, 'employees', employeeId));
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to delete employee.", { id: employeeId, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to delete employee from project.", { id: employeeId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -1139,7 +1123,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     deleteSprint,
     setCurrentSprint,
     addEmployee,
-    updateEmployee,
     deleteEmployee,
     addLeavePeriod,
     deleteLeavePeriod,

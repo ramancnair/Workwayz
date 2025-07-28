@@ -7,6 +7,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -99,8 +100,11 @@ export type Employee = {
   clientEmail?: string;
   role?: EmployeeRole;
   experience?: number;
-  onboardingDate?: string; // ISO String
-  offloadingDate?: string; // ISO String
+  onboardingDate?: string; // ISO String - Project Specific
+  offloadingDate?: string; // ISO String - Project Specific
+  employmentStartDate?: string; // ISO String - Global
+  employmentEndDate?: string; // ISO String - Global
+  domainExpertise?: string;
   onshoreOrOffshore?: OnshoreOffshore;
   billedRate?: number;
   availability?: number;
@@ -225,7 +229,7 @@ export type Worklog = {
 export type WorklogSubmission = {
   id: string; // employeeId-weekStartDate (e.g., 'emp1-2024-07-21')
   employeeId: string;
-  weekStartDate: string; // ISO String for Sunday of that week
+  weekStartDate: string; // ISO string
   submittedAt: string; // ISO string
 };
 
