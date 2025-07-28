@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   FolderKanban,
   Briefcase,
+  Users,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -36,8 +37,13 @@ export function PmSidebarNav() {
     },
     {
       href: `/pmdashboard`,
-      label: "PM Dashboard",
+      label: "Projects Dashboard",
       icon: FolderKanban,
+    },
+    {
+      href: `/employees`,
+      label: "Employees",
+      icon: Users,
     },
   ];
 
@@ -59,7 +65,7 @@ export function PmSidebarNav() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname === item.href}
+                  isActive={pathname.startsWith(item.href)}
                   tooltip={item.label}
                 >
                   <item.icon />
