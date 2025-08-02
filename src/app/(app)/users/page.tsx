@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -49,7 +49,7 @@ import { format, parseISO } from 'date-fns';
 const accessLevels: AccessLevel[] = ['Admin', 'Portfolio Manager', 'Project Manager', 'Business Analyst', 'Dev Lead', 'Developer', 'Test Lead', 'Tester', 'PMO', 'Finance'];
 
 const userFormSchema = z.object({
-  empId: z.string().min(1, 'User ID is required'),
+  empId: z.string().min(1, 'Emp ID is required'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
@@ -162,7 +162,17 @@ export default function UsersPage() {
         await updateDoc(doc(db, 'employees', editingUser.id), sanitizedValues);
         toast({ title: "Success", description: `User updated successfully.` });
       } else {
-        await addDoc(collection(db, 'employees'), { 
+        // Check for unique Emp ID when creating a new user
+        const isEmpIdTaken = users.some(user => user.empId === values.empId);
+        if (isEmpIdTaken) {
+            form.setError("empId", { type: "manual", message: "This Emp ID is already taken." });
+            setIsSubmitting(false);
+            return;
+        }
+
+        // Use empId as the document ID
+        const userRef = doc(db, 'employees', values.empId);
+        await setDoc(userRef, { 
             ...sanitizedValues, 
             avatar: 'https://placehold.co/40x40.png'
         });
@@ -192,7 +202,7 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>Emp ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
@@ -250,7 +260,7 @@ export default function UsersPage() {
                 )} />
                  <FormField control={form.control} name="empId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>User ID *</FormLabel>
+                    <FormLabel>Emp ID *</FormLabel>
                     <FormControl><Input placeholder="E.g., E001" {...field} disabled={!!editingUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -304,14 +314,14 @@ export default function UsersPage() {
                 <FormField control={form.control} name="employmentStartDate" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="employmentEndDate" render={({ field }) => (
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
