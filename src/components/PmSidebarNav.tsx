@@ -47,7 +47,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     {
       id: 'users',
       href: `/users`,
-      label: "Users",
+      label: "User List",
       icon: Building2,
     },
   ];
