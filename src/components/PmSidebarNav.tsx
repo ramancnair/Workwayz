@@ -24,7 +24,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar";
 
 type PmSidebarNavProps = {
-  activeTab: 'portfolios' | 'projects' | 'employees';
+  activeTab: 'portfolios' | 'projects' | 'users';
 };
 
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
@@ -45,9 +45,9 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       icon: FolderKanban,
     },
     {
-      id: 'employees',
-      href: `/employees`,
-      label: "Employees",
+      id: 'users',
+      href: `/users`,
+      label: "Users",
       icon: Building2,
     },
   ];

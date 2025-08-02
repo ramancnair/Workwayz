@@ -51,7 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, Employee, WorkItemType, BugCriticality } from '@/types';
+import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -103,7 +103,7 @@ const sprintFormSchema = z.object({
   endDate: z.string().optional(),
 });
 
-function StoryCard({ story, epic, assignee, onClick, onDelete, className }: { story: Story; epic?: Epic; assignee?: Employee; onClick: () => void; onDelete: () => void; className?: string; }) {
+function StoryCard({ story, epic, assignee, onClick, onDelete, className }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string; }) {
   const Icon = workItemIcons[story.itemType];
 
   return (
@@ -167,7 +167,7 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className }: { st
   );
 }
 
-function SubItemsDisplay({ items, onCardClick, onDelete, employees, title }: { items: Story[], onCardClick: (story: Story) => void, onDelete: (story: Story) => void, employees: Employee[], title: string }) {
+function SubItemsDisplay({ items, onCardClick, onDelete, users, title }: { items: Story[], onCardClick: (story: Story) => void, onDelete: (story: Story) => void, users: User[], title: string }) {
     if (items.length === 0) return null;
 
     return (
@@ -181,7 +181,7 @@ function SubItemsDisplay({ items, onCardClick, onDelete, employees, title }: { i
             <CollapsibleContent>
                 <div className="pl-6 pt-2 space-y-2">
                     {items.map(subItem => {
-                        const subItemAssignee = employees.find((d) => d.id === subItem.assigneeId);
+                        const subItemAssignee = users.find((d) => d.id === subItem.assigneeId);
                         return (
                             <div key={subItem.id} className="flex items-start gap-2">
                                 <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
@@ -208,7 +208,7 @@ export default function BacklogPage() {
     epics, 
     stories, 
     sprints, 
-    employees, 
+    employees: users, 
     releasesAndMilestones,
     moveStoryToSprint, 
     moveStoryToEpic, 
@@ -810,7 +810,7 @@ export default function BacklogPage() {
                               </FormControl>
                               <SelectContent>
                               <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {employees.map(emp => (
+                              {users.map(emp => (
                                   <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                               ))}
                               </SelectContent>
@@ -931,7 +931,7 @@ export default function BacklogPage() {
                               {backlogItemsForGroup.length > 0 ? (
                                 backlogItemsForGroup.map((story) => {
                                   const storyEpic = epics.find((e) => e.id === story.epicId);
-                                  const assignee = employees.find((d) => d.id === story.assigneeId);
+                                  const assignee = users.find((d) => d.id === story.assigneeId);
                                   const subItems = (subItemsByParentId[story.id] || []).filter(item => !item.sprintId);
                                   
                                   return (
@@ -971,7 +971,7 @@ export default function BacklogPage() {
                                           </div>
                                           )}
                                       </div>
-                                      <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} employees={employees} title="Related Items" />
+                                      <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} users={users} title="Related Items" />
                                     </div>
                                   )
                                 })
@@ -1089,7 +1089,7 @@ export default function BacklogPage() {
                           {topLevelSprintItems.length > 0 ? (
                             topLevelSprintItems.map((story) => {
                               const epic = epics.find((e) => e.id === story.epicId);
-                              const assignee = employees.find((d) => d.id === story.assigneeId);
+                              const assignee = users.find((d) => d.id === story.assigneeId);
                               const subItems = sprintItems.filter(item => item.epicId === story.id);
                               
                               return (
@@ -1101,7 +1101,7 @@ export default function BacklogPage() {
                                         onClick={() => setSelectedStory(story)}
                                         onDelete={() => setStoryToDelete(story)}
                                     />
-                                    <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} employees={employees} title="Related Items" />
+                                    <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} users={users} title="Related Items" />
                                 </div>
                               );
                             })
@@ -1306,7 +1306,7 @@ export default function BacklogPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {employees.map((emp) => (
+                            {users.map((emp) => (
                               <SelectItem key={emp.id} value={emp.id}>
                                 {emp.firstName} {emp.lastName}
                               </SelectItem>

@@ -9,6 +9,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -81,7 +82,7 @@ export type TestCase = {
 
 export type OnshoreOffshore = 'Onshore' | 'Offshore';
 
-export type EmployeeRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM';
+export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM';
 
 export type AccessLevel = 'Admin' | 'Portfolio Manager' | 'Project Manager' | 'Business Analyst' | 'Dev Lead' | 'Developer' | 'Test Lead' | 'Tester' | 'PMO' | 'Finance';
 
@@ -91,7 +92,7 @@ export type LeavePeriod = {
   endDate: string; // ISO String
 };
 
-export type Employee = {
+export type User = {
   id: string;
   empId: string;
   firstName: string;
@@ -101,7 +102,7 @@ export type Employee = {
   avatar?: string;
   clientEmpId?: string;
   clientEmail?: string;
-  role?: EmployeeRole;
+  role?: UserRole;
   experience?: number;
   onboardingDate?: string; // ISO String - Project Specific
   offloadingDate?: string; // ISO String - Project Specific

@@ -34,7 +34,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { format, isSameDay, eachDayOfInterval } from 'date-fns';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { type Employee, type LeavePeriod } from '@/types';
+import { type User, type LeavePeriod } from '@/types';
 import { cn } from '@/lib/utils';
 
 const leaveSchema = z.object({
@@ -49,10 +49,10 @@ const leaveSchema = z.object({
 });
 
 export default function LeaveTrackerPage() {
-  const { employees, addLeavePeriod, deleteLeavePeriod, isLoading, holidays, weeklyOffDays } = useProject();
+  const { employees: users, addLeavePeriod, deleteLeavePeriod, isLoading, holidays, weeklyOffDays } = useProject();
   const { toast } = useToast();
   
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deletingLeavePeriod, setDeletingLeavePeriod] = useState<LeavePeriod | null>(null);
 
   const form = useForm<z.infer<typeof leaveSchema>>({
@@ -64,25 +64,25 @@ export default function LeaveTrackerPage() {
   });
 
   useEffect(() => {
-    if (employees.length > 0 && !selectedEmployee) {
-      setSelectedEmployee(employees[0]);
+    if (users.length > 0 && !selectedUser) {
+      setSelectedUser(users[0]);
     }
-  }, [employees, selectedEmployee]);
+  }, [users, selectedUser]);
 
-  // This effect ensures the selectedEmployee state is updated when the master list changes
+  // This effect ensures the selectedUser state is updated when the master list changes
   useEffect(() => {
-    if (selectedEmployee) {
-      const updatedEmployee = employees.find(e => e.id === selectedEmployee.id);
-      if (updatedEmployee) {
-        setSelectedEmployee(updatedEmployee);
+    if (selectedUser) {
+      const updatedUser = users.find(e => e.id === selectedUser.id);
+      if (updatedUser) {
+        setSelectedUser(updatedUser);
       }
     }
-  }, [employees, selectedEmployee]);
+  }, [users, selectedUser]);
 
 
-  const handleEmployeeChange = (employeeId: string) => {
-    const employee = employees.find(e => e.id === employeeId);
-    setSelectedEmployee(employee || null);
+  const handleUserChange = (userId: string) => {
+    const user = users.find(e => e.id === userId);
+    setSelectedUser(user || null);
     form.reset();
   };
 
@@ -114,8 +114,8 @@ export default function LeaveTrackerPage() {
   };
 
   const onSubmit = async (values: z.infer<typeof leaveSchema>) => {
-    if (!selectedEmployee) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select an employee.' });
+    if (!selectedUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select a user.' });
       return;
     }
     
@@ -124,7 +124,7 @@ export default function LeaveTrackerPage() {
       endDate: new Date(values.endDate).toISOString(),
     };
 
-    const success = await addLeavePeriod(selectedEmployee.id, newLeavePeriod);
+    const success = await addLeavePeriod(selectedUser.id, newLeavePeriod);
     if (success) {
       toast({ title: 'Success', description: 'Leave period added successfully.' });
       form.reset({ startDate: '', endDate: '' });
@@ -134,9 +134,9 @@ export default function LeaveTrackerPage() {
   };
 
   const handleDelete = async () => {
-    if (!selectedEmployee || !deletingLeavePeriod) return;
+    if (!selectedUser || !deletingLeavePeriod) return;
     
-    const success = await deleteLeavePeriod(selectedEmployee.id, deletingLeavePeriod.id);
+    const success = await deleteLeavePeriod(selectedUser.id, deletingLeavePeriod.id);
     if (success) {
         toast({ title: 'Success', description: 'Leave period deleted.' });
     } else {
@@ -145,28 +145,28 @@ export default function LeaveTrackerPage() {
     setDeletingLeavePeriod(null);
   }
 
-  const sortedLeavePeriods = selectedEmployee?.leavePeriods
-    ? [...selectedEmployee.leavePeriods].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+  const sortedLeavePeriods = selectedUser?.leavePeriods
+    ? [...selectedUser.leavePeriods].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
     : [];
 
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Leave Tracker" description="Manage employee leave days." />
+        <PageHeader title="Leave Tracker" description="Manage user leave days." />
 
         <div className="grid gap-6 md:grid-cols-2">
             <Card>
                 <CardHeader>
-                <CardTitle>Select Employee</CardTitle>
-                <CardDescription>Choose an employee to manage their leave periods.</CardDescription>
+                <CardTitle>Select User</CardTitle>
+                <CardDescription>Choose a user to manage their leave periods.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                <Select onValueChange={handleEmployeeChange} value={selectedEmployee?.id}>
+                <Select onValueChange={handleUserChange} value={selectedUser?.id}>
                     <SelectTrigger className="w-full md:w-[280px]">
-                    <SelectValue placeholder="Select an employee" />
+                    <SelectValue placeholder="Select a user" />
                     </SelectTrigger>
                     <SelectContent>
-                    {employees.map(emp => (
+                    {users.map(emp => (
                         <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                     ))}
                     </SelectContent>
@@ -210,7 +210,7 @@ export default function LeaveTrackerPage() {
                                     )}
                                 />
                             </div>
-                            <Button type="submit" disabled={!selectedEmployee || form.formState.isSubmitting}>
+                            <Button type="submit" disabled={!selectedUser || form.formState.isSubmitting}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Add Leave
                             </Button>
@@ -220,10 +220,10 @@ export default function LeaveTrackerPage() {
             </Card>
         </div>
 
-        {selectedEmployee && (
+        {selectedUser && (
             <Card>
                 <CardHeader>
-                    <CardTitle>Logged Leave for {selectedEmployee.firstName}</CardTitle>
+                    <CardTitle>Logged Leave for {selectedUser.firstName}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -250,7 +250,7 @@ export default function LeaveTrackerPage() {
                             )) : (
                                 <TableRow>
                                     <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                        No leave periods logged for this employee.
+                                        No leave periods logged for this user.
                                     </TableCell>
                                 </TableRow>
                             )}

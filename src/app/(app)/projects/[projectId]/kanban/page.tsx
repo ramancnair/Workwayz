@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, Employee, WorkItemType, BugCriticality, KanbanColumn } from '@/types';
+import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -147,7 +147,7 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick,
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees, updateStory, deleteStory } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -246,7 +246,7 @@ export default function KanbanPage() {
   }
 
   const sprintAssigneeIds = new Set(baseSprintStories.map(story => story.assigneeId).filter(Boolean));
-  const sprintAssignees = employees.filter(emp => sprintAssigneeIds.has(emp.id));
+  const sprintAssignees = users.filter(emp => sprintAssigneeIds.has(emp.id));
 
   const sortedColumns = kanbanColumns.sort((a, b) => a.order - b.order);
   const doneColumnName = sortedColumns.find(c => c.isDoneColumn)?.name || 'Done';
@@ -263,9 +263,9 @@ export default function KanbanPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Assignees</SelectItem>
-                {sprintAssignees.map(employee => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.firstName} {employee.lastName}
+                {sprintAssignees.map(user => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -435,7 +435,7 @@ export default function KanbanPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {employees.map((emp) => (
+                            {users.map((emp) => (
                               <SelectItem key={emp.id} value={emp.id}>
                                 {emp.firstName} {emp.lastName}
                               </SelectItem>

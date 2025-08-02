@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -38,7 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Trash2, Edit } from 'lucide-react';
-import { type Employee, type OnshoreOffshore, type EmployeeRole } from '@/types';
+import { type User, type OnshoreOffshore, type UserRole } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -49,29 +50,29 @@ import { buttonVariants } from '@/components/ui/button';
 import { format } from 'date-fns';
 
 const resourceSchema = z.object({
-  employeeId: z.string().min(1, 'Please select an employee.'),
+  employeeId: z.string().min(1, 'Please select a user.'),
   role: z.string().optional(),
   availability: z.coerce.number().min(0).max(100).optional(),
   onshoreOrOffshore: z.enum(['Onshore', 'Offshore']).optional(),
   onboardingDate: z.string().optional(),
 });
 
-const roles: EmployeeRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
+const roles: UserRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
 const onshoreOffshoreOptions: OnshoreOffshore[] = ['Onshore', 'Offshore'];
 
 export default function ResourcesPage() {
   const { 
-    employees: projectEmployees, 
-    addEmployee: addEmployeeToProject, 
-    updateEmployee: updateProjectEmployee,
-    deleteEmployee: removeEmployeeFromProject 
+    employees: projectUsers, 
+    addEmployee: addUserToProject, 
+    updateEmployee: updateProjectUser,
+    deleteEmployee: removeUserFromProject 
   } = useProject();
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [employeeInputText, setEmployeeInputText] = useState('');
-  const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userInputText, setUserInputText] = useState('');
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
   const form = useForm<z.infer<typeof resourceSchema>>({
     resolver: zodResolver(resourceSchema),
@@ -81,24 +82,24 @@ export default function ResourcesPage() {
     if (!db) return;
     const q = collection(db, 'employees');
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const employeesData = querySnapshot.docs.map(doc => ({
+        const usersData = querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-        } as Employee));
-        setAllEmployees(employeesData);
+        } as User));
+        setAllUsers(usersData);
     });
     return () => unsubscribe();
   }, []);
   
   useEffect(() => {
     if(isDialogOpen) {
-      if (editingEmployee) {
+      if (editingUser) {
         form.reset({
-          employeeId: editingEmployee.id,
-          role: editingEmployee.role,
-          availability: editingEmployee.availability,
-          onshoreOrOffshore: editingEmployee.onshoreOrOffshore,
-          onboardingDate: editingEmployee.onboardingDate ? format(new Date(editingEmployee.onboardingDate), 'yyyy-MM-dd') : '',
+          employeeId: editingUser.id,
+          role: editingUser.role,
+          availability: editingUser.availability,
+          onshoreOrOffshore: editingUser.onshoreOrOffshore,
+          onboardingDate: editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
@@ -108,62 +109,62 @@ export default function ResourcesPage() {
           onshoreOrOffshore: undefined,
           onboardingDate: format(new Date(), 'yyyy-MM-dd'),
         });
-        setEmployeeInputText('');
+        setUserInputText('');
       }
     }
-  }, [isDialogOpen, editingEmployee, form]);
+  }, [isDialogOpen, editingUser, form]);
 
   const handleFormSubmit = async (values: z.infer<typeof resourceSchema>) => {
-    if (editingEmployee) {
-      // Update existing employee
-      const success = await updateProjectEmployee(editingEmployee.id, {
-        role: values.role as EmployeeRole,
+    if (editingUser) {
+      // Update existing user
+      const success = await updateProjectUser(editingUser.id, {
+        role: values.role as UserRole,
         availability: values.availability,
         onshoreOrOffshore: values.onshoreOrOffshore,
         onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
       });
 
       if (success) {
-        toast({ title: "Success", description: `${editingEmployee.firstName}'s details updated.` });
+        toast({ title: "Success", description: `${editingUser.firstName}'s details updated.` });
       } else {
-        toast({ variant: "destructive", title: "Error", description: `Could not update employee.` });
+        toast({ variant: "destructive", title: "Error", description: `Could not update user.` });
       }
     } else {
-      // Add new employee
-      const employeeToAdd = allEmployees.find(emp => emp.id === values.employeeId);
-      if (!employeeToAdd) {
-          toast({ variant: "destructive", title: "Error", description: "Selected employee not found." });
+      // Add new user
+      const userToAdd = allUsers.find(emp => emp.id === values.employeeId);
+      if (!userToAdd) {
+          toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
           return;
       }
       
-      const projectEmployeeData: Employee = {
-        ...employeeToAdd,
-        role: values.role as EmployeeRole,
+      const projectUserData: User = {
+        ...userToAdd,
+        role: values.role as UserRole,
         availability: values.availability,
         onshoreOrOffshore: values.onshoreOrOffshore,
         onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
       };
       
-      const success = await addEmployeeToProject(projectEmployeeData);
+      const success = await addUserToProject(projectUserData);
 
       if (success) {
-        toast({ title: "Success", description: `${employeeToAdd.firstName} added to the project.` });
+        toast({ title: "Success", description: `${userToAdd.firstName} added to the project.` });
       } else {
-        toast({ variant: "destructive", title: "Error", description: `Could not add employee to project. They may already be on the team.` });
+        toast({ variant: "destructive", title: "Error", description: `Could not add user to project. They may already be on the team.` });
       }
     }
     
     setIsDialogOpen(false);
-    setEditingEmployee(null);
+    setEditingUser(null);
   };
   
-  const handleOpenDialog = (employee: Employee | null) => {
-    setEditingEmployee(employee);
+  const handleOpenDialog = (user: User | null) => {
+    setEditingUser(user);
     setIsDialogOpen(true);
   }
 
-  const availableEmployees = allEmployees.filter(emp => !projectEmployees.some(pe => pe.id === emp.id));
-  const availableEmployeeOptions = availableEmployees.map(emp => ({
+  const availableUsers = allUsers.filter(emp => !projectUsers.some(pe => pe.id === emp.id));
+  const availableUserOptions = availableUsers.map(emp => ({
       value: emp.id,
       label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
   }));
@@ -171,17 +172,17 @@ export default function ResourcesPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Project Resources" description="Manage employees assigned to this project.">
-           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) setEditingEmployee(null); }}>
+        <PageHeader title="Project Resources" description="Manage users assigned to this project.">
+           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) setEditingUser(null); }}>
             <DialogTrigger asChild>
               <Button onClick={() => handleOpenDialog(null)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Add Employee
+                Add User
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingEmployee ? 'Edit Resource' : 'Add Employee to Project'}</DialogTitle>
+                <DialogTitle>{editingUser ? 'Edit Resource' : 'Add User to Project'}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
@@ -190,33 +191,33 @@ export default function ResourcesPage() {
                     name="employeeId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Employee</FormLabel>
+                        <FormLabel>User</FormLabel>
                          <FormControl>
                            <Input 
-                              list="employee-options"
-                              placeholder="Search for an employee..."
-                              value={editingEmployee ? `${editingEmployee.firstName} ${editingEmployee.lastName}` : employeeInputText}
-                              readOnly={!!editingEmployee}
+                              list="user-options"
+                              placeholder="Search for a user..."
+                              value={editingUser ? `${editingUser.firstName} ${editingUser.lastName}` : userInputText}
+                              readOnly={!!editingUser}
                               onChange={(e) => {
-                                  if (editingEmployee) return;
+                                  if (editingUser) return;
                                   const inputText = e.target.value;
-                                  setEmployeeInputText(inputText);
+                                  setUserInputText(inputText);
 
-                                  const matchingOption = availableEmployeeOptions.find(opt => opt.label === inputText);
+                                  const matchingOption = availableUserOptions.find(opt => opt.label === inputText);
                                   field.onChange(matchingOption ? matchingOption.value : '');
                               }}
                               onBlur={(e) => {
-                                  if (editingEmployee) return;
-                                  const matchingOption = availableEmployeeOptions.find(opt => opt.label === e.target.value);
+                                  if (editingUser) return;
+                                  const matchingOption = availableUserOptions.find(opt => opt.label === e.target.value);
                                   if(!matchingOption) {
-                                      setEmployeeInputText('');
+                                      setUserInputText('');
                                       field.onChange('');
                                   }
                               }}
                            />
                           </FormControl>
-                          <datalist id="employee-options">
-                              {availableEmployeeOptions.map(emp => (
+                          <datalist id="user-options">
+                              {availableUserOptions.map(emp => (
                                   <option key={emp.value} value={emp.label} />
                               ))}
                           </datalist>
@@ -271,7 +272,7 @@ export default function ResourcesPage() {
 
                   <DialogFooter>
                     <Button type="submit">
-                      {editingEmployee ? 'Save Changes' : 'Add to Project'}
+                      {editingUser ? 'Save Changes' : 'Add to Project'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -283,7 +284,7 @@ export default function ResourcesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Emp ID</TableHead>
+                <TableHead>User ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Email</TableHead>
@@ -293,21 +294,21 @@ export default function ResourcesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projectEmployees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell className="font-medium">{employee.empId}</TableCell>
-                  <TableCell>{employee.firstName} {employee.lastName}</TableCell>
-                  <TableCell>{employee.role || 'N/A'}</TableCell>
-                  <TableCell>{employee.email}</TableCell>
-                  <TableCell>{employee.availability ? `${employee.availability}%` : 'N/A'}</TableCell>
+              {projectUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.empId}</TableCell>
+                  <TableCell>{user.firstName} {user.lastName}</TableCell>
+                  <TableCell>{user.role || 'N/A'}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.availability ? `${user.availability}%` : 'N/A'}</TableCell>
                   <TableCell>
-                    {employee.onshoreOrOffshore && <Badge variant={employee.onshoreOrOffshore === 'Onshore' ? 'default' : 'secondary'}>{employee.onshoreOrOffshore}</Badge>}
+                    {user.onshoreOrOffshore && <Badge variant={user.onshoreOrOffshore === 'Onshore' ? 'default' : 'secondary'}>{user.onshoreOrOffshore}</Badge>}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(employee)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeletingEmployee(employee)}>
+                    <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -318,26 +319,26 @@ export default function ResourcesPage() {
         </Card>
       </div>
       
-      <AlertDialog open={!!deletingEmployee} onOpenChange={(isOpen) => !isOpen && setDeletingEmployee(null)}>
+      <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove {deletingEmployee?.firstName} {deletingEmployee?.lastName} from this project. It will not delete their global employee record.
+              This will remove {deletingUser?.firstName} {deletingUser?.lastName} from this project. It will not delete their global user record.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => {
-                if(deletingEmployee) {
-                  removeEmployeeFromProject(deletingEmployee.id).then(success => {
+                if(deletingUser) {
+                  removeUserFromProject(deletingUser.id).then(success => {
                     if (success) {
-                      toast({ title: "Success", description: "Employee removed from project." });
+                      toast({ title: "Success", description: "User removed from project." });
                     } else {
-                      toast({ variant: "destructive", title: "Error", description: "Could not remove employee." });
+                      toast({ variant: "destructive", title: "Error", description: "Could not remove user." });
                     }
-                    setDeletingEmployee(null);
+                    setDeletingUser(null);
                   })
                 }
               }}

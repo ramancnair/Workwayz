@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -40,7 +40,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
-import { type Employee, type AccessLevel } from '@/types';
+import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -48,8 +48,8 @@ import { format, parseISO } from 'date-fns';
 
 const accessLevels: AccessLevel[] = ['Admin', 'Portfolio Manager', 'Project Manager', 'Business Analyst', 'Dev Lead', 'Developer', 'Test Lead', 'Tester', 'PMO', 'Finance'];
 
-const employeeFormSchema = z.object({
-  empId: z.string().min(1, 'Employee ID is required'),
+const userFormSchema = z.object({
+  empId: z.string().min(1, 'User ID is required'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
@@ -61,43 +61,43 @@ const employeeFormSchema = z.object({
   employmentEndDate: z.string().optional(),
 });
 
-export default function EmployeesPage() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof employeeFormSchema>>({
-    resolver: zodResolver(employeeFormSchema),
+  const form = useForm<z.infer<typeof userFormSchema>>({
+    resolver: zodResolver(userFormSchema),
   });
   
   useEffect(() => {
     if (!db) return;
     const q = collection(db, 'employees');
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const employeesData = querySnapshot.docs.map(doc => {
+        const usersData = querySnapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
                 ...data,
                 employmentStartDate: data.employmentStartDate?.toDate ? data.employmentStartDate.toDate().toISOString() : data.employmentStartDate,
                 employmentEndDate: data.employmentEndDate?.toDate ? data.employmentEndDate.toDate().toISOString() : data.employmentEndDate,
-            } as Employee;
+            } as User;
         });
-        setEmployees(employeesData);
+        setUsers(usersData);
     });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     if (isDialogOpen) {
-        if (editingEmployee) {
+        if (editingUser) {
         form.reset({
-            ...editingEmployee,
-            employmentStartDate: editingEmployee.employmentStartDate ? format(parseISO(editingEmployee.employmentStartDate), 'yyyy-MM-dd') : '',
-            employmentEndDate: editingEmployee.employmentEndDate ? format(parseISO(editingEmployee.employmentEndDate), 'yyyy-MM-dd') : '',
+            ...editingUser,
+            employmentStartDate: editingUser.employmentStartDate ? format(parseISO(editingUser.employmentStartDate), 'yyyy-MM-dd') : '',
+            employmentEndDate: editingUser.employmentEndDate ? format(parseISO(editingUser.employmentEndDate), 'yyyy-MM-dd') : '',
         });
         } else {
         form.reset({
@@ -114,28 +114,36 @@ export default function EmployeesPage() {
         });
         }
     }
-  }, [isDialogOpen, editingEmployee, form]);
+  }, [isDialogOpen, editingUser, form]);
 
-  const handleDialogOpen = (employee: Employee | null) => {
-    setEditingEmployee(employee);
+  const handleDialogOpen = (user: User | null) => {
+    setEditingUser(user);
     setIsDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deletingEmployee || !db) return;
+    if (!deletingUser || !db) return;
     try {
-      await deleteDoc(doc(db, 'employees', deletingEmployee.id));
-      toast({ title: "Success", description: "Employee record deleted." });
+      await deleteDoc(doc(db, 'employees', deletingUser.id));
+      toast({ title: "Success", description: "User record deleted." });
     } catch (error) {
-      console.error("Error deleting employee:", error)
-      toast({ variant: "destructive", title: "Error", description: "Could not delete employee." });
+      console.error("Error deleting user:", error)
+      toast({ variant: "destructive", title: "Error", description: "Could not delete user." });
     }
-    setDeletingEmployee(null);
+    setDeletingUser(null);
   };
 
-  const onSubmit = async (values: z.infer<typeof employeeFormSchema>) => {
+  const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
     if (!db) return;
     setIsSubmitting(true);
+    
+    // Check for unique email
+    const isEmailTaken = users.some(user => user.email === values.email && user.id !== editingUser?.id);
+    if (isEmailTaken) {
+        form.setError("email", { type: "manual", message: "This email is already in use." });
+        setIsSubmitting(false);
+        return;
+    }
     
     const sanitizedValues: any = { ...values };
     if (values.employmentStartDate) {
@@ -150,21 +158,21 @@ export default function EmployeesPage() {
     }
     
     try {
-      if (editingEmployee) {
-        await updateDoc(doc(db, 'employees', editingEmployee.id), sanitizedValues);
-        toast({ title: "Success", description: `Employee updated successfully.` });
+      if (editingUser) {
+        await updateDoc(doc(db, 'employees', editingUser.id), sanitizedValues);
+        toast({ title: "Success", description: `User updated successfully.` });
       } else {
         await addDoc(collection(db, 'employees'), { 
             ...sanitizedValues, 
             avatar: 'https://placehold.co/40x40.png'
         });
-        toast({ title: "Success", description: `Employee added successfully.` });
+        toast({ title: "Success", description: `User added successfully.` });
       }
       setIsDialogOpen(false);
-      setEditingEmployee(null);
+      setEditingUser(null);
     } catch (error) {
-      console.error("Error saving employee", error);
-      toast({ variant: "destructive", title: "Error", description: `Could not save employee.` });
+      console.error("Error saving user", error);
+      toast({ variant: "destructive", title: "Error", description: `Could not save user.` });
     } finally {
       setIsSubmitting(false);
     }
@@ -173,10 +181,10 @@ export default function EmployeesPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Employees" description="Manage all employees in the organization.">
+        <PageHeader title="User List" description="Manage all users in the organization.">
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Employee
+            Add User
           </Button>
         </PageHeader>
         <Card>
@@ -184,7 +192,7 @@ export default function EmployeesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Emp ID</TableHead>
+                  <TableHead>User ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
@@ -194,19 +202,19 @@ export default function EmployeesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {employees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell className="font-medium">{employee.empId}</TableCell>
-                    <TableCell>{employee.firstName} {employee.lastName}</TableCell>
-                    <TableCell>{employee.email}</TableCell>
-                    <TableCell>{employee.phone}</TableCell>
-                    <TableCell>{employee.experience ? `${employee.experience} yrs` : 'N/A'}</TableCell>
-                    <TableCell>{employee.domainExpertise || 'N/A'}</TableCell>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.empId}</TableCell>
+                    <TableCell>{user.firstName} {user.lastName}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.phone}</TableCell>
+                    <TableCell>{user.experience ? `${user.experience} yrs` : 'N/A'}</TableCell>
+                    <TableCell>{user.domainExpertise || 'N/A'}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(employee)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(user)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingEmployee(employee)}>
+                      <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -218,10 +226,10 @@ export default function EmployeesPage() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingEmployee(null); }}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingUser(null); }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingEmployee ? 'Edit Employee' : 'Add New Employee'}</DialogTitle>
+            <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -242,8 +250,8 @@ export default function EmployeesPage() {
                 )} />
                  <FormField control={form.control} name="empId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Employee ID *</FormLabel>
-                    <FormControl><Input placeholder="E.g., E001" {...field} disabled={!!editingEmployee} /></FormControl>
+                    <FormLabel>User ID *</FormLabel>
+                    <FormControl><Input placeholder="E.g., E001" {...field} disabled={!!editingUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -310,7 +318,7 @@ export default function EmployeesPage() {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (editingEmployee ? 'Saving...' : 'Creating...') : (editingEmployee ? 'Save Changes' : 'Create Employee')}
+                    {isSubmitting ? (editingUser ? 'Saving...' : 'Creating...') : (editingUser ? 'Save Changes' : 'Create User')}
                 </Button>
               </DialogFooter>
             </form>
@@ -318,12 +326,12 @@ export default function EmployeesPage() {
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={!!deletingEmployee} onOpenChange={(isOpen) => !isOpen && setDeletingEmployee(null)}>
+      <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the employee record for {deletingEmployee?.firstName} {deletingEmployee?.lastName}.
+              This action cannot be undone. This will permanently delete the user record for {deletingUser?.firstName} {deletingUser?.lastName}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

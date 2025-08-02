@@ -16,7 +16,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const getTabValue = () => {
     if (pathname.startsWith('/pmdashboard')) return 'projects';
     if (pathname.startsWith('/portfolios')) return 'portfolios';
-    if (pathname.startsWith('/employees')) return 'employees';
+    if (pathname.startsWith('/users')) return 'users';
     return 'portfolios'; // Default to portfolios
   };
 
@@ -25,8 +25,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/pmdashboard');
     } else if (value === 'portfolios') {
       router.push('/portfolios');
-    } else if (value === 'employees') {
-      router.push('/employees');
+    } else if (value === 'users') {
+      router.push('/users');
     }
   };
 
@@ -48,7 +48,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                   <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                       <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio</TabsTrigger>
                       <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
-                      <TabsTrigger value="employees" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Employees</TabsTrigger>
+                      <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
                   </TabsList>
               </Tabs>
           </div>

@@ -66,7 +66,7 @@ const statusStyles: Record<AssumptionStatus, string> = {
 
 
 export default function AssumptionsPage() {
-  const { assumptions, employees, addAssumption, updateAssumption, deleteAssumption } = useProject();
+  const { assumptions, employees: users, addAssumption, updateAssumption, deleteAssumption } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAssumption, setEditingAssumption] = useState<Assumption | null>(null);
@@ -158,7 +158,7 @@ export default function AssumptionsPage() {
             </TableHeader>
             <TableBody>
               {assumptions.map((assumption) => {
-                const owner = employees.find(e => e.id === assumption.ownerId);
+                const owner = users.find(e => e.id === assumption.ownerId);
                 return (
                     <TableRow key={assumption.id}>
                         <TableCell className="font-medium">{assumption.assumptionId}</TableCell>
@@ -238,7 +238,7 @@ export default function AssumptionsPage() {
                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign an owner" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                                    {users.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <FormMessage />

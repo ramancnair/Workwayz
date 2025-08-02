@@ -74,7 +74,7 @@ const statusStyles: Record<IssueStatus, string> = {
 
 
 export default function IssuesPage() {
-  const { issues, employees, addIssue, updateIssue, deleteIssue } = useProject();
+  const { issues, employees: users, addIssue, updateIssue, deleteIssue } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
@@ -170,7 +170,7 @@ export default function IssuesPage() {
             </TableHeader>
             <TableBody>
               {issues.map((issue) => {
-                const assignee = employees.find(e => e.id === issue.assigneeId);
+                const assignee = users.find(e => e.id === issue.assigneeId);
                 return (
                     <TableRow key={issue.id}>
                         <TableCell className="font-medium">{issue.issueId}</TableCell>
@@ -253,7 +253,7 @@ export default function IssuesPage() {
                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                                    {users.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <FormMessage />

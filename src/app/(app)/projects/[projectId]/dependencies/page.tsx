@@ -67,7 +67,7 @@ const statusStyles: Record<DependencyStatus, string> = {
 
 
 export default function DependenciesPage() {
-  const { dependencies, employees, addDependency, updateDependency, deleteDependency } = useProject();
+  const { dependencies, employees: users, addDependency, updateDependency, deleteDependency } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDependency, setEditingDependency] = useState<Dependency | null>(null);
@@ -247,7 +247,7 @@ export default function DependenciesPage() {
                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign an owner" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                                    {users.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <FormMessage />

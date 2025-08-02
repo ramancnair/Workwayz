@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { eachDayOfInterval, format, differenceInDays, parseISO, startOfDay } from 'date-fns';
-import { type Employee } from '@/types';
+import { type User } from '@/types';
 
 // Generate a color palette for resources
 const COLORS = [
@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function ProjectGanttPage() {
-  const { stories, employees } = useProject();
+  const { stories, employees: users } = useProject();
   const [selectedResourceId, setSelectedResourceId] = useState('all');
 
   const tasks = useMemo(() => {
@@ -50,11 +50,11 @@ export default function ProjectGanttPage() {
 
   const resourceColorMapping = useMemo(() => {
     const mapping: Record<string, string> = {};
-    employees.forEach((emp, index) => {
+    users.forEach((emp, index) => {
         mapping[emp.id] = COLORS[index % COLORS.length];
     });
     return mapping;
-  }, [employees]);
+  }, [users]);
 
   const chartData = useMemo(() => {
     const filteredTasks = selectedResourceId === 'all'
@@ -66,7 +66,7 @@ export default function ProjectGanttPage() {
     return filteredTasks.map(task => {
         const start = parseISO(task.startDate!);
         const end = parseISO(task.endDate!);
-        const assignee = employees.find(e => e.id === task.assigneeId);
+        const assignee = users.find(e => e.id === task.assigneeId);
         
         return {
             name: task.storyId,
@@ -79,7 +79,7 @@ export default function ProjectGanttPage() {
             duration: differenceInDays(end, start) + 1,
         };
     }).sort((a, b) => a.start.getTime() - b.start.getTime());
-  }, [tasks, selectedResourceId, employees]);
+  }, [tasks, selectedResourceId, users]);
 
   const domain: [number, number] | undefined = useMemo(() => {
     if (chartData.length === 0) {
@@ -115,7 +115,7 @@ export default function ProjectGanttPage() {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="all">All Resources</SelectItem>
-                    {employees.map(emp => (
+                    {users.map(emp => (
                         <SelectItem key={emp.id} value={emp.id}>
                             {emp.firstName} {emp.lastName}
                         </SelectItem>
@@ -151,8 +151,8 @@ export default function ProjectGanttPage() {
                      {selectedResourceId === 'all' && (
                         <Legend
                             formatter={(value, entry) => {
-                                const employee = employees.find(e => e.id === value);
-                                return employee ? `${employee.firstName} ${employee.lastName}` : value;
+                                const user = users.find(e => e.id === value);
+                                return user ? `${user.firstName} ${user.lastName}` : value;
                             }}
                         />
                     )}
