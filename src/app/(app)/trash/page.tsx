@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, getDocs, deleteDoc, collectionGroup, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, getDocs, deleteDoc, collectionGroup, orderBy, Timestamp } from 'firebase/firestore';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -38,51 +38,58 @@ export default function TrashPage() {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         const collectionsToQuery = ['portfolios', 'projects', 'employees'];
+        
+        const fetchAndSetData = () => {
+             Promise.all(collectionsToQuery.map(async cName => {
+                const trashQuery = query(collection(db, cName), where('isDeleted', '==', true));
+                const snapshot = await getDocs(trashQuery);
+                return snapshot.docs.map(d => {
+                    const data = d.data();
+                    if (!data.deletedAt) return null; // Skip items without a deletion date
+                    
+                    // Auto-delete logic
+                    if (data.deletedAt.toDate() < thirtyDaysAgo) {
+                        // This will be handled by a scheduled function in a real app
+                        // For now, we'll just filter them out from the view
+                        return null;
+                    }
+
+                    const name = cName === 'employees' ? `${data.firstName} ${data.lastName}` : data.name;
+                    const type = cName === 'portfolios' ? 'Portfolio' : (cName === 'projects' ? 'Project' : 'User');
+                    return { id: d.id, name: name, type, deletedAt: data.deletedAt.toDate().toISOString() };
+                }).filter(Boolean) as TrashedItem[]; // filter(Boolean) removes nulls
+            })).then(allTrashed => {
+                const flattened = allTrashed.flat().sort((a, b) => parseISO(b.deletedAt).getTime() - parseISO(a.deletedAt).getTime());
+                setTrashedItems(flattened);
+                setIsLoading(false);
+            }).catch(e => {
+                console.error("Error fetching trashed items:", e);
+                setError(e.message);
+                setIsLoading(false);
+            });
+        };
+        
+        // Initial fetch
+        fetchAndSetData();
+
+        // Set up listeners to refetch when data changes
         const unsubscribers = collectionsToQuery.map(collectionName => {
             const q = query(collection(db, collectionName), where('isDeleted', '==', true));
-            
-            return onSnapshot(q, (querySnapshot) => {
-                const batch = writeBatch(db);
-                let itemsToDelete = false;
-
-                querySnapshot.docs.forEach(docSnap => {
-                    const data = docSnap.data();
-                    if (data.deletedAt && parseISO(data.deletedAt.toDate().toISOString()) < thirtyDaysAgo) {
-                        itemsToDelete = true;
-                        if(collectionName === 'portfolios') {
-                            // This needs full project and sub-collection deletion logic
-                        } else {
-                           batch.delete(docSnap.ref);
-                        }
-                    }
-                });
-
-                if (itemsToDelete) {
-                    batch.commit().then(() => {
-                        toast({ title: 'Cleanup', description: 'Permanently removed items older than 30 days from trash.' });
-                    }).catch(e => console.error("Error during auto-deletion cleanup:", e));
-                }
-
-                // We refetch all items after potential cleanup
-                Promise.all(collectionsToQuery.map(async cName => {
-                    const trashQuery = query(collection(db, cName), where('isDeleted', '==', true), orderBy('deletedAt', 'desc'));
-                    const snapshot = await getDocs(trashQuery);
-                    return snapshot.docs.map(d => {
-                        const data = d.data();
-                        const name = cName === 'employees' ? `${data.firstName} ${data.lastName}` : data.name;
-                        const type = cName === 'portfolios' ? 'Portfolio' : (cName === 'projects' ? 'Project' : 'User');
-                        return { id: d.id, name: name, type, deletedAt: data.deletedAt.toDate().toISOString() };
-                    })
-                })).then(allTrashed => {
-                    const flattened = allTrashed.flat().sort((a, b) => parseISO(b.deletedAt).getTime() - parseISO(a.deletedAt).getTime());
-                    setTrashedItems(flattened);
-                    setIsLoading(false);
-                });
+            return onSnapshot(q, fetchAndSetData, (error) => {
+                 console.error(`Error listening to ${collectionName}:`, error);
+                 setError(`Failed to listen for updates in ${collectionName}.`);
             });
         });
 
         return () => unsubscribers.forEach(unsub => unsub());
     }, [toast]);
+    
+    const [error, setError] = useState<string | null>(null);
+    if (error) {
+        // A simple error display, you might want to make this more robust
+        return <div className="p-8 text-red-500">Error: {error} <br /> This is likely due to a missing Firestore index. Please check the developer console for a link to create it.</div>;
+    }
+
 
     const getCollectionName = (type: TrashedItem['type']) => {
         switch (type) {
