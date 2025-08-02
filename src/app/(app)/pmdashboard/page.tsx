@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -70,7 +70,7 @@ export default function ProjectsDashboard() {
   
   useEffect(() => {
     if (!db) return;
-    const portfolioUnsubscribe = onSnapshot(collection(db, 'portfolios'), (snapshot) => {
+    const portfolioUnsubscribe = onSnapshot(query(collection(db, 'portfolios'), where('isDeleted', '!=', true)), (snapshot) => {
       const portfoliosData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...(doc.data() as Omit<Portfolio, 'id'>),
@@ -78,7 +78,7 @@ export default function ProjectsDashboard() {
       setPortfolios(portfoliosData);
     });
     
-    const projectUnsubscribe = onSnapshot(collection(db, 'projects'), (snapshot) => {
+    const projectUnsubscribe = onSnapshot(query(collection(db, 'projects'), where('isDeleted', '!=', true)), (snapshot) => {
         const projectsData = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...(doc.data() as Omit<Project, 'id'>),
@@ -114,7 +114,7 @@ export default function ProjectsDashboard() {
       } else {
         const projectId = `P${Date.now()}`;
         const projectRef = doc(db, 'projects', projectId);
-        await setDoc(projectRef, { ...values, id: projectId });
+        await setDoc(projectRef, { ...values, id: projectId, isDeleted: false });
         toast({ title: 'Success', description: 'Project created successfully.' });
       }
 
@@ -130,8 +130,10 @@ export default function ProjectsDashboard() {
   const handleDeleteProject = async () => {
     if (!deletingProject) return;
     try {
-      await deleteProjectAndSubcollections(deletingProject.id);
-      toast({ title: 'Success', description: `Project "${deletingProject.name}" has been deleted.` });
+      // Soft delete the project
+      const projectRef = doc(db, 'projects', deletingProject.id);
+      await updateDoc(projectRef, { isDeleted: true, deletedAt: Timestamp.now() });
+      toast({ title: 'Success', description: `Project "${deletingProject.name}" moved to Trash.` });
     } catch (error) {
       console.error('Error deleting project:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not delete project.' });
@@ -335,7 +337,7 @@ export default function ProjectsDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the project "{deletingProject?.name}" and all of its associated data (stories, tasks, test cases, etc.).
+              This will move the project "{deletingProject?.name}" to the Trash. It will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -344,7 +346,7 @@ export default function ProjectsDashboard() {
               onClick={handleDeleteProject}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

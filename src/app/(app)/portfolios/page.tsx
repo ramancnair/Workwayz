@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, where, query, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, where, query, writeBatch, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -58,7 +58,7 @@ export default function PortfoliosPage() {
 
   useEffect(() => {
     if (!db) return;
-    const q = collection(db, 'portfolios');
+    const q = query(collection(db, 'portfolios'), where('isDeleted', '!=', true));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const portfoliosData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -88,7 +88,7 @@ export default function PortfoliosPage() {
         await updateDoc(portfolioRef, values);
         toast({ title: 'Success', description: 'Portfolio updated successfully.' });
       } else {
-        await addDoc(collection(db, 'portfolios'), values);
+        await addDoc(collection(db, 'portfolios'), { ...values, isDeleted: false });
         toast({ title: 'Success', description: 'Portfolio created successfully.' });
       }
       setEditingPortfolio(null);
@@ -103,23 +103,24 @@ export default function PortfoliosPage() {
     if (!deletingPortfolio || !db) return;
     try {
         const batch = writeBatch(db);
+        const deletionTime = Timestamp.now();
         
         // Find all projects in the portfolio
         const projectsQuery = query(collection(db, 'projects'), where('portfolioId', '==', deletingPortfolio.id));
         const projectsSnapshot = await getDocs(projectsQuery);
         
-        // Delete each project and its subcollections
-        for (const projectDoc of projectsSnapshot.docs) {
-            await deleteProjectAndSubcollections(projectDoc.id);
-        }
+        // Soft delete each project
+        projectsSnapshot.forEach(projectDoc => {
+            batch.update(projectDoc.ref, { isDeleted: true, deletedAt: deletionTime });
+        });
         
-        // Delete the portfolio document itself
+        // Soft delete the portfolio document itself
         const portfolioRef = doc(db, 'portfolios', deletingPortfolio.id);
-        batch.delete(portfolioRef);
+        batch.update(portfolioRef, { isDeleted: true, deletedAt: deletionTime });
 
         await batch.commit();
 
-        toast({ title: 'Success', description: `Portfolio "${deletingPortfolio.name}" and all its projects have been deleted.` });
+        toast({ title: 'Success', description: `Portfolio "${deletingPortfolio.name}" and its projects moved to Trash.` });
     } catch (error) {
         console.error('Error deleting portfolio:', error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not delete portfolio and its projects.' });
@@ -219,7 +220,7 @@ export default function PortfoliosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the portfolio "{deletingPortfolio?.name}" and ALL of its associated projects and data.
+              This action will move the portfolio "{deletingPortfolio?.name}" and all of its associated projects to the Trash. They will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -228,7 +229,7 @@ export default function PortfoliosPage() {
               onClick={handleDeletePortfolio}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

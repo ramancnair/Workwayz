@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -75,7 +75,7 @@ export default function UsersPage() {
   
   useEffect(() => {
     if (!db) return;
-    const q = collection(db, 'employees');
+    const q = query(collection(db, 'employees'), where('isDeleted', '!=', true));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const usersData = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -124,8 +124,9 @@ export default function UsersPage() {
   const handleDeleteConfirm = async () => {
     if (!deletingUser || !db) return;
     try {
-      await deleteDoc(doc(db, 'employees', deletingUser.id));
-      toast({ title: "Success", description: "User record deleted." });
+      const userRef = doc(db, 'employees', deletingUser.id);
+      await updateDoc(userRef, { isDeleted: true, deletedAt: Timestamp.now() });
+      toast({ title: "Success", description: "User moved to Trash." });
     } catch (error) {
       console.error("Error deleting user:", error)
       toast({ variant: "destructive", title: "Error", description: "Could not delete user." });
@@ -174,7 +175,8 @@ export default function UsersPage() {
         const userRef = doc(db, 'employees', values.empId);
         await setDoc(userRef, { 
             ...sanitizedValues, 
-            avatar: 'https://placehold.co/40x40.png'
+            avatar: 'https://placehold.co/40x40.png',
+            isDeleted: false,
         });
         toast({ title: "Success", description: `User added successfully.` });
       }
@@ -341,7 +343,7 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the user record for {deletingUser?.firstName} {deletingUser?.lastName}.
+              This will move the user record for {deletingUser?.firstName} {deletingUser?.lastName} to the Trash. It will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -350,7 +352,7 @@ export default function UsersPage() {
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -358,5 +360,3 @@ export default function UsersPage() {
     </>
   );
 }
-
-    

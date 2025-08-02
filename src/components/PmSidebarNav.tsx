@@ -21,12 +21,13 @@ import {
   Building2,
   Briefcase,
   Settings,
+  Trash2,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
 type PmSidebarNavProps = {
-  activeTab: 'portfolios' | 'projects' | 'users';
+  activeTab: 'portfolios' | 'projects' | 'users' | 'trash';
 };
 
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
@@ -39,6 +40,12 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: `/portfolios`,
       label: "Manage Portfolios",
       icon: Briefcase,
+    },
+    {
+      id: 'trash',
+      href: `/trash`,
+      label: "Trash",
+      icon: Trash2,
     },
     {
       id: 'projects',
@@ -54,7 +61,10 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     },
   ];
 
-  const menuItems = allMenuItems.filter(item => item.id === activeTab);
+  const menuItems = allMenuItems.filter(item => {
+    if (activeTab === 'trash') return item.id === 'trash';
+    return item.id === activeTab;
+  });
 
   return (
     <>

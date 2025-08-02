@@ -13,12 +13,14 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   const isProjectPage = pathname.startsWith('/projects/');
   const isSettingsPage = pathname.startsWith('/portfolio-settings');
+  const isTrashPage = pathname.startsWith('/trash');
 
 
   const getTabValue = () => {
     if (pathname.startsWith('/pmdashboard')) return 'projects';
     if (pathname.startsWith('/portfolios')) return 'portfolios';
     if (pathname.startsWith('/users')) return 'users';
+    if (pathname.startsWith('/trash')) return 'trash';
     return 'portfolios'; // Default to portfolios
   };
 
@@ -29,6 +31,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/portfolios');
     } else if (value === 'users') {
       router.push('/users');
+    } else if (value === 'trash') {
+        router.push('/trash');
     }
   };
 
@@ -46,7 +50,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
       <SidebarInset>
         <div className="h-screen flex flex-col">
           <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center gap-4">
-              {!isSettingsPage && (
+              {!isSettingsPage && !isTrashPage && (
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio</TabsTrigger>

@@ -1,4 +1,5 @@
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -103,6 +104,8 @@ export type User = {
   billedRate?: number;
   availability?: number;
   leavePeriods?: LeavePeriod[];
+  isDeleted?: boolean;
+  deletedAt?: string; // ISO String
 };
 
 export type RiskSeverity = 1 | 2 | 3;
@@ -231,6 +234,8 @@ export type Portfolio = {
   id: string;
   name: string;
   description?: string;
+  isDeleted?: boolean;
+  deletedAt?: string; // ISO String
 };
 
 export type Project = {
@@ -238,9 +243,18 @@ export type Project = {
   name: string;
   description?: string;
   portfolioId: string;
+  isDeleted?: boolean;
+  deletedAt?: string; // ISO String
 };
 
 export type AccessControlSetting = {
   id: AccessLevel; // The access level itself is the ID
   pageAccess: Record<string, boolean>; // Key is page name, value is true/false
+};
+
+export type TrashedItem = {
+  id: string;
+  name: string;
+  type: 'Portfolio' | 'Project' | 'User';
+  deletedAt: string;
 };
