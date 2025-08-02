@@ -191,7 +191,7 @@ export default function UsersPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="User List" description="Manage all users in the organization.">
+        <PageHeader title="User List" description="Manage user access">
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add User
@@ -358,3 +358,5 @@ export default function UsersPage() {
     </>
   );
 }
+
+    
