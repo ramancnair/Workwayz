@@ -122,10 +122,10 @@ export default function UsersPage() {
             lastName: '',
             email: '',
             phone: '',
-            experience: undefined,
+            experience: 0,
             domainExpertise: '',
             accessLevel: undefined,
-            employmentStartDate: '',
+            employmentStartDate: format(new Date(), 'yyyy-MM-dd'),
             employmentEndDate: '',
         });
         }
