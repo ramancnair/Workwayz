@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -46,8 +46,10 @@ import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 
 const employeeFormSchema = z.object({
+  empId: z.string().min(1, 'Employee ID is required'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email address'),
   phone: z.string().min(1, 'Phone number is required'),
   experience: z.coerce.number().optional(),
   domainExpertise: z.string().optional(),
@@ -95,8 +97,10 @@ export default function EmployeesPage() {
         });
         } else {
         form.reset({
+            empId: '',
             firstName: '',
             lastName: '',
+            email: '',
             phone: '',
             experience: undefined,
             domainExpertise: '',
@@ -145,29 +149,8 @@ export default function EmployeesPage() {
         await updateDoc(doc(db, 'employees', editingEmployee.id), sanitizedValues);
         toast({ title: "Success", description: `Employee updated successfully.` });
       } else {
-        const newIdNumber = employees.length > 0
-            ? Math.max(0, ...employees
-                .map(emp => emp.empId)
-                .filter((id: string | undefined): id is string => id && typeof id === 'string')
-                .map((id: string) => parseInt(id.replace('E', ''), 10) || 0)
-            ) + 1
-            : 1;
-
-        let email = `${values.firstName.toLowerCase()}.${values.lastName.toLowerCase()}@example.com`;
-        const existingEmails = new Set(employees.map(e => e.email));
-        if (existingEmails.has(email)) {
-            let counter = 1;
-            let baseEmail = `${values.firstName.toLowerCase()}.${values.lastName.toLowerCase()}`;
-            while(existingEmails.has(`${baseEmail}${counter}@example.com`)) {
-                counter++;
-            }
-            email = `${baseEmail}${counter}@example.com`;
-        }
-
         await addDoc(collection(db, 'employees'), { 
             ...sanitizedValues, 
-            email, 
-            empId: `E${newIdNumber}`,
             avatar: 'https://placehold.co/40x40.png'
         });
         toast({ title: "Success", description: `Employee added successfully.` });
@@ -238,6 +221,20 @@ export default function EmployeesPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormField control={form.control} name="empId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Employee ID *</FormLabel>
+                    <FormControl><Input placeholder="E.g., E001" {...field} disabled={!!editingEmployee} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                 <FormField control={form.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <FormField control={form.control} name="firstName" render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name *</FormLabel>
