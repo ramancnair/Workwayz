@@ -112,7 +112,7 @@ export default function HolidayCalendarPage() {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Holiday Calendar" description="Manage weekly off-days and yearly holidays." />
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Weekly Off-Days</CardTitle>
@@ -223,3 +223,4 @@ export default function HolidayCalendarPage() {
     </>
   );
 }
+
