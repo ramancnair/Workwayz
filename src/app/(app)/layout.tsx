@@ -12,6 +12,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const router = useRouter();
 
   const isProjectPage = pathname.startsWith('/projects/');
+  const isSettingsPage = pathname.startsWith('/portfolio-settings');
+
 
   const getTabValue = () => {
     if (pathname.startsWith('/pmdashboard')) return 'projects';
@@ -44,13 +46,15 @@ export default function AppLayout({ children }: PropsWithChildren) {
       <SidebarInset>
         <div className="h-screen flex flex-col">
           <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center gap-4">
-              <Tabs value={activeTab} onValueChange={onTabChange}>
-                  <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                      <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio</TabsTrigger>
-                      <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
-                      <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
-                  </TabsList>
-              </Tabs>
+              {!isSettingsPage && (
+                <Tabs value={activeTab} onValueChange={onTabChange}>
+                    <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
+                        <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio</TabsTrigger>
+                        <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
+                        <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+              )}
           </div>
           <div className="flex-1 overflow-y-auto">
             {children}

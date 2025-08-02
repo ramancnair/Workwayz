@@ -20,8 +20,10 @@ import {
   FolderKanban,
   Building2,
   Briefcase,
+  Settings,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 
 type PmSidebarNavProps = {
   activeTab: 'portfolios' | 'projects' | 'users';
@@ -84,6 +86,17 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
+        <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <Link href="/portfolio-settings">
+              <SidebarMenuButton tooltip="Portfolio Settings" isActive={pathname.startsWith(`/portfolio-settings`)}>
+                <Settings />
+                <span>Portfolio Settings</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:hidden">
             <Avatar className="h-10 w-10">
                 <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />

@@ -1,15 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -249,4 +238,9 @@ export type Project = {
   name: string;
   description?: string;
   portfolioId: string;
+};
+
+export type AccessControlSetting = {
+  id: AccessLevel; // The access level itself is the ID
+  pageAccess: Record<string, boolean>; // Key is page name, value is true/false
 };
