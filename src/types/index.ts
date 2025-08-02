@@ -191,6 +191,8 @@ export type ImpactedSystem = {
   name: string;
   description: string;
   category: ImpactedSystemCategory;
+  explanation?: string;
+  estimate?: number; // in man-days
 };
 
 export type ReleaseItemType = 'Release' | 'Stage' | 'Milestone';
@@ -245,6 +247,7 @@ export type Project = {
   portfolioId: string;
   isDeleted?: boolean;
   deletedAt?: string; // ISO String
+  summary?: string;
 };
 
 export type AccessControlSetting = {

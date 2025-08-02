@@ -60,6 +60,9 @@ interface ProjectContextType {
   weeklyOffDays: number[];
   impactedSystems: ImpactedSystem[];
   
+  // Project actions
+  updateProject: (data: Partial<Omit<Project, 'id'>>) => Promise<boolean>;
+  
   // Story actions
   addStory: (story: Omit<Story, 'id' | 'storyId'>, prefix?: string) => Promise<boolean>;
   updateStory: (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>) => Promise<boolean>;
@@ -324,6 +327,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   }, [isLoading, stories, impactedSystems, projectId]);
 
+  const updateProject = async (data: Partial<Omit<Project, 'id'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await updateDoc(doc(db, 'projects', projectId), sanitizeForFirestore(data));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update project.", { code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  }
 
   // Story Actions
   const addStory = async (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string): Promise<boolean> => {
@@ -1126,6 +1139,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     impactedSystems,
     isLoading,
     error,
+    updateProject,
     addStory,
     updateStory,
     deleteStory,

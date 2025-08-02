@@ -38,6 +38,7 @@ import {
   CalendarCheck,
   Package,
   Home,
+  FileText,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -93,6 +94,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/architecture`,
       label: "Impacted Systems",
       icon: Network,
+    },
+    {
+      href: `${basePath}/architecture/initial-estimation`,
+      label: "Initial Estimation",
+      icon: FileText,
     },
   ];
   
