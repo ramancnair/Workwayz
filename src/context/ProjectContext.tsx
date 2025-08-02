@@ -563,7 +563,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     try {
       // Add the employee document to the project's subcollection
       // We use setDoc with the global employee ID to keep them in sync
-      await setDoc(doc(db, 'projects', projectId, 'employees', employee.id), employee);
+      await setDoc(doc(db, 'projects', projectId, 'employees', employee.id), sanitizeForFirestore(employee));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add employee to project.", { code: e.code, message: e.message, fullError: e });
@@ -610,7 +610,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       
       const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
       await updateDoc(employeeRef, {
-        leavePeriods: arrayUnion(newLeavePeriod)
+        leavePeriods: arrayUnion(sanitizeForFirestore(newLeavePeriod))
       });
       return true;
     } catch (e) {
@@ -630,7 +630,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     try {
       const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
       await updateDoc(employeeRef, {
-        leavePeriods: arrayRemove(leavePeriodToDelete)
+        leavePeriods: arrayRemove(sanitizeForFirestore(leavePeriodToDelete))
       });
       return true;
     } catch (e) {

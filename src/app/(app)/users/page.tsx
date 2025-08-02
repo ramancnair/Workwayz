@@ -61,6 +61,22 @@ const userFormSchema = z.object({
   employmentEndDate: z.string().optional(),
 });
 
+// Helper to remove undefined values from an object before sending to Firestore
+const sanitizeForFirestore = (data: any) => {
+    const sanitized: any = {};
+    for (const key in data) {
+        if (data[key] !== undefined) {
+             if (typeof data[key] === 'number' && !Number.isNaN(data[key])) {
+                sanitized[key] = data[key];
+            } else if (typeof data[key] !== 'number') {
+                sanitized[key] = data[key];
+            }
+        }
+    }
+    return sanitized;
+};
+
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
@@ -146,18 +162,20 @@ export default function UsersPage() {
         return;
     }
     
-    const sanitizedValues: any = { ...values };
+    const valuesWithDates: any = { ...values };
     if (values.employmentStartDate) {
-        sanitizedValues.employmentStartDate = new Date(values.employmentStartDate);
+        valuesWithDates.employmentStartDate = new Date(values.employmentStartDate);
     } else {
-        delete sanitizedValues.employmentStartDate;
+        delete valuesWithDates.employmentStartDate;
     }
     if (values.employmentEndDate) {
-        sanitizedValues.employmentEndDate = new Date(values.employmentEndDate);
+        valuesWithDates.employmentEndDate = new Date(values.employmentEndDate);
     } else {
-        delete sanitizedValues.employmentEndDate;
+        delete valuesWithDates.employmentEndDate;
     }
     
+    const sanitizedValues = sanitizeForFirestore(valuesWithDates);
+
     try {
       if (editingUser) {
         await updateDoc(doc(db, 'employees', editingUser.id), sanitizedValues);
