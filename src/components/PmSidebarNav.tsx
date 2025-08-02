@@ -43,13 +43,6 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'portfolio'
     },
     {
-      id: 'trash',
-      href: `/trash`,
-      label: "Trash",
-      icon: Trash2,
-      group: 'portfolio'
-    },
-    {
       id: 'projects',
       href: `/pmdashboard`,
       label: "Projects Dashboard",
@@ -114,6 +107,14 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
         <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
+          <SidebarMenuItem>
+            <Link href="/trash">
+              <SidebarMenuButton tooltip="Trash" isActive={pathname.startsWith(`/trash`)}>
+                <Trash2 />
+                <span>Trash</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/portfolio-settings">
               <SidebarMenuButton tooltip="Portfolio Settings" isActive={pathname.startsWith(`/portfolio-settings`)}>
