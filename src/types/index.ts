@@ -8,6 +8,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -82,6 +83,8 @@ export type OnshoreOffshore = 'Onshore' | 'Offshore';
 
 export type EmployeeRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM';
 
+export type AccessLevel = 'Admin' | 'Portfolio Manager' | 'Project Manager' | 'Business Analyst' | 'Dev Lead' | 'Developer' | 'Test Lead' | 'Tester' | 'PMO' | 'Finance';
+
 export type LeavePeriod = {
   id: string; // uuid on the client
   startDate: string; // ISO String
@@ -105,6 +108,7 @@ export type Employee = {
   employmentStartDate?: string; // ISO String - Global
   employmentEndDate?: string; // ISO String - Global
   domainExpertise?: string;
+  accessLevel?: AccessLevel;
   onshoreOrOffshore?: OnshoreOffshore;
   billedRate?: number;
   availability?: number;

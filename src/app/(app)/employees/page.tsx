@@ -38,12 +38,15 @@ import {
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
-import { type Employee } from '@/types';
+import { type Employee, type AccessLevel } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
+
+const accessLevels: AccessLevel[] = ['Admin', 'Portfolio Manager', 'Project Manager', 'Business Analyst', 'Dev Lead', 'Developer', 'Test Lead', 'Tester', 'PMO', 'Finance'];
 
 const employeeFormSchema = z.object({
   empId: z.string().min(1, 'Employee ID is required'),
@@ -53,6 +56,7 @@ const employeeFormSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   experience: z.coerce.number().optional(),
   domainExpertise: z.string().optional(),
+  accessLevel: z.enum(accessLevels).optional(),
   employmentStartDate: z.string().optional(),
   employmentEndDate: z.string().optional(),
 });
@@ -104,6 +108,7 @@ export default function EmployeesPage() {
             phone: '',
             experience: undefined,
             domainExpertise: '',
+            accessLevel: undefined,
             employmentStartDate: '',
             employmentEndDate: '',
         });
@@ -221,20 +226,6 @@ export default function EmployeesPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField control={form.control} name="empId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Employee ID *</FormLabel>
-                    <FormControl><Input placeholder="E.g., E001" {...field} disabled={!!editingEmployee} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                 <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email *</FormLabel>
-                    <FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
                 <FormField control={form.control} name="firstName" render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name *</FormLabel>
@@ -246,6 +237,20 @@ export default function EmployeesPage() {
                   <FormItem>
                     <FormLabel>Last Name *</FormLabel>
                     <FormControl><Input placeholder="Doe" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                 <FormField control={form.control} name="empId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Employee ID *</FormLabel>
+                    <FormControl><Input placeholder="E.g., E001" {...field} disabled={!!editingEmployee} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                 <FormField control={form.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -270,7 +275,24 @@ export default function EmployeesPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <div></div>
+                 <FormField control={form.control} name="accessLevel" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Access Level</FormLabel>
+                     <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an access level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {accessLevels.map(level => (
+                            <SelectItem key={level} value={level}>{level}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <FormField control={form.control} name="employmentStartDate" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
