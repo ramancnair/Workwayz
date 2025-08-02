@@ -40,31 +40,47 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: `/portfolios`,
       label: "Manage Portfolios",
       icon: Briefcase,
+      group: 'portfolio'
     },
     {
       id: 'trash',
       href: `/trash`,
       label: "Trash",
       icon: Trash2,
+      group: 'portfolio'
     },
     {
       id: 'projects',
       href: `/pmdashboard`,
       label: "Projects Dashboard",
       icon: FolderKanban,
+      group: 'projects'
     },
     {
       id: 'users',
       href: `/users`,
       label: "User List",
       icon: Building2,
+      group: 'users'
     },
   ];
 
-  const menuItems = allMenuItems.filter(item => {
-    if (activeTab === 'trash') return item.id === 'trash';
-    return item.id === activeTab;
-  });
+  const getGroupForTab = (tab: PmSidebarNavProps['activeTab']) => {
+    switch (tab) {
+      case 'portfolios':
+      case 'trash':
+        return 'portfolio';
+      case 'projects':
+        return 'projects';
+      case 'users':
+        return 'users';
+      default:
+        return 'portfolio';
+    }
+  }
+
+  const activeGroup = getGroupForTab(activeTab);
+  const menuItems = allMenuItems.filter(item => item.group === activeGroup);
 
   return (
     <>
