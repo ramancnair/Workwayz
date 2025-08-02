@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Save } from 'lucide-react';
@@ -121,44 +120,46 @@ export default function InitialEstimationPage() {
               <CardTitle>Impacted System Estimates</CardTitle>
               <CardDescription>Explain the impact and provide a man-day estimate for each system.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Accordion type="multiple" defaultValue={impactedSystems.map(s => s.id)} className="w-full">
-                {form.getValues('systems')?.map((system, index) => (
-                  <AccordionItem value={system.id} key={system.id}>
-                    <AccordionTrigger>
-                      <span className="font-semibold">{impactedSystems.find(s=>s.id === system.id)?.name}</span>
-                    </AccordionTrigger>
-                    <AccordionContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name={`systems.${index}.explanation`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Explanation of Impact</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder={`Describe how ${impactedSystems.find(s=>s.id === system.id)?.name} is impacted...`} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`systems.${index}.estimate`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Estimate (Man-Days)</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="0" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+            <CardContent className="space-y-4">
+                 <div className="grid grid-cols-[200px_1fr_150px] items-center gap-4 font-medium text-muted-foreground px-2 py-1 text-sm">
+                    <div>System Name</div>
+                    <div>Explanation of Impact</div>
+                    <div>Estimate (Man-Days)</div>
+                </div>
+                <div className="space-y-4">
+                    {form.getValues('systems')?.map((system, index) => {
+                       const systemDetails = impactedSystems.find(s=>s.id === system.id);
+                       return (
+                        <div key={system.id} className="grid grid-cols-[200px_1fr_150px] items-start gap-4 p-2 rounded-md hover:bg-muted/50">
+                            <div className="font-semibold pt-2">{systemDetails?.name}</div>
+                            <FormField
+                                control={form.control}
+                                name={`systems.${index}.explanation`}
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormControl>
+                                    <Textarea placeholder={`Describe how ${systemDetails?.name} is impacted...`} {...field} className="min-h-0" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`systems.${index}.estimate`}
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormControl>
+                                    <Input type="number" placeholder="0" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                       );
+                    })}
+                </div>
             </CardContent>
           </Card>
         </form>
