@@ -78,6 +78,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: TestTube2,
     },
     {
+      href: `${basePath}/testing/test-plan`,
+      label: "Test Plan",
+      icon: FileText,
+    },
+    {
       href: `${basePath}/testing/test-cases`,
       label: "Test Cases",
       icon: ClipboardCheck,
@@ -182,7 +187,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     }
   ];
 
-  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list'].some(p => pathname.startsWith(basePath + p));
+  const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isArchitecturePath = pathname.startsWith(`${basePath}/architecture`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
