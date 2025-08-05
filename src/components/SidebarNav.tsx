@@ -96,14 +96,9 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const architectureMenuItems = [
     {
-      href: `${basePath}/architecture`,
-      label: "Impacted Systems",
-      icon: Network,
-    },
-    {
       href: `${basePath}/architecture/initial-estimation`,
       label: "Initial Estimation",
-      icon: FileText,
+      icon: Network,
     },
   ];
   
