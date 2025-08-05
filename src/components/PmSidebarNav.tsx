@@ -125,12 +125,12 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:hidden">
+        <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:justify-center">
             <Avatar className="h-10 w-10">
                 <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
                 <AvatarFallback>JD</AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
+            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                 <span className="font-semibold text-sm text-sidebar-foreground">Jane Doe</span>
                 <span className="text-xs text-sidebar-foreground/70">janedoe@example.com</span>
             </div>
