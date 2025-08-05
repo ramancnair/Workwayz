@@ -90,9 +90,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
 // This is a Server Component, so we can use `use` to resolve the params promise
 export default function AppLayout({ children, params }: PropsWithChildren<{ params: { projectId: string } }>) {
-  const resolvedParams = use(params);
   return (
-    <ProjectProvider projectId={resolvedParams.projectId}>
+    <ProjectProvider projectId={params.projectId}>
       <ProjectLayoutContent>{children}</ProjectLayoutContent>
     </ProjectProvider>
   )
