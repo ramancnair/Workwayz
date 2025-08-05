@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch, updateDoc, Timestamp } from 'firebase/firestore';
@@ -58,6 +58,182 @@ const projectSchema = z.object({
   methodology: z.enum(projectMethodologies).optional(),
   pricingModel: z.enum(pricingModels).optional(),
 });
+
+function ProjectDialogContent({
+  form,
+  onSubmit,
+  editingProject,
+  portfolios
+}: {
+  form: any;
+  onSubmit: (values: z.infer<typeof projectSchema>) => void;
+  editingProject: Project | null;
+  portfolios: Portfolio[];
+}) {
+  const watchedProjectType = useWatch({
+    control: form.control,
+    name: 'projectType',
+  });
+
+  useEffect(() => {
+    if (watchedProjectType === 'Initial Estimation') {
+      form.setValue('methodology', undefined, { shouldValidate: true });
+      form.setValue('pricingModel', undefined, { shouldValidate: true });
+    } else if (watchedProjectType === 'Support') {
+      form.setValue('methodology', 'Agile', { shouldValidate: true });
+    }
+  }, [watchedProjectType, form]);
+
+  const isMethodologyDisabled = watchedProjectType === 'Initial Estimation' || watchedProjectType === 'Support';
+  const isPricingModelDisabled = watchedProjectType === 'Initial Estimation';
+
+  return (
+    <DialogContent className="sm:max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>{editingProject ? 'Edit Project' : 'Create New Project'}</DialogTitle>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="portfolioId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Portfolio</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a portfolio" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {portfolios.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="E.g., Q3 Marketing Campaign" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Describe the project's goals..." {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="projectType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {projectTypes.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="methodology"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Methodology</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={isMethodologyDisabled}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {projectMethodologies.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="pricingModel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pricing Model</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={isPricingModelDisabled}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {pricingModels.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit">{editingProject ? 'Save Changes' : 'Create Project'}</Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
+  );
+}
 
 export default function ProjectsDashboard() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
@@ -205,120 +381,12 @@ export default function ProjectsDashboard() {
         </PageHeader>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="sm:max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{editingProject ? 'Edit Project' : 'Create New Project'}</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="portfolioId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Portfolio</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a portfolio" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {portfolios.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Project Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="E.g., Q3 Marketing Campaign" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Describe the project's goals..." {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="projectType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Project Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                  <SelectTrigger><SelectValue /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  {projectTypes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="methodology"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Methodology</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                  <SelectTrigger><SelectValue /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  {projectMethodologies.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="pricingModel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pricing Model</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                  <SelectTrigger><SelectValue /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  {pricingModels.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">{editingProject ? 'Save Changes' : 'Create Project'}</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
+          <ProjectDialogContent 
+            form={form} 
+            onSubmit={onSubmit}
+            editingProject={editingProject} 
+            portfolios={portfolios}
+          />
         </Dialog>
 
         <Card>
