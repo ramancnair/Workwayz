@@ -176,10 +176,12 @@ export default function InitialEstimationPage() {
                     </FormItem>
                   )}
                 />
-                 <Button type="submit" disabled={isSubmitting} className="mt-4">
-                    <Save className="mr-2 h-4 w-4" />
-                    {isSubmitting ? 'Saving...' : 'Save Summary'}
-                 </Button>
+                <div className="flex justify-end mt-4">
+                    <Button type="submit" disabled={isSubmitting}>
+                        <Save className="mr-2 h-4 w-4" />
+                        {isSubmitting ? 'Saving...' : 'Save Summary'}
+                    </Button>
+                </div>
               </CardContent>
             </Card>
           </form>
