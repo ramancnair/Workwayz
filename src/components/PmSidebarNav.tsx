@@ -78,14 +78,15 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   return (
     <>
       <SidebarHeader className="flex items-center justify-between p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-        <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
-                <ChevronLeft />
-            </Button>
-            <Flame className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
+        <div className="flex items-center gap-2">
+          <Flame className="w-8 h-8 text-primary" />
+          <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
+                  <ChevronLeft />
+              </Button>
+              <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
+          </div>
         </div>
-        
       </SidebarHeader>
       <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
