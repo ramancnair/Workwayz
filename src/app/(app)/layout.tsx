@@ -17,10 +17,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (pathname.startsWith('/pmdashboard')) return 'projects';
     if (pathname.startsWith('/portfolios')) return 'portfolios';
     if (pathname.startsWith('/users')) return 'users';
-    // Even for trash and settings, we can keep a default active tab
+    if (pathname.startsWith('/utilization')) return 'users';
     if (pathname.startsWith('/trash')) return 'trash'; 
-    if (pathname.startsWith('/portfolio-settings')) return 'portfolios'; // Or any other default you prefer
-    return 'portfolios'; // Default to portfolios
+    if (pathname.startsWith('/portfolio-settings')) return 'portfolios';
+    return 'portfolios';
   };
 
   const onTabChange = (value: string) => {

@@ -22,6 +22,7 @@ import {
   Briefcase,
   Settings,
   Trash2,
+  Users,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -56,6 +57,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       icon: Building2,
       group: 'users'
     },
+     {
+      id: 'utilization',
+      href: `/utilization`,
+      label: "Utilization",
+      icon: Users,
+      group: 'users'
+    },
   ];
 
   const getGroupForTab = (tab: PmSidebarNavProps['activeTab']) => {
@@ -77,15 +85,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
 
   return (
     <>
-      <SidebarHeader className="flex items-center justify-between p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-        <div className="flex items-center gap-2">
-          <Flame className="w-8 h-8 text-primary" />
-          <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
-                  <ChevronLeft />
-              </Button>
-              <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
-          </div>
+      <SidebarHeader className="flex items-center gap-2 p-4 group-data-[collapsible=icon]:justify-center">
+        <Flame className="w-8 h-8 text-primary" />
+        <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
+                <ChevronLeft />
+            </Button>
+            <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
         </div>
       </SidebarHeader>
       <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
@@ -126,14 +132,14 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
           </SidebarMenuItem>
         </SidebarMenu>
         <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:justify-center">
-            <Avatar className="h-10 w-10">
-                <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
-                <AvatarFallback>JD</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                <span className="font-semibold text-sm text-sidebar-foreground">Jane Doe</span>
-                <span className="text-xs text-sidebar-foreground/70">janedoe@example.com</span>
-            </div>
+          <Avatar className="h-10 w-10">
+              <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
+              <AvatarFallback>JD</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+              <span className="font-semibold text-sm text-sidebar-foreground">Jane Doe</span>
+              <span className="text-xs text-sidebar-foreground/70">janedoe@example.com</span>
+          </div>
         </div>
       </SidebarFooter>
     </>
