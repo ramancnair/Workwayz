@@ -67,6 +67,7 @@ export default function InitialEstimationPage() {
   } = useProject();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditingSummary, setIsEditingSummary] = useState(true);
   
   const [isSystemDialogOpen, setIsSystemDialogOpen] = useState(false);
   const [editingSystem, setEditingSystem] = useState<ImpactedSystem | null>(null);
@@ -85,6 +86,9 @@ export default function InitialEstimationPage() {
   useEffect(() => {
     if (project) {
       estimationForm.reset({ summary: project.summary || '' });
+      if (project.summary) {
+        setIsEditingSummary(false);
+      }
     }
   }, [project, estimationForm]);
 
@@ -105,11 +109,13 @@ export default function InitialEstimationPage() {
         const projectSuccess = await updateProject({ summary: values.summary });
         if (projectSuccess) {
           toast({ title: "Success", description: "Initial estimation saved successfully." });
+          setIsEditingSummary(false);
         } else {
           toast({ variant: "destructive", title: "Failure", description: "Failed to save estimation." });
         }
       } else {
         toast({ title: "No Changes", description: "No changes to save." });
+        setIsEditingSummary(false);
       }
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "An error occurred while saving." });
@@ -156,36 +162,48 @@ export default function InitialEstimationPage() {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Initial Estimation" description="Define the project summary and impacted systems." />
 
-        <Form {...estimationForm}>
-          <form onSubmit={estimationForm.handleSubmit(onSummarySubmit)}>
-            <Card>
-              <CardHeader>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <div>
                   <CardTitle>Project Summary</CardTitle>
                   <CardDescription>Provide a brief overview of the project's goals and scope.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={estimationForm.control}
-                  name="summary"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Textarea rows={5} placeholder="Enter project summary..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex justify-end mt-4">
-                    <Button type="submit" disabled={isSubmitting}>
-                        <Save className="mr-2 h-4 w-4" />
-                        {isSubmitting ? 'Saving...' : 'Save'}
-                    </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </form>
-        </Form>
+              </div>
+              {!isEditingSummary && (
+                <Button variant="outline" onClick={() => setIsEditingSummary(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+          </CardHeader>
+          <CardContent>
+            {isEditingSummary ? (
+               <Form {...estimationForm}>
+                  <form onSubmit={estimationForm.handleSubmit(onSummarySubmit)} className="space-y-4">
+                    <FormField
+                      control={estimationForm.control}
+                      name="summary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea rows={5} placeholder="Enter project summary..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end">
+                        <Button type="submit" disabled={isSubmitting}>
+                            <Save className="mr-2 h-4 w-4" />
+                            {isSubmitting ? 'Saving...' : 'Save'}
+                        </Button>
+                    </div>
+                  </form>
+                </Form>
+            ) : (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{project?.summary || "No summary provided."}</p>
+            )}
+          </CardContent>
+        </Card>
         
         <Card className="mt-6">
            <CardHeader className="flex flex-row items-center justify-between">
