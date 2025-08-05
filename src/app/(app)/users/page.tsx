@@ -57,8 +57,6 @@ const userFormSchema = z.object({
   experience: z.coerce.number().optional(),
   domainExpertise: z.string().optional(),
   accessLevel: z.enum(accessLevels).optional(),
-  employmentStartDate: z.string().optional(),
-  employmentEndDate: z.string().optional(),
 });
 
 // Helper to remove undefined values from an object before sending to Firestore
@@ -112,8 +110,6 @@ export default function UsersPage() {
         if (editingUser) {
         form.reset({
             ...editingUser,
-            employmentStartDate: editingUser.employmentStartDate ? format(parseISO(editingUser.employmentStartDate), 'yyyy-MM-dd') : '',
-            employmentEndDate: editingUser.employmentEndDate ? format(parseISO(editingUser.employmentEndDate), 'yyyy-MM-dd') : '',
         });
         } else {
         form.reset({
@@ -125,8 +121,6 @@ export default function UsersPage() {
             experience: 0,
             domainExpertise: '',
             accessLevel: undefined,
-            employmentStartDate: format(new Date(), 'yyyy-MM-dd'),
-            employmentEndDate: '',
         });
         }
     }
@@ -163,16 +157,6 @@ export default function UsersPage() {
     }
     
     const valuesWithDates: any = { ...values };
-    if (values.employmentStartDate) {
-        valuesWithDates.employmentStartDate = new Date(values.employmentStartDate);
-    } else {
-        delete valuesWithDates.employmentStartDate;
-    }
-    if (values.employmentEndDate) {
-        valuesWithDates.employmentEndDate = new Date(values.employmentEndDate);
-    } else {
-        delete valuesWithDates.employmentEndDate;
-    }
     
     const sanitizedValues = sanitizeForFirestore(valuesWithDates);
 
@@ -328,20 +312,6 @@ export default function UsersPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="employmentStartDate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="employmentEndDate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
