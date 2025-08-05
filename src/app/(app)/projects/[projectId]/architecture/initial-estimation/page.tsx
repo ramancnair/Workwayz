@@ -169,7 +169,7 @@ export default function InitialEstimationPage() {
                   <CardDescription>Provide a brief overview of the project's goals and scope.</CardDescription>
               </div>
               {!isEditingSummary && (
-                <Button variant="outline" onClick={() => setIsEditingSummary(true)}>
+                <Button onClick={() => setIsEditingSummary(true)}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </Button>
