@@ -154,7 +154,6 @@ const defaultKanbanColumns: Omit<KanbanColumn, 'id'>[] = [
 ];
 
 const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
-  weeklyOffDays: [0, 6],
   sprintDurationInWeeks: 2,
   sprintStartDay: 1, // Monday
 };
@@ -177,6 +176,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [worklogSubmissions, setWorklogSubmissions] = useState<WorklogSubmission[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
+  const [globalSettings, setGlobalSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -189,6 +189,26 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return;
     }
     
+    // Listener for global settings
+    const globalSettingsDocRef = doc(db, 'settings', 'main');
+    const unsubGlobalSettings = onSnapshot(globalSettingsDocRef, (doc) => {
+        if (doc.exists()) {
+            setGlobalSettings(doc.data() as ProjectSettings);
+        }
+    });
+
+    const unsubGlobalHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
+        const holidaysData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
+            } as Holiday
+        });
+        setHolidays(holidaysData);
+    });
+
     const rootProjectDocRef = doc(db, 'projects', projectId);
     
     // Listener for project document itself
@@ -211,7 +231,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'issues', setState: setIssues },
         { name: 'dependencies', setState: setDependencies },
         { name: 'kanbanColumns', setState: setKanbanColumns },
-        { name: 'holidays', setState: setHolidays },
         { name: 'releases', setState: setReleasesAndMilestones },
         { name: 'impactedSystems', setState: setImpactedSystems },
         { name: 'worklogs', setState: setWorklogs },
@@ -260,7 +279,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         assumptions: ['validationDate'],
                         issues: ['reportedDate', 'resolvedDate'],
                         dependencies: ['expectedByDate'],
-                        holidays: ['date'],
                         releases: ['startDate', 'endDate', 'milestoneDate'],
                         worklogs: ['date'],
                         worklogSubmissions: ['weekStartDate', 'submittedAt'],
@@ -301,6 +319,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       unsubProject();
       unsubscribers.forEach(unsub => unsub());
       unsubSettings();
+      unsubGlobalSettings();
+      unsubGlobalHolidays();
     }
   }, [projectId]);
 
@@ -1135,7 +1155,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     worklogs,
     worklogSubmissions,
     projectSettings,
-    weeklyOffDays: projectSettings?.weeklyOffDays || [0, 6],
+    weeklyOffDays: globalSettings?.weeklyOffDays || [0, 6],
     impactedSystems,
     isLoading,
     error,

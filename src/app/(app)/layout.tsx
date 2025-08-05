@@ -19,6 +19,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (pathname.startsWith('/users')) return 'users';
     if (pathname.startsWith('/utilization')) return 'users';
     if (pathname.startsWith('/trash')) return 'trash'; 
+    if (pathname.startsWith('/holidays')) return 'holidays';
     if (pathname.startsWith('/portfolio-settings')) return 'portfolios';
     return 'portfolios';
   };
@@ -30,6 +31,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/portfolios');
     } else if (value === 'users') {
       router.push('/users');
+    } else if (value === 'holidays') {
+      router.push('/holidays');
     } else if (value === 'trash') {
         router.push('/trash');
     }
@@ -54,6 +57,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                       <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio</TabsTrigger>
                       <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
                       <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
+                      <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
                   </TabsList>
               </Tabs>
           </div>

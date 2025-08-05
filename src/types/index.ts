@@ -179,7 +179,7 @@ export type Holiday = {
 
 export type ProjectSettings = {
     id: 'main';
-    weeklyOffDays: number[]; // 0 for Sunday, 6 for Saturday
+    weeklyOffDays?: number[]; // 0 for Sunday, 6 for Saturday
     sprintDurationInWeeks?: number;
     sprintStartDay?: number; // 0 for Sunday, 1 for Monday etc.
 };

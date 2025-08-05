@@ -23,12 +23,13 @@ import {
   Settings,
   Trash2,
   Users,
+  CalendarDays,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
 type PmSidebarNavProps = {
-  activeTab: 'portfolios' | 'projects' | 'users' | 'trash';
+  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays';
 };
 
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
@@ -64,6 +65,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       icon: Users,
       group: 'users'
     },
+    {
+      id: 'holidays',
+      href: `/holidays`,
+      label: "Holiday Calendar",
+      icon: CalendarDays,
+      group: 'holidays'
+    },
   ];
 
   const getGroupForTab = (tab: PmSidebarNavProps['activeTab']) => {
@@ -75,6 +83,8 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
         return 'projects';
       case 'users':
         return 'users';
+      case 'holidays':
+        return 'holidays';
       default:
         return 'portfolio';
     }

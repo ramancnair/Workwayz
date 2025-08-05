@@ -161,14 +161,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
   ];
 
-  const holidayMenuItems = [
-    {
-      href: `${basePath}/holiday-calendar`,
-      label: "Holiday Calendar",
-      icon: CalendarDays,
-    },
-  ];
-
   const settingsMenuItems = [
     {
       href: `${basePath}/settings/board`,
@@ -187,7 +179,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
-  const isHolidaysPath = pathname.startsWith(`${basePath}/holiday-calendar`);
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
 
   const menuItems = isSettingsPath ? settingsMenuItems
@@ -196,7 +187,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     : isReleasesPath ? releasesMenuItems
     : isResourcesPath ? resourcesMenuItems 
     : isGovernancePath ? governanceMenuItems 
-    : isHolidaysPath ? holidayMenuItems 
     : devMenuItems;
 
   return (

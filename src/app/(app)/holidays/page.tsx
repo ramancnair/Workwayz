@@ -1,12 +1,10 @@
 
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,8 +28,19 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Holiday } from '@/types';
+import type { Holiday, ProjectSettings } from '@/types';
 import { format } from 'date-fns';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  setDoc,
+  Timestamp,
+} from 'firebase/firestore';
 
 const holidayFormSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
@@ -48,23 +57,69 @@ const weekdays = [
   { id: 0, label: 'Sunday' },
 ];
 
-export default function HolidayCalendarPage() {
-  const { holidays, weeklyOffDays, setWeeklyOffDays, addHoliday, updateHoliday, deleteHoliday } = useProject();
+const defaultSettings: Omit<ProjectSettings, 'id'> = {
+  weeklyOffDays: [0, 6],
+};
+
+export default function HolidayPage() {
   const { toast } = useToast();
   
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [weeklyOffDays, setWeeklyOffDays] = useState<number[]>(defaultSettings.weeklyOffDays);
   const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
+
+  useEffect(() => {
+    if (!db) return;
+    
+    // Listener for holidays
+    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
+        const holidaysData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
+            } as Holiday
+        });
+        setHolidays(holidaysData);
+    });
+    
+    // Listener for settings
+    const settingsDocRef = doc(db, 'settings', 'main');
+    const unsubSettings = onSnapshot(settingsDocRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data() as ProjectSettings;
+        setWeeklyOffDays(data.weeklyOffDays || defaultSettings.weeklyOffDays);
+      } else {
+        // Initialize settings if they don't exist
+        setDoc(settingsDocRef, defaultSettings).catch(e => console.error("Failed to set default settings", e));
+      }
+    });
+
+    return () => {
+        unsubHolidays();
+        unsubSettings();
+    };
+  }, []);
 
   const holidayForm = useForm<z.infer<typeof holidayFormSchema>>({
     resolver: zodResolver(holidayFormSchema),
   });
   
-  const handleDayToggle = (dayId: number) => {
+  const handleDayToggle = async (dayId: number) => {
+    if (!db) return;
     const newOffDays = weeklyOffDays.includes(dayId)
       ? weeklyOffDays.filter((d) => d !== dayId)
       : [...weeklyOffDays, dayId];
-    setWeeklyOffDays(newOffDays);
-    toast({ title: 'Success', description: 'Weekly off-days updated.' });
+    
+    try {
+        await setDoc(doc(db, 'settings', 'main'), { weeklyOffDays: newOffDays }, { merge: true });
+        toast({ title: 'Success', description: 'Weekly off-days updated.' });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update weekly off-days.' });
+        console.error("Error updating weekly off days:", e);
+    }
   };
   
   const openHolidayDialog = (holiday: Holiday | null) => {
@@ -81,14 +136,24 @@ export default function HolidayCalendarPage() {
   };
   
   const onHolidaySubmit = async (values: z.infer<typeof holidayFormSchema>) => {
+    if (!db) return;
     const holidayData = {
       description: values.description,
-      date: new Date(values.date),
+      date: Timestamp.fromDate(new Date(values.date)),
     };
 
-    const success = editingHoliday
-      ? await updateHoliday(editingHoliday.id, holidayData)
-      : await addHoliday(holidayData);
+    let success = false;
+    try {
+        if (editingHoliday) {
+            await updateDoc(doc(db, 'holidays', editingHoliday.id), holidayData);
+        } else {
+            await addDoc(collection(db, 'holidays'), holidayData);
+        }
+        success = true;
+    } catch (e) {
+        console.error("Error saving holiday:", e);
+    }
+
 
     if (success) {
       toast({ title: 'Success', description: `Holiday ${editingHoliday ? 'updated' : 'added'}.` });
@@ -99,24 +164,26 @@ export default function HolidayCalendarPage() {
   };
 
   const handleDeleteHoliday = async (id: string) => {
-    const success = await deleteHoliday(id);
-     if (success) {
-      toast({ title: 'Success', description: 'Holiday deleted.' });
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: `Could not delete holiday.` });
+    if (!db) return;
+    try {
+        await deleteDoc(doc(db, 'holidays', id));
+        toast({ title: 'Success', description: 'Holiday deleted.' });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: `Could not delete holiday.` });
+        console.error("Error deleting holiday:", e);
     }
   }
 
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Holiday Calendar" description="Manage weekly off-days and yearly holidays." />
+        <PageHeader title="Holiday Calendar" description="Manage global weekly off-days and yearly holidays." />
 
         <div className="grid gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Weekly Off-Days</CardTitle>
-              <CardDescription>Select the days of the week that are consistently off.</CardDescription>
+              <CardDescription>Select the days of the week that are consistently off for all projects.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
               {weekdays.map(day => (
@@ -223,4 +290,3 @@ export default function HolidayCalendarPage() {
     </>
   );
 }
-
