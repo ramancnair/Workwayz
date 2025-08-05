@@ -265,7 +265,7 @@ export default function UsersPage() {
                  <FormField control={form.control} name="empId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Emp ID *</FormLabel>
-                    <FormControl><Input placeholder="E.g., E001" {...field} disabled={!!editingUser} /></FormControl>
+                    <FormControl><Input placeholder="E.g., E001" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
