@@ -22,8 +22,9 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
+  const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isArchitecturePath && !isReleasesPath && !isSettingsPath;
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isArchitecturePath && !isReleasesPath && !isSettingsPath && !isHolidaysPath;
 
   const getTabValue = () => {
     if (isDevelopmentPath) return 'development';
@@ -32,6 +33,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (isReleasesPath) return 'releases';
     if (isResourcesPath) return 'resources';
     if (isGovernancePath) return 'governance';
+    if (isHolidaysPath) return 'holidays';
     return ''; // No active tab for settings
   };
 
@@ -48,6 +50,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
       router.push(`${basePath}/resources`);
     } else if (value === 'governance') {
       router.push(`${basePath}/raid-dashboard`);
+    } else if (value === 'holidays') {
+      router.push(`${basePath}/holidays`);
     }
   };
 
@@ -71,6 +75,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                       <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
                       <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                       <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
+                       <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
                   </TabsList>
               </Tabs>
             </div>

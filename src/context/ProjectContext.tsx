@@ -126,6 +126,7 @@ interface ProjectContextType {
   updateKanbanColumnOrder: (oldIndex: number, newIndex: number) => Promise<boolean>;
   
   // Settings actions
+  updateProjectSettings: (settings: Partial<Omit<ProjectSettings, 'id'>>) => Promise<boolean>;
   setWeeklyOffDays: (days: number[]) => Promise<boolean>;
   updateSprintSettings: (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>) => Promise<boolean>;
   addHoliday: (holiday: Omit<Holiday, 'id'>) => Promise<boolean>;
@@ -156,6 +157,7 @@ const defaultKanbanColumns: Omit<KanbanColumn, 'id'>[] = [
 const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
   sprintDurationInWeeks: 2,
   sprintStartDay: 1, // Monday
+  overrideGlobalHolidays: false,
 };
 
 export function ProjectProvider({ children, projectId }: PropsWithChildren<{ projectId: string }>) {
@@ -170,7 +172,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [issues, setIssues] = useState<Issue[]>([]);
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [projectHolidays, setProjectHolidays] = useState<Holiday[]>([]);
+  const [globalHolidays, setGlobalHolidays] = useState<Holiday[]>([]);
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
@@ -179,6 +182,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [globalSettings, setGlobalSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const holidays = projectSettings?.overrideGlobalHolidays ? projectHolidays : globalHolidays;
+  const weeklyOffDays = projectSettings?.overrideGlobalHolidays 
+    ? projectSettings?.weeklyOffDays ?? globalSettings?.weeklyOffDays ?? [0, 6] 
+    : globalSettings?.weeklyOffDays ?? [0, 6];
 
   useEffect(() => {
     if (!db || !projectId) {
@@ -206,7 +214,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                 date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
             } as Holiday
         });
-        setHolidays(holidaysData);
+        setGlobalHolidays(holidaysData);
     });
 
     const rootProjectDocRef = doc(db, 'projects', projectId);
@@ -231,6 +239,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'issues', setState: setIssues },
         { name: 'dependencies', setState: setDependencies },
         { name: 'kanbanColumns', setState: setKanbanColumns },
+        { name: 'holidays', setState: setProjectHolidays },
         { name: 'releases', setState: setReleasesAndMilestones },
         { name: 'impactedSystems', setState: setImpactedSystems },
         { name: 'worklogs', setState: setWorklogs },
@@ -282,6 +291,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         releases: ['startDate', 'endDate', 'milestoneDate'],
                         worklogs: ['date'],
                         worklogSubmissions: ['weekStartDate', 'submittedAt'],
+                        holidays: ['date'],
                     };
 
                     if (dateFields[name]) {
@@ -1000,28 +1010,26 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Settings Actions
-  const setWeeklyOffDays = async (days: number[]): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    try {
-      const settingsRef = doc(db, 'projects', projectId, 'settings', 'main');
-      await setDoc(settingsRef, { weeklyOffDays: days }, { merge: true });
-      return true;
-    } catch (e) {
-      console.error("Firebase Error: Failed to set weekly off days.", e);
-      return false;
-    }
-  };
-  
-  const updateSprintSettings = async (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>): Promise<boolean> => {
+  const updateProjectSettings = async (settings: Partial<Omit<ProjectSettings, 'id'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const settingsRef = doc(db, 'projects', projectId, 'settings', 'main');
       await setDoc(settingsRef, sanitizeForFirestore(settings), { merge: true });
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to update sprint settings.", e);
+      console.error("Firebase Error: Failed to update project settings.", e);
       return false;
     }
+  };
+  
+  const setWeeklyOffDays = async (days: number[]): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    return updateProjectSettings({ weeklyOffDays: days });
+  };
+  
+  const updateSprintSettings = async (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>): Promise<boolean> => {
+     if (!db || !projectId) return false;
+     return updateProjectSettings(settings);
   };
 
   const addHoliday = async (holiday: Omit<Holiday, 'id'>): Promise<boolean> => {
@@ -1155,7 +1163,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     worklogs,
     worklogSubmissions,
     projectSettings,
-    weeklyOffDays: globalSettings?.weeklyOffDays || [0, 6],
+    weeklyOffDays,
     impactedSystems,
     isLoading,
     error,
@@ -1200,6 +1208,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     updateKanbanColumn,
     deleteKanbanColumn,
     updateKanbanColumnOrder,
+    updateProjectSettings,
     setWeeklyOffDays,
     updateSprintSettings,
     addHoliday,

@@ -182,6 +182,7 @@ export type ProjectSettings = {
     weeklyOffDays?: number[]; // 0 for Sunday, 6 for Saturday
     sprintDurationInWeeks?: number;
     sprintStartDay?: number; // 0 for Sunday, 1 for Monday etc.
+    overrideGlobalHolidays?: boolean;
 };
 
 export type ImpactedSystemCategory = 'Technology' | 'Function';
