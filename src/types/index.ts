@@ -240,6 +240,10 @@ export type Portfolio = {
   deletedAt?: string; // ISO String
 };
 
+export type ProjectType = 'Initial Estimation' | 'Project' | 'Support' | 'Change Request';
+export type ProjectMethodology = 'Agile' | 'SDLC';
+export type PricingModel = 'Fixed Bid' | 'T&M' | 'Fixed Capacity';
+
 export type Project = {
   id: string;
   name: string;
@@ -248,6 +252,9 @@ export type Project = {
   isDeleted?: boolean;
   deletedAt?: string; // ISO String
   summary?: string;
+  projectType?: ProjectType;
+  methodology?: ProjectMethodology;
+  pricingModel?: PricingModel;
 };
 
 export type AccessControlSetting = {

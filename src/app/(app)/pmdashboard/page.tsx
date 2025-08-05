@@ -43,13 +43,20 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
-import { type Portfolio, type Project } from '@/types';
+import { type Portfolio, type Project, type ProjectType, type ProjectMethodology, type PricingModel } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const projectTypes: ProjectType[] = ['Initial Estimation', 'Project', 'Support', 'Change Request'];
+const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC'];
+const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M', 'Fixed Capacity'];
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required.'),
   description: z.string().optional(),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
+  projectType: z.enum(projectTypes).optional(),
+  methodology: z.enum(projectMethodologies).optional(),
+  pricingModel: z.enum(pricingModels).optional(),
 });
 
 export default function ProjectsDashboard() {
@@ -65,7 +72,7 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', description: '', portfolioId: '' },
+    defaultValues: { name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M' },
   });
   
   useEffect(() => {
@@ -98,7 +105,7 @@ export default function ProjectsDashboard() {
       if (editingProject) {
         form.reset(editingProject);
       } else {
-        form.reset({ name: '', description: '', portfolioId: '' });
+        form.reset({ name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M' });
       }
     }
   }, [isDialogOpen, editingProject, form]);
@@ -198,7 +205,7 @@ export default function ProjectsDashboard() {
         </PageHeader>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{editingProject ? 'Edit Project' : 'Create New Project'}</DialogTitle>
               </DialogHeader>
@@ -250,6 +257,62 @@ export default function ProjectsDashboard() {
                       </FormItem>
                     )}
                   />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="projectType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Project Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {projectTypes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="methodology"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Methodology</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {projectMethodologies.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="pricingModel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pricing Model</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {pricingModels.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <DialogFooter>
                     <Button type="submit">{editingProject ? 'Save Changes' : 'Create Project'}</Button>
                   </DialogFooter>
