@@ -253,6 +253,7 @@ export type Project = {
   isDeleted?: boolean;
   deletedAt?: string; // ISO String
   summary?: string;
+  projectManagerId?: string;
   projectType?: ProjectType;
   methodology?: ProjectMethodology;
   pricingModel?: PricingModel;

@@ -43,8 +43,10 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
-import { type Portfolio, type Project, type ProjectType, type ProjectMethodology, type PricingModel } from '@/types';
+import { type Portfolio, type Project, type ProjectType, type ProjectMethodology, type PricingModel, type User } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const projectTypes: ProjectType[] = ['Initial Estimation', 'Project', 'Support', 'Change Request'];
 const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC'];
@@ -54,6 +56,7 @@ const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required.'),
   description: z.string().optional(),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
+  projectManagerId: z.string().optional(),
   projectType: z.enum(projectTypes).optional(),
   methodology: z.enum(projectMethodologies).optional(),
   pricingModel: z.enum(pricingModels).optional(),
@@ -63,17 +66,38 @@ function ProjectDialogContent({
   form,
   onSubmit,
   editingProject,
-  portfolios
+  portfolios,
+  users,
 }: {
   form: any;
   onSubmit: (values: z.infer<typeof projectSchema>) => void;
   editingProject: Project | null;
   portfolios: Portfolio[];
+  users: User[];
 }) {
   const watchedProjectType = useWatch({
     control: form.control,
     name: 'projectType',
   });
+  
+  const [pmInputText, setPmInputText] = useState('');
+  
+  const pmOptions = useMemo(() => users.map(user => ({
+      value: user.id,
+      label: `${user.firstName} ${user.lastName} (${user.empId})`
+  })), [users]);
+  
+  useEffect(() => {
+    if (editingProject && editingProject.projectManagerId) {
+      const pm = users.find(u => u.id === editingProject.projectManagerId);
+      if (pm) {
+        setPmInputText(`${pm.firstName} ${pm.lastName} (${pm.empId})`);
+      }
+    } else {
+        setPmInputText('');
+    }
+  }, [editingProject, users]);
+
 
   useEffect(() => {
     if (watchedProjectType === 'Initial Estimation') {
@@ -140,6 +164,42 @@ function ProjectDialogContent({
                 <FormControl>
                   <Textarea placeholder="Describe the project's goals..." {...field} value={field.value ?? ''} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="projectManagerId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project Manager</FormLabel>
+                 <FormControl>
+                    <Input 
+                        list="pm-options" 
+                        placeholder="Select a Project Manager..." 
+                        value={pmInputText}
+                        onChange={(e) => {
+                            const inputText = e.target.value;
+                            setPmInputText(inputText);
+                            
+                            const matchingOption = pmOptions.find(opt => opt.label === inputText);
+                            field.onChange(matchingOption ? matchingOption.value : undefined);
+                        }}
+                        onBlur={() => {
+                            const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
+                            if (!matchingOption) {
+                                setPmInputText('');
+                                field.onChange(undefined);
+                            }
+                        }}
+                    />
+                    </FormControl>
+                    <datalist id="pm-options">
+                        {pmOptions.map(option => (
+                            <option key={option.value} value={option.label} />
+                        ))}
+                    </datalist>
                 <FormMessage />
               </FormItem>
             )}
@@ -238,6 +298,7 @@ function ProjectDialogContent({
 export default function ProjectsDashboard() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -248,7 +309,7 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M' },
+    defaultValues: { name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '' },
   });
   
   useEffect(() => {
@@ -270,18 +331,30 @@ export default function ProjectsDashboard() {
         setIsLoading(false);
     });
 
+    const usersUnsubscribe = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot) => {
+      const usersData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<User, 'id'>),
+      }));
+      setUsers(usersData);
+    });
+
     return () => {
         portfolioUnsubscribe();
         projectUnsubscribe();
+        usersUnsubscribe();
     };
   }, []);
   
   useEffect(() => {
     if (isDialogOpen) {
       if (editingProject) {
-        form.reset(editingProject);
+        form.reset({
+          ...editingProject,
+          projectManagerId: editingProject.projectManagerId || '',
+        });
       } else {
-        form.reset({ name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M' });
+        form.reset({ name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '' });
       }
     }
   }, [isDialogOpen, editingProject, form]);
@@ -290,14 +363,20 @@ export default function ProjectsDashboard() {
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
     if (!db) return;
     try {
+      const { projectManagerId, ...restValues } = values;
+      const dataToSave = {
+          ...restValues,
+          projectManagerId: projectManagerId || null,
+      };
+
       if (editingProject) {
         const projectRef = doc(db, 'projects', editingProject.id);
-        await updateDoc(projectRef, values);
+        await updateDoc(projectRef, dataToSave);
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
         const projectId = `P${Date.now()}`;
         const projectRef = doc(db, 'projects', projectId);
-        await setDoc(projectRef, { ...values, id: projectId, isDeleted: false });
+        await setDoc(projectRef, { ...dataToSave, id: projectId, isDeleted: false });
         toast({ title: 'Success', description: 'Project created successfully.' });
       }
 
@@ -351,15 +430,23 @@ export default function ProjectsDashboard() {
 
         if (sorting) {
             filtered.sort((a, b) => {
-                const valA = (a as any)[sorting.id] || '';
-                const valB = (b as any)[sorting.id] || '';
+                let valA: any, valB: any;
+                if(sorting.id === 'projectManagerId') {
+                    const pmA = users.find(u => u.id === a.projectManagerId);
+                    const pmB = users.find(u => u.id === b.projectManagerId);
+                    valA = pmA ? `${pmA.firstName} ${pmA.lastName}` : 'zzz'; // put unassigned last
+                    valB = pmB ? `${pmB.firstName} ${pmB.lastName}` : 'zzz';
+                } else {
+                    valA = (a as any)[sorting.id] || '';
+                    valB = (b as any)[sorting.id] || '';
+                }
                 const comparison = valA.localeCompare(valB, undefined, { numeric: true });
                 return sorting.desc ? -comparison : comparison;
             });
         }
         return { ...portfolio, projects: filtered };
     });
-  }, [projects, portfolios, filterText, sorting]);
+  }, [projects, portfolios, filterText, sorting, users]);
   
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>
@@ -386,6 +473,7 @@ export default function ProjectsDashboard() {
             onSubmit={onSubmit}
             editingProject={editingProject} 
             portfolios={portfolios}
+            users={users}
           />
         </Dialog>
 
@@ -417,38 +505,55 @@ export default function ProjectsDashboard() {
                             <TableRow>
                               <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
                               <SortableHeader columnId="name">Project Name</SortableHeader>
-                              <SortableHeader columnId="description">Description</SortableHeader>
+                              <SortableHeader columnId="projectManagerId">Project Manager</SortableHeader>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {portfolio.projects.map((project) => (
-                              <TableRow key={project.id}>
-                                <TableCell className="font-medium">
-                                  <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                                    {project.id}
-                                  </Link>
-                                </TableCell>
-                                <TableCell>
-                                  <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                                    {project.name}
-                                  </Link>
-                                </TableCell>
-                                <TableCell>
-                                  <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                                    {project.description}
-                                  </Link>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                   <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
-                                     <Edit className="h-4 w-4" />
-                                   </Button>
-                                   <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                     <Trash2 className="h-4 w-4" />
-                                   </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                            {portfolio.projects.map((project) => {
+                                const projectManager = users.find(u => u.id === project.projectManagerId);
+                                return (
+                                  <TableRow key={project.id}>
+                                    <TableCell className="font-medium">
+                                      <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                        {project.id}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                        {project.name}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                        {projectManager ? (
+                                             <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Avatar className="h-8 w-8">
+                                                            <AvatarImage src={projectManager.avatar} alt={`${projectManager.firstName} ${projectManager.lastName}`} data-ai-hint="manager avatar" />
+                                                            <AvatarFallback>{projectManager.firstName?.charAt(0)}</AvatarFallback>
+                                                        </Avatar>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{projectManager.firstName} {projectManager.lastName}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                             </TooltipProvider>
+                                        ) : 'Unassigned'}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                       <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
+                                         <Edit className="h-4 w-4" />
+                                       </Button>
+                                       <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                         <Trash2 className="h-4 w-4" />
+                                       </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                            })}
                           </TableBody>
                         </Table>
                        ) : (
