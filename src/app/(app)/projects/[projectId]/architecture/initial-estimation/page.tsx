@@ -159,15 +159,9 @@ export default function InitialEstimationPage() {
         <Form {...estimationForm}>
           <form onSubmit={estimationForm.handleSubmit(onSummarySubmit)}>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
+              <CardHeader>
                   <CardTitle>Project Summary</CardTitle>
                   <CardDescription>Provide a brief overview of the project's goals and scope.</CardDescription>
-                </div>
-                 <Button type="submit" disabled={isSubmitting}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {isSubmitting ? 'Saving...' : 'Save Summary'}
-                 </Button>
               </CardHeader>
               <CardContent>
                 <FormField
@@ -182,6 +176,10 @@ export default function InitialEstimationPage() {
                     </FormItem>
                   )}
                 />
+                 <Button type="submit" disabled={isSubmitting} className="mt-4">
+                    <Save className="mr-2 h-4 w-4" />
+                    {isSubmitting ? 'Saving...' : 'Save Summary'}
+                 </Button>
               </CardContent>
             </Card>
           </form>
