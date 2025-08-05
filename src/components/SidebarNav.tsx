@@ -94,10 +94,10 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
   ];
 
-  const architectureMenuItems = [
+  const projectMenuItems = [
     {
-      href: `${basePath}/architecture/initial-estimation`,
-      label: "Initial Estimation",
+      href: `${basePath}/project`,
+      label: "Project Summary",
       icon: Network,
     },
   ];
@@ -183,7 +183,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   ];
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
-  const isArchitecturePath = pathname.startsWith(`${basePath}/architecture`);
+  const isProjectPath = pathname.startsWith(`${basePath}/project`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
@@ -193,7 +193,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const menuItems = isSettingsPath ? settingsMenuItems
     : isTestingPath ? testMenuItems 
-    : isArchitecturePath ? architectureMenuItems
+    : isProjectPath ? projectMenuItems
     : isReleasesPath ? releasesMenuItems
     : isResourcesPath ? resourcesMenuItems 
     : isGovernancePath ? governanceMenuItems 
@@ -233,7 +233,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname === item.href}
+                  isActive={pathname === item.href || (item.href.endsWith('/project') && pathname.startsWith(item.href))}
                   tooltip={item.label}
                 >
                   <item.icon />

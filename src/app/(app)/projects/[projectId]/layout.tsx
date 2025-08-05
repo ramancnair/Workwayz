@@ -18,18 +18,18 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
-  const isArchitecturePath = pathname.startsWith(`${basePath}/architecture`);
+  const isProjectPath = pathname.startsWith(`${basePath}/project`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isArchitecturePath && !isReleasesPath && !isSettingsPath && !isHolidaysPath;
+  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isProjectPath && !isReleasesPath && !isSettingsPath && !isHolidaysPath;
 
   const getTabValue = () => {
     if (isDevelopmentPath) return 'development';
     if (isTestingPath) return 'testing';
-    if (isArchitecturePath) return 'architecture';
+    if (isProjectPath) return 'project';
     if (isReleasesPath) return 'releases';
     if (isResourcesPath) return 'resources';
     if (isGovernancePath) return 'governance';
@@ -42,8 +42,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
       router.push(`${basePath}/dashboard/development`);
     } else if (value === 'testing') {
       router.push(`${basePath}/dashboard/testing`);
-    } else if (value === 'architecture') {
-      router.push(`${basePath}/architecture`);
+    } else if (value === 'project') {
+      router.push(`${basePath}/project`);
     } else if (value === 'releases') {
       router.push(`${basePath}/releases`);
     } else if (value === 'resources') {
@@ -69,7 +69,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
               </div>
               <Tabs value={getTabValue()} onValueChange={onTabChange}>
                   <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                      <TabsTrigger value="architecture" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Architecture</TabsTrigger>
+                      <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project</TabsTrigger>
                       <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                       <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
                       <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
