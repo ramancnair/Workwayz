@@ -530,21 +530,17 @@ export default function ProjectsDashboard() {
                                     </TableCell>
                                     <TableCell>
                                         <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                                        {projectManager ? (
-                                             <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Avatar className="h-8 w-8">
-                                                            <AvatarImage src={projectManager.avatar} alt={`${projectManager.firstName} ${projectManager.lastName}`} data-ai-hint="manager avatar" />
-                                                            <AvatarFallback>{projectManager.firstName?.charAt(0)}</AvatarFallback>
-                                                        </Avatar>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{projectManager.firstName} {projectManager.lastName}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                             </TooltipProvider>
-                                        ) : 'Unassigned'}
+                                          <div className="flex items-center gap-2">
+                                            {projectManager ? (
+                                                <>
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={projectManager.avatar} alt={`${projectManager.firstName} ${projectManager.lastName}`} data-ai-hint="manager avatar" />
+                                                        <AvatarFallback>{projectManager.firstName?.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <span>{projectManager.firstName} {projectManager.lastName}</span>
+                                                </>
+                                            ) : 'Unassigned'}
+                                          </div>
                                       </Link>
                                     </TableCell>
                                     <TableCell className="text-right">
@@ -594,5 +590,7 @@ export default function ProjectsDashboard() {
     </>
   );
 }
+
+    
 
     
