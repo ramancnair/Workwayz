@@ -243,7 +243,7 @@ export type Portfolio = {
 
 export type ProjectMethodology = 'Agile' | 'SDLC';
 export type PricingModel = 'Fixed Bid' | 'T&M' | 'Fixed Capacity';
-export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
+export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Initial Estimation';
 
 export type Project = {
   id: string;

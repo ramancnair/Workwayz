@@ -51,9 +51,10 @@ import { Badge } from '@/components/ui/badge';
 
 const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC'];
 const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M', 'Fixed Capacity'];
-const projectStatuses: ProjectStatus[] = ['Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
+const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 
 const statusStyles: Record<ProjectStatus, string> = {
+    'Initial Estimation': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
     'Not Started': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
     'Active': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
     'On Hold': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
@@ -301,7 +302,7 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Not Started' },
+    defaultValues: { name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' },
   });
   
   useEffect(() => {
@@ -344,10 +345,10 @@ export default function ProjectsDashboard() {
         form.reset({
           ...editingProject,
           projectManagerId: editingProject.projectManagerId || '',
-          status: editingProject.status || 'Not Started',
+          status: editingProject.status || 'Initial Estimation',
         });
       } else {
-        form.reset({ name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Not Started' });
+        form.reset({ name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' });
       }
     }
   }, [isDialogOpen, editingProject, form]);
