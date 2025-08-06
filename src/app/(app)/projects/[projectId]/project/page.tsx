@@ -78,6 +78,7 @@ export default function ProjectPage() {
     horizontals,
     addHorizontal,
     updateHorizontal,
+    deleteHorizontal,
   } = useProject();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,6 +90,7 @@ export default function ProjectPage() {
   const [isSystemSubmitting, setIsSystemSubmitting] = useState(false);
 
   const [isHorizontalFormOpen, setIsHorizontalFormOpen] = useState(false);
+  const [deletingHorizontal, setDeletingHorizontal] = useState<Horizontal | null>(null);
 
   const estimationForm = useForm<z.infer<typeof estimationSchema>>({
     resolver: zodResolver(estimationSchema),
@@ -196,6 +198,17 @@ export default function ProjectPage() {
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not add horizontal." });
     }
+  };
+
+  const handleDeleteHorizontalConfirm = async () => {
+    if (!deletingHorizontal) return;
+    const success = await deleteHorizontal(deletingHorizontal.id);
+    if (success) {
+      toast({ title: "Success", description: "Horizontal deleted." });
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete horizontal." });
+    }
+    setDeletingHorizontal(null);
   };
 
   const totalDevEffort = impactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
@@ -336,6 +349,7 @@ export default function ProjectPage() {
                             <TableHead>Effort (man-days)</TableHead>
                              <TableHead>Daily Billing Rate (USD)</TableHead>
                             <TableHead>Cost (USD)</TableHead>
+                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -383,6 +397,11 @@ export default function ProjectPage() {
                                         />
                                     </TableCell>
                                     <TableCell>${cost.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => setDeletingHorizontal(h)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             )
                         })}
@@ -390,7 +409,7 @@ export default function ProjectPage() {
                      <TableFooter>
                         {!isHorizontalFormOpen && (
                           <TableRow>
-                            <TableCell colSpan={6}>
+                            <TableCell colSpan={7}>
                               <Button variant="link" onClick={() => setIsHorizontalFormOpen(true)} className="mt-4 p-0">
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Horizontal
                               </Button>
@@ -399,7 +418,7 @@ export default function ProjectPage() {
                         )}
                         {isHorizontalFormOpen && (
                             <TableRow>
-                                <TableCell colSpan={6}>
+                                <TableCell colSpan={7}>
                                     <div className="mt-4 pt-4 border-t">
                                         <h4 className="font-medium mb-2">Add New Horizontal</h4>
                                         <Form {...horizontalForm}>
@@ -441,12 +460,14 @@ export default function ProjectPage() {
                           <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
                           <TableCell />
                           <TableCell className="font-bold">${totalHorizontalCost.toFixed(2)}</TableCell>
+                          <TableCell />
                         </TableRow>
                         <TableRow className="bg-muted/80 hover:bg-muted/80">
                             <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
                             <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
                             <TableCell />
                             <TableCell className="font-bold text-lg">${grandTotalCost.toFixed(2)}</TableCell>
+                            <TableCell />
                         </TableRow>
                       </TableFooter>
                 </Table>
@@ -545,6 +566,26 @@ export default function ProjectPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteSystemConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deletingHorizontal} onOpenChange={(isOpen) => !isOpen && setDeletingHorizontal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the horizontal "{deletingHorizontal?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteHorizontalConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue

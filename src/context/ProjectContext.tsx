@@ -144,6 +144,7 @@ interface ProjectContextType {
   // Horizontal actions
   addHorizontal: (horizontal: Omit<Horizontal, 'id'>) => Promise<boolean>;
   updateHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
+  deleteHorizontal: (horizontalId: string) => Promise<boolean>;
 
   // Worklog actions
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
@@ -935,6 +936,61 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
+  // Release & Milestone Actions
+  const addReleaseOrMilestone = async (item: Omit<Release, 'id' | 'releaseId'>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const { startDate, endDate, milestoneDate, ...rest } = item;
+      const prefixMap: Record<string, string> = {
+        'Release': 'REL',
+        'Stage': 'S',
+        'Milestone': 'M',
+      }
+      const prefix = prefixMap[item.itemType] || 'ITEM';
+      const itemsOfType = releasesAndMilestones.filter(i => i.itemType === item.itemType);
+      const newId = `${prefix}-${itemsOfType.length + 1}`;
+      
+      const payload: any = { ...rest, releaseId: newId };
+      if(startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
+      if(endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
+      if(milestoneDate) payload.milestoneDate = Timestamp.fromDate(new Date(milestoneDate));
+      
+      await addDoc(collection(db, 'projects', projectId, 'releases'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to add release or milestone.", { code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const updateReleaseOrMilestone = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'itemType' >>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const { startDate, endDate, milestoneDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('startDate') && startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
+      if (data.hasOwnProperty('endDate') && endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
+      if (data.hasOwnProperty('milestoneDate') && milestoneDate) payload.milestoneDate = Timestamp.fromDate(new Date(milestoneDate));
+
+      await updateDoc(doc(db, 'projects', projectId, 'releases', id), sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update release or milestone.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const deleteReleaseOrMilestone = async (id: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId, 'releases', id));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to delete release or milestone.", { id, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
   // Kanban Column Actions
   const addKanbanColumn = async (column: Omit<KanbanColumn, 'id' | 'isDefault' | 'isDoneColumn'>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -995,61 +1051,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
-  // Release & Milestone Actions
-  const addReleaseOrMilestone = async (item: Omit<Release, 'id' | 'releaseId'>): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    try {
-      const { startDate, endDate, milestoneDate, ...rest } = item;
-      const prefixMap: Record<string, string> = {
-        'Release': 'REL',
-        'Stage': 'S',
-        'Milestone': 'M',
-      }
-      const prefix = prefixMap[item.itemType] || 'ITEM';
-      const itemsOfType = releasesAndMilestones.filter(i => i.itemType === item.itemType);
-      const newId = `${prefix}-${itemsOfType.length + 1}`;
-      
-      const payload: any = { ...rest, releaseId: newId };
-      if(startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
-      if(endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
-      if(milestoneDate) payload.milestoneDate = Timestamp.fromDate(new Date(milestoneDate));
-      
-      await addDoc(collection(db, 'projects', projectId, 'releases'), sanitizeForFirestore(payload));
-      return true;
-    } catch (e: any) {
-      console.error("Firebase Error: Failed to add release or milestone.", { code: e.code, message: e.message, fullError: e });
-      return false;
-    }
-  };
-
-  const updateReleaseOrMilestone = async (id: string, data: Partial<Omit<Release, 'id' | 'releaseId' | 'itemType' >>): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    try {
-      const { startDate, endDate, milestoneDate, ...rest } = data;
-      const payload: any = { ...rest };
-      if (data.hasOwnProperty('startDate') && startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
-      if (data.hasOwnProperty('endDate') && endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
-      if (data.hasOwnProperty('milestoneDate') && milestoneDate) payload.milestoneDate = Timestamp.fromDate(new Date(milestoneDate));
-
-      await updateDoc(doc(db, 'projects', projectId, 'releases', id), sanitizeForFirestore(payload));
-      return true;
-    } catch (e: any) {
-      console.error("Firebase Error: Failed to update release or milestone.", { id, code: e.code, message: e.message, fullError: e });
-      return false;
-    }
-  };
-
-  const deleteReleaseOrMilestone = async (id: string): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    try {
-      await deleteDoc(doc(db, 'projects', projectId, 'releases', id));
-      return true;
-    } catch (e: any) {
-      console.error("Firebase Error: Failed to delete release or milestone.", { id, code: e.code, message: e.message, fullError: e });
-      return false;
-    }
-  };
-
   // Settings Actions
   const updateProjectSettings = async (settings: Partial<Omit<ProjectSettings, 'id'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1163,6 +1164,17 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to update horizontal.", e);
+      return false;
+    }
+  };
+
+  const deleteHorizontal = async (horizontalId: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId, 'horizontals', horizontalId));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to delete horizontal.", e);
       return false;
     }
   };
@@ -1284,6 +1296,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     deleteImpactedSystem,
     addHorizontal,
     updateHorizontal,
+    deleteHorizontal,
     saveWorklog,
     submitWorklogForWeek,
   };
