@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -172,7 +173,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases'],
     '/testing/bug-list': ['stories', 'employees', 'sprints'],
-    '/project-details/initial-estimation': ['impactedSystems', 'project'],
+    '/project-details/initial-estimation': ['impactedSystems'],
     '/project-details/project-dashboard': [],
     '/releases': ['releases'],
     '/resources': ['employees'],
@@ -221,10 +222,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     : globalSettings?.weeklyOffDays ?? [0, 6];
 
   const getCollectionsForPage = useCallback((path: string): CollectionName[] => {
-    const pageKey = Object.keys(pageToCollectionMap).find(key => path.endsWith(key));
-    const baseCollections: CollectionName[] = ['project', 'settings'];
-    if (!pageKey) return baseCollections;
-    return [...new Set([...baseCollections, ...pageToCollectionMap[pageKey]])];
+      const pageKey = Object.keys(pageToCollectionMap).find(key => path.endsWith(key));
+      const baseCollections: CollectionName[] = ['project', 'settings'];
+      if (!pageKey) return baseCollections;
+      const mappedCollections = pageToCollectionMap[pageKey];
+      return [...new Set([...baseCollections, ...mappedCollections])];
   }, []);
 
   useEffect(() => {
@@ -260,7 +262,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'settings', setState: setProjectSettings },
     ];
 
-    const neededCollections = getCollectionsForPage(pathname);
+    const neededCollectionNames = getCollectionsForPage(pathname);
+    const neededCollections = allCollections.filter(c => neededCollectionNames.includes(c.name));
     
     const unsubscribers = neededCollections.map(({ name, setState }) => {
         if(name === 'project') {
