@@ -60,12 +60,12 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: KanbanSquare,
     },
     {
-      href: `${basePath}/backlog`,
+      href: `${basePath}/development/backlog`,
       label: "Product Backlog",
       icon: Layers,
     },
      {
-      href: `${basePath}/development-tasks`,
+      href: `${basePath}/development/development-tasks`,
       label: "Development Tasks",
       icon: CheckSquare,
     },
