@@ -242,7 +242,7 @@ export type Portfolio = {
 };
 
 export type ProjectMethodology = 'Agile' | 'SDLC';
-export type PricingModel = 'Fixed Bid' | 'T&M' | 'Fixed Capacity';
+export type PricingModel = 'Fixed Price' | 'T&M' | 'Fixed Capacity';
 export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Initial Estimation';
 
 export type Project = {
@@ -270,3 +270,5 @@ export type TrashedItem = {
   type: 'Portfolio' | 'Project' | 'User';
   deletedAt: string;
 };
+
+    
