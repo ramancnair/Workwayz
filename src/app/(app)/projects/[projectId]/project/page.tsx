@@ -56,6 +56,7 @@ const systemSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
   category: z.enum(['Technology', 'Function']),
   estimate: z.coerce.number().min(1, 'Estimation must be at least 1.'),
+  dailyBillingRate: z.coerce.number().optional(),
 });
 
 const horizontalFormSchema = z.object({
@@ -95,7 +96,7 @@ export default function ProjectPage() {
 
   const systemForm = useForm<z.infer<typeof systemSchema>>({
     resolver: zodResolver(systemSchema),
-    defaultValues: { name: '', description: '', category: 'Technology', estimate: 0 },
+    defaultValues: { name: '', description: '', category: 'Technology', estimate: 0, dailyBillingRate: 0 },
   });
   
   const horizontalForm = useForm<z.infer<typeof horizontalFormSchema>>({
@@ -119,9 +120,10 @@ export default function ProjectPage() {
         systemForm.reset({
           ...editingSystem,
           estimate: editingSystem.estimate || 0,
+          dailyBillingRate: editingSystem.dailyBillingRate || 0,
         });
       } else {
-        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: 0 });
+        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: 0, dailyBillingRate: 0 });
       }
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
@@ -197,11 +199,18 @@ export default function ProjectPage() {
   };
 
   const totalDevEffort = impactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
+  const totalDevCost = impactedSystems.reduce((acc, system) => acc + ((system.estimate || 0) * (system.dailyBillingRate || 0)), 0);
+
   const totalHorizontalEffort = horizontals.reduce((acc, h) => {
       if (!h.isEnabled) return acc;
       return acc + (totalDevEffort * (h.weightage / 100));
   }, 0);
   const grandTotalEffort = totalDevEffort + totalHorizontalEffort;
+  
+  // Assuming average rate for horizontals, could be more complex
+  const averageDevRate = totalDevEffort > 0 ? totalDevCost / totalDevEffort : 0;
+  const totalHorizontalCost = totalHorizontalEffort * averageDevRate;
+  const grandTotalCost = totalDevCost + totalHorizontalCost;
 
   return (
     <>
@@ -267,9 +276,10 @@ export default function ProjectPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[25%]">Name</TableHead>
-                  <TableHead className="w-[45%]">Description</TableHead>
+                  <TableHead className="w-[35%]">Description</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Estimation (man-days)</TableHead>
+                  <TableHead>Billing Rate (USD)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -282,6 +292,7 @@ export default function ProjectPage() {
                       <Badge variant="outline">{system.category}</Badge>
                     </TableCell>
                     <TableCell>{system.estimate || 'N/A'}</TableCell>
+                    <TableCell>{system.dailyBillingRate || 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleSystemDialogOpen(system)}>
                         <Edit className="h-4 w-4" />
@@ -297,7 +308,7 @@ export default function ProjectPage() {
                 <TableRow>
                   <TableCell colSpan={3} className="text-right font-bold">Total Development Effort</TableCell>
                   <TableCell className="font-bold">{totalDevEffort}</TableCell>
-                  <TableCell />
+                  <TableCell className="font-bold text-right" colSpan={2}>${totalDevCost.toFixed(2)}</TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
@@ -323,7 +334,7 @@ export default function ProjectPage() {
                     </TableHeader>
                     <TableBody>
                         {horizontals.map(h => {
-                            const horizontalEffort = (totalDevEffort * (h.weightage / 100)).toFixed(2);
+                            const horizontalEffort = (totalDevEffort * (h.weightage / 100));
                             return (
                                 <TableRow key={h.id}>
                                     <TableCell>
@@ -346,7 +357,7 @@ export default function ProjectPage() {
                                             className="w-24"
                                         />
                                     </TableCell>
-                                    <TableCell>{horizontalEffort}</TableCell>
+                                    <TableCell>{horizontalEffort.toFixed(2)}</TableCell>
                                 </TableRow>
                             )
                         })}
@@ -359,7 +370,7 @@ export default function ProjectPage() {
                         <TableRow className="bg-muted/80 hover:bg-muted/80">
                             <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
                             <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
-                            <TableCell/>
+                            <TableCell className="font-bold text-lg text-right">${grandTotalCost.toFixed(2)}</TableCell>
                         </TableRow>
                       </TableFooter>
                 </Table>
@@ -467,6 +478,17 @@ export default function ProjectPage() {
                   )}
                 />
               </div>
+               <FormField
+                  control={systemForm.control}
+                  name="dailyBillingRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Daily Billing Rate (USD)</FormLabel>
+                      <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <DialogFooter>
                 <Button type="submit" disabled={isSystemSubmitting}>
                   {isSystemSubmitting ? (editingSystem ? 'Saving...' : 'Creating...') : (editingSystem ? 'Save Changes' : 'Create System')}
@@ -499,3 +521,4 @@ export default function ProjectPage() {
     </>
   );
 }
+

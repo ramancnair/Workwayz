@@ -194,6 +194,7 @@ export type ImpactedSystem = {
   category: ImpactedSystemCategory;
   explanation?: string;
   estimate?: number; // in man-days
+  dailyBillingRate?: number;
 };
 
 export type ReleaseItemType = 'Release' | 'Stage' | 'Milestone';
@@ -277,5 +278,3 @@ export type Horizontal = {
   weightage: number; // percentage
   isEnabled: boolean;
 };
-
-    
