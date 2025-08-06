@@ -24,7 +24,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   
-  const isDevelopmentPath = !isTestingPath && !isResourcesPath && !isGovernancePath && !isProjectPath && !isReleasesPath && !isSettingsPath && !isHolidaysPath;
+  const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
   const getTabValue = () => {
     if (isDevelopmentPath) return 'development';
@@ -39,7 +39,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
   const onTabChange = (value: string) => {
     if (value === 'development') {
-      router.push(`${basePath}/dashboard/development`);
+      router.push(`${basePath}/development/dashboard`);
     } else if (value === 'testing') {
       router.push(`${basePath}/dashboard/testing`);
     } else if (value === 'project') {

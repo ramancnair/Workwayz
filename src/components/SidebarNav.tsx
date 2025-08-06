@@ -50,7 +50,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const devMenuItems = [
     {
-      href: `${basePath}/dashboard/development`,
+      href: `${basePath}/development/dashboard`,
       label: "Dev Dashboard",
       icon: LayoutDashboard,
     },
@@ -194,6 +194,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
+  const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
 
   const menuItems = isSettingsPath ? settingsMenuItems
@@ -202,7 +203,8 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     : isReleasesPath ? releasesMenuItems
     : isResourcesPath ? resourcesMenuItems 
     : isGovernancePath ? governanceMenuItems 
-    : isHolidaysPath ? holidaysMenuItems
+    : isHolidaysPath ? holidaysMenuItems 
+    : isDevelopmentPath ? devMenuItems
     : devMenuItems;
 
   return (

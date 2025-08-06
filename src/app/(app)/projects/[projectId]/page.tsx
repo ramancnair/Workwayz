@@ -2,5 +2,5 @@
 import { redirect } from 'next/navigation';
 
 export default function ProjectRootPage({ params }: { params: { projectId: string } }) {
-  redirect(`/projects/${params.projectId}/dashboard/development`);
+  redirect(`/projects/${params.projectId}/development/dashboard`);
 }
