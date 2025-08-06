@@ -55,7 +55,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: LayoutDashboard,
     },
     {
-      href: `${basePath}/kanban`,
+      href: `${basePath}/development/kanban`,
       label: "Kanban Board",
       icon: KanbanSquare,
     },
