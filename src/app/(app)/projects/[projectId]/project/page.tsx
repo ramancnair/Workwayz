@@ -280,11 +280,10 @@ export default function ProjectPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[25%]">Name</TableHead>
-                  <TableHead className="w-[35%]">Description</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead className="w-[40%]">Name</TableHead>
                   <TableHead>Estimation (man-days)</TableHead>
                   <TableHead>Billing Rate (USD)</TableHead>
+                  <TableHead>Cost (USD)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -292,12 +291,9 @@ export default function ProjectPage() {
                 {impactedSystems.map((system) => (
                   <TableRow key={system.id}>
                     <TableCell className="font-medium">{system.name}</TableCell>
-                    <TableCell className="break-words">{system.description}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{system.category}</Badge>
-                    </TableCell>
                     <TableCell>{system.estimate || 'N/A'}</TableCell>
-                    <TableCell>{system.dailyBillingRate || 'N/A'}</TableCell>
+                    <TableCell>${system.dailyBillingRate || 'N/A'}</TableCell>
+                    <TableCell>${((system.estimate || 0) * (system.dailyBillingRate || 0)).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleSystemDialogOpen(system)}>
                         <Edit className="h-4 w-4" />
@@ -311,9 +307,11 @@ export default function ProjectPage() {
               </TableBody>
                <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={3} className="text-right font-bold">Total Development Effort</TableCell>
+                  <TableCell className="text-right font-bold">Total Development Effort</TableCell>
                   <TableCell className="font-bold">{totalDevEffort}</TableCell>
-                  <TableCell className="font-bold text-right" colSpan={2}>${totalDevCost.toFixed(2)}</TableCell>
+                  <TableCell />
+                  <TableCell className="font-bold">${totalDevCost.toFixed(2)}</TableCell>
+                  <TableCell />
                 </TableRow>
               </TableFooter>
             </Table>
@@ -381,7 +379,7 @@ export default function ProjectPage() {
                         <TableRow className="bg-muted/80 hover:bg-muted/80">
                             <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
                             <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
-                            <TableCell className="font-bold text-lg text-right" colSpan={2}>${grandTotalCost.toFixed(2)}</TableCell>
+                            <TableCell colSpan={2} className="font-bold text-lg text-right">${grandTotalCost.toFixed(2)}</TableCell>
                         </TableRow>
                       </TableFooter>
                 </Table>
