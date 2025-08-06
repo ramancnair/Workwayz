@@ -18,7 +18,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
-  const isProjectPath = pathname.startsWith(`${basePath}/architecture`) || pathname.startsWith(`${basePath}/dashboard/cto`);
+  const isProjectPath = pathname.startsWith(`${basePath}/architecture`) || pathname.startsWith(`${basePath}/dashboard/project-dashboard`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
@@ -43,7 +43,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     } else if (value === 'testing') {
       router.push(`${basePath}/dashboard/testing`);
     } else if (value === 'project') {
-      router.push(`${basePath}/dashboard/cto`);
+      router.push(`${basePath}/dashboard/project-dashboard`);
     } else if (value === 'releases') {
       router.push(`${basePath}/releases`);
     } else if (value === 'resources') {

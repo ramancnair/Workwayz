@@ -96,7 +96,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const projectMenuItems = [
     {
-      href: `${basePath}/dashboard/cto`,
+      href: `${basePath}/dashboard/project-dashboard`,
       label: "Project Dashboard",
       icon: LayoutDashboard,
     },
@@ -188,7 +188,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   ];
 
   const isTestingPath = ['/dashboard/testing', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
-  const isProjectPath = pathname.startsWith(`${basePath}/architecture`) || pathname.startsWith(`${basePath}/dashboard/cto`);
+  const isProjectPath = pathname.startsWith(`${basePath}/architecture`) || pathname.startsWith(`${basePath}/dashboard/project-dashboard`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
