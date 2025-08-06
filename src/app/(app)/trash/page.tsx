@@ -23,13 +23,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function TrashPage() {
     const [trashedItems, setTrashedItems] = useState<TrashedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
-    const [itemToRestore, setItemToRestore] = useState<TrashedItem | null>(null);
-    const [itemToDeleteForever, setItemToDeleteForever] = useState<TrashedItem | null>(null);
+    const [selectedItems, setSelectedItems] = useState<TrashedItem[]>([]);
+    const [actionType, setActionType] = useState<'restore' | 'delete' | null>(null);
 
     useEffect(() => {
         if (!db) return;
@@ -100,64 +101,97 @@ export default function TrashPage() {
     };
     
     const handleRestore = async () => {
-        if (!itemToRestore || !db) return;
+        if (selectedItems.length === 0 || !db) return;
         
         try {
-            const collectionName = getCollectionName(itemToRestore.type);
-            const itemRef = doc(db, collectionName, itemToRestore.id);
-            await updateDoc(itemRef, { isDeleted: false, deletedAt: null });
+            const batch = writeBatch(db);
+            for (const item of selectedItems) {
+                const collectionName = getCollectionName(item.type);
+                const itemRef = doc(db, collectionName, item.id);
+                batch.update(itemRef, { isDeleted: false, deletedAt: null });
 
-            // If restoring a portfolio, we should also restore its projects
-            if (itemToRestore.type === 'Portfolio') {
-                const projectsQuery = query(collection(db, 'projects'), where('portfolioId', '==', itemToRestore.id), where('isDeleted', '==', true));
-                const projectsSnapshot = await getDocs(projectsQuery);
-                const batch = writeBatch(db);
-                projectsSnapshot.forEach(projectDoc => {
-                    batch.update(projectDoc.ref, { isDeleted: false, deletedAt: null });
-                });
-                await batch.commit();
+                // If restoring a portfolio, we should also restore its projects
+                if (item.type === 'Portfolio') {
+                    const projectsQuery = query(collection(db, 'projects'), where('portfolioId', '==', item.id), where('isDeleted', '==', true));
+                    const projectsSnapshot = await getDocs(projectsQuery);
+                    projectsSnapshot.forEach(projectDoc => {
+                        batch.update(projectDoc.ref, { isDeleted: false, deletedAt: null });
+                    });
+                }
             }
-
-            toast({ title: 'Success', description: `${itemToRestore.type} "${itemToRestore.name}" has been restored.` });
+            await batch.commit();
+            toast({ title: 'Success', description: `${selectedItems.length} item(s) have been restored.` });
         } catch (error) {
-            console.error("Error restoring item:", error);
-            toast({ variant: 'destructive', title: 'Error', description: `Could not restore ${itemToRestore.type}.` });
+            console.error("Error restoring items:", error);
+            toast({ variant: 'destructive', title: 'Error', description: `Could not restore selected items.` });
         } finally {
-            setItemToRestore(null);
+            setSelectedItems([]);
+            setActionType(null);
         }
     };
     
     const handleDeleteForever = async () => {
-        if (!itemToDeleteForever || !db) return;
+        if (selectedItems.length === 0 || !db) return;
         try {
-            if (itemToDeleteForever.type === 'Portfolio') {
-                const projectsQuery = query(collection(db, 'projects'), where('portfolioId', '==', itemToDeleteForever.id));
-                const projectsSnapshot = await getDocs(projectsQuery);
-                for(const projectDoc of projectsSnapshot.docs) {
-                    await deleteProjectAndSubcollections(projectDoc.id);
+             for (const item of selectedItems) {
+                if (item.type === 'Portfolio') {
+                    const projectsQuery = query(collection(db, 'projects'), where('portfolioId', '==', item.id));
+                    const projectsSnapshot = await getDocs(projectsQuery);
+                    for(const projectDoc of projectsSnapshot.docs) {
+                        await deleteProjectAndSubcollections(projectDoc.id);
+                    }
+                    await deleteDoc(doc(db, 'portfolios', item.id));
+
+                } else if (item.type === 'Project') {
+                    await deleteProjectAndSubcollections(item.id);
+                } else { // User
+                    await deleteDoc(doc(db, 'employees', item.id));
                 }
-                await deleteDoc(doc(db, 'portfolios', itemToDeleteForever.id));
-
-            } else if (itemToDeleteForever.type === 'Project') {
-                await deleteProjectAndSubcollections(itemToDeleteForever.id);
-            } else { // User
-                await deleteDoc(doc(db, 'employees', itemToDeleteForever.id));
             }
-
-            toast({ title: 'Success', description: `${itemToDeleteForever.type} "${itemToDeleteForever.name}" has been permanently deleted.` });
+            toast({ title: 'Success', description: `${selectedItems.length} item(s) have been permanently deleted.` });
 
         } catch (error) {
-             console.error("Error permanently deleting item:", error);
-             toast({ variant: 'destructive', title: 'Error', description: `Could not permanently delete ${itemToDeleteForever.type}.` });
+             console.error("Error permanently deleting items:", error);
+             toast({ variant: 'destructive', title: 'Error', description: `Could not permanently delete selected items.` });
         } finally {
-            setItemToDeleteForever(null);
+            setSelectedItems([]);
+            setActionType(null);
         }
     };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedItems(trashedItems);
+        } else {
+            setSelectedItems([]);
+        }
+    };
+
+    const handleSelectItem = (item: TrashedItem, checked: boolean) => {
+        if (checked) {
+            setSelectedItems(prev => [...prev, item]);
+        } else {
+            setSelectedItems(prev => prev.filter(i => i.id !== item.id));
+        }
+    };
+
+    const isAllSelected = trashedItems.length > 0 && selectedItems.length === trashedItems.length;
+    const isSomeSelected = selectedItems.length > 0 && selectedItems.length < trashedItems.length;
+
+    const dialogTitle = actionType === 'restore' ? 'Restore Items?' : 'Delete Forever?';
+    const dialogDescription = actionType === 'restore' 
+        ? `Are you sure you want to restore the selected ${selectedItems.length} item(s)? Portfolios will also have their projects restored.`
+        : `This action cannot be undone. This will permanently delete the selected ${selectedItems.length} item(s) and all associated data.`;
+    const dialogAction = actionType === 'restore' ? handleRestore : handleDeleteForever;
+
 
     return (
         <>
             <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-                <PageHeader title="Trash" description="Items are permanently deleted after 30 days." />
+                <PageHeader title="Trash" description="Items are permanently deleted after 30 days.">
+                    <Button variant="outline" onClick={() => setActionType('restore')} disabled={selectedItems.length === 0}>Restore</Button>
+                    <Button variant="destructive" onClick={() => setActionType('delete')} disabled={selectedItems.length === 0}>Delete Forever</Button>
+                </PageHeader>
                 <Card>
                     <CardContent className="p-4">
                          {isLoading ? (
@@ -166,29 +200,37 @@ export default function TrashPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-10">
+                                        <Checkbox 
+                                            onCheckedChange={handleSelectAll}
+                                            checked={isAllSelected}
+                                            aria-label="Select all"
+                                        />
+                                    </TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Type</TableHead>
                                     <TableHead>Deleted</TableHead>
                                     <TableHead>Time Left</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {trashedItems.length > 0 ? trashedItems.map((item) => {
                                     const deletedDate = parseISO(item.deletedAt);
                                     const daysLeft = 30 - differenceInDays(new Date(), deletedDate);
+                                    const isSelected = selectedItems.some(i => i.id === item.id);
                                     return (
-                                        <TableRow key={item.id}>
+                                        <TableRow key={item.id} data-state={isSelected ? "selected" : ""}>
+                                            <TableCell>
+                                                <Checkbox 
+                                                    checked={isSelected}
+                                                    onCheckedChange={(checked) => handleSelectItem(item, !!checked)}
+                                                    aria-label={`Select ${item.name}`}
+                                                />
+                                            </TableCell>
                                             <TableCell className="font-medium">{item.name}</TableCell>
                                             <TableCell>{item.type}</TableCell>
                                             <TableCell>{formatDistanceToNow(deletedDate, { addSuffix: true })}</TableCell>
                                             <TableCell>{daysLeft > 0 ? `${daysLeft} days` : 'Deleting soon'}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="outline" size="sm" onClick={() => setItemToRestore(item)}>Restore</Button>
-                                                <Button variant="destructive" size="sm" className="ml-2" onClick={() => setItemToDeleteForever(item)}>
-                                                    Delete Forever
-                                                </Button>
-                                            </TableCell>
                                         </TableRow>
                                     )
                                 }) : (
@@ -202,36 +244,24 @@ export default function TrashPage() {
                     </CardContent>
                 </Card>
             </div>
-             <AlertDialog open={!!itemToRestore} onOpenChange={(isOpen) => !isOpen && setItemToRestore(null)}>
+            <AlertDialog open={!!actionType} onOpenChange={(isOpen) => !isOpen && setActionType(null)}>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Restore Item?</AlertDialogTitle>
+                    <AlertDialogTitle>{dialogTitle}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Are you sure you want to restore the {itemToRestore?.type} "{itemToRestore?.name}"?
-                      {itemToRestore?.type === 'Portfolio' && " This will also restore its associated projects."}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleRestore}>Restore</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-            <AlertDialog open={!!itemToDeleteForever} onOpenChange={(isOpen) => !isOpen && setItemToDeleteForever(null)}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Forever?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the {itemToDeleteForever?.type} "{itemToDeleteForever?.name}" and all its associated data.
+                      {dialogDescription}
+                      <ul className="mt-2 list-disc list-inside">
+                        {selectedItems.map(i => <li key={i.id}>{i.name} ({i.type})</li>)}
+                      </ul>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction 
-                        onClick={handleDeleteForever}
-                        className={cn(buttonVariants({ variant: 'destructive' }))}
+                        onClick={dialogAction}
+                        className={cn(actionType === 'delete' && buttonVariants({ variant: 'destructive' }))}
                     >
-                        Delete Forever
+                        {actionType === 'restore' ? 'Restore' : 'Delete Forever'}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
