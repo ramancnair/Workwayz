@@ -244,6 +244,7 @@ export type Portfolio = {
 export type ProjectType = 'Initial Estimation' | 'Project' | 'Support' | 'Change Request';
 export type ProjectMethodology = 'Agile' | 'SDLC';
 export type PricingModel = 'Fixed Bid' | 'T&M' | 'Fixed Capacity';
+export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
 
 export type Project = {
   id: string;
@@ -257,6 +258,7 @@ export type Project = {
   projectType?: ProjectType;
   methodology?: ProjectMethodology;
   pricingModel?: PricingModel;
+  status?: ProjectStatus;
 };
 
 export type AccessControlSetting = {

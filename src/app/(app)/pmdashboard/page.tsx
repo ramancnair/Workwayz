@@ -43,14 +43,25 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
-import { type Portfolio, type Project, type ProjectType, type ProjectMethodology, type PricingModel, type User } from '@/types';
+import { type Portfolio, type Project, type ProjectType, type ProjectMethodology, type PricingModel, type User, type ProjectStatus } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 const projectTypes: ProjectType[] = ['Initial Estimation', 'Project', 'Support', 'Change Request'];
 const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC'];
 const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M', 'Fixed Capacity'];
+const projectStatuses: ProjectStatus[] = ['Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
+
+const statusStyles: Record<ProjectStatus, string> = {
+    'Not Started': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    'Active': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'On Hold': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'Completed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'Cancelled': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
+
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required.'),
@@ -60,6 +71,7 @@ const projectSchema = z.object({
   projectType: z.enum(projectTypes).optional(),
   methodology: z.enum(projectMethodologies).optional(),
   pricingModel: z.enum(pricingModels).optional(),
+  status: z.enum(projectStatuses).optional(),
 });
 
 function ProjectDialogContent({
@@ -168,42 +180,68 @@ function ProjectDialogContent({
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="projectManagerId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Project Manager</FormLabel>
-                 <FormControl>
-                    <Input 
-                        list="pm-options" 
-                        placeholder="Select a Project Manager..." 
-                        value={pmInputText}
-                        onChange={(e) => {
-                            const inputText = e.target.value;
-                            setPmInputText(inputText);
-                            
-                            const matchingOption = pmOptions.find(opt => opt.label === inputText);
-                            field.onChange(matchingOption ? matchingOption.value : undefined);
-                        }}
-                        onBlur={() => {
-                            const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
-                            if (!matchingOption) {
-                                setPmInputText('');
-                                field.onChange(undefined);
-                            }
-                        }}
-                    />
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="projectManagerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Manager</FormLabel>
+                  <FormControl>
+                      <Input 
+                          list="pm-options" 
+                          placeholder="Select a Project Manager..." 
+                          value={pmInputText}
+                          onChange={(e) => {
+                              const inputText = e.target.value;
+                              setPmInputText(inputText);
+                              
+                              const matchingOption = pmOptions.find(opt => opt.label === inputText);
+                              field.onChange(matchingOption ? matchingOption.value : undefined);
+                          }}
+                          onBlur={() => {
+                              const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
+                              if (!matchingOption) {
+                                  setPmInputText('');
+                                  field.onChange(undefined);
+                              }
+                          }}
+                      />
+                      </FormControl>
+                      <datalist id="pm-options">
+                          {pmOptions.map(option => (
+                              <option key={option.value} value={option.label} />
+                          ))}
+                      </datalist>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                     </FormControl>
-                    <datalist id="pm-options">
-                        {pmOptions.map(option => (
-                            <option key={option.value} value={option.label} />
-                        ))}
-                    </datalist>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                    <SelectContent>
+                      {projectStatuses.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
@@ -309,7 +347,7 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '' },
+    defaultValues: { name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Not Started' },
   });
   
   useEffect(() => {
@@ -352,9 +390,10 @@ export default function ProjectsDashboard() {
         form.reset({
           ...editingProject,
           projectManagerId: editingProject.projectManagerId || '',
+          status: editingProject.status || 'Not Started',
         });
       } else {
-        form.reset({ name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '' });
+        form.reset({ name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Not Started' });
       }
     }
   }, [isDialogOpen, editingProject, form]);
@@ -505,6 +544,7 @@ export default function ProjectsDashboard() {
                             <TableRow>
                               <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
                               <SortableHeader columnId="name">Project Name</SortableHeader>
+                              <SortableHeader columnId="status">Status</SortableHeader>
                               <SortableHeader columnId="projectManagerId">Project Manager</SortableHeader>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -522,6 +562,15 @@ export default function ProjectsDashboard() {
                                     <TableCell>
                                       <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
                                         {project.name}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                        {project.status ? (
+                                             <Badge className={cn('font-semibold', statusStyles[project.status])}>
+                                                {project.status}
+                                            </Badge>
+                                        ) : 'N/A'}
                                       </Link>
                                     </TableCell>
                                     <TableCell>
