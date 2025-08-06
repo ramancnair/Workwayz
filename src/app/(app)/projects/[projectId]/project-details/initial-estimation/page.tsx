@@ -37,6 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, Save } from 'lucide-react';
@@ -161,6 +162,8 @@ export default function InitialEstimationPage() {
     }
     setIsSystemSubmitting(false);
   };
+  
+  const totalEstimate = impactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
 
   return (
     <>
@@ -252,6 +255,13 @@ export default function InitialEstimationPage() {
                   </TableRow>
                 ))}
               </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-right font-bold">Total Estimation</TableCell>
+                  <TableCell className="font-bold">{totalEstimate}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
             </Table>
           </CardContent>
         </Card>
@@ -347,3 +357,4 @@ export default function InitialEstimationPage() {
     </>
   );
 }
+

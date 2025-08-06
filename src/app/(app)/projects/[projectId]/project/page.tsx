@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -36,6 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, Save } from 'lucide-react';
@@ -161,6 +163,8 @@ export default function ProjectPage() {
     setIsSystemSubmitting(false);
   };
 
+  const totalEstimate = impactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
+
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -251,6 +255,13 @@ export default function ProjectPage() {
                   </TableRow>
                 ))}
               </TableBody>
+               <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-right font-bold">Total Estimation</TableCell>
+                  <TableCell className="font-bold">{totalEstimate}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
             </Table>
           </CardContent>
         </Card>
@@ -346,3 +357,4 @@ export default function ProjectPage() {
     </>
   );
 }
+
