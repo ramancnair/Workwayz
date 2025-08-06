@@ -22,7 +22,7 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
     return (
         <div className={className}>
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-lg font-semibold">{value || <span className="text-muted-foreground/70">N/A</span>}</p>
+            <div className="text-lg font-semibold">{value || <span className="text-muted-foreground/70">N/A</span>}</div>
         </div>
     );
 }
