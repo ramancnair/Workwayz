@@ -14,7 +14,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const isProjectPage = pathname.startsWith('/projects/');
   
   const getTabValue = () => {
-    if (pathname.startsWith('/pmdashboard')) return 'projects';
+    if (pathname.startsWith('/project-home')) return 'projects';
     if (pathname.startsWith('/portfolios')) return 'portfolios';
     if (pathname.startsWith('/users')) return 'users';
     if (pathname.startsWith('/utilization')) return 'users';
@@ -26,7 +26,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   const onTabChange = (value: string) => {
     if (value === 'projects') {
-      router.push('/pmdashboard');
+      router.push('/project-home');
     } else if (value === 'portfolios') {
       router.push('/portfolios');
     } else if (value === 'users') {

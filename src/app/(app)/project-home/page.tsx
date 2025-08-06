@@ -474,7 +474,7 @@ export default function ProjectsDashboard() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="PM Dashboard" description="Manage all your portfolios and projects.">
+        <PageHeader title="Project Home" description="Manage all your portfolios and projects.">
           <Button onClick={() => handleOpenDialog(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             New Project
