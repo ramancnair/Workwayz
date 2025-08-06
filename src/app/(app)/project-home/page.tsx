@@ -153,9 +153,9 @@ function ProjectDialogContent({
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description</FormLabel>
+                <FormLabel>Project Objective</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Describe the project's goals..." {...field} value={field.value ?? ''} />
+                  <Textarea placeholder="Describe the project's objective..." {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -602,7 +602,6 @@ export default function ProjectsDashboard() {
     </>
   );
 }
-
     
 
     
