@@ -24,12 +24,14 @@ import {
   Trash2,
   Users,
   CalendarDays,
+  CreditCard,
+  DollarSign,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
 type PmSidebarNavProps = {
-  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays';
+  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing';
 };
 
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
@@ -50,6 +52,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       label: "Project Home",
       icon: FolderKanban,
       group: 'projects'
+    },
+    {
+      id: 'billing-rate',
+      href: '/billing-rate',
+      label: 'Billing Rate',
+      icon: DollarSign,
+      group: 'billing',
     },
     {
       id: 'users',
@@ -81,6 +90,8 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
         return 'portfolio';
       case 'projects':
         return 'projects';
+      case 'billing':
+        return 'billing';
       case 'users':
         return 'users';
       case 'holidays':
