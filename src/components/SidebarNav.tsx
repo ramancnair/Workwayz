@@ -122,17 +122,17 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Users,
     },
     {
-      href: `${basePath}/project-gantt`,
+      href: `${basePath}/resources/project-gantt`,
       label: "Resource Gantt",
       icon: GanttChartSquare,
     },
     {
-      href: `${basePath}/worklog`,
+      href: `${basePath}/resources/worklog`,
       label: "Worklog",
       icon: ClipboardList,
     },
      {
-      href: `${basePath}/leave-tracker`,
+      href: `${basePath}/resources/leave-tracker`,
       label: "Leave Tracker",
       icon: CalendarCheck,
     },
@@ -190,7 +190,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isTestingPath = ['/testing/dashboard', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
-  const isResourcesPath = ['/resources', '/project-gantt', '/worklog', '/leave-tracker'].some(p => pathname.startsWith(basePath + p));
+  const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
