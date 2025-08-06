@@ -118,7 +118,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const resourcesMenuItems = [
     {
       href: `${basePath}/resources`,
-      label: "Employees",
+      label: "Project Resources",
       icon: Users,
     },
     {
