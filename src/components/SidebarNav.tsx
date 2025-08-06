@@ -221,12 +221,12 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       <div className="p-4 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
             <SidebarMenuItem>
-              <Link href="/pmdashboard">
+              <Link href="/project-home">
                 <SidebarMenuButton
-                  tooltip="PM Dashboard"
+                  tooltip="Project Home"
                 >
                   <Home />
-                  <span>PM Dashboard</span>
+                  <span>Project Home</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
