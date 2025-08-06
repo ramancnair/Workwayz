@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -209,7 +208,7 @@ export default function InitialEstimationPage() {
   const totalHorizontalCost = horizontals.reduce((acc, h) => {
     if (!h.isEnabled) return acc;
     const horizontalEffort = (totalDevEffort * (h.weightage / 100));
-    const rate = h.dailyBillingRate || averageDevRate;
+    const rate = h.dailyBillingRate === undefined ? averageDevRate : h.dailyBillingRate;
     return acc + (horizontalEffort * rate);
   }, 0);
 
@@ -388,12 +387,16 @@ export default function InitialEstimationPage() {
                     </TableBody>
                      <TableFooter>
                         <TableRow>
-                          <TableCell colSpan={4} className="text-right font-bold">Total Horizontal Effort</TableCell>
-                          <TableCell colSpan={2} className="text-right font-bold">${totalHorizontalCost.toFixed(2)}</TableCell>
+                          <TableCell colSpan={3} className="text-right font-bold">Total Horizontal Effort</TableCell>
+                          <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
+                          <TableCell />
+                          <TableCell className="font-bold">${totalHorizontalCost.toFixed(2)}</TableCell>
                         </TableRow>
                         <TableRow className="bg-muted/80 hover:bg-muted/80">
-                            <TableCell colSpan={4} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
-                            <TableCell colSpan={2} className="font-bold text-lg text-right">${grandTotalCost.toFixed(2)}</TableCell>
+                            <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
+                            <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
+                            <TableCell />
+                            <TableCell className="font-bold text-lg">${grandTotalCost.toFixed(2)}</TableCell>
                         </TableRow>
                       </TableFooter>
                 </Table>
