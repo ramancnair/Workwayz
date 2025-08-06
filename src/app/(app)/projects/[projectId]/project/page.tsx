@@ -52,7 +52,7 @@ const systemSchema = z.object({
   name: z.string().min(1, 'System name is required.'),
   description: z.string().min(1, 'Description is required.'),
   category: z.enum(['Technology', 'Function']),
-  estimate: z.coerce.number().optional(),
+  estimate: z.coerce.number().min(1, 'Estimation is required.'),
 });
 
 const categories: ImpactedSystemCategory[] = ['Technology', 'Function'];
