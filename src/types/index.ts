@@ -241,7 +241,6 @@ export type Portfolio = {
   deletedAt?: string; // ISO String
 };
 
-export type ProjectType = 'Initial Estimation' | 'Project' | 'Support' | 'Change Request';
 export type ProjectMethodology = 'Agile' | 'SDLC';
 export type PricingModel = 'Fixed Bid' | 'T&M' | 'Fixed Capacity';
 export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled';
@@ -255,7 +254,6 @@ export type Project = {
   deletedAt?: string; // ISO String
   summary?: string;
   projectManagerId?: string;
-  projectType?: ProjectType;
   methodology?: ProjectMethodology;
   pricingModel?: PricingModel;
   status?: ProjectStatus;

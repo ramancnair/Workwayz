@@ -43,13 +43,12 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
-import { type Portfolio, type Project, type ProjectType, type ProjectMethodology, type PricingModel, type User, type ProjectStatus } from '@/types';
+import { type Portfolio, type Project, type ProjectMethodology, type PricingModel, type User, type ProjectStatus } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 
-const projectTypes: ProjectType[] = ['Initial Estimation', 'Project', 'Support', 'Change Request'];
 const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC'];
 const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M', 'Fixed Capacity'];
 const projectStatuses: ProjectStatus[] = ['Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
@@ -68,7 +67,6 @@ const projectSchema = z.object({
   description: z.string().optional(),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
   projectManagerId: z.string().optional(),
-  projectType: z.enum(projectTypes).optional(),
   methodology: z.enum(projectMethodologies).optional(),
   pricingModel: z.enum(pricingModels).optional(),
   status: z.enum(projectStatuses).optional(),
@@ -87,11 +85,6 @@ function ProjectDialogContent({
   portfolios: Portfolio[];
   users: User[];
 }) {
-  const watchedProjectType = useWatch({
-    control: form.control,
-    name: 'projectType',
-  });
-  
   const [pmInputText, setPmInputText] = useState('');
   
   const pmOptions = useMemo(() => users.map(user => ({
@@ -109,19 +102,6 @@ function ProjectDialogContent({
         setPmInputText('');
     }
   }, [editingProject, users]);
-
-
-  useEffect(() => {
-    if (watchedProjectType === 'Initial Estimation') {
-      form.setValue('methodology', undefined, { shouldValidate: true });
-      form.setValue('pricingModel', undefined, { shouldValidate: true });
-    } else if (watchedProjectType === 'Support') {
-      form.setValue('methodology', 'Agile', { shouldValidate: true });
-    }
-  }, [watchedProjectType, form]);
-
-  const isMethodologyDisabled = watchedProjectType === 'Initial Estimation' || watchedProjectType === 'Support';
-  const isPricingModelDisabled = watchedProjectType === 'Initial Estimation';
 
   return (
     <DialogContent className="sm:max-w-2xl">
@@ -242,31 +222,7 @@ function ProjectDialogContent({
               )}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="projectType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {projectTypes.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="methodology"
@@ -276,7 +232,6 @@ function ProjectDialogContent({
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
-                    disabled={isMethodologyDisabled}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -304,7 +259,6 @@ function ProjectDialogContent({
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
-                    disabled={isPricingModelDisabled}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -347,7 +301,7 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Not Started' },
+    defaultValues: { name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Not Started' },
   });
   
   useEffect(() => {
@@ -393,7 +347,7 @@ export default function ProjectsDashboard() {
           status: editingProject.status || 'Not Started',
         });
       } else {
-        form.reset({ name: '', description: '', portfolioId: '', projectType: 'Project', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Not Started' });
+        form.reset({ name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Not Started' });
       }
     }
   }, [isDialogOpen, editingProject, form]);
