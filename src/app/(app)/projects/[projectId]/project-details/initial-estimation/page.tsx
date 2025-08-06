@@ -207,9 +207,10 @@ export default function InitialEstimationPage() {
   }, 0);
 
   const totalHorizontalCost = horizontals.reduce((acc, h) => {
-      if (!h.isEnabled) return acc;
-      const horizontalEffort = (totalDevEffort * (h.weightage / 100));
-      return acc + (horizontalEffort * averageDevRate);
+    if (!h.isEnabled) return acc;
+    const horizontalEffort = (totalDevEffort * (h.weightage / 100));
+    const rate = h.dailyBillingRate || averageDevRate;
+    return acc + (horizontalEffort * rate);
   }, 0);
 
 
@@ -332,14 +333,15 @@ export default function InitialEstimationPage() {
                             <TableHead>Horizontal</TableHead>
                             <TableHead>Weightage (%)</TableHead>
                             <TableHead>Effort (man-days)</TableHead>
-                             <TableHead>Daily Billing Rate (USD)</TableHead>
+                            <TableHead>Daily Billing Rate (USD)</TableHead>
                             <TableHead>Cost (USD)</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {horizontals.map(h => {
                             const horizontalEffort = (totalDevEffort * (h.weightage / 100));
-                            const cost = horizontalEffort * averageDevRate;
+                            const rate = h.dailyBillingRate === undefined ? averageDevRate : h.dailyBillingRate;
+                            const cost = horizontalEffort * rate;
                             return (
                                 <TableRow key={h.id}>
                                     <TableCell>
@@ -363,7 +365,22 @@ export default function InitialEstimationPage() {
                                         />
                                     </TableCell>
                                     <TableCell>{horizontalEffort.toFixed(2)}</TableCell>
-                                    <TableCell>${averageDevRate.toFixed(2)}</TableCell>
+                                    <TableCell>
+                                        <Input
+                                            type="number"
+                                            defaultValue={h.dailyBillingRate}
+                                            placeholder={averageDevRate.toFixed(2)}
+                                            onBlur={(e) => {
+                                                const newRate = parseFloat(e.target.value);
+                                                if (!isNaN(newRate) && newRate !== h.dailyBillingRate) {
+                                                    updateHorizontal(h.id, { dailyBillingRate: newRate });
+                                                } else if (e.target.value === '' && h.dailyBillingRate !== undefined) {
+                                                    updateHorizontal(h.id, { dailyBillingRate: undefined });
+                                                }
+                                            }}
+                                            className="w-24"
+                                        />
+                                    </TableCell>
                                     <TableCell>${cost.toFixed(2)}</TableCell>
                                 </TableRow>
                             )
@@ -371,14 +388,12 @@ export default function InitialEstimationPage() {
                     </TableBody>
                      <TableFooter>
                         <TableRow>
-                          <TableCell colSpan={3} className="text-right font-bold">Total Horizontal Effort</TableCell>
-                          <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
+                          <TableCell colSpan={4} className="text-right font-bold">Total Horizontal Effort</TableCell>
                           <TableCell colSpan={2} className="text-right font-bold">${totalHorizontalCost.toFixed(2)}</TableCell>
                         </TableRow>
                         <TableRow className="bg-muted/80 hover:bg-muted/80">
-                            <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
-                            <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
-                             <TableCell colSpan={2} className="font-bold text-lg text-right">${grandTotalCost.toFixed(2)}</TableCell>
+                            <TableCell colSpan={4} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
+                            <TableCell colSpan={2} className="font-bold text-lg text-right">${grandTotalCost.toFixed(2)}</TableCell>
                         </TableRow>
                       </TableFooter>
                 </Table>

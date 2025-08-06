@@ -277,4 +277,5 @@ export type Horizontal = {
   name: string;
   weightage: number; // percentage
   isEnabled: boolean;
+  dailyBillingRate?: number;
 };
