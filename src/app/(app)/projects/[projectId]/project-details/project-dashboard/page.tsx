@@ -70,7 +70,7 @@ export default function ProjectDashboardPage() {
                     <CardHeader><CardTitle>Project Summary</CardTitle></CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground whitespace-pre-wrap">
-                            {project.description || "No description provided."}
+                            {project.summary || "No summary provided."}
                         </p>
                     </CardContent>
                 </Card>
