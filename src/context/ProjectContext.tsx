@@ -173,8 +173,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases'],
     '/testing/bug-list': ['stories', 'employees', 'sprints'],
-    '/project-details/initial-estimation': ['impactedSystems'],
     '/project-details/project-dashboard': ['employees'],
+    '/project-details/initial-estimation': ['impactedSystems'],
     '/releases': ['releases'],
     '/resources': ['employees'],
     '/project-gantt': ['stories', 'employees'],
@@ -355,7 +355,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             return {
                 id: doc.id,
                 ...data,
-                date: data.date?.toDate ? data.date().toISOString() : data.date,
+                date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
             } as Holiday
         });
         setGlobalHolidays(holidaysData);
