@@ -122,7 +122,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Users,
     },
     {
-      href: `${basePath}/resources/project-gantt`,
+      href: `${basePath}/resources/resource-gantt`,
       label: "Resource Gantt",
       icon: GanttChartSquare,
     },
