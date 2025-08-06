@@ -549,18 +549,10 @@ export default function ProjectsDashboard() {
                                       </Link>
                                     </TableCell>
                                     <TableCell>
-                                        <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
-                                          <div className="flex items-center gap-2">
-                                            {projectManager ? (
-                                                <>
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarImage src={projectManager.avatar} alt={`${projectManager.firstName} ${projectManager.lastName}`} data-ai-hint="manager avatar" />
-                                                        <AvatarFallback>{projectManager.firstName?.charAt(0)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span>{projectManager.firstName} {projectManager.lastName}</span>
-                                                </>
-                                            ) : 'Unassigned'}
-                                          </div>
+                                      <Link href={`/projects/${project.id}/dashboard/development`} className="block w-full h-full">
+                                        {projectManager ? (
+                                          <span>{projectManager.firstName} {projectManager.lastName}</span>
+                                        ) : 'Unassigned'}
                                       </Link>
                                     </TableCell>
                                     <TableCell className="text-right">
