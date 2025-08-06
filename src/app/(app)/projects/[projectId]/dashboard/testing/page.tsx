@@ -1,6 +1,6 @@
 
-import { redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 
-export default function TestingDashboardRedirect({ params }: { params: { projectId: string } }) {
-  redirect(`/projects/${params.projectId}/testing/dashboard`);
+export default function DeprecatedTestingDashboardPage() {
+  notFound();
 }
