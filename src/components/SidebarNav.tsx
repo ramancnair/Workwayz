@@ -21,7 +21,7 @@ import {
   ClipboardCheck,
   TestTube2,
   Settings,
-  Flame,
+  Waves,
   ChevronLeft,
   Layers,
   Users,
@@ -209,7 +209,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     <>
       <SidebarHeader className="flex items-center justify-between p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
         <div className="flex items-center gap-2">
-          <Flame className="w-8 h-8 text-primary" />
+          <Waves className="w-8 h-8 text-primary" />
           <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
               <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
                   <ChevronLeft />

@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
-  Flame,
+  Waves,
   ChevronLeft,
   FolderKanban,
   Building2,
@@ -96,7 +96,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   return (
     <>
       <SidebarHeader className="flex items-center gap-2 p-4 group-data-[collapsible=icon]:justify-center">
-        <Flame className="w-8 h-8 text-primary" />
+        <Waves className="w-8 h-8 text-primary" />
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
                 <ChevronLeft />
