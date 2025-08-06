@@ -201,15 +201,20 @@ export default function ProjectPage() {
   const totalDevEffort = impactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
   const totalDevCost = impactedSystems.reduce((acc, system) => acc + ((system.estimate || 0) * (system.dailyBillingRate || 0)), 0);
 
+  const averageDevRate = totalDevEffort > 0 ? totalDevCost / totalDevEffort : 0;
+
   const totalHorizontalEffort = horizontals.reduce((acc, h) => {
       if (!h.isEnabled) return acc;
       return acc + (totalDevEffort * (h.weightage / 100));
   }, 0);
+
+  const totalHorizontalCost = horizontals.reduce((acc, h) => {
+    if (!h.isEnabled) return acc;
+    const horizontalEffort = (totalDevEffort * (h.weightage / 100));
+    return acc + (horizontalEffort * averageDevRate);
+  }, 0);
+
   const grandTotalEffort = totalDevEffort + totalHorizontalEffort;
-  
-  // Assuming average rate for horizontals, could be more complex
-  const averageDevRate = totalDevEffort > 0 ? totalDevCost / totalDevEffort : 0;
-  const totalHorizontalCost = totalHorizontalEffort * averageDevRate;
   const grandTotalCost = totalDevCost + totalHorizontalCost;
 
   return (
@@ -330,11 +335,14 @@ export default function ProjectPage() {
                             <TableHead>Horizontal</TableHead>
                             <TableHead>Weightage (%)</TableHead>
                             <TableHead>Effort (man-days)</TableHead>
+                             <TableHead>Daily Billing Rate (USD)</TableHead>
+                            <TableHead>Cost (USD)</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {horizontals.map(h => {
                             const horizontalEffort = (totalDevEffort * (h.weightage / 100));
+                             const cost = horizontalEffort * averageDevRate;
                             return (
                                 <TableRow key={h.id}>
                                     <TableCell>
@@ -358,6 +366,8 @@ export default function ProjectPage() {
                                         />
                                     </TableCell>
                                     <TableCell>{horizontalEffort.toFixed(2)}</TableCell>
+                                    <TableCell>${averageDevRate.toFixed(2)}</TableCell>
+                                    <TableCell>${cost.toFixed(2)}</TableCell>
                                 </TableRow>
                             )
                         })}
@@ -366,11 +376,12 @@ export default function ProjectPage() {
                         <TableRow>
                           <TableCell colSpan={3} className="text-right font-bold">Total Horizontal Effort</TableCell>
                           <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
+                          <TableCell colSpan={2} className="text-right font-bold">${totalHorizontalCost.toFixed(2)}</TableCell>
                         </TableRow>
                         <TableRow className="bg-muted/80 hover:bg-muted/80">
                             <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
                             <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
-                            <TableCell className="font-bold text-lg text-right">${grandTotalCost.toFixed(2)}</TableCell>
+                            <TableCell className="font-bold text-lg text-right" colSpan={2}>${grandTotalCost.toFixed(2)}</TableCell>
                         </TableRow>
                       </TableFooter>
                 </Table>
@@ -521,4 +532,3 @@ export default function ProjectPage() {
     </>
   );
 }
-
