@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -52,7 +53,7 @@ const systemSchema = z.object({
   name: z.string().min(1, 'System name is required.'),
   description: z.string().min(1, 'Description is required.'),
   category: z.enum(['Technology', 'Function']),
-  estimate: z.coerce.number().min(1, 'Estimation is required.'),
+  estimate: z.coerce.number().min(1, 'Estimation must be at least 1.'),
 });
 
 const categories: ImpactedSystemCategory[] = ['Technology', 'Function'];
@@ -96,7 +97,10 @@ export default function InitialEstimationPage() {
   useEffect(() => {
     if (isSystemDialogOpen) {
       if (editingSystem) {
-        systemForm.reset(editingSystem);
+        systemForm.reset({
+          ...editingSystem,
+          estimate: editingSystem.estimate || 0,
+        });
       } else {
         systemForm.reset({ name: '', description: '', category: 'Technology', estimate: 0 });
       }
@@ -305,7 +309,7 @@ export default function InitialEstimationPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Estimation (man-days)</FormLabel>
-                      <FormControl><Input type="number" placeholder="0" {...field} /></FormControl>
+                      <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
