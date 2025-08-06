@@ -47,7 +47,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     } else if (value === 'releases') {
       router.push(`${basePath}/releases`);
     } else if (value === 'resources') {
-      router.push(`${basePath}/resources`);
+      router.push(`${basePath}/resources/project-resources`);
     } else if (value === 'governance') {
       router.push(`${basePath}/raid-dashboard`);
     } else if (value === 'holidays') {
