@@ -388,6 +388,54 @@ export default function ProjectPage() {
                         })}
                     </TableBody>
                      <TableFooter>
+                        {!isHorizontalFormOpen && (
+                          <TableRow>
+                            <TableCell colSpan={6}>
+                              <Button variant="link" onClick={() => setIsHorizontalFormOpen(true)} className="mt-4 p-0">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Horizontal
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {isHorizontalFormOpen && (
+                            <TableRow>
+                                <TableCell colSpan={6}>
+                                    <div className="mt-4 pt-4 border-t">
+                                        <h4 className="font-medium mb-2">Add New Horizontal</h4>
+                                        <Form {...horizontalForm}>
+                                            <form onSubmit={horizontalForm.handleSubmit(onHorizontalSubmit)} className="flex items-start gap-4">
+                                               <FormField
+                                                control={horizontalForm.control}
+                                                name="name"
+                                                render={({ field }) => (
+                                                  <FormItem className="flex-1">
+                                                    <FormLabel>Name</FormLabel>
+                                                    <FormControl><Input placeholder="e.g. Security" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                  </FormItem>
+                                                )}
+                                              />
+                                                <FormField
+                                                control={horizontalForm.control}
+                                                name="weightage"
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormLabel>Weightage (%)</FormLabel>
+                                                    <FormControl><Input type="number" placeholder="10" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                  </FormItem>
+                                                )}
+                                              />
+                                              <div className="pt-8">
+                                                <Button type="submit">Add</Button>
+                                                <Button type="button" variant="ghost" onClick={() => setIsHorizontalFormOpen(false)}>Cancel</Button>
+                                              </div>
+                                            </form>
+                                        </Form>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        )}
                         <TableRow>
                           <TableCell colSpan={3} className="text-right font-bold">Total Horizontal Effort</TableCell>
                           <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
@@ -402,48 +450,6 @@ export default function ProjectPage() {
                         </TableRow>
                       </TableFooter>
                 </Table>
-                
-                {!isHorizontalFormOpen && (
-                   <Button variant="link" onClick={() => setIsHorizontalFormOpen(true)} className="mt-4">
-                     <PlusCircle className="mr-2 h-4 w-4" /> Add Horizontal
-                  </Button>
-                )}
-
-                {isHorizontalFormOpen && (
-                    <div className="mt-4 pt-4 border-t">
-                        <h4 className="font-medium mb-2">Add New Horizontal</h4>
-                        <Form {...horizontalForm}>
-                            <form onSubmit={horizontalForm.handleSubmit(onHorizontalSubmit)} className="flex items-start gap-4">
-                               <FormField
-                                control={horizontalForm.control}
-                                name="name"
-                                render={({ field }) => (
-                                  <FormItem className="flex-1">
-                                    <FormLabel>Name</FormLabel>
-                                    <FormControl><Input placeholder="e.g. Security" {...field} /></FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                                <FormField
-                                control={horizontalForm.control}
-                                name="weightage"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Weightage (%)</FormLabel>
-                                    <FormControl><Input type="number" placeholder="10" {...field} /></FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <div className="pt-8">
-                                <Button type="submit">Add</Button>
-                                <Button type="button" variant="ghost" onClick={() => setIsHorizontalFormOpen(false)}>Cancel</Button>
-                              </div>
-                            </form>
-                        </Form>
-                    </div>
-                )}
             </CardContent>
         </Card>
       </div>
