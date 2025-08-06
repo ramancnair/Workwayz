@@ -167,26 +167,26 @@ function ProjectDialogContent({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Project Manager</FormLabel>
-                  <FormControl>
-                      <Input 
-                          list="pm-options" 
-                          placeholder="Select a Project Manager..." 
-                          value={pmInputText}
-                          onChange={(e) => {
-                              const inputText = e.target.value;
-                              setPmInputText(inputText);
-                              
-                              const matchingOption = pmOptions.find(opt => opt.label === inputText);
-                              field.onChange(matchingOption ? matchingOption.value : undefined);
-                          }}
-                          onBlur={() => {
-                              const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
-                              if (!matchingOption) {
-                                  setPmInputText('');
-                                  field.onChange(undefined);
-                              }
-                          }}
-                      />
+                      <FormControl>
+                          <Input 
+                              list="pm-options" 
+                              placeholder="Select a Project Manager..." 
+                              value={pmInputText}
+                              onChange={(e) => {
+                                  const inputText = e.target.value;
+                                  setPmInputText(inputText);
+                                  
+                                  const matchingOption = pmOptions.find(opt => opt.label === inputText);
+                                  field.onChange(matchingOption ? matchingOption.value : undefined);
+                              }}
+                              onBlur={() => {
+                                  const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
+                                  if (!matchingOption) {
+                                      setPmInputText('');
+                                      field.onChange(undefined);
+                                  }
+                              }}
+                          />
                       </FormControl>
                       <datalist id="pm-options">
                           {pmOptions.map(option => (
