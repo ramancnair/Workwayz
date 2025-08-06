@@ -368,7 +368,27 @@ export default function ProjectsDashboard() {
         await updateDoc(projectRef, dataToSave);
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
-        const projectId = `P${Date.now()}`;
+        const year = new Date().getFullYear().toString().slice(-2);
+        const prefix = `P${year}`;
+        
+        const projectsQuery = query(collection(db, 'projects'), where('id', '>=', prefix), where('id', '<', `P${parseInt(year) + 1}`));
+        const querySnapshot = await getDocs(projectsQuery);
+        
+        let maxSerial = 0;
+        querySnapshot.forEach(doc => {
+            const docId = doc.id;
+            const serialPart = docId.substring(prefix.length);
+            if (/^\d{6}$/.test(serialPart)) {
+                const serial = parseInt(serialPart, 10);
+                if (serial > maxSerial) {
+                    maxSerial = serial;
+                }
+            }
+        });
+
+        const newSerial = (maxSerial + 1).toString().padStart(6, '0');
+        const projectId = `${prefix}${newSerial}`;
+
         const projectRef = doc(db, 'projects', projectId);
         await setDoc(projectRef, { ...dataToSave, id: projectId, isDeleted: false });
         toast({ title: 'Success', description: 'Project created successfully.' });
@@ -590,6 +610,8 @@ export default function ProjectsDashboard() {
     </>
   );
 }
+
+    
 
     
 
