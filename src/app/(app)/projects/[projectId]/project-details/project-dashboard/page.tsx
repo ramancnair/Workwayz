@@ -67,10 +67,10 @@ export default function ProjectDashboardPage() {
             
             <div className="space-y-6">
                 <Card>
-                    <CardHeader><CardTitle>Project Summary</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Project Description</CardTitle></CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground whitespace-pre-wrap">
-                            {project.summary || "No summary provided."}
+                            {project.description || "No description provided."}
                         </p>
                     </CardContent>
                 </Card>
