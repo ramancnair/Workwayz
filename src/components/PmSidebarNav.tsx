@@ -47,7 +47,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     {
       id: 'projects',
       href: `/pmdashboard`,
-      label: "Projects Dashboard",
+      label: "PM Dashboard",
       icon: FolderKanban,
       group: 'projects'
     },
