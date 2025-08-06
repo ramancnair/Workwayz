@@ -250,10 +250,10 @@ export default function TrashPage() {
                     <AlertDialogTitle>{dialogTitle}</AlertDialogTitle>
                     <AlertDialogDescription>
                       {dialogDescription}
-                      <ul className="mt-2 list-disc list-inside">
-                        {selectedItems.map(i => <li key={i.id}>{i.name} ({i.type})</li>)}
-                      </ul>
                     </AlertDialogDescription>
+                    <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground">
+                      {selectedItems.map(i => <li key={i.id}>{i.name} ({i.type})</li>)}
+                    </ul>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
