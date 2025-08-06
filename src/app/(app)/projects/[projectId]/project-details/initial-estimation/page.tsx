@@ -41,10 +41,11 @@ import {
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, Save } from 'lucide-react';
-import { type ImpactedSystem, type ImpactedSystemCategory } from '@/types';
+import { type ImpactedSystem, type ImpactedSystemCategory, type Horizontal } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from '@/components/ui/checkbox';
 
 const estimationSchema = z.object({
   summary: z.string().optional(),
@@ -57,6 +58,11 @@ const systemSchema = z.object({
   estimate: z.coerce.number().min(1, 'Estimation must be at least 1.'),
 });
 
+const horizontalFormSchema = z.object({
+  name: z.string().min(1, 'Name is required.'),
+  weightage: z.coerce.number().min(0, 'Weightage must be positive.'),
+});
+
 const categories: ImpactedSystemCategory[] = ['Technology', 'Function'];
 
 export default function InitialEstimationPage() {
@@ -66,7 +72,10 @@ export default function InitialEstimationPage() {
     impactedSystems, 
     addImpactedSystem, 
     updateImpactedSystem, 
-    deleteImpactedSystem 
+    deleteImpactedSystem,
+    horizontals,
+    addHorizontal,
+    updateHorizontal,
   } = useProject();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,6 +86,8 @@ export default function InitialEstimationPage() {
   const [deletingSystem, setDeletingSystem] = useState<ImpactedSystem | null>(null);
   const [isSystemSubmitting, setIsSystemSubmitting] = useState(false);
 
+  const [isHorizontalFormOpen, setIsHorizontalFormOpen] = useState(false);
+
   const estimationForm = useForm<z.infer<typeof estimationSchema>>({
     resolver: zodResolver(estimationSchema),
   });
@@ -84,6 +95,11 @@ export default function InitialEstimationPage() {
   const systemForm = useForm<z.infer<typeof systemSchema>>({
     resolver: zodResolver(systemSchema),
     defaultValues: { name: '', description: '', category: 'Technology', estimate: 0 },
+  });
+  
+  const horizontalForm = useForm<z.infer<typeof horizontalFormSchema>>({
+    resolver: zodResolver(horizontalFormSchema),
+    defaultValues: { name: '', weightage: 0 },
   });
 
   useEffect(() => {
@@ -162,8 +178,28 @@ export default function InitialEstimationPage() {
     }
     setIsSystemSubmitting(false);
   };
+
+  const onHorizontalSubmit = async (values: z.infer<typeof horizontalFormSchema>) => {
+    const success = await addHorizontal({
+      name: values.name,
+      weightage: values.weightage,
+      isEnabled: true
+    });
+    if (success) {
+      toast({ title: "Success", description: `Horizontal "${values.name}" added.` });
+      setIsHorizontalFormOpen(false);
+      horizontalForm.reset();
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not add horizontal." });
+    }
+  };
   
-  const totalEstimate = impactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
+  const totalDevEffort = impactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
+  const totalHorizontalEffort = horizontals.reduce((acc, h) => {
+      if (!h.isEnabled) return acc;
+      return acc + (totalDevEffort * (h.weightage / 100));
+  }, 0);
+  const grandTotalEffort = totalDevEffort + totalHorizontalEffort;
 
   return (
     <>
@@ -258,12 +294,118 @@ export default function InitialEstimationPage() {
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={3} className="text-right font-bold">Total Development Effort</TableCell>
-                  <TableCell className="font-bold">{totalEstimate}</TableCell>
+                  <TableCell className="font-bold">{totalDevEffort}</TableCell>
                   <TableCell />
                 </TableRow>
               </TableFooter>
             </Table>
           </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Horizontals</CardTitle>
+                    <CardDescription>Effort derived from the Total Development Effort.</CardDescription>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-10" />
+                            <TableHead>Horizontal</TableHead>
+                            <TableHead>Weightage (%)</TableHead>
+                            <TableHead>Effort (man-days)</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {horizontals.map(h => {
+                            const horizontalEffort = (totalDevEffort * (h.weightage / 100)).toFixed(2);
+                            return (
+                                <TableRow key={h.id}>
+                                    <TableCell>
+                                        <Checkbox
+                                            checked={h.isEnabled}
+                                            onCheckedChange={(checked) => updateHorizontal(h.id, { isEnabled: !!checked })}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="font-medium">{h.name}</TableCell>
+                                    <TableCell>
+                                        <Input
+                                            type="number"
+                                            defaultValue={h.weightage}
+                                            onBlur={(e) => {
+                                                const newWeightage = parseFloat(e.target.value);
+                                                if (!isNaN(newWeightage) && newWeightage !== h.weightage) {
+                                                    updateHorizontal(h.id, { weightage: newWeightage });
+                                                }
+                                            }}
+                                            className="w-24"
+                                        />
+                                    </TableCell>
+                                    <TableCell>{horizontalEffort}</TableCell>
+                                </TableRow>
+                            )
+                        })}
+                    </TableBody>
+                     <TableFooter>
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-right font-bold">Total Horizontal Effort</TableCell>
+                          <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
+                        </TableRow>
+                      </TableFooter>
+                </Table>
+                
+                {!isHorizontalFormOpen && (
+                   <Button variant="link" onClick={() => setIsHorizontalFormOpen(true)} className="mt-4">
+                     <PlusCircle className="mr-2 h-4 w-4" /> Add Horizontal
+                  </Button>
+                )}
+
+                {isHorizontalFormOpen && (
+                    <div className="mt-4 pt-4 border-t">
+                        <h4 className="font-medium mb-2">Add New Horizontal</h4>
+                        <Form {...horizontalForm}>
+                            <form onSubmit={horizontalForm.handleSubmit(onHorizontalSubmit)} className="flex items-start gap-4">
+                               <FormField
+                                control={horizontalForm.control}
+                                name="name"
+                                render={({ field }) => (
+                                  <FormItem className="flex-1">
+                                    <FormLabel>Name</FormLabel>
+                                    <FormControl><Input placeholder="e.g. Security" {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                                <FormField
+                                control={horizontalForm.control}
+                                name="weightage"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Weightage (%)</FormLabel>
+                                    <FormControl><Input type="number" placeholder="10" {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="pt-8">
+                                <Button type="submit">Add</Button>
+                                <Button type="button" variant="ghost" onClick={() => setIsHorizontalFormOpen(false)}>Cancel</Button>
+                              </div>
+                            </form>
+                        </Form>
+                    </div>
+                )}
+            </CardContent>
+            <TableFooter>
+                <TableRow className="bg-muted/80 hover:bg-muted/80">
+                    <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
+                    <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
+                    <TableCell/>
+                </TableRow>
+            </TableFooter>
         </Card>
       </div>
 

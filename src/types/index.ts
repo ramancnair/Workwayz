@@ -271,4 +271,11 @@ export type TrashedItem = {
   deletedAt: string;
 };
 
+export type Horizontal = {
+  id: string;
+  name: string;
+  weightage: number; // percentage
+  isEnabled: boolean;
+};
+
     

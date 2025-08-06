@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -61,6 +61,7 @@ interface ProjectContextType {
   projectSettings: ProjectSettings | null,
   weeklyOffDays: number[];
   impactedSystems: ImpactedSystem[];
+  horizontals: Horizontal[];
   
   // Project actions
   updateProject: (data: Partial<Omit<Project, 'id'>>) => Promise<boolean>;
@@ -140,6 +141,10 @@ interface ProjectContextType {
   updateImpactedSystem: (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => Promise<boolean>;
   deleteImpactedSystem: (systemId: string) => Promise<boolean>;
 
+  // Horizontal actions
+  addHorizontal: (horizontal: Omit<Horizontal, 'id'>) => Promise<boolean>;
+  updateHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
+
   // Worklog actions
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
   submitWorklogForWeek: (employeeId: string, weekStartDate: string) => Promise<boolean>;
@@ -162,7 +167,16 @@ const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
   overrideGlobalHolidays: false,
 };
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project';
+const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
+    { name: 'Project Management', weightage: 10, isEnabled: true },
+    { name: 'Business Analysis', weightage: 10, isEnabled: true },
+    { name: 'Architecture', weightage: 10, isEnabled: true },
+    { name: 'Quality Analysis', weightage: 15, isEnabled: true },
+    { name: 'UI/UX', weightage: 5, isEnabled: false },
+    { name: 'Dev Ops', weightage: 5, isEnabled: false },
+];
+
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
@@ -174,7 +188,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases'],
     '/testing/bug-list': ['stories', 'employees', 'sprints'],
     '/project-details/project-dashboard': ['employees'],
-    '/project-details/initial-estimation': ['impactedSystems'],
+    '/project-details/initial-estimation': ['impactedSystems', 'horizontals'],
+    '/project': ['impactedSystems', 'horizontals'],
     '/releases': ['releases'],
     '/resources': ['employees'],
     '/project-gantt': ['stories', 'employees'],
@@ -207,6 +222,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [globalHolidays, setGlobalHolidays] = useState<Holiday[]>([]);
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
+  const [horizontals, setHorizontals] = useState<Horizontal[]>([]);
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [worklogSubmissions, setWorklogSubmissions] = useState<WorklogSubmission[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
@@ -257,6 +273,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'holidays', setState: setProjectHolidays },
         { name: 'releases', setState: setReleasesAndMilestones },
         { name: 'impactedSystems', setState: setImpactedSystems },
+        { name: 'horizontals', setState: setHorizontals },
         { name: 'worklogs', setState: setWorklogs },
         { name: 'worklogSubmissions', setState: setWorklogSubmissions },
         { name: 'settings', setState: setProjectSettings },
@@ -296,6 +313,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         batch.set(docRef, col);
                     });
                     batch.commit().catch(e => console.error("Failed to set default Kanban columns", e));
+                    return;
+                }
+                
+                if (name === 'horizontals' && querySnapshot.empty) {
+                    const batch = writeBatch(db);
+                    defaultHorizontals.forEach(h => {
+                        const docRef = doc(collection(rootProjectDocRef, 'horizontals'));
+                        batch.set(docRef, h);
+                    });
+                    batch.commit().catch(e => console.error("Failed to set default horizontals", e));
                     return;
                 }
 
@@ -1116,6 +1143,29 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return false;
     }
   };
+  
+  // Horizontal Actions
+  const addHorizontal = async (horizontal: Omit<Horizontal, 'id'>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await addDoc(collection(db, 'projects', projectId, 'horizontals'), sanitizeForFirestore(horizontal));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to add horizontal.", e);
+      return false;
+    }
+  };
+
+  const updateHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await updateDoc(doc(db, 'projects', projectId, 'horizontals', horizontalId), sanitizeForFirestore(data));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to update horizontal.", e);
+      return false;
+    }
+  };
 
   // Worklog Actions
   const saveWorklog = async (worklog: Omit<Worklog, 'id'>): Promise<boolean> => {
@@ -1179,6 +1229,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     projectSettings,
     weeklyOffDays,
     impactedSystems,
+    horizontals,
     isLoading,
     error,
     updateProject,
@@ -1231,6 +1282,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addImpactedSystem,
     updateImpactedSystem,
     deleteImpactedSystem,
+    addHorizontal,
+    updateHorizontal,
     saveWorklog,
     submitWorklogForWeek,
   };
