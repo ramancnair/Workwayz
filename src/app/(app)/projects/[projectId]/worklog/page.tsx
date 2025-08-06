@@ -156,7 +156,7 @@ export default function WorklogPage() {
 
   // Effect to auto-populate holidays and weekends for the displayed week
   useEffect(() => {
-    if (!selectedEmployee || isWeekSubmitted) return;
+    if (!selectedEmployee || isWeekSubmitted || isLoading) return;
   
     const autoPopulateWeek = async () => {
       for (const day of weekDays) {
@@ -192,7 +192,7 @@ export default function WorklogPage() {
     };
 
     autoPopulateWeek();
-  }, [selectedEmployee, weekStartDate, worklogs, holidays, weeklyOffDays, isWeekSubmitted, saveWorklog]);
+  }, [selectedEmployee, weekStartDate, worklogs, holidays, weeklyOffDays, isWeekSubmitted, saveWorklog, isLoading]);
 
 
   useEffect(() => {

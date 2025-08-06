@@ -1,7 +1,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
+import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
 import { db, firebaseConfig } from '@/lib/firebase';
 import {
   collection,
@@ -23,6 +23,7 @@ import {
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
+import { usePathname } from 'next/navigation';
 
 // Helper to remove undefined values from an object before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
@@ -160,6 +161,35 @@ const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
   overrideGlobalHolidays: false,
 };
 
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project';
+
+const pageToCollectionMap: Record<string, CollectionName[]> = {
+    '/development/dashboard': ['stories'],
+    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees'],
+    '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings'],
+    '/development/development-tasks': ['stories', 'employees', 'sprints', 'holidays', 'impactedSystems'],
+    '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
+    '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
+    '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases'],
+    '/testing/bug-list': ['stories', 'employees', 'sprints'],
+    '/project-details/initial-estimation': ['impactedSystems', 'project'],
+    '/project-details/project-dashboard': [],
+    '/releases': ['releases'],
+    '/resources': ['employees'],
+    '/project-gantt': ['stories', 'employees'],
+    '/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
+    '/leave-tracker': ['employees', 'holidays'],
+    '/raid-dashboard': ['risks', 'assumptions', 'issues', 'dependencies'],
+    '/risks': ['risks'],
+    '/assumptions': ['assumptions', 'employees'],
+    '/issues': ['issues', 'employees'],
+    '/dependencies': ['dependencies'],
+    '/holidays': ['holidays', 'projectSettings'],
+    '/settings/board': ['kanbanColumns'],
+    '/settings/sprint': ['projectSettings'],
+};
+
+
 export function ProjectProvider({ children, projectId }: PropsWithChildren<{ projectId: string }>) {
   const [project, setProject] = useState<Project | null>(null);
   const [epics, setEpics] = useState<Epic[]>([]);
@@ -182,11 +212,20 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [globalSettings, setGlobalSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const pathname = usePathname();
 
   const holidays = projectSettings?.overrideGlobalHolidays ? projectHolidays : globalHolidays;
   const weeklyOffDays = projectSettings?.overrideGlobalHolidays 
     ? projectSettings?.weeklyOffDays ?? globalSettings?.weeklyOffDays ?? [0, 6] 
     : globalSettings?.weeklyOffDays ?? [0, 6];
+
+  const getCollectionsForPage = useCallback((path: string): CollectionName[] => {
+    const pageKey = Object.keys(pageToCollectionMap).find(key => path.endsWith(key));
+    const baseCollections: CollectionName[] = ['project', 'settings'];
+    if (!pageKey) return baseCollections;
+    return [...new Set([...baseCollections, ...pageToCollectionMap[pageKey]])];
+  }, []);
 
   useEffect(() => {
     if (!db || !projectId) {
@@ -197,38 +236,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return;
     }
     
-    // Listener for global settings
-    const globalSettingsDocRef = doc(db, 'settings', 'main');
-    const unsubGlobalSettings = onSnapshot(globalSettingsDocRef, (doc) => {
-        if (doc.exists()) {
-            setGlobalSettings(doc.data() as ProjectSettings);
-        }
-    });
-
-    const unsubGlobalHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
-        const holidaysData = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
-            } as Holiday
-        });
-        setGlobalHolidays(holidaysData);
-    });
+    setIsLoading(true);
 
     const rootProjectDocRef = doc(db, 'projects', projectId);
-    
-    // Listener for project document itself
-    const unsubProject = onSnapshot(rootProjectDocRef, (doc) => {
-        if (doc.exists()) {
-            setProject({ id: doc.id, ...doc.data() } as Project);
-        } else {
-            setError(`Project with ID "${projectId}" not found.`);
-        }
-    });
 
-    const collections: { name: string, setState: React.Dispatch<any> }[] = [
+    const allCollections: { name: CollectionName, setState: React.Dispatch<any> }[] = [
+        { name: 'project', setState: setProject },
         { name: 'epics', setState: setEpics },
         { name: 'stories', setState: setStories },
         { name: 'sprints', setState: setSprints },
@@ -244,24 +257,35 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'impactedSystems', setState: setImpactedSystems },
         { name: 'worklogs', setState: setWorklogs },
         { name: 'worklogSubmissions', setState: setWorklogSubmissions },
+        { name: 'settings', setState: setProjectSettings },
     ];
-    
-    // Listener for project settings
-    const settingsDocRef = doc(rootProjectDocRef, 'settings', 'main');
-    const unsubSettings = onSnapshot(settingsDocRef, (doc) => {
-      if (doc.exists()) {
-        setProjectSettings({ id: doc.id, ...doc.data() } as ProjectSettings);
-      } else {
-        // Initialize settings if they don't exist
-        setDoc(settingsDocRef, defaultProjectSettings).catch(e => console.error("Failed to set default project settings", e));
-      }
-    });
 
-    const unsubscribers = collections.map(({ name, setState }) => {
+    const neededCollections = getCollectionsForPage(pathname);
+    
+    const unsubscribers = neededCollections.map(({ name, setState }) => {
+        if(name === 'project') {
+            return onSnapshot(rootProjectDocRef, (doc) => {
+                if (doc.exists()) {
+                    setState({ id: doc.id, ...doc.data() } as Project);
+                } else {
+                    setError(`Project with ID "${projectId}" not found.`);
+                }
+            });
+        }
+        if(name === 'settings') {
+            const settingsDocRef = doc(rootProjectDocRef, 'settings', 'main');
+            return onSnapshot(settingsDocRef, (doc) => {
+              if (doc.exists()) {
+                setState({ id: doc.id, ...doc.data() } as ProjectSettings);
+              } else {
+                setDoc(settingsDocRef, defaultProjectSettings).catch(e => console.error("Failed to set default project settings", e));
+              }
+            });
+        }
+        
         const q = query(collection(rootProjectDocRef, name));
         return onSnapshot(q, 
             (querySnapshot) => {
-                // Special handling for kanbanColumns to ensure defaults
                 if (name === 'kanbanColumns' && querySnapshot.empty) {
                     const batch = writeBatch(db);
                     defaultKanbanColumns.forEach(col => {
@@ -269,17 +293,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         batch.set(docRef, col);
                     });
                     batch.commit().catch(e => console.error("Failed to set default Kanban columns", e));
-                    return; // The snapshot listener will re-fire with the new data
+                    return;
                 }
 
                 const data = querySnapshot.docs.map(doc => {
                     const docData = doc.data();
-                    const convertTimestamp = (field: any) => {
-                      if (field && typeof field.toDate === 'function') {
-                        return field.toDate().toISOString();
-                      }
-                      return field;
-                    }
+                    const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
                     
                     const dateFields: Record<string, string[]> = {
                         stories: ['startDate', 'endDate'],
@@ -296,14 +315,13 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
                     if (dateFields[name]) {
                         dateFields[name].forEach(field => {
-                            if (Array.isArray(docData[field])) {
-                                docData[field] = docData[field].map(convertTimestamp);
-                            } else {
-                                docData[field] = convertTimestamp(docData[field]);
+                            if (docData[field]) {
+                                docData[field] = Array.isArray(docData[field])
+                                    ? docData[field].map(convertTimestamp)
+                                    : convertTimestamp(docData[field]);
                             }
                         });
                     }
-
                     if(name === 'employees' && docData.leavePeriods) {
                         docData.leavePeriods = docData.leavePeriods.map((lp: any) => ({
                             ...lp,
@@ -311,51 +329,44 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                             endDate: convertTimestamp(lp.endDate)
                         }))
                     }
-                    
                     return { id: doc.id, ...docData };
                 });
                 setState(data);
-                setIsLoading(false);
             },
             (err) => {
                 console.error(`Error fetching ${name}:`, err);
-                setError(`Failed to listen to the database. Please check your Firestore security rules. (Collection: ${name}, Error: ${err.message})`);
-                setIsLoading(false);
+                setError(`Failed to listen to the database. (Collection: ${name}, Error: ${err.message})`);
             }
         );
     });
+    
+    // Global listeners that are always active
+    const globalSettingsDocRef = doc(db, 'settings', 'main');
+    const unsubGlobalSettings = onSnapshot(globalSettingsDocRef, (doc) => {
+        setGlobalSettings(doc.exists() ? doc.data() as ProjectSettings : null);
+    });
+
+    const unsubGlobalHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
+        const holidaysData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
+            } as Holiday
+        });
+        setGlobalHolidays(holidaysData);
+    });
+
+    Promise.all(unsubscribers).then(() => setIsLoading(false));
 
     return () => {
-      unsubProject();
-      unsubscribers.forEach(unsub => unsub());
-      unsubSettings();
+      unsubscribers.forEach(unsub => unsub && unsub());
       unsubGlobalSettings();
       unsubGlobalHolidays();
     }
-  }, [projectId]);
+  }, [projectId, pathname, getCollectionsForPage]);
 
-  // One-time effect to assign random impacted systems to tasks that don't have one
-  useEffect(() => {
-    if (isLoading || impactedSystems.length === 0 || !db || !projectId) return;
-
-    const tasksWithoutSystem = stories.filter(
-      (story) => story.itemType === 'Task' && !story.impactedSystemId
-    );
-    const projectDocRef = doc(db, 'projects', projectId);
-
-    if (tasksWithoutSystem.length > 0) {
-      const batch = writeBatch(db);
-      tasksWithoutSystem.forEach((task) => {
-        const randomSystem = impactedSystems[Math.floor(Math.random() * impactedSystems.length)];
-        const taskRef = doc(projectDocRef, 'stories', task.id);
-        batch.update(taskRef, { impactedSystemId: randomSystem.id });
-      });
-
-      batch.commit().catch((err) => {
-        console.error('Failed to assign random impacted systems to tasks:', err);
-      });
-    }
-  }, [isLoading, stories, impactedSystems, projectId]);
 
   const updateProject = async (data: Partial<Omit<Project, 'id'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1226,7 +1237,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             <div className="flex h-screen w-full items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
                     <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-muted-foreground">Connecting to project database...</p>
+                    <p className="text-muted-foreground">Loading project data...</p>
                 </div>
             </div>
         );
