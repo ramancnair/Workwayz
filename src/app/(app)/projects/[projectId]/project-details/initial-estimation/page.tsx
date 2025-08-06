@@ -52,6 +52,7 @@ const systemSchema = z.object({
   name: z.string().min(1, 'System name is required.'),
   description: z.string().min(1, 'Description is required.'),
   category: z.enum(['Technology', 'Function']),
+  estimate: z.coerce.number().optional(),
 });
 
 const categories: ImpactedSystemCategory[] = ['Technology', 'Function'];
@@ -80,7 +81,7 @@ export default function InitialEstimationPage() {
 
   const systemForm = useForm<z.infer<typeof systemSchema>>({
     resolver: zodResolver(systemSchema),
-    defaultValues: { name: '', description: '', category: 'Technology' },
+    defaultValues: { name: '', description: '', category: 'Technology', estimate: 0 },
   });
 
   useEffect(() => {
@@ -97,7 +98,7 @@ export default function InitialEstimationPage() {
       if (editingSystem) {
         systemForm.reset(editingSystem);
       } else {
-        systemForm.reset({ name: '', description: '', category: 'Technology' });
+        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: 0 });
       }
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
@@ -221,8 +222,9 @@ export default function InitialEstimationPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[25%]">Name</TableHead>
-                  <TableHead className="w-[50%]">Description</TableHead>
+                  <TableHead className="w-[45%]">Description</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Estimation (man-days)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -234,6 +236,7 @@ export default function InitialEstimationPage() {
                     <TableCell>
                       <Badge variant="outline">{system.category}</Badge>
                     </TableCell>
+                    <TableCell>{system.estimate || 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleSystemDialogOpen(system)}>
                         <Edit className="h-4 w-4" />
@@ -279,22 +282,35 @@ export default function InitialEstimationPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={systemForm.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={systemForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={systemForm.control}
+                  name="estimate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estimation (man-days)</FormLabel>
+                      <FormControl><Input type="number" placeholder="0" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <DialogFooter>
                 <Button type="submit" disabled={isSystemSubmitting}>
                   {isSystemSubmitting ? (editingSystem ? 'Saving...' : 'Creating...') : (editingSystem ? 'Save Changes' : 'Create System')}
