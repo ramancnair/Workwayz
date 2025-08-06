@@ -257,7 +257,7 @@ export default function ProjectPage() {
               </TableBody>
                <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={3} className="text-right font-bold">Total Estimation</TableCell>
+                  <TableCell colSpan={3} className="text-right font-bold">Total Development Effort</TableCell>
                   <TableCell className="font-bold">{totalEstimate}</TableCell>
                   <TableCell />
                 </TableRow>
@@ -357,4 +357,3 @@ export default function ProjectPage() {
     </>
   );
 }
-
