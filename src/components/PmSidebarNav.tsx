@@ -40,7 +40,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     {
       id: 'portfolios',
       href: `/portfolios`,
-      label: "Manage Portfolios",
+      label: "Portfolios",
       icon: Briefcase,
       group: 'portfolio'
     },

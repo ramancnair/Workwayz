@@ -132,7 +132,7 @@ export default function PortfoliosPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Manage Portfolios" description="Create, edit, and organize your project portfolios.">
+        <PageHeader title="Portfolios" description="Create, edit, and organize your project portfolios.">
           <Button onClick={() => { setEditingPortfolio(null); setIsDialogOpen(true); }}>
             <PlusCircle className="mr-2 h-4 w-4" />
             New Portfolio
