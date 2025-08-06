@@ -356,6 +356,11 @@ export default function ProjectPage() {
                           <TableCell colSpan={3} className="text-right font-bold">Total Horizontal Effort</TableCell>
                           <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
                         </TableRow>
+                        <TableRow className="bg-muted/80 hover:bg-muted/80">
+                            <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
+                            <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
+                            <TableCell/>
+                        </TableRow>
                       </TableFooter>
                 </Table>
                 
@@ -401,13 +406,6 @@ export default function ProjectPage() {
                     </div>
                 )}
             </CardContent>
-            <TableFooter>
-                <TableRow className="bg-muted/80 hover:bg-muted/80">
-                    <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
-                    <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
-                    <TableCell/>
-                </TableRow>
-            </TableFooter>
         </Card>
       </div>
 
