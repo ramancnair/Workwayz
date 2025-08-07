@@ -45,7 +45,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     } else if (value === 'project') {
       router.push(`${basePath}/project-details/project-dashboard`);
     } else if (value === 'releases') {
-      router.push(`${basePath}/releases`);
+      router.push(`${basePath}/releases/project-releases`);
     } else if (value === 'resources') {
       router.push(`${basePath}/resources/project-resources`);
     } else if (value === 'governance') {
