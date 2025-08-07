@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { type Release } from '@/types';
-import { eachDayOfInterval, format, differenceInDays, parseISO, startOfDay, addDays, getDaysInMonth, startOfMonth } from 'date-fns';
+import { eachDayOfInterval, format, differenceInDays, parseISO, startOfDay, addDays, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardContent } from './ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
@@ -18,24 +18,27 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate)
         .sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
     
-    if (releases.length === 0) {
+    if (allItems.filter(i => i.startDate || i.milestoneDate).length === 0) {
       return { chartData: [], months: [], totalDays: 0, todayOffset: 0, milestones: [] };
     }
 
     const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate);
     const milestones = allItems.filter(item => item.itemType === 'Milestone' && item.milestoneDate);
 
-    const allDates = [
-        ...releases.map(r => parseISO(r.startDate!)),
-        ...releases.map(r => parseISO(r.endDate!)),
-        ...milestones.map(m => parseISO(m.milestoneDate!)),
-    ];
+    const allDates = allItems
+        .flatMap(item => [item.startDate, item.endDate, item.milestoneDate])
+        .filter(Boolean)
+        .map(dateStr => parseISO(dateStr!));
+    
+    if (allDates.length === 0) {
+      allDates.push(new Date()); // Default to today if no dates
+    }
     
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
     const chartStartDate = startOfDay(addDays(startOfMonth(minDate), -7));
-    const chartEndDate = startOfDay(addDays(maxDate, 37));
+    const chartEndDate = startOfDay(addDays(endOfMonth(maxDate), 7));
 
     const totalDays = differenceInDays(chartEndDate, chartStartDate);
     const today = startOfDay(new Date());
