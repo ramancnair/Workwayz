@@ -110,6 +110,13 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
   return (
     <div className="w-full overflow-x-auto">
         <div className="relative pt-12 pb-4 min-w-[1200px]" style={{ minHeight: `${chartData.length * 6 + 10}rem` }}>
+             {/* Background Grid Lines */}
+            <div className="absolute top-0 left-0 w-full h-full">
+                {months.map((month, index) => (
+                    <div key={index} className="absolute top-0 bottom-0 border-l border-dashed" style={{ left: `${month.offset}%` }}></div>
+                ))}
+            </div>
+
             {/* Months Header */}
             <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm">
                 <div className="relative h-8 flex border-b">
