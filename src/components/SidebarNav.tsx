@@ -109,7 +109,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   
   const releasesMenuItems = [
     {
-      href: `${basePath}/releases`,
+      href: `${basePath}/releases/project-releases`,
       label: "Project Releases",
       icon: Package,
     }
@@ -240,7 +240,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname === item.href || (item.href.endsWith('/project') && pathname.startsWith(item.href))}
+                  isActive={pathname.startsWith(item.href)}
                   tooltip={item.label}
                 >
                   <item.icon />
