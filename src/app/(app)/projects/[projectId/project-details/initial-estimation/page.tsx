@@ -1,8 +1,6 @@
 
-'use client';
+import { notFound } from 'next/navigation';
 
-import { redirect } from 'next/navigation';
-
-export default function DeprecatedPage({ params }: { params: { projectId: string } }) {
-  redirect(`/projects/${params.projectId}/project-details/initial-estimation`);
+export default function NotFoundPage() {
+  notFound();
 }
