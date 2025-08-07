@@ -1,6 +1,6 @@
 
-import { redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 
-export default function ProjectRootPage({ params }: { params: { projectId: string } }) {
-  redirect(`/projects/${params.projectId}/development/dashboard`);
+export default function NotFoundPage() {
+  notFound();
 }
