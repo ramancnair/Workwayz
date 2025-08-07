@@ -225,7 +225,7 @@ export default function ProjectHolidayPage() {
           <DialogHeader>
             <DialogTitle>{editingHoliday ? 'Edit Holiday' : 'Add New Holiday'}</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
+          <Form {...holidayForm}>
             <form onSubmit={holidayForm.handleSubmit(onHolidaySubmit)} className="space-y-4">
               <FormField
                 control={holidayForm.control}
