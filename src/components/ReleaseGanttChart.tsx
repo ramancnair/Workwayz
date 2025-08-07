@@ -14,9 +14,9 @@ const COLORS = [
 
 export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] }) {
 
-  const { chartData, months, totalDays, todayOffset } = useMemo(() => {
+  const { chartData, months, todayOffset } = useMemo(() => {
     const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate)
-        .sort((a,b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime());
+        .sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
     
     if (releases.length === 0) {
       return { chartData: [], months: [], totalDays: 0, todayOffset: 0, milestones: [] };
@@ -35,7 +35,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
     const chartStartDate = startOfDay(addDays(startOfMonth(minDate), -7));
-    const chartEndDate = startOfDay(addDays(startOfMonth(maxDate), 37));
+    const chartEndDate = startOfDay(addDays(maxDate, 37));
 
     const totalDays = differenceInDays(chartEndDate, chartStartDate);
     const today = startOfDay(new Date());
