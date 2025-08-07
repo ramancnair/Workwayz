@@ -191,7 +191,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/project-details/project-dashboard': ['employees'],
     '/project-details/initial-estimation': ['impactedSystems', 'horizontals'],
     '/project': ['impactedSystems', 'horizontals'],
-    '/releases': ['releases'],
+    '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees'],
     '/resources/project-gantt': ['stories', 'employees'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
