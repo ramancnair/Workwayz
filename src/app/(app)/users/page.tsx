@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -39,7 +39,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
 import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -82,6 +82,9 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [filters, setFilters] = useState({ search: '', accessLevel: 'all' });
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'firstName', desc: false });
 
   const form = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
@@ -192,6 +195,76 @@ export default function UsersPage() {
     }
   };
 
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ search: '', accessLevel: 'all' });
+  };
+  
+  const handleSort = (columnId: string) => {
+    if (sorting?.id === columnId) {
+      setSorting({ ...sorting, desc: !sorting.desc });
+    } else {
+      setSorting({ id: columnId, desc: false });
+    }
+  };
+
+  const filteredAndSortedUsers = useMemo(() => {
+    let filtered = [...users];
+    const searchTerm = filters.search.toLowerCase();
+
+    if (searchTerm) {
+      filtered = filtered.filter(user => 
+        user.firstName.toLowerCase().includes(searchTerm) ||
+        user.lastName.toLowerCase().includes(searchTerm) ||
+        user.email.toLowerCase().includes(searchTerm) ||
+        user.empId.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    if (filters.accessLevel !== 'all') {
+      filtered = filtered.filter(user => user.accessLevel === filters.accessLevel);
+    }
+
+    if (sorting) {
+      filtered.sort((a, b) => {
+        let valA: any = (a as any)[sorting.id] || '';
+        let valB: any = (b as any)[sorting.id] || '';
+        
+        if (sorting.id === 'name') {
+            valA = `${a.firstName} ${a.lastName}`;
+            valB = `${b.firstName} ${b.lastName}`;
+        }
+        
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+        
+        let comparison = 0;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB, undefined, { numeric: true });
+        } else if (valA > valB) {
+          comparison = 1;
+        } else if (valA < valB) {
+          comparison = -1;
+        }
+
+        return sorting.desc ? -comparison : comparison;
+      });
+    }
+    return filtered;
+  }, [users, filters, sorting]);
+
+  const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
+    <TableHead className={className}>
+      <Button variant="ghost" onClick={() => handleSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -202,21 +275,42 @@ export default function UsersPage() {
           </Button>
         </PageHeader>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center gap-4 flex-wrap">
+                <Input
+                    placeholder="Filter by name, ID, or email..."
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    className="max-w-sm"
+                />
+                <Select value={filters.accessLevel} onValueChange={(v) => handleFilterChange('accessLevel', v)}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by access level..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Access Levels</SelectItem>
+                        {accessLevels.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Button variant="ghost" onClick={clearFilters}>
+                    <X className="mr-2 h-4 w-4" /> Clear Filters
+                </Button>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Emp ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
+                  <SortableHeader columnId="empId">Emp ID</SortableHeader>
+                  <SortableHeader columnId="name">Name</SortableHeader>
+                  <SortableHeader columnId="email">Email</SortableHeader>
                   <TableHead>Phone</TableHead>
-                  <TableHead>Experience</TableHead>
-                  <TableHead>Domain</TableHead>
+                  <SortableHeader columnId="experience">Experience</SortableHeader>
+                  <SortableHeader columnId="domainExpertise">Domain</SortableHeader>
+                   <SortableHeader columnId="accessLevel">Access Level</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {filteredAndSortedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.empId}</TableCell>
                     <TableCell>{user.firstName} {user.lastName}</TableCell>
@@ -224,6 +318,7 @@ export default function UsersPage() {
                     <TableCell>{user.phone}</TableCell>
                     <TableCell>{user.experience ? `${user.experience} yrs` : 'N/A'}</TableCell>
                     <TableCell>{user.domainExpertise || 'N/A'}</TableCell>
+                    <TableCell>{user.accessLevel || 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(user)}>
                         <Edit className="h-4 w-4" />
@@ -265,7 +360,7 @@ export default function UsersPage() {
                  <FormField control={form.control} name="empId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Emp ID *</FormLabel>
-                    <FormControl><Input placeholder="E.g., E001" {...field} /></FormControl>
+                    <FormControl><Input placeholder="E.g., E001" {...field} readOnly={!!editingUser} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
