@@ -50,7 +50,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 
-const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC'];
+const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC', 'Hybrid'];
 const pricingModels: PricingModel[] = ['Fixed Price', 'T&M', 'Fixed Capacity'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 

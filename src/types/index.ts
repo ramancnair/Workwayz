@@ -242,7 +242,7 @@ export type Portfolio = {
   deletedAt?: string; // ISO String
 };
 
-export type ProjectMethodology = 'Agile' | 'SDLC';
+export type ProjectMethodology = 'Agile' | 'SDLC' | 'Hybrid';
 export type PricingModel = 'Fixed Price' | 'T&M' | 'Fixed Capacity';
 export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Initial Estimation';
 
