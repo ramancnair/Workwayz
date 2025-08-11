@@ -26,6 +26,7 @@ import {
   CalendarDays,
   CreditCard,
   DollarSign,
+  LayoutDashboard,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -44,6 +45,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: `/portfolios`,
       label: "Portfolios",
       icon: Briefcase,
+      group: 'portfolio'
+    },
+    {
+      id: 'cto-dashboard',
+      href: `/cto-dashboard`,
+      label: "CTO Dashboard",
+      icon: LayoutDashboard,
       group: 'portfolio'
     },
     {
