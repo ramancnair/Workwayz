@@ -42,7 +42,7 @@ export default function ResourceGanttPage() {
 
   const tasks = useMemo(() => {
     return stories.filter(story => 
-      story.itemType === 'Task' && 
+      story.itemType === 'Development Task' && 
       story.startDate && 
       story.endDate
     );

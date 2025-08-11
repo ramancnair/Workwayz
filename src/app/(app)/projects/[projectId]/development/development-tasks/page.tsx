@@ -80,7 +80,7 @@ export default function DevelopmentTasksPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   
-  const tasks = stories.filter(story => story.itemType === 'Task');
+  const tasks = stories.filter(story => story.itemType === 'Development Task');
 
   const [filters, setFilters] = useState({
     status: 'all',
@@ -266,7 +266,7 @@ export default function DevelopmentTasksPage() {
     
     const taskData: Omit<Story, 'id' | 'storyId'> = {
         title: values.title,
-        itemType: 'Task',
+        itemType: 'Development Task',
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
@@ -283,7 +283,7 @@ export default function DevelopmentTasksPage() {
     if (editingTask) {
       success = await updateStory(editingTask.id, taskData);
     } else {
-      success = await addStory(taskData);
+      success = await addStory(taskData, 'TASK');
     }
 
     if (success) {

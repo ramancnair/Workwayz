@@ -71,11 +71,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
   Bug: Bug,
-  Task: CheckSquare,
+  'Development Task': CheckSquare,
   'Feature Change': GitCommit,
 };
 
-const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Bug', 'Task', 'Feature Change'];
+const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Bug', 'Development Task', 'Feature Change'];
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 
 const epicFormSchema = z.object({
@@ -500,7 +500,7 @@ export default function BacklogPage() {
   const backlogStories = stories.filter((story) => story.sprintId === null || story.sprintId === undefined);
   
   const subItemsByParentId = stories.reduce((acc, story) => {
-      if (['Bug', 'Task', 'Feature Change'].includes(story.itemType) && story.epicId) {
+      if (['Bug', 'Development Task', 'Feature Change'].includes(story.itemType) && story.epicId) {
           if (!acc[story.epicId]) {
               acc[story.epicId] = [];
           }
@@ -511,7 +511,7 @@ export default function BacklogPage() {
 
   const backlogItemsByEpic = backlogStories.reduce((acc, story) => {
     // Exclude sub-items from top-level grouping if their parent is also in the backlog
-    if (['Bug', 'Task', 'Feature Change'].includes(story.itemType) && story.epicId && backlogStories.some(s => s.id === story.epicId)) {
+    if (['Bug', 'Development Task', 'Feature Change'].includes(story.itemType) && story.epicId && backlogStories.some(s => s.id === story.epicId)) {
         return acc;
     }
 

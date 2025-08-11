@@ -56,7 +56,7 @@ import { Separator } from '@/components/ui/separator';
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
   Bug: Bug,
-  Task: CheckSquare,
+  'Development Task': CheckSquare,
   'Feature Change': GitCommit,
 };
 
@@ -164,7 +164,7 @@ export default function KanbanPage() {
   }, {} as Record<string, Story>);
   
   const subItemsByStoryId = stories.reduce((acc, story) => {
-    if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
+    if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
         if (!acc[story.epicId]) {
             acc[story.epicId] = [];
         }
@@ -193,7 +193,7 @@ export default function KanbanPage() {
     if (!selectedStory) return;
     setEditStorySubmitting(true);
     
-    const isSubItem = ['Bug', 'Task'].includes(selectedStory.itemType);
+    const isSubItem = ['Bug', 'Development Task'].includes(selectedStory.itemType);
     const relatedStoryId = isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined;
 
     const success = await updateStory(selectedStory.id, {
@@ -369,7 +369,7 @@ export default function KanbanPage() {
                     )}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {['Bug', 'Task'].includes(selectedStory.itemType) ? (
+                  {['Bug', 'Development Task'].includes(selectedStory.itemType) ? (
                      <FormField
                       control={editStoryForm.control}
                       name="epicId"
