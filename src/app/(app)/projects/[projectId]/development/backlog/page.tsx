@@ -268,6 +268,8 @@ export default function BacklogPage() {
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
   });
+  const watchedEditItemType = useWatch({ control: editStoryForm.control, name: 'itemType' });
+
 
   const addSprintForm = useForm<z.infer<typeof sprintFormSchema>>({
     resolver: zodResolver(sprintFormSchema),
@@ -698,6 +700,30 @@ export default function BacklogPage() {
               </DialogHeader>
               <Form {...addStoryForm}>
                 <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="space-y-4">
+                     <FormField
+                        control={addStoryForm.control}
+                        name="itemType"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select a requirement type" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {workItemTypes.map(itemType => (
+                                <SelectItem key={itemType} value={itemType}>
+                                    {itemType}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                     <FormField
                         control={addStoryForm.control}
                         name="title"
@@ -718,30 +744,6 @@ export default function BacklogPage() {
                         </TabsList>
                         <TabsContent value="details" className="pt-4">
                             <div className="space-y-4">
-                                <FormField
-                                    control={addStoryForm.control}
-                                    name="itemType"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Type</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                            <SelectValue placeholder="Select a requirement type" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {workItemTypes.map(itemType => (
-                                            <SelectItem key={itemType} value={itemType}>
-                                                {itemType}
-                                            </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
                                 <FormField
                                     control={addStoryForm.control}
                                     name="description"
@@ -1245,6 +1247,30 @@ export default function BacklogPage() {
               </DialogHeader>
               <Form {...editStoryForm}>
                 <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4">
+                  <FormField
+                      control={editStoryForm.control}
+                      name="itemType"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled>
+                          <FormControl>
+                              <SelectTrigger>
+                              <SelectValue placeholder="Select a requirement type" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {workItemTypes.map(itemType => (
+                              <SelectItem key={itemType} value={itemType}>
+                                  {itemType}
+                              </SelectItem>
+                              ))}
+                          </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
                    <FormField
                     control={editStoryForm.control}
                     name="title"
@@ -1660,5 +1686,4 @@ export default function BacklogPage() {
     </>
   );
 }
-
     
