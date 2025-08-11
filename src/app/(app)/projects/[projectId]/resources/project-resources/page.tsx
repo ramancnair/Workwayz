@@ -159,7 +159,7 @@ export default function ResourcesPage() {
     setIsDialogOpen(true);
   }
 
-  const availableUsers = allUsers.filter(emp => !projectUsers.some(pe => pe.id === emp.id));
+  const availableUsers = allUsers.filter(emp => !emp.isDeleted && !projectUsers.some(pe => pe.id === emp.id));
   const availableUserOptions = availableUsers.map(emp => ({
       value: emp.id,
       label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
