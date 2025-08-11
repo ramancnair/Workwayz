@@ -39,6 +39,7 @@ import {
   Package,
   Home,
   FileText,
+  Server,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -104,6 +105,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/project-details/initial-estimation`,
       label: "Initial Estimation",
       icon: Network,
+    },
+    {
+      href: `${basePath}/project-details/environments`,
+      label: "Environments",
+      icon: Server,
     },
   ];
   

@@ -70,7 +70,7 @@ export type TestCase = {
   sprintId?: string;
 };
 
-export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM';
+export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';
 
 export type AccessLevel = 'Admin' | 'Portfolio Manager' | 'Project Manager' | 'Program Director' | 'Business Analyst' | 'Dev Lead' | 'Developer' | 'Test Lead' | 'Tester' | 'PMO' | 'Finance';
 
@@ -277,4 +277,9 @@ export type Horizontal = {
   weightage: number; // percentage
   isEnabled: boolean;
   dailyBillingRate?: number;
+};
+
+export type Environment = {
+  id: string;
+  name: string;
 };

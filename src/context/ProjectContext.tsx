@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -63,6 +63,7 @@ interface ProjectContextType {
   weeklyOffDays: number[];
   impactedSystems: ImpactedSystem[];
   horizontals: Horizontal[];
+  environments: Environment[];
   
   // Project actions
   updateProject: (data: Partial<Omit<Project, 'id'>>) => Promise<boolean>;
@@ -147,6 +148,11 @@ interface ProjectContextType {
   updateHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
   deleteHorizontal: (horizontalId: string) => Promise<boolean>;
 
+  // Environment actions
+  addEnvironment: (environment: Omit<Environment, 'id'>) => Promise<boolean>;
+  updateEnvironment: (environmentId: string, data: Partial<Omit<Environment, 'id'>>) => Promise<boolean>;
+  deleteEnvironment: (environmentId: string) => Promise<boolean>;
+
   // Worklog actions
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
   submitWorklogForWeek: (employeeId: string, weekStartDate: string) => Promise<boolean>;
@@ -178,7 +184,16 @@ const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
     { name: 'Dev Ops', weightage: 5, isEnabled: false },
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers';
+const defaultEnvironments: Omit<Environment, 'id'>[] = [
+    { name: 'Dev' },
+    { name: 'SIT' },
+    { name: 'UAT' },
+    { name: 'Production' },
+    { name: 'VAPT' },
+    { name: 'Performance' },
+];
+
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
@@ -191,6 +206,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/bug-list': ['stories', 'employees', 'sprints'],
     '/project-details/project-dashboard': ['employees', 'allUsers'],
     '/project-details/initial-estimation': ['impactedSystems', 'horizontals'],
+    '/project-details/environments': ['environments'],
     '/project': ['impactedSystems', 'horizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers'],
@@ -226,6 +242,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [horizontals, setHorizontals] = useState<Horizontal[]>([]);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [worklogSubmissions, setWorklogSubmissions] = useState<WorklogSubmission[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
@@ -278,6 +295,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'releases', setState: setReleasesAndMilestones },
         { name: 'impactedSystems', setState: setImpactedSystems },
         { name: 'horizontals', setState: setHorizontals },
+        { name: 'environments', setState: setEnvironments },
         { name: 'worklogs', setState: setWorklogs },
         { name: 'worklogSubmissions', setState: setWorklogSubmissions },
         { name: 'settings', setState: setProjectSettings },
@@ -334,6 +352,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         batch.set(docRef, h);
                     });
                     batch.commit().catch(e => console.error("Failed to set default horizontals", e));
+                    return;
+                }
+
+                if (name === 'environments' && querySnapshot.empty) {
+                    const batch = writeBatch(db);
+                    defaultEnvironments.forEach(h => {
+                        const docRef = doc(collection(rootProjectDocRef, 'environments'));
+                        batch.set(docRef, h);
+                    });
+                    batch.commit().catch(e => console.error("Failed to set default environments", e));
                     return;
                 }
 
@@ -1197,6 +1225,40 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
+  // Environment Actions
+  const addEnvironment = async (environment: Omit<Environment, 'id'>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await addDoc(collection(db, 'projects', projectId, 'environments'), sanitizeForFirestore(environment));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to add environment.", e);
+      return false;
+    }
+  };
+
+  const updateEnvironment = async (environmentId: string, data: Partial<Omit<Environment, 'id'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await updateDoc(doc(db, 'projects', projectId, 'environments', environmentId), sanitizeForFirestore(data));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to update environment.", e);
+      return false;
+    }
+  };
+
+  const deleteEnvironment = async (environmentId: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId, 'environments', environmentId));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to delete environment.", e);
+      return false;
+    }
+  };
+
   // Worklog Actions
   const saveWorklog = async (worklog: Omit<Worklog, 'id'>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1261,6 +1323,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     weeklyOffDays,
     impactedSystems,
     horizontals,
+    environments,
     isLoading,
     error,
     updateProject,
@@ -1316,6 +1379,9 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addHorizontal,
     updateHorizontal,
     deleteHorizontal,
+    addEnvironment,
+    updateEnvironment,
+    deleteEnvironment,
     saveWorklog,
     submitWorklogForWeek,
   };
