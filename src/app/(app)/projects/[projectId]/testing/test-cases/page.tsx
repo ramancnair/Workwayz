@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from '@/components/ui/checkbox';
 
 const testCaseFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -58,6 +59,7 @@ const testCaseFormSchema = z.object({
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
+  environmentIds: z.array(z.string()).optional(),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -73,7 +75,7 @@ const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
 
 export default function TestCasesPage() {
-  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones } = useProject();
+  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
@@ -220,6 +222,7 @@ export default function TestCasesPage() {
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
+            environmentIds: editingTestCase.environmentIds || [],
           });
         } else {
           setRelatedStoryInputText('');
@@ -233,6 +236,7 @@ export default function TestCasesPage() {
             storyId: '',
             releaseId: 'unassigned',
             sprintId: 'backlog',
+            environmentIds: [],
           });
         }
     }
@@ -266,6 +270,7 @@ export default function TestCasesPage() {
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
+        environmentIds: values.environmentIds,
     };
 
     let success = false;
@@ -293,6 +298,8 @@ export default function TestCasesPage() {
       </Button>
     </TableHead>
   );
+  
+  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
   return (
     <>
@@ -364,18 +371,14 @@ export default function TestCasesPage() {
                 <SortableHeader columnId="title">Title</SortableHeader>
                 <SortableHeader columnId="status">Status</SortableHeader>
                 <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
-                <SortableHeader columnId="sprintId">Sprint</SortableHeader>
-                <SortableHeader columnId="storyId">Story</SortableHeader>
-                <SortableHeader columnId="releaseId">Release</SortableHeader>
+                <TableHead>Environments</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAndSortedTestCases.map((tc) => {
                 const assignee = employees.find(e => e.id === tc.assigneeId);
-                const story = stories.find(s => s.id === tc.storyId);
-                const sprint = sprints.find(s => s.id === tc.sprintId);
-                const release = releases.find(r => r.id === tc.releaseId);
+                const tcEnvironments = tc.environmentIds?.map(envId => environments.find(e => e.id === envId)?.name).filter(Boolean).join(', ');
                 return (
                     <TableRow key={tc.id}>
                         <TableCell className="font-medium">{tc.testCaseId}</TableCell>
@@ -396,35 +399,7 @@ export default function TestCasesPage() {
                                 </div>
                             ) : "Unassigned"}
                         </TableCell>
-                        <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                        <TableCell>
-                          {story ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                   <Badge variant="secondary">{story.storyId}</Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{story.title}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ): 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          {release ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Badge variant="outline">{release.releaseId}</Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{release.name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : 'N/A'}
-                        </TableCell>
+                        <TableCell>{tcEnvironments || 'N/A'}</TableCell>
                         <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
                             <Edit className="h-4 w-4" />
@@ -498,6 +473,51 @@ export default function TestCasesPage() {
                     <FormMessage />
                   </FormItem>
               )} />
+               <FormField
+                control={form.control}
+                name="environmentIds"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Environments to Run</FormLabel>
+                    <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
+                      {sortedEnvironments.map((env) => (
+                        <FormField
+                          key={env.id}
+                          control={form.control}
+                          name="environmentIds"
+                          render={({ field }) => {
+                            return (
+                              <FormItem
+                                key={env.id}
+                                className="flex flex-row items-start space-x-3 space-y-0"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(env.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...(field.value || []), env.id])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== env.id
+                                            )
+                                          )
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {env.name}
+                                </FormLabel>
+                              </FormItem>
+                            )
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="assigneeId" render={({ field }) => (
                       <FormItem>

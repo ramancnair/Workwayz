@@ -68,6 +68,7 @@ export type TestCase = {
   storyId?: string;
   releaseId?: string;
   sprintId?: string;
+  environmentIds?: string[];
 };
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';
