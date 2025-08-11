@@ -47,7 +47,7 @@ import { useToast } from "@/hooks/use-toast";
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { buttonVariants } from '@/components/ui/button';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 const resourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
@@ -55,6 +55,7 @@ const resourceSchema = z.object({
   availability: z.coerce.number().min(0).max(100).optional(),
   onshoreOrOffshore: z.enum(['Onshore', 'Offshore']).optional(),
   onboardingDate: z.string().optional(),
+  offloadingDate: z.string().optional(),
 });
 
 const roles: UserRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
@@ -62,6 +63,7 @@ const onshoreOffshoreOptions: OnshoreOffshore[] = ['Onshore', 'Offshore'];
 
 export default function ResourcesPage() {
   const { 
+    project,
     employees: projectUsers, 
     addEmployee: addUserToProject, 
     updateEmployee: updateProjectUser,
@@ -100,6 +102,7 @@ export default function ResourcesPage() {
           availability: editingUser.availability,
           onshoreOrOffshore: editingUser.onshoreOrOffshore,
           onboardingDate: editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : '',
+          offloadingDate: editingUser.offloadingDate ? format(new Date(editingUser.offloadingDate), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
@@ -108,11 +111,12 @@ export default function ResourcesPage() {
           availability: 100,
           onshoreOrOffshore: undefined,
           onboardingDate: format(new Date(), 'yyyy-MM-dd'),
+          offloadingDate: project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
         });
         setUserInputText('');
       }
     }
-  }, [isDialogOpen, editingUser, form]);
+  }, [isDialogOpen, editingUser, form, project]);
 
   const handleFormSubmit = async (values: z.infer<typeof resourceSchema>) => {
     if (editingUser) {
@@ -122,6 +126,7 @@ export default function ResourcesPage() {
         availability: values.availability,
         onshoreOrOffshore: values.onshoreOrOffshore,
         onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
+        offloadingDate: values.offloadingDate ? new Date(values.offloadingDate).toISOString() : undefined,
       });
 
       if (success) {
@@ -143,6 +148,7 @@ export default function ResourcesPage() {
         availability: values.availability,
         onshoreOrOffshore: values.onshoreOrOffshore,
         onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
+        offloadingDate: values.offloadingDate ? new Date(values.offloadingDate).toISOString() : undefined,
       };
       
       const success = await addUserToProject(projectUserData);
@@ -269,6 +275,14 @@ export default function ResourcesPage() {
                       </FormItem>
                     )} />
                   </div>
+                  
+                  <FormField control={form.control} name="offloadingDate" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Offloading Date</FormLabel>
+                      <FormControl><Input type="date" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
 
                   <DialogFooter>
                     <Button type="submit">
@@ -290,6 +304,8 @@ export default function ResourcesPage() {
                 <TableHead>Email</TableHead>
                 <TableHead>Availability</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead>Onboarding Date</TableHead>
+                <TableHead>Offloading Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -304,6 +320,8 @@ export default function ResourcesPage() {
                   <TableCell>
                     {user.onshoreOrOffshore && <Badge variant={user.onshoreOrOffshore === 'Onshore' ? 'default' : 'secondary'}>{user.onshoreOrOffshore}</Badge>}
                   </TableCell>
+                  <TableCell>{user.onboardingDate ? format(parseISO(user.onboardingDate), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{user.offloadingDate ? format(parseISO(user.offloadingDate), 'PPP') : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
                       <Edit className="h-4 w-4" />

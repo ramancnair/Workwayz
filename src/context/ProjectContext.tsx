@@ -667,9 +667,10 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const { onboardingDate, ...rest } = data;
+      const { onboardingDate, offloadingDate, ...rest } = data;
       const payload: any = { ...rest };
       if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(new Date(onboardingDate)) : null;
+      if (data.hasOwnProperty('offloadingDate')) payload.offloadingDate = offloadingDate ? Timestamp.fromDate(new Date(offloadingDate)) : null;
 
       const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
       await updateDoc(employeeRef, sanitizeForFirestore(payload));
