@@ -178,7 +178,7 @@ const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
     { name: 'Dev Ops', weightage: 5, isEnabled: false },
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
@@ -193,7 +193,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/project-details/initial-estimation': ['impactedSystems', 'horizontals'],
     '/project': ['impactedSystems', 'horizontals'],
     '/releases/project-releases': ['releases'],
-    '/resources/project-resources': ['employees'],
+    '/resources/project-resources': ['employees', 'allUsers'],
     '/resources/resource-gantt': ['stories', 'employees'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
     '/resources/leave-tracker': ['employees', 'holidays'],
@@ -267,6 +267,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'stories', setState: setStories },
         { name: 'sprints', setState: setSprints },
         { name: 'employees', setState: setEmployees },
+        { name: 'allUsers', setState: setAllUsers },
         { name: 'testCases', setState: setTestCases },
         { name: 'risks', setState: setRisks },
         { name: 'assumptions', setState: setAssumptions },
@@ -306,6 +307,13 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             });
         }
         
+        if (name === 'allUsers') {
+            return onSnapshot(collection(db, 'employees'), (snapshot) => {
+                const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+                setState(usersData);
+            });
+        }
+
         const q = query(collection(rootProjectDocRef, name));
         return onSnapshot(q, 
             (querySnapshot) => {
@@ -391,10 +399,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         setGlobalHolidays(holidaysData);
     });
     
-    const unsubAllUsers = onSnapshot(collection(db, 'employees'), (snapshot) => {
-        const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-        setAllUsers(usersData);
-    });
+    // No need for a separate allUsers listener if it's handled by pageToCollectionMap
+    // const unsubAllUsers = onSnapshot(collection(db, 'employees'), (snapshot) => {
+    //     const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+    //     setAllUsers(usersData);
+    // });
 
     Promise.all(unsubscribers).then(() => setIsLoading(false));
 
@@ -402,7 +411,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       unsubscribers.forEach(unsub => unsub && unsub());
       unsubGlobalSettings();
       unsubGlobalHolidays();
-      unsubAllUsers();
+      // unsubAllUsers();
     }
   }, [projectId, pathname, getCollectionsForPage]);
 

@@ -58,17 +58,17 @@ const resourceSchema = z.object({
   clientEmail: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
 });
 
-const roles: UserRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
+const roles: UserRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM', 'Program Director'];
 
 export default function ResourcesPage() {
   const { 
     project,
     employees: projectUsers, 
+    allUsers,
     addEmployee: addUserToProject, 
     updateEmployee: updateProjectUser,
     deleteEmployee: removeUserFromProject 
   } = useProject();
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -78,19 +78,6 @@ export default function ResourcesPage() {
   const form = useForm<z.infer<typeof resourceSchema>>({
     resolver: zodResolver(resourceSchema),
   });
-
-  useEffect(() => {
-    if (!db) return;
-    const q = collection(db, 'employees');
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const usersData = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as User));
-        setAllUsers(usersData);
-    });
-    return () => unsubscribe();
-  }, []);
   
   useEffect(() => {
     if(isDialogOpen) {
