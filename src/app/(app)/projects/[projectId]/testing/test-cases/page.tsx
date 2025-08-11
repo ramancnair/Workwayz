@@ -129,7 +129,7 @@ export default function TestCasesPage() {
   };
 
   const storyOptions = useMemo(() => stories
-    .filter(s => s.itemType === 'Story')
+    .filter(s => s.itemType === 'Requirement/Story')
     .map(story => ({
       value: story.id,
       label: `[${story.storyId}] ${story.title}`,
@@ -340,7 +340,7 @@ export default function TestCasesPage() {
                 <SelectContent>
                   <SelectItem value="all">All Stories</SelectItem>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {stories.filter(s => s.itemType === 'Story').map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
+                  {stories.filter(s => s.itemType === 'Requirement/Story').map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
                 </SelectContent>
               </Select>
                <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>

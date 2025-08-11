@@ -202,7 +202,7 @@ export default function DevelopmentTasksPage() {
   }, [watchedStartDate, watchedEffortDays, form, holidays, weeklyOffDays]);
 
   const storyOptions = useMemo(() => stories
-    .filter(s => s.itemType === 'Story')
+    .filter(s => s.itemType === 'Requirement/Story')
     .map(story => ({
       value: story.id,
       label: `[${story.storyId}] ${story.title}`,

@@ -31,7 +31,7 @@ export default function DevelopmentDashboard() {
   const { stories } = useProject();
 
   const allWorkItems = stories; // Includes stories, tasks, bugs, etc.
-  const allStories = stories.filter(s => s.itemType === 'Story');
+  const allStories = stories.filter(s => s.itemType === 'Requirement/Story');
   const allTasks = stories.filter(s => s.itemType === 'Task');
   
   const totalTasks = allTasks.length;

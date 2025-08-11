@@ -54,11 +54,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Separator } from '@/components/ui/separator';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
-  Story: BookOpen,
+  'Requirement/Story': BookOpen,
   Bug: Bug,
   Task: CheckSquare,
-  Change: GitCommit,
-  Improvement: TrendingUp,
+  'Feature Change': GitCommit,
 };
 
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
@@ -287,10 +286,10 @@ export default function KanbanPage() {
                 <div className="flex-1 space-y-4 overflow-y-auto">
                   {itemsInColumn.map((story) => {
                       const epic = epics.find(e => e.id === story.epicId);
-                      const parentStory = story.epicId && story.itemType !== 'Story' ? allStoriesById[story.epicId] : undefined;
+                      const parentStory = story.epicId && story.itemType !== 'Requirement/Story' ? allStoriesById[story.epicId] : undefined;
 
                       const subItems = subItemsByStoryId[story.id] || [];
-                      const isMoveToDoneDisabled = story.itemType === 'Story' && subItems.some(sub => sub.status !== doneColumnName);
+                      const isMoveToDoneDisabled = story.itemType === 'Requirement/Story' && subItems.some(sub => sub.status !== doneColumnName);
 
                       return (
                         <div key={story.id}>
@@ -385,7 +384,7 @@ export default function KanbanPage() {
                               </FormControl>
                               <SelectContent>
                               <SelectItem value="unassigned">None</SelectItem>
-                              {stories.filter(s => s.itemType === 'Story').map(story => (
+                              {stories.filter(s => s.itemType === 'Requirement/Story').map(story => (
                                   <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
                               ))}
                               </SelectContent>
@@ -487,7 +486,7 @@ export default function KanbanPage() {
                     )}
                   />
 
-                  {selectedStory.itemType === 'Story' && selectedStorySubItems.length > 0 && (
+                  {selectedStory.itemType === 'Requirement/Story' && selectedStorySubItems.length > 0 && (
                     <div>
                         <Separator className="my-4" />
                         <h4 className="text-sm font-medium mb-2">Related Items</h4>

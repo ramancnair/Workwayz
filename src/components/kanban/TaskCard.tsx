@@ -4,14 +4,13 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import type { Story, Epic, WorkItemType } from '@/types';
 import { PropsWithChildren } from 'react';
-import { BookOpen, Bug, CheckSquare, GitCommit, TrendingUp } from 'lucide-react';
+import { BookOpen, Bug, CheckSquare, GitCommit } from 'lucide-react';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
-  Story: BookOpen,
+  'Requirement/Story': BookOpen,
   Bug: Bug,
   Task: CheckSquare,
-  Change: GitCommit,
-  Improvement: TrendingUp,
+  'Feature Change': GitCommit,
 };
 
 interface StoryCardProps extends PropsWithChildren {

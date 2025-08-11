@@ -69,14 +69,13 @@ import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
-  Story: BookOpen,
+  'Requirement/Story': BookOpen,
   Bug: Bug,
   Task: CheckSquare,
-  Change: GitCommit,
-  Improvement: TrendingUp,
+  'Feature Change': GitCommit,
 };
 
-const workItemTypes: WorkItemType[] = ['Story', 'Bug', 'Task', 'Change', 'Improvement'];
+const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Bug', 'Task', 'Feature Change'];
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 
 const epicFormSchema = z.object({
@@ -258,7 +257,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned' },
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -342,8 +341,8 @@ export default function BacklogPage() {
         title: selectedStory.title,
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-        epicId: selectedStory.itemType === 'Story' ? selectedStory.epicId || 'unassigned' : undefined,
-        parentStoryId: selectedStory.itemType !== 'Story' ? selectedStory.epicId || 'unassigned' : undefined,
+        epicId: selectedStory.itemType === 'Requirement/Story' ? selectedStory.epicId || 'unassigned' : undefined,
+        parentStoryId: selectedStory.itemType !== 'Requirement/Story' ? selectedStory.epicId || 'unassigned' : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
@@ -426,7 +425,7 @@ export default function BacklogPage() {
       itemType: values.itemType,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: values.itemType === 'Story' 
+      epicId: values.itemType === 'Requirement/Story' 
         ? (values.epicId === 'unassigned' ? undefined : values.epicId)
         : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
       status: 'To Do',
@@ -452,7 +451,7 @@ export default function BacklogPage() {
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: selectedStory.itemType === 'Story' 
+        epicId: selectedStory.itemType === 'Requirement/Story' 
             ? (values.epicId === 'unassigned' ? undefined : values.epicId) 
             : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
         estimatedHours: values.estimatedHours,
@@ -501,7 +500,7 @@ export default function BacklogPage() {
   const backlogStories = stories.filter((story) => story.sprintId === null || story.sprintId === undefined);
   
   const subItemsByParentId = stories.reduce((acc, story) => {
-      if (['Bug', 'Task', 'Change', 'Improvement'].includes(story.itemType) && story.epicId) {
+      if (['Bug', 'Task', 'Feature Change'].includes(story.itemType) && story.epicId) {
           if (!acc[story.epicId]) {
               acc[story.epicId] = [];
           }
@@ -512,7 +511,7 @@ export default function BacklogPage() {
 
   const backlogItemsByEpic = backlogStories.reduce((acc, story) => {
     // Exclude sub-items from top-level grouping if their parent is also in the backlog
-    if (['Bug', 'Task', 'Change', 'Improvement'].includes(story.itemType) && story.epicId && backlogStories.some(s => s.id === story.epicId)) {
+    if (['Bug', 'Task', 'Feature Change'].includes(story.itemType) && story.epicId && backlogStories.some(s => s.id === story.epicId)) {
         return acc;
     }
 
@@ -747,7 +746,7 @@ export default function BacklogPage() {
                     )}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {watchedItemType === 'Story' ? (
+                  {watchedItemType === 'Requirement/Story' ? (
                      <FormField
                         control={addStoryForm.control}
                         name="epicId"
@@ -786,7 +785,7 @@ export default function BacklogPage() {
                               </FormControl>
                               <SelectContent>
                               <SelectItem value="unassigned">None</SelectItem>
-                              {stories.filter(s => s.itemType === 'Story').map(story => (
+                              {stories.filter(s => s.itemType === 'Requirement/Story').map(story => (
                                   <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
                               ))}
                               </SelectContent>
@@ -944,7 +943,7 @@ export default function BacklogPage() {
                                               onClick={() => setSelectedStory(story)}
                                               onDelete={() => setStoryToDelete(story)}
                                           />
-                                          {story.itemType === 'Story' && (
+                                          {story.itemType === 'Requirement/Story' && (
                                           <div className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
                                               <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
@@ -1007,7 +1006,7 @@ export default function BacklogPage() {
                 {sprints.map((sprint) => {
                    const sprintItems = stories.filter((story) => story.sprintId === sprint.id);
                    const topLevelSprintItems = sprintItems.filter(item => 
-                       item.itemType === 'Story' || 
+                       item.itemType === 'Requirement/Story' || 
                        !sprintItems.some(parent => parent.id === item.epicId)
                    );
 
@@ -1241,7 +1240,7 @@ export default function BacklogPage() {
                     )}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedStory.itemType === 'Story' ? (
+                  {selectedStory.itemType === 'Requirement/Story' ? (
                      <FormField
                       control={editStoryForm.control}
                       name="epicId"
@@ -1282,7 +1281,7 @@ export default function BacklogPage() {
                               </FormControl>
                               <SelectContent>
                               <SelectItem value="unassigned">None</SelectItem>
-                              {stories.filter(s => s.itemType === 'Story').map(story => (
+                              {stories.filter(s => s.itemType === 'Requirement/Story').map(story => (
                                   <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
                               ))}
                               </SelectContent>
@@ -1383,7 +1382,7 @@ export default function BacklogPage() {
                     />
                   )}
 
-                  {selectedStory.itemType === 'Story' && selectedStorySubItems.length > 0 && (
+                  {selectedStory.itemType === 'Requirement/Story' && selectedStorySubItems.length > 0 && (
                     <div>
                         <Separator className="my-4" />
                         <h4 className="text-sm font-medium mb-2">Related Items</h4>

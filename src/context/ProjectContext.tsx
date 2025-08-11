@@ -481,7 +481,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
 
         // If it's a sub-item (Bug/Task) linked to a story, inherit the sprint
-        if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
+        if (['Bug', 'Task', 'Feature Change'].includes(story.itemType) && story.epicId) {
             const parentStory = stories.find(s => s.id === story.epicId);
             if (parentStory && parentStory.sprintId) {
                 payload.sprintId = parentStory.sprintId;
@@ -1412,27 +1412,27 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     submitWorklogForWeek,
   };
   
-    if (isLoading) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-background">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-muted-foreground">Loading project data...</p>
-                </div>
-            </div>
-        );
-    }
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Loading project data...</p>
+        </div>
+      </div>
+    );
+  }
 
-    if (error) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-background p-8">
-                <div className="max-w-2xl rounded-lg border border-destructive bg-destructive/10 p-6 text-center text-destructive">
-                    <h2 className="text-2xl font-bold">Database Connection Error</h2>
-                    <p className="mt-2 text-destructive/80">{error}</p>
-                </div>
-            </div>
-        );
-    }
+  if (error) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background p-8">
+        <div className="max-w-2xl rounded-lg border border-destructive bg-destructive/10 p-6 text-center text-destructive">
+          <h2 className="text-2xl font-bold">Database Connection Error</h2>
+          <p className="mt-2 text-destructive/80">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ProjectContext.Provider value={value}>
