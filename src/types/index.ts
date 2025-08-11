@@ -70,8 +70,6 @@ export type TestCase = {
   sprintId?: string;
 };
 
-export type OnshoreOffshore = 'Onshore' | 'Offshore';
-
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM';
 
 export type AccessLevel = 'Admin' | 'Portfolio Manager' | 'Project Manager' | 'Program Director' | 'Business Analyst' | 'Dev Lead' | 'Developer' | 'Test Lead' | 'Tester' | 'PMO' | 'Finance';
@@ -100,7 +98,6 @@ export type User = {
   employmentEndDate?: string; // ISO String - Global
   domainExpertise?: string;
   accessLevel?: AccessLevel;
-  onshoreOrOffshore?: OnshoreOffshore;
   billedRate?: number;
   availability?: number;
   leavePeriods?: LeavePeriod[];

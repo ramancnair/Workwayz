@@ -39,9 +39,8 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Trash2, Edit } from 'lucide-react';
-import { type User, type OnshoreOffshore, type UserRole } from '@/types';
+import { type User, type UserRole } from '@/types';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -53,13 +52,13 @@ const resourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
   role: z.string().optional(),
   availability: z.coerce.number().min(0).max(100).optional(),
-  onshoreOrOffshore: z.enum(['Onshore', 'Offshore']).optional(),
   onboardingDate: z.string().optional(),
   offloadingDate: z.string().optional(),
+  clientEmpId: z.string().optional(),
+  clientEmail: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
 });
 
 const roles: UserRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM'];
-const onshoreOffshoreOptions: OnshoreOffshore[] = ['Onshore', 'Offshore'];
 
 export default function ResourcesPage() {
   const { 
@@ -100,18 +99,20 @@ export default function ResourcesPage() {
           employeeId: editingUser.id,
           role: editingUser.role,
           availability: editingUser.availability,
-          onshoreOrOffshore: editingUser.onshoreOrOffshore,
           onboardingDate: editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : '',
           offloadingDate: editingUser.offloadingDate ? format(new Date(editingUser.offloadingDate), 'yyyy-MM-dd') : '',
+          clientEmpId: editingUser.clientEmpId || '',
+          clientEmail: editingUser.clientEmail || '',
         });
       } else {
         form.reset({
           employeeId: '',
           role: undefined,
           availability: 100,
-          onshoreOrOffshore: undefined,
           onboardingDate: format(new Date(), 'yyyy-MM-dd'),
           offloadingDate: project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
+          clientEmpId: '',
+          clientEmail: '',
         });
         setUserInputText('');
       }
@@ -124,9 +125,10 @@ export default function ResourcesPage() {
       const success = await updateProjectUser(editingUser.id, {
         role: values.role as UserRole,
         availability: values.availability,
-        onshoreOrOffshore: values.onshoreOrOffshore,
         onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
         offloadingDate: values.offloadingDate ? new Date(values.offloadingDate).toISOString() : undefined,
+        clientEmpId: values.clientEmpId,
+        clientEmail: values.clientEmail,
       });
 
       if (success) {
@@ -146,9 +148,10 @@ export default function ResourcesPage() {
         ...userToAdd,
         role: values.role as UserRole,
         availability: values.availability,
-        onshoreOrOffshore: values.onshoreOrOffshore,
         onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
         offloadingDate: values.offloadingDate ? new Date(values.offloadingDate).toISOString() : undefined,
+        clientEmpId: values.clientEmpId,
+        clientEmail: values.clientEmail,
       };
       
       const success = await addUserToProject(projectUserData);
@@ -255,18 +258,6 @@ export default function ResourcesPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <FormField control={form.control} name="onshoreOrOffshore" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select location type" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {onshoreOffshoreOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
                      <FormField control={form.control} name="onboardingDate" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Onboarding Date</FormLabel>
@@ -274,15 +265,32 @@ export default function ResourcesPage() {
                         <FormMessage />
                       </FormItem>
                     )} />
+                     <FormField control={form.control} name="offloadingDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Offloading Date</FormLabel>
+                        <FormControl><Input type="date" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
                   </div>
                   
-                  <FormField control={form.control} name="offloadingDate" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Offloading Date</FormLabel>
-                      <FormControl><Input type="date" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="clientEmpId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client ID</FormLabel>
+                        <FormControl><Input placeholder="Client Employee ID" {...field} value={field.value || ''} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="clientEmail" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client Email</FormLabel>
+                        <FormControl><Input type="email" placeholder="client.email@example.com" {...field} value={field.value || ''} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+
 
                   <DialogFooter>
                     <Button type="submit">
@@ -303,9 +311,10 @@ export default function ResourcesPage() {
                 <TableHead>Role</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Availability</TableHead>
-                <TableHead>Location</TableHead>
                 <TableHead>Onboarding Date</TableHead>
                 <TableHead>Offloading Date</TableHead>
+                <TableHead>Client ID</TableHead>
+                <TableHead>Client Email</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -317,11 +326,10 @@ export default function ResourcesPage() {
                   <TableCell>{user.role || 'N/A'}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.availability ? `${user.availability}%` : 'N/A'}</TableCell>
-                  <TableCell>
-                    {user.onshoreOrOffshore && <Badge variant={user.onshoreOrOffshore === 'Onshore' ? 'default' : 'secondary'}>{user.onshoreOrOffshore}</Badge>}
-                  </TableCell>
                   <TableCell>{user.onboardingDate ? format(parseISO(user.onboardingDate), 'PPP') : 'N/A'}</TableCell>
                   <TableCell>{user.offloadingDate ? format(parseISO(user.offloadingDate), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{user.clientEmpId || 'N/A'}</TableCell>
+                  <TableCell>{user.clientEmail || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
                       <Edit className="h-4 w-4" />
