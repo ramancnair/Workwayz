@@ -25,38 +25,107 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, GripVertical } from 'lucide-react';
 import { type Environment } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const environmentSchema = z.object({
   name: z.string().min(1, 'Environment name is required.'),
 });
 
+function SortableItem({ environment }: { environment: Environment }) {
+    const { updateEnvironment, deleteEnvironment } = useProject();
+    const { toast } = useToast();
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({ id: environment.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+    
+    const handleRenameEnvironment = async (id: string, newName: string) => {
+        if (!newName) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Environment name cannot be empty.' });
+          return;
+        }
+        const success = await updateEnvironment(id, { name: newName });
+        if (success) {
+          toast({ title: 'Success', description: 'Environment renamed.' });
+        } else {
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not rename environment.' });
+        }
+    };
+    
+    return (
+        <div ref={setNodeRef} style={style} className="flex items-center gap-2 bg-background p-2 rounded-md border">
+            <Button variant="ghost" size="icon" {...attributes} {...listeners} className="cursor-grab" aria-label="Drag to reorder">
+                <GripVertical className="h-5 w-5" />
+            </Button>
+            <Input
+              defaultValue={environment.name}
+              onBlur={(e) => {
+                 if (e.target.value !== environment.name) {
+                   handleRenameEnvironment(environment.id, e.target.value)
+                 }
+              }}
+              className="flex-1"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => deleteEnvironment(environment.id)}
+              aria-label="Delete environment"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+        </div>
+    );
+}
+
+
 export default function EnvironmentsPage() {
-  const { environments, addEnvironment, updateEnvironment, deleteEnvironment } = useProject();
+  const { environments, addEnvironment, deleteEnvironment, updateEnvironmentOrder } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
   const [deletingEnvironment, setDeletingEnvironment] = useState<Environment | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
   const form = useForm<z.infer<typeof environmentSchema>>({
     resolver: zodResolver(environmentSchema),
     defaultValues: { name: '' },
   });
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor)
+  );
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -99,11 +168,24 @@ export default function EnvironmentsPage() {
     }
     setIsSubmitting(false);
   };
+  
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = sortedEnvironments.findIndex((c) => c.id === active.id);
+      const newIndex = sortedEnvironments.findIndex((c) => c.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        updateEnvironmentOrder(oldIndex, newIndex);
+      }
+    }
+  }
 
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Environments" description="Manage common testing environments for the project.">
+        <PageHeader title="Environments" description="Manage and reorder common testing environments for the project.">
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Environment
@@ -111,29 +193,19 @@ export default function EnvironmentsPage() {
         </PageHeader>
         <Card>
           <CardContent className="p-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {environments.map((env) => (
-                  <TableRow key={env.id}>
-                    <TableCell className="font-medium">{env.name}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(env)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingEnvironment(env)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+             <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={sortedEnvironments} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-2">
+                        {sortedEnvironments.map((env) => (
+                           <SortableItem key={env.id} environment={env} />
+                        ))}
+                    </div>
+                </SortableContext>
+              </DndContext>
           </CardContent>
         </Card>
       </div>

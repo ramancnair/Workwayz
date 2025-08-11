@@ -282,4 +282,5 @@ export type Horizontal = {
 export type Environment = {
   id: string;
   name: string;
+  order: number;
 };

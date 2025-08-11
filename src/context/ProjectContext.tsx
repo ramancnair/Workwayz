@@ -149,9 +149,10 @@ interface ProjectContextType {
   deleteHorizontal: (horizontalId: string) => Promise<boolean>;
 
   // Environment actions
-  addEnvironment: (environment: Omit<Environment, 'id'>) => Promise<boolean>;
-  updateEnvironment: (environmentId: string, data: Partial<Omit<Environment, 'id'>>) => Promise<boolean>;
+  addEnvironment: (environment: Omit<Environment, 'id' | 'order'>) => Promise<boolean>;
+  updateEnvironment: (environmentId: string, data: Partial<Omit<Environment, 'id' | 'order'>>) => Promise<boolean>;
   deleteEnvironment: (environmentId: string) => Promise<boolean>;
+  updateEnvironmentOrder: (oldIndex: number, newIndex: number) => Promise<boolean>;
 
   // Worklog actions
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
@@ -185,12 +186,12 @@ const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
 ];
 
 const defaultEnvironments: Omit<Environment, 'id'>[] = [
-    { name: 'Dev' },
-    { name: 'SIT' },
-    { name: 'UAT' },
-    { name: 'Production' },
-    { name: 'VAPT' },
-    { name: 'Performance' },
+    { name: 'Dev', order: 0 },
+    { name: 'SIT', order: 1 },
+    { name: 'UAT', order: 2 },
+    { name: 'Production', order: 3 },
+    { name: 'VAPT', order: 4 },
+    { name: 'Performance', order: 5 },
 ];
 
 type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers';
@@ -1226,10 +1227,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Environment Actions
-  const addEnvironment = async (environment: Omit<Environment, 'id'>): Promise<boolean> => {
+  const addEnvironment = async (environment: Omit<Environment, 'id' | 'order'>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      await addDoc(collection(db, 'projects', projectId, 'environments'), sanitizeForFirestore(environment));
+      const newOrder = environments.length > 0 ? Math.max(...environments.map(e => e.order)) + 1 : 0;
+      const payload = { ...environment, order: newOrder };
+      await addDoc(collection(db, 'projects', projectId, 'environments'), sanitizeForFirestore(payload));
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to add environment.", e);
@@ -1237,7 +1240,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const updateEnvironment = async (environmentId: string, data: Partial<Omit<Environment, 'id'>>): Promise<boolean> => {
+  const updateEnvironment = async (environmentId: string, data: Partial<Omit<Environment, 'id' | 'order'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       await updateDoc(doc(db, 'projects', projectId, 'environments', environmentId), sanitizeForFirestore(data));
@@ -1256,6 +1259,28 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     } catch (e) {
       console.error("Firebase Error: Failed to delete environment.", e);
       return false;
+    }
+  };
+  
+  const updateEnvironmentOrder = async (oldIndex: number, newIndex: number): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    const sortedEnvironments = [...environments].sort((a, b) => a.order - b.order);
+    const movedEnvironments = arrayMove(sortedEnvironments, oldIndex, newIndex);
+    
+    setEnvironments(movedEnvironments.map((env, index) => ({ ...env, order: index })));
+
+    try {
+        const batch = writeBatch(db);
+        movedEnvironments.forEach((env, index) => {
+            const docRef = doc(db, 'projects', projectId, 'environments', env.id);
+            batch.update(docRef, { order: index });
+        });
+        await batch.commit();
+        return true;
+    } catch (e) {
+        console.error("Firebase Error: Failed to update environment order.", e);
+        setEnvironments(sortedEnvironments);
+        return false;
     }
   };
 
@@ -1382,6 +1407,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addEnvironment,
     updateEnvironment,
     deleteEnvironment,
+    updateEnvironmentOrder,
     saveWorklog,
     submitWorklogForWeek,
   };
