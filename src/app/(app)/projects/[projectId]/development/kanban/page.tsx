@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -147,7 +147,7 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick,
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -241,6 +241,8 @@ export default function KanbanPage() {
   }, [selectedStory, subItemsByStoryId]);
   
   const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType)), [stories]);
+
+  const sortedEnvironments = useMemo(() => [...environments].sort((a,b) => a.order - b.order), [environments]);
 
 
   if (!currentSprint) {
@@ -463,30 +465,55 @@ export default function KanbanPage() {
                                 />
                                 </div>
                                 {selectedStory.itemType === 'Bug' && (
-                                    <FormField
-                                    control={editStoryForm.control}
-                                    name="criticality"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Criticality</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Set criticality" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            {bugCriticalities.map((c) => (
-                                                <SelectItem key={c} value={c}>
-                                                {c}
-                                                </SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
+                                    <>
+                                        <FormField
+                                        control={editStoryForm.control}
+                                        name="criticality"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Criticality</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Set criticality" />
+                                                </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                {bugCriticalities.map((c) => (
+                                                    <SelectItem key={c} value={c}>
+                                                    {c}
+                                                    </SelectItem>
+                                                ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                        />
+                                         <FormField
+                                            control={editStoryForm.control}
+                                            name="environmentId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                <FormLabel>Environment</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                    <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select an environment" />
+                                                    </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                    <SelectItem value="unassigned">None</SelectItem>
+                                                    {sortedEnvironments.map(env => (
+                                                        <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                                    ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </>
                                 )}
                                 <FormField
                                     control={editStoryForm.control}
@@ -642,5 +669,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
+    
 
     
