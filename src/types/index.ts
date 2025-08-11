@@ -74,7 +74,7 @@ export type OnshoreOffshore = 'Onshore' | 'Offshore';
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM';
 
-export type AccessLevel = 'Admin' | 'Portfolio Manager' | 'Project Manager' | 'Business Analyst' | 'Dev Lead' | 'Developer' | 'Test Lead' | 'Tester' | 'PMO' | 'Finance';
+export type AccessLevel = 'Admin' | 'Portfolio Manager' | 'Project Manager' | 'Program Director' | 'Business Analyst' | 'Dev Lead' | 'Developer' | 'Test Lead' | 'Tester' | 'PMO' | 'Finance';
 
 export type LeavePeriod = {
   id: string; // uuid on the client

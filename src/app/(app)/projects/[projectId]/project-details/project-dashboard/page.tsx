@@ -29,7 +29,7 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
 }
 
 export default function ProjectDashboardPage() {
-    const { project, isLoading, employees } = useProject();
+    const { project, isLoading, allUsers: employees } = useProject();
 
     const projectManager = project?.projectManagerId
         ? employees.find(e => e.id === project.projectManagerId)

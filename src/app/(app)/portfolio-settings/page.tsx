@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Save } from 'lucide-react';
 
-const accessLevels: AccessLevel[] = ['Admin', 'Portfolio Manager', 'Project Manager', 'Business Analyst', 'Dev Lead', 'Developer', 'Test Lead', 'Tester', 'PMO', 'Finance'];
+const accessLevels: AccessLevel[] = ['Admin', 'Portfolio Manager', 'Project Manager', 'Program Director', 'Business Analyst', 'Dev Lead', 'Developer', 'Test Lead', 'Tester', 'PMO', 'Finance'];
 
 // Define your application's pages/features here
 const appPages = [

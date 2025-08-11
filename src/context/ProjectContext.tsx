@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -48,6 +48,7 @@ interface ProjectContextType {
   stories: Story[];
   sprints: Sprint[];
   employees: Employee[];
+  allUsers: User[];
   testCases: TestCase[];
   risks: Risk[];
   assumptions: Assumption[];
@@ -193,7 +194,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/project': ['impactedSystems', 'horizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees'],
-    '/resources/project-gantt': ['stories', 'employees'],
+    '/resources/resource-gantt': ['stories', 'employees'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
     '/resources/leave-tracker': ['employees', 'holidays'],
     '/raid-dashboard': ['risks', 'assumptions', 'issues', 'dependencies'],
@@ -213,6 +214,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [stories, setStories] = useState<Story[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [risks, setRisks] = useState<Risk[]>([]);
   const [assumptions, setAssumptions] = useState<Assumption[]>([]);
@@ -388,6 +390,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         });
         setGlobalHolidays(holidaysData);
     });
+    
+    const unsubAllUsers = onSnapshot(collection(db, 'employees'), (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+        setAllUsers(usersData);
+    });
 
     Promise.all(unsubscribers).then(() => setIsLoading(false));
 
@@ -395,6 +402,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       unsubscribers.forEach(unsub => unsub && unsub());
       unsubGlobalSettings();
       unsubGlobalHolidays();
+      unsubAllUsers();
     }
   }, [projectId, pathname, getCollectionsForPage]);
 
@@ -1228,6 +1236,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     stories,
     sprints,
     employees,
+    allUsers,
     testCases,
     risks,
     assumptions,
