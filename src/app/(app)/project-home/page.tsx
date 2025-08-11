@@ -459,6 +459,8 @@ export default function ProjectsDashboard() {
   };
 
   const projectsByPortfolio = useMemo(() => {
+    const userMap = new Map(users.map(u => [u.id, u]));
+
     return portfolios.map(portfolio => {
         let filtered = projects.filter(p => 
             p.portfolioId === portfolio.id && (
@@ -472,16 +474,24 @@ export default function ProjectsDashboard() {
             filtered.sort((a, b) => {
                 let valA: any, valB: any;
                 if(sorting.id === 'projectManagerId') {
-                    const pmA = users.find(u => u.id === a.projectManagerId);
-                    const pmB = users.find(u => u.id === b.projectManagerId);
+                    const pmA = userMap.get(a.projectManagerId || '');
+                    const pmB = userMap.get(b.projectManagerId || '');
                     valA = pmA ? `${pmA.firstName} ${pmA.lastName}` : 'zzz'; // put unassigned last
                     valB = pmB ? `${pmB.firstName} ${pmB.lastName}` : 'zzz';
                 } else {
                     valA = (a as any)[sorting.id] || '';
                     valB = (b as any)[sorting.id] || '';
                 }
-                const comparison = valA.localeCompare(valB, undefined, { numeric: true });
-                return sorting.desc ? -comparison : comparison;
+                
+                if (typeof valA === 'string' && typeof valB === 'string') {
+                    const comparison = valA.localeCompare(valB, undefined, { numeric: true });
+                    return sorting.desc ? -comparison : comparison;
+                }
+                
+                // Fallback for non-string types
+                if (valA < valB) return sorting.desc ? 1 : -1;
+                if (valA > valB) return sorting.desc ? -1 : 1;
+                return 0;
             });
         }
         return { ...portfolio, projects: filtered };
@@ -635,3 +645,4 @@ export default function ProjectsDashboard() {
     
 
     
+
