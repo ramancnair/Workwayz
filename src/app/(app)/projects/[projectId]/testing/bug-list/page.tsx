@@ -66,11 +66,12 @@ const bugFormSchema = z.object({
   status: z.enum(['To Do', 'In Progress', 'Done']),
   sprintId: z.string().optional(),
   criticality: z.enum(bugCriticalities).optional(),
+  environmentId: z.string().optional(),
 });
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, updateStory } = useProject();
+  const { stories, employees, sprints, updateStory, environments } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,6 +92,7 @@ export default function BugListPage() {
         status: editingBug.status,
         sprintId: editingBug.sprintId || 'backlog',
         criticality: editingBug.criticality || 'Medium',
+        environmentId: editingBug.environmentId || 'unassigned',
       });
     } else {
       form.reset();
@@ -110,6 +112,7 @@ export default function BugListPage() {
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         criticality: values.criticality,
+        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
     });
     
     if (success) {
@@ -120,6 +123,8 @@ export default function BugListPage() {
     }
     setIsSubmitting(false);
   };
+  
+  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
 
   return (
@@ -134,6 +139,7 @@ export default function BugListPage() {
               <TableHead>Title</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Criticality</TableHead>
+              <TableHead>Environment</TableHead>
               <TableHead>Assignee</TableHead>
               <TableHead>Related Story</TableHead>
             </TableRow>
@@ -142,6 +148,7 @@ export default function BugListPage() {
             {bugs.map((bug) => {
               const assignee = employees.find(e => e.id === bug.assigneeId);
               const relatedStory = stories.find(s => s.id === bug.epicId); // epicId holds related story for bugs
+              const environment = environments.find(e => e.id === bug.environmentId);
               return (
                 <TableRow key={bug.id}>
                   <TableCell className="font-medium">{bug.storyId}</TableCell>
@@ -164,6 +171,11 @@ export default function BugListPage() {
                         {bug.criticality}
                       </Badge>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    {environment ? (
+                       <Badge variant="outline">{environment.name}</Badge>
+                    ) : 'N/A'}
                   </TableCell>
                   <TableCell>
                     {assignee ? (
@@ -300,7 +312,7 @@ export default function BugListPage() {
                             </FormControl>
                             <SelectContent>
                             <SelectItem value="unassigned">None</SelectItem>
-                            {stories.filter(s => s.itemType === 'Story').map(story => (
+                            {stories.filter(s => s.itemType === 'Requirement/Story').map(story => (
                                 <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
                             ))}
                             </SelectContent>
@@ -331,30 +343,55 @@ export default function BugListPage() {
                     )}
                     />
                 </div>
-                 <FormField
-                    control={form.control}
-                    name="criticality"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Criticality</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Set criticality" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {bugCriticalities.map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {c}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="criticality"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Criticality</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Set criticality" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {bugCriticalities.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                    {c}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="environmentId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Environment</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an environment" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="unassigned">None</SelectItem>
+                              {sortedEnvironments.map(env => (
+                                <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Saving...' : 'Save Changes'}

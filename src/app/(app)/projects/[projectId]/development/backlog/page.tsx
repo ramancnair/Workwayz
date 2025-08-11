@@ -94,6 +94,7 @@ const storyFormSchema = z.object({
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
   releaseId: z.string().optional(),
+  environmentId: z.string().optional(),
 });
 
 const sprintFormSchema = z.object({
@@ -209,6 +210,7 @@ export default function BacklogPage() {
     sprints, 
     employees: users, 
     releasesAndMilestones,
+    environments,
     moveStoryToSprint, 
     moveStoryToEpic, 
     deleteStory, 
@@ -257,7 +259,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned' },
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -347,6 +349,7 @@ export default function BacklogPage() {
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
         releaseId: selectedStory.releaseId || 'unassigned',
+        environmentId: selectedStory.environmentId || 'unassigned',
       });
     }
   }, [selectedStory, editStoryForm]);
@@ -432,6 +435,7 @@ export default function BacklogPage() {
       estimatedHours: values.estimatedHours,
       criticality: values.itemType === 'Bug' ? values.criticality : undefined,
       releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+      environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
     };
     const success = await addStory(newStory);
     if (success) {
@@ -457,6 +461,7 @@ export default function BacklogPage() {
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
     });
     if (success) {
       setSelectedStory(null);
@@ -550,6 +555,8 @@ export default function BacklogPage() {
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
   const selectedStorySubItems = selectedStory && subItemsByParentId[selectedStory.id] ? subItemsByParentId[selectedStory.id] : [];
+  
+  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
   return (
     <>
@@ -858,6 +865,7 @@ export default function BacklogPage() {
                     />
                   </div>
                    {watchedItemType === 'Bug' && (
+                    <>
                     <FormField
                       control={addStoryForm.control}
                       name="criticality"
@@ -882,6 +890,30 @@ export default function BacklogPage() {
                         </FormItem>
                       )}
                     />
+                     <FormField
+                      control={addStoryForm.control}
+                      name="environmentId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Environment</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an environment" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="unassigned">None</SelectItem>
+                              {sortedEnvironments.map(env => (
+                                <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    </>
                   )}
                   <DialogFooter>
                     <Button type="submit" disabled={isAddStorySubmitting}>
@@ -1356,6 +1388,7 @@ export default function BacklogPage() {
                     />
                   </div>
                   {selectedStory.itemType === 'Bug' && (
+                    <>
                     <FormField
                       control={editStoryForm.control}
                       name="criticality"
@@ -1380,6 +1413,30 @@ export default function BacklogPage() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={editStoryForm.control}
+                      name="environmentId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Environment</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an environment" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="unassigned">None</SelectItem>
+                              {sortedEnvironments.map(env => (
+                                <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    </>
                   )}
 
                   {selectedStory.itemType === 'Requirement/Story' && selectedStorySubItems.length > 0 && (

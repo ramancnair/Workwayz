@@ -1,5 +1,6 @@
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -43,6 +44,7 @@ export type Story = {
   effortDays?: number;
   impactedSystemId?: string;
   releaseId?: string;
+  environmentId?: string;
 };
 
 export type Sprint = {
