@@ -29,10 +29,10 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
 }
 
 export default function ProjectDashboardPage() {
-    const { project, isLoading, allUsers: employees } = useProject();
+    const { project, isLoading, allUsers } = useProject();
 
     const projectManager = project?.projectManagerId
-        ? employees.find(e => e.id === project.projectManagerId)
+        ? allUsers.find(e => e.id === project.projectManagerId)
         : null;
         
     if (isLoading) {

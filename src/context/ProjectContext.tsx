@@ -189,7 +189,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases'],
     '/testing/bug-list': ['stories', 'employees', 'sprints'],
-    '/project-details/project-dashboard': ['employees'],
+    '/project-details/project-dashboard': ['employees', 'allUsers'],
     '/project-details/initial-estimation': ['impactedSystems', 'horizontals'],
     '/project': ['impactedSystems', 'horizontals'],
     '/releases/project-releases': ['releases'],
@@ -399,11 +399,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         setGlobalHolidays(holidaysData);
     });
     
-    // No need for a separate allUsers listener if it's handled by pageToCollectionMap
-    // const unsubAllUsers = onSnapshot(collection(db, 'employees'), (snapshot) => {
-    //     const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-    //     setAllUsers(usersData);
-    // });
+    // Always fetch allUsers regardless of the page
+    const unsubAllUsers = onSnapshot(collection(db, 'employees'), (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+        setAllUsers(usersData);
+    });
 
     Promise.all(unsubscribers).then(() => setIsLoading(false));
 
@@ -411,7 +411,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       unsubscribers.forEach(unsub => unsub && unsub());
       unsubGlobalSettings();
       unsubGlobalHolidays();
-      // unsubAllUsers();
+      unsubAllUsers();
     }
   }, [projectId, pathname, getCollectionsForPage]);
 
