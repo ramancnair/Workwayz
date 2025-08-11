@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type ProjectStatus } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format, parseISO } from 'date-fns';
 
 const statusStyles: Record<ProjectStatus, string> = {
     'Initial Estimation': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
@@ -97,6 +98,14 @@ export default function ProjectDashboardPage() {
                          <DetailCard 
                             title="Pricing Model" 
                             value={project.pricingModel}
+                        />
+                        <DetailCard 
+                            title="Start Date" 
+                            value={project.startDate ? format(parseISO(project.startDate), 'PPP') : 'N/A'}
+                        />
+                        <DetailCard 
+                            title="End Date" 
+                            value={project.endDate ? format(parseISO(project.endDate), 'PPP') : 'N/A'}
                         />
                     </CardContent>
                 </Card>

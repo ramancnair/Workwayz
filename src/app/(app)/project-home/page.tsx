@@ -48,6 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { format, parseISO } from 'date-fns';
 
 const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC'];
 const pricingModels: PricingModel[] = ['Fixed Price', 'T&M', 'Fixed Capacity'];
@@ -71,6 +72,11 @@ const projectSchema = z.object({
   methodology: z.enum(projectMethodologies).optional(),
   pricingModel: z.enum(pricingModels).optional(),
   status: z.enum(projectStatuses).optional(),
+  startDate: z.string().min(1, "Start date is required."),
+  endDate: z.string().min(1, "End date is required."),
+}).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
+    message: 'End date must be after or on the same day as the start date.',
+    path: ['endDate'],
 });
 
 function ProjectDialogContent({
@@ -161,6 +167,22 @@ function ProjectDialogContent({
               </FormItem>
             )}
           />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField control={form.control} name="startDate" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Project Start Date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )} />
+            <FormField control={form.control} name="endDate" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Project End Date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )} />
+          </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -346,9 +368,11 @@ export default function ProjectsDashboard() {
           ...editingProject,
           projectManagerId: editingProject.projectManagerId || '',
           status: editingProject.status || 'Initial Estimation',
+          startDate: editingProject.startDate ? format(parseISO(editingProject.startDate), 'yyyy-MM-dd') : '',
+          endDate: editingProject.endDate ? format(parseISO(editingProject.endDate), 'yyyy-MM-dd') : '',
         });
       } else {
-        form.reset({ name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' });
+        form.reset({ name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '' });
       }
     }
   }, [isDialogOpen, editingProject, form]);
@@ -358,9 +382,11 @@ export default function ProjectsDashboard() {
     if (!db) return;
     try {
       const { projectManagerId, ...restValues } = values;
-      const dataToSave = {
+      const dataToSave: Partial<Project> = {
           ...restValues,
-          projectManagerId: projectManagerId || null,
+          projectManagerId: projectManagerId || undefined,
+          startDate: new Date(values.startDate).toISOString(),
+          endDate: new Date(values.endDate).toISOString(),
       };
 
       if (editingProject) {

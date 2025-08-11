@@ -258,6 +258,8 @@ export type Project = {
   methodology?: ProjectMethodology;
   pricingModel?: PricingModel;
   status?: ProjectStatus;
+  startDate?: string; // ISO String
+  endDate?: string; // ISO String
 };
 
 export type AccessControlSetting = {
