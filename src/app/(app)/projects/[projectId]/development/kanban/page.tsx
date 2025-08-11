@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -73,10 +73,13 @@ const storyFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
 });
 
-function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick, className, isMoveToDoneDisabled }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; isMoveToDoneDisabled?: boolean; }) {
+function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick, className, isMoveToDoneDisabled, subItems }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; isMoveToDoneDisabled?: boolean; subItems?: Story[] }) {
 
   const Icon = workItemIcons[story.itemType];
   const doneColumn = columns.find(c => c.isDoneColumn);
+  
+  const devTasks = subItems?.filter(i => i.itemType === 'Development Task') || [];
+  const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
 
   return (
     <Card className={cn("bg-card cursor-pointer", className)} onClick={onClick}>
@@ -98,6 +101,22 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick,
                 <Clock className="h-3 w-3" />
                 <span>{story.estimatedHours}h</span>
                 </div>
+            )}
+             {(devTasks.length > 0 || bugs.length > 0) && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {devTasks.length > 0 && (
+                  <div className="flex items-center gap-1" title={`${devTasks.length} development tasks`}>
+                    <CheckSquare className="h-3 w-3" />
+                    <span>{devTasks.length}</span>
+                  </div>
+                )}
+                 {bugs.length > 0 && (
+                  <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
+                    <Bug className="h-3 w-3" />
+                    <span>{bugs.length}</span>
+                  </div>
+                )}
+              </div>
             )}
         </div>
         {onStatusChange && (
@@ -223,13 +242,26 @@ export default function KanbanPage() {
   
   const currentSprint = sprints.find((s) => s.isCurrent);
   
-  const baseSprintStories = currentSprint
+  const baseSprintStories = useMemo(() => currentSprint
       ? stories.filter((story) => story.sprintId === currentSprint.id)
-      : [];
+      : [], [stories, currentSprint]);
 
-  const sprintStories = selectedAssigneeId === 'all'
-    ? baseSprintStories
-    : baseSprintStories.filter(story => story.assigneeId === selectedAssigneeId);
+  const sprintStories = useMemo(() => {
+    const filteredByAssignee = selectedAssigneeId === 'all'
+      ? baseSprintStories
+      : baseSprintStories.filter(story => story.assigneeId === selectedAssigneeId);
+
+    // Only show parent items (Stories/Feature Changes) or sub-items whose parent is not in the sprint
+    return filteredByAssignee.filter(item => {
+      const isSubItem = ['Bug', 'Development Task'].includes(item.itemType);
+      if (!isSubItem) {
+        return true; // Always show parent items
+      }
+      // Hide sub-item if its parent is also in the sprint
+      return !baseSprintStories.some(parent => parent.id === item.epicId);
+    });
+  }, [baseSprintStories, selectedAssigneeId]);
+
 
  const selectedStorySubItems = useMemo(() => {
     if (!selectedStory) return { devTasks: [], bugs: [] };
@@ -299,8 +331,8 @@ export default function KanbanPage() {
                   {itemsInColumn.map((story) => {
                       const epic = epics.find(e => e.id === story.epicId);
                       const parentStory = story.epicId && !['Requirement/Story', 'Feature Change'].includes(story.itemType) ? allStoriesById[story.epicId] : undefined;
-
                       const subItems = subItemsByStoryId[story.id] || [];
+
                       const isMoveToDoneDisabled = ['Requirement/Story', 'Feature Change'].includes(story.itemType) && subItems.some(sub => sub.status !== doneColumnName);
 
                       return (
@@ -313,6 +345,7 @@ export default function KanbanPage() {
                             onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
                             onClick={() => setSelectedStory(story)}
                             isMoveToDoneDisabled={isMoveToDoneDisabled}
+                            subItems={subItems}
                           />
                         </div>
                       );
@@ -669,7 +702,3 @@ export default function KanbanPage() {
     </>
   );
 }
-
-    
-
-    
