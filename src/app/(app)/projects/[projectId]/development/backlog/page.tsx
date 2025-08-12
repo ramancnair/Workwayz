@@ -105,8 +105,10 @@ const sprintFormSchema = z.object({
   endDate: z.string().optional(),
 });
 
-function StoryCard({ story, epic, assignee, onClick, onDelete, className }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string; }) {
+function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[] }) {
   const Icon = workItemIcons[story.itemType];
+  const bugEffort = subItems?.filter(i => i.itemType === 'Bug').reduce((sum, i) => sum + (i.estimatedHours || 0), 0) || 0;
+  const bugCount = subItems?.filter(i => i.itemType === 'Bug').length || 0;
 
   return (
     <Card
@@ -155,14 +157,22 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className }: { st
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center text-xs text-muted-foreground">
           {epic && <Badge variant="secondary">{epic.title}</Badge>}
-          {story.estimatedHours !== undefined && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>{story.estimatedHours}h</span>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {story.estimatedHours !== undefined && (
+              <div className="flex items-center gap-1" title="Development effort">
+                <CheckSquare className="h-3 w-3" />
+                <span>{story.estimatedHours}h</span>
+              </div>
+            )}
+            {bugCount > 0 && (
+              <div className="flex items-center gap-1" title={`${bugCount} bugs, ${bugEffort}h total effort`}>
+                <Bug className="h-3 w-3" />
+                <span>{bugCount} ({bugEffort}h)</span>
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -1010,6 +1020,7 @@ export default function BacklogPage() {
                                               assignee={assignee}
                                               onClick={() => setSelectedStory(story)}
                                               onDelete={() => setStoryToDelete(story)}
+                                              subItems={subItems}
                                           />
                                           {['Requirement/Story', 'Feature Change'].includes(story.itemType) && (
                                           <div className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1167,6 +1178,7 @@ export default function BacklogPage() {
                                         assignee={assignee}
                                         onClick={() => setSelectedStory(story)}
                                         onDelete={() => setStoryToDelete(story)}
+                                        subItems={subItems}
                                     />
                                     <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} users={users} title="Related Items" />
                                 </div>
