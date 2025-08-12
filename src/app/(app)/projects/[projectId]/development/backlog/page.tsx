@@ -274,6 +274,7 @@ export default function BacklogPage() {
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
+  const parentStories = useMemo(() => stories.filter(s => s.itemType === 'Requirement/Story' || s.itemType === 'Feature Change'), [stories]);
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -468,7 +469,7 @@ export default function BacklogPage() {
     });
   }, [epics, backlogItemsByEpic]);
   
-  const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
+  const epicToDeleteStoryCount = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
   const selectedStorySubItems = useMemo(() => {
     if (!selectedStory) return { devTasks: [], bugs: [] };
@@ -478,8 +479,6 @@ export default function BacklogPage() {
       bugs: allSubItems.filter(item => item.itemType === 'Bug'),
     };
   }, [selectedStory, subItemsByParentId]);
-
-  const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType)), [stories]);
 
   const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
@@ -812,113 +811,84 @@ export default function BacklogPage() {
             </DialogContent>
           </Dialog>
         </PageHeader>
-        <div className="flex-1 flex flex-col gap-8">
-            <div className="bg-muted/50 rounded-lg p-4 flex flex-col">
-                <h3 className="text-lg font-semibold mb-4">Backlog</h3>
-                <div className="overflow-y-auto flex-1 -mr-4 pr-4">
-                  <Accordion type="multiple" className="w-full" defaultValue={epicsAndUnassigned.map(e => e.id)}>
-                    {epicsAndUnassigned.map((epic) => {
-                      const isUnassignedEpic = epic.id === 'unassigned';
-                      
-                      const allStoriesInEpic = stories.filter(s => s.epicId === epic.id);
-                      const totalEpicItemsCount = allStoriesInEpic.length;
-                      const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
-      
-                      const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
+        <div className="flex-1 overflow-y-auto pr-2">
+          <Accordion type="multiple" className="w-full" defaultValue={epicsAndUnassigned.map(e => e.id)}>
+            {epicsAndUnassigned.map((epic) => {
+              const isUnassignedEpic = epic.id === 'unassigned';
+              
+              const allStoriesInEpic = stories.filter(s => s.epicId === epic.id);
+              const totalEpicItemsCount = allStoriesInEpic.length;
+              const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
 
-                      const backlogItemsForGroup = backlogItemsByEpic[epic.id] || [];
+              const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
 
-                      return (
-                          <AccordionItem value={epic.id} key={epic.id}>
-                          <AccordionTrigger>
-                              <div className="flex-1 text-left pr-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-semibold">{epic.title}</span>
-                                    <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
-                                  </div>
-                                  {!isUnassignedEpic && totalEpicItemsCount > 0 && (
-                                    <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
-                                        <Progress value={donePercentage} className="h-2" />
-                                        <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
-                                    </div>
-                                  )}
+              const backlogItemsForGroup = backlogItemsByEpic[epic.id] || [];
+
+              if (backlogItemsForGroup.length === 0 && isUnassignedEpic) return null;
+
+              return (
+                  <AccordionItem value={epic.id} key={epic.id}>
+                  <AccordionTrigger>
+                      <div className="flex-1 text-left pr-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">{epic.title}</span>
+                            <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
+                          </div>
+                          {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                            <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
+                                <Progress value={donePercentage} className="h-2" />
+                                <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                            </div>
+                          )}
+                      </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-2 p-2">
+                      {backlogItemsForGroup.length > 0 ? (
+                        backlogItemsForGroup.map((story) => {
+                          const storyEpic = epics.find((e) => e.id === story.epicId);
+                          const assignee = users.find((d) => d.id === story.assigneeId);
+                          const sprint = sprints.find(s => s.id === story.sprintId);
+                          const subItems = subItemsByParentId[story.id] || [];
+                          
+                          return (
+                            <div key={story.id}>
+                              <div className="relative">
+                                  <StoryCard
+                                      story={story}
+                                      epic={storyEpic}
+                                      assignee={assignee}
+                                      onClick={() => setSelectedStory(story)}
+                                      onDelete={() => setStoryToDelete(story)}
+                                      subItems={subItems}
+                                      sprint={sprint}
+                                  />
                               </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="space-y-2">
-                              {backlogItemsForGroup.length > 0 ? (
-                                backlogItemsForGroup.map((story) => {
-                                  const storyEpic = epics.find((e) => e.id === story.epicId);
-                                  const assignee = users.find((d) => d.id === story.assigneeId);
-                                  const sprint = sprints.find(s => s.id === story.sprintId);
-                                  const subItems = subItemsByParentId[story.id] || [];
-                                  
-                                  return (
-                                    <div key={story.id}>
-                                      <div className="relative">
-                                          <StoryCard
-                                              story={story}
-                                              epic={storyEpic}
-                                              assignee={assignee}
-                                              onClick={() => setSelectedStory(story)}
-                                              onDelete={() => setStoryToDelete(story)}
-                                              subItems={subItems}
-                                              sprint={sprint}
-                                          />
-                                          {['Requirement/Story', 'Feature Change'].includes(story.itemType) && (
-                                          <div className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                              <DropdownMenu>
-                                                  <DropdownMenuTrigger asChild>
-                                                      <Button variant="ghost" size="sm" className="h-7">
-                                                      Change Epic <ChevronDown className="ml-1 h-4 w-4" />
-                                                      </Button>
-                                                  </DropdownMenuTrigger>
-                                                  <DropdownMenuContent align="end">
-                                                  <DropdownMenuItem onClick={() => moveStoryToEpic(story.id, null)}>
-                                                      Unassigned
-                                                  </DropdownMenuItem>
-                                                  {epics
-                                                  .filter((e) => e.id !== story.epicId)
-                                                  .map((e) => (
-                                                      <DropdownMenuItem
-                                                      key={e.id}
-                                                      onClick={() => moveStoryToEpic(story.id, e.id)}
-                                                      >
-                                                      {e.title}
-                                                      </DropdownMenuItem>
-                                                  ))}
-                                                  </DropdownMenuContent>
-                                              </DropdownMenu>
-                                          </div>
-                                          )}
-                                      </div>
-                                      <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} users={users} title="Related Items" />
-                                    </div>
-                                  )
-                                })
-                              ) : (
-                                <p className="text-sm text-muted-foreground italic px-2">
-                                    No items for this epic in the backlog.
-                                </p>
-                              )}
-                              {!isUnassignedEpic && (
-                                <div className="pt-4 px-4 flex justify-end gap-2">
-                                  <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit Epic
-                                  </Button>
-                                  <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete Epic
-                                  </Button>
-                                </div>
-                              )}
-                          </AccordionContent>
-                          </AccordionItem>
-                      );
-                    })}
-                  </Accordion>
-                </div>
-            </div>
+                              <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} users={users} title="Related Items" />
+                            </div>
+                          )
+                        })
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic px-2">
+                            No items for this epic in the backlog.
+                        </p>
+                      )}
+                      {!isUnassignedEpic && (
+                        <div className="pt-4 px-4 flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Epic
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Epic
+                          </Button>
+                        </div>
+                      )}
+                  </AccordionContent>
+                  </AccordionItem>
+              );
+            })}
+          </Accordion>
         </div>
       </div>
 
@@ -927,8 +897,8 @@ export default function BacklogPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-               {epicToDelete && storiesInEpicToDelete > 0
-                ? `This epic contains ${storiesInEpicToDelete} ${storiesInEpicToDelete === 1 ? 'story' : 'stories'}. Deleting the epic will mark them as unassigned. This action cannot be undone.`
+               {epicToDelete && epicToDeleteStoryCount > 0
+                ? `This epic contains ${epicToDeleteStoryCount} ${epicToDeleteStoryCount === 1 ? 'story' : 'stories'}. Deleting the epic will mark them as unassigned. This action cannot be undone.`
                 : `This will permanently delete the epic "${epicToDelete?.title}". This action cannot be undone.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -964,7 +934,7 @@ export default function BacklogPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={!!selectedStory} onOpenChange={setSelectedStory}>
+      <Dialog open={!!selectedStory} onOpenChange={(open) => setSelectedStory(open ? selectedStory : null)}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           {selectedStory && (
             <>
