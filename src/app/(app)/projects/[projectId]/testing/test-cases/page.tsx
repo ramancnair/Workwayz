@@ -84,12 +84,9 @@ export default function TestCasesPage() {
   const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
 
   const [filters, setFilters] = useState({
-    status: 'all',
-    type: 'all',
-    assigneeId: 'all',
-    storyId: 'all',
     sprintId: 'all',
     releaseId: 'all',
+    environmentId: 'all',
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
 
@@ -117,7 +114,7 @@ export default function TestCasesPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ status: 'all', type: 'all', assigneeId: 'all', storyId: 'all', sprintId: 'all', releaseId: 'all' });
+    setFilters({ sprintId: 'all', releaseId: 'all', environmentId: 'all' });
   };
   
   const handleSort = (columnId: string) => {
@@ -138,22 +135,6 @@ export default function TestCasesPage() {
   const filteredAndSortedTestCases = useMemo(() => {
     let filtered = [...testCases];
 
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(tc => tc.status === filters.status);
-    }
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(tc => tc.type === filters.type);
-    }
-    if (filters.assigneeId !== 'all') {
-      filtered = filtered.filter(tc => tc.assigneeId === filters.assigneeId);
-    }
-    if (filters.storyId !== 'all') {
-      if(filters.storyId === 'unassigned') {
-        filtered = filtered.filter(tc => !tc.storyId);
-      } else {
-        filtered = filtered.filter(tc => tc.storyId === filters.storyId);
-      }
-    }
      if (filters.sprintId !== 'all') {
       if (filters.sprintId === 'backlog') {
         filtered = filtered.filter(t => !t.sprintId);
@@ -168,6 +149,10 @@ export default function TestCasesPage() {
             filtered = filtered.filter(tc => tc.releaseId === filters.releaseId);
         }
     }
+    if (filters.environmentId !== 'all') {
+      filtered = filtered.filter(tc => tc.environmentIds?.includes(filters.environmentId));
+    }
+
 
     if (sorting) {
       filtered.sort((a, b) => {
@@ -313,36 +298,6 @@ export default function TestCasesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4 flex-wrap">
-              <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by type..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {testCaseTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by status..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {testCaseStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-               <Select value={filters.assigneeId} onValueChange={(v) => handleFilterChange('assigneeId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by assignee..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Assignees</SelectItem>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                </SelectContent>
-              </Select>
-               <Select value={filters.storyId} onValueChange={(v) => handleFilterChange('storyId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by story..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Stories</SelectItem>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {stories.filter(s => s.itemType === 'Requirement/Story').map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
                <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
                 <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
                 <SelectContent>
@@ -357,6 +312,13 @@ export default function TestCasesPage() {
                   <SelectItem value="all">All Releases</SelectItem>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filters.environmentId} onValueChange={(v) => handleFilterChange('environmentId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by environment..."/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Environments</SelectItem>
+                  {sortedEnvironments.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Button variant="ghost" onClick={clearFilters}>
