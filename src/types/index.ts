@@ -75,7 +75,7 @@ export type TestCase = {
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';
 
-export type AccessLevel = 'Admin' | 'Portfolio Manager' | 'Project Manager' | 'Program Director' | 'Business Analyst' | 'Dev Lead' | 'Developer' | 'Test Lead' | 'Tester' | 'PMO' | 'Finance';
+export type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
 export type LeavePeriod = {
   id: string; // uuid on the client

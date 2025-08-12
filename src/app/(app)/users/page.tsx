@@ -46,7 +46,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 
-const accessLevels: AccessLevel[] = ['Admin', 'Portfolio Manager', 'Project Manager', 'Program Director', 'Business Analyst', 'Dev Lead', 'Developer', 'Test Lead', 'Tester', 'PMO', 'Finance'];
+const accessLevels: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
 const userFormSchema = z.object({
   empId: z.string().min(1, 'Emp ID is required'),

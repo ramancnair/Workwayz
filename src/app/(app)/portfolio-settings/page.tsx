@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Save } from 'lucide-react';
 
-const accessLevels: AccessLevel[] = ['Admin', 'Portfolio Manager', 'Project Manager', 'Program Director', 'Business Analyst', 'Dev Lead', 'Developer', 'Test Lead', 'Tester', 'PMO', 'Finance'];
+const accessLevels: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
 // Define your application's pages/features here
 const appPages = [
@@ -65,7 +65,7 @@ export default function PortfolioSettingsPage() {
             for (const level of accessLevels) {
                 newSettings[level] = {};
                 for (const page of appPages) {
-                    newSettings[level][page] = fetchedSettings[level]?.[page] ?? (level === 'Admin');
+                    newSettings[level][page] = fetchedSettings[level]?.[page] ?? (level === 'Administrator');
                 }
             }
 
@@ -139,7 +139,7 @@ export default function PortfolioSettingsPage() {
                                                 <Checkbox
                                                     checked={accessSettings[level]?.[page] ?? false}
                                                     onCheckedChange={(checked) => handlePermissionChange(level, page, !!checked)}
-                                                    disabled={level === 'Admin'}
+                                                    disabled={level === 'Administrator'}
                                                 />
                                             </TableCell>
                                         ))}
