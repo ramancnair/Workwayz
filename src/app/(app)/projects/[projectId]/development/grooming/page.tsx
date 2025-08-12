@@ -7,7 +7,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -15,14 +15,24 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type User, type WorkItemType, type BugCriticality, type StoryStatus } from '@/types';
+import { type Sprint, type Story } from '@/types';
 import { DatePicker } from '@/components/ui/datepicker';
-import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { StoryCard } from '@/components/kanban/TaskCard'; // Re-using for consistency
 
 const sprintSchema = z.object({
@@ -31,10 +41,30 @@ const sprintSchema = z.object({
   endDate: z.date().optional(),
 });
 
-function SprintColumn({ sprint, stories }: { sprint: Sprint, stories: Story[] }) {
+function SprintColumn({ 
+  sprint, 
+  stories,
+  onEdit,
+  onDelete
+}: { 
+  sprint: Sprint, 
+  stories: Story[],
+  onEdit: (sprint: Sprint) => void,
+  onDelete: (sprint: Sprint) => void,
+}) {
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-1/3">
-            <h3 className="text-lg font-semibold mb-4">{sprint.title}</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{sprint.title}</h3>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(sprint)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(sprint)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
             <div className="flex-1 space-y-4 overflow-y-auto">
                 {stories.map(story => (
                     <StoryCard key={story.id} story={story} />
@@ -53,12 +83,12 @@ export default function GroomingPage() {
         addSprint,
         updateSprint,
         deleteSprint,
-        setCurrentSprint,
     } = useProject();
     const { toast } = useToast();
     
     const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false);
     const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
+    const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
 
     const backlogItems = useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType));
@@ -84,18 +114,20 @@ export default function GroomingPage() {
     const watchedStartDate = useWatch({ control: sprintForm.control, name: "startDate" });
 
     React.useEffect(() => {
-        if (isSprintDialogOpen && editingSprint) {
-            sprintForm.reset({
-                title: editingSprint.title,
-                startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
-                endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
-            });
-        } else if (isSprintDialogOpen && !editingSprint) {
-            sprintForm.reset({
-                title: '',
-                startDate: undefined,
-                endDate: undefined,
-            });
+        if (isSprintDialogOpen) {
+            if (editingSprint) {
+                sprintForm.reset({
+                    title: editingSprint.title,
+                    startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
+                    endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
+                });
+            } else {
+                sprintForm.reset({
+                    title: '',
+                    startDate: undefined,
+                    endDate: undefined,
+                });
+            }
         }
     }, [isSprintDialogOpen, editingSprint, sprintForm]);
 
@@ -121,6 +153,17 @@ export default function GroomingPage() {
             toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingSprint ? 'update' : 'create'} sprint.` });
         }
     };
+    
+    const handleDeleteConfirm = async () => {
+        if (!deletingSprint) return;
+        const success = await deleteSprint(deletingSprint.id);
+        if (success) {
+            toast({ title: 'Success', description: 'Sprint deleted.' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not delete sprint.' });
+        }
+        setDeletingSprint(null);
+    }
 
 
     return (
@@ -148,7 +191,13 @@ export default function GroomingPage() {
 
                 {/* Sprint Columns */}
                 {sprintsWithStories.map(sprint => (
-                    <SprintColumn key={sprint.id} sprint={sprint} stories={sprint.stories} />
+                    <SprintColumn 
+                        key={sprint.id} 
+                        sprint={sprint} 
+                        stories={sprint.stories} 
+                        onEdit={() => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
+                        onDelete={() => setDeletingSprint(sprint)}
+                    />
                 ))}
             </div>
         </div>
@@ -206,6 +255,26 @@ export default function GroomingPage() {
                 </Form>
             </DialogContent>
         </Dialog>
+        
+        <AlertDialog open={!!deletingSprint} onOpenChange={(isOpen) => !isOpen && setDeletingSprint(null)}>
+            <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the sprint and move all its items back to the backlog.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                onClick={handleDeleteConfirm}
+                className={cn(buttonVariants({ variant: 'destructive' }))}
+                >
+                Continue
+                </AlertDialogAction>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
         </>
     );
 }
