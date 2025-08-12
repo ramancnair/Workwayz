@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -74,7 +74,7 @@ const storyFormSchema = z.object({
   environmentId: z.string().optional(),
 });
 
-function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick, className, isMoveToDoneDisabled, subItems }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; isMoveToDoneDisabled?: boolean; subItems?: Story[] }) {
+function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, className, isMoveToDoneDisabled, subItems }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onEdit: () => void; className?: string; isMoveToDoneDisabled?: boolean; subItems?: Story[] }) {
 
   const Icon = workItemIcons[story.itemType];
   const doneColumn = columns.find(c => c.isDoneColumn);
@@ -83,7 +83,7 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick,
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
 
   return (
-    <Card className={cn("bg-card cursor-pointer", className)} onClick={onClick}>
+    <Card className={cn("bg-card", className)}>
       <CardHeader>
         <div className="flex justify-between items-start">
             <div className="flex items-center gap-2">
@@ -121,46 +121,51 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick,
               </div>
             )}
         </div>
-        {onStatusChange && (
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                    Move <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    {columns.filter(col => col.name !== story.status).map(col => {
-                        const isDoneAndDisabled = doneColumn && col.id === doneColumn.id && isMoveToDoneDisabled;
+        <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+                <Edit className="h-4 w-4" />
+            </Button>
+            {onStatusChange && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7">
+                        Move <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        {columns.filter(col => col.name !== story.status).map(col => {
+                            const isDoneAndDisabled = doneColumn && col.id === doneColumn.id && isMoveToDoneDisabled;
 
-                        if (isDoneAndDisabled) {
+                            if (isDoneAndDisabled) {
+                                return (
+                                    <TooltipProvider key={col.id}>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="w-full">
+                                                    <DropdownMenuItem disabled>
+                                                        <Ban className="mr-2 h-4 w-4" />
+                                                        Move to {col.name}
+                                                    </DropdownMenuItem>
+                                                </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Complete all sub-items first.</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                )
+                            }
+
                             return (
-                                <TooltipProvider key={col.id}>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <span className="w-full">
-                                                <DropdownMenuItem disabled>
-                                                    <Ban className="mr-2 h-4 w-4" />
-                                                    Move to {col.name}
-                                                </DropdownMenuItem>
-                                            </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Complete all sub-items first.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+                                <DropdownMenuItem key={col.id} onClick={() => onStatusChange(col.name)}>
+                                    Move to {col.name}
+                                </DropdownMenuItem>
                             )
-                        }
-
-                        return (
-                            <DropdownMenuItem key={col.id} onClick={() => onStatusChange(col.name)}>
-                                Move to {col.name}
-                            </DropdownMenuItem>
-                        )
-                    })}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        )}
+                        })}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
+        </div>
       </CardFooter>
     </Card>
   );
@@ -347,7 +352,7 @@ export default function KanbanPage() {
                             parentStory={parentStory}
                             columns={sortedColumns}
                             onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
-                            onClick={() => setSelectedStory(story)}
+                            onEdit={() => setSelectedStory(story)}
                             isMoveToDoneDisabled={isMoveToDoneDisabled}
                             subItems={subItems}
                           />
