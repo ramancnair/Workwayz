@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn } from '@/types';
+import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -71,6 +71,7 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
+  environmentId: z.string().optional(),
 });
 
 function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick, className, isMoveToDoneDisabled, subItems }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onClick: () => void; className?: string; isMoveToDoneDisabled?: boolean; subItems?: Story[] }) {
@@ -84,18 +85,19 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onClick,
   return (
     <Card className={cn("bg-card cursor-pointer", className)} onClick={onClick}>
       <CardHeader>
-        <div className="flex items-center gap-2">
-            {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-            <p className="text-xs font-semibold text-muted-foreground">
-              {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
-            </p>
+        <div className="flex justify-between items-start">
+            <div className="flex items-center gap-2">
+                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                <p className="text-xs font-semibold text-muted-foreground">
+                {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
+                </p>
+            </div>
+            {epic && <Badge variant="secondary">{epic.title}</Badge>}
         </div>
         <CardTitle className="text-base">{story.title}</CardTitle>
-        <CardDescription>{story.description}</CardDescription>
       </CardHeader>
       <CardFooter className="flex justify-between items-center" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-4">
-            {epic && <Badge variant="secondary">{epic.title}</Badge>}
             {story.estimatedHours !== undefined && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
@@ -178,12 +180,12 @@ export default function KanbanPage() {
     resolver: zodResolver(storyFormSchema),
   });
 
-  const allStoriesById = stories.reduce((acc, story) => {
+  const allStoriesById = useMemo(() => stories.reduce((acc, story) => {
     acc[story.id] = story;
     return acc;
-  }, {} as Record<string, Story>);
+  }, {} as Record<string, Story>), [stories]);
   
-  const subItemsByStoryId = stories.reduce((acc, story) => {
+  const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
     if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
         if (!acc[story.epicId]) {
             acc[story.epicId] = [];
@@ -191,7 +193,7 @@ export default function KanbanPage() {
         acc[story.epicId].push(story);
     }
     return acc;
-  }, {} as Record<string, Story[]>);
+  }, {} as Record<string, Story[]>), [stories]);
 
   useEffect(() => {
     if (!selectedStory) {
@@ -206,6 +208,7 @@ export default function KanbanPage() {
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
+        environmentId: selectedStory.environmentId || 'unassigned',
       });
     }
   }, [selectedStory, editStoryForm]);
@@ -224,6 +227,7 @@ export default function KanbanPage() {
         epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
+        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
     });
     if (success) {
       setSelectedStory(null);
@@ -240,7 +244,7 @@ export default function KanbanPage() {
     });
   };
   
-  const currentSprint = sprints.find((s) => s.isCurrent);
+  const currentSprint = useMemo(() => sprints.find((s) => s.isCurrent), [sprints]);
   
   const baseSprintStories = useMemo(() => currentSprint
       ? stories.filter((story) => story.sprintId === currentSprint.id)
