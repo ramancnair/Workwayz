@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -109,6 +109,7 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
   const Icon = workItemIcons[story.itemType];
   const bugEffort = subItems?.filter(i => i.itemType === 'Bug').reduce((sum, i) => sum + (i.estimatedHours || 0), 0) || 0;
   const bugCount = subItems?.filter(i => i.itemType === 'Bug').length || 0;
+  const hasEffort = story.estimatedHours && story.estimatedHours > 0;
 
   return (
     <Card
@@ -132,6 +133,7 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
             <div className="flex items-center gap-2">
               {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
               <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+              {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
             </div>
             <p className="font-semibold break-words">{story.title}</p>
           </div>
@@ -1570,8 +1572,8 @@ export default function BacklogPage() {
                     <div className="flex items-center gap-2">
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm">
-                              Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
+                              <Button variant="outline" size="sm" disabled={!selectedStory.estimatedHours || selectedStory.estimatedHours === 0}>
+                                  Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
                               </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
