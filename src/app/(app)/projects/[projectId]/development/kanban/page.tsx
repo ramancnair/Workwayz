@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, MoreVertical } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -52,6 +52,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
@@ -74,7 +75,7 @@ const storyFormSchema = z.object({
   environmentId: z.string().optional(),
 });
 
-function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, className, isMoveToDoneDisabled, subItems }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onEdit: () => void; className?: string; isMoveToDoneDisabled?: boolean; subItems?: Story[] }) {
+function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, className, isMoveToDoneDisabled, subItems, onSubItemClick }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onEdit: () => void; className?: string; isMoveToDoneDisabled?: boolean; subItems?: Story[], onSubItemClick: (story: Story) => void; }) {
 
   const Icon = workItemIcons[story.itemType];
   const doneColumn = columns.find(c => c.isDoneColumn);
@@ -83,6 +84,7 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, 
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
 
   return (
+    <Collapsible>
     <Card className={cn("bg-card", className)}>
       <CardHeader>
         <div className="flex justify-between items-start">
@@ -92,7 +94,22 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, 
                 {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                 </p>
             </div>
-            {epic && <Badge variant="secondary">{epic.title}</Badge>}
+            <div className="flex items-center gap-1">
+                {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={onEdit}>
+                            <TrendingUp className="mr-2 h-4 w-4" />
+                            Edit
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
         </div>
         <CardTitle className="text-base">{story.title}</CardTitle>
       </CardHeader>
@@ -105,26 +122,25 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, 
                 </div>
             )}
              {(devTasks.length > 0 || bugs.length > 0) && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {devTasks.length > 0 && (
-                  <div className="flex items-center gap-1" title={`${devTasks.length} development tasks`}>
-                    <CheckSquare className="h-3 w-3" />
-                    <span>{devTasks.length}</span>
-                  </div>
-                )}
-                 {bugs.length > 0 && (
-                  <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
-                    <Bug className="h-3 w-3" />
-                    <span>{bugs.length}</span>
-                  </div>
-                )}
-              </div>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  {devTasks.length > 0 && (
+                    <div className="flex items-center gap-1" title={`${devTasks.length} development tasks`}>
+                      <CheckSquare className="h-3 w-3" />
+                      <span>{devTasks.length}</span>
+                    </div>
+                  )}
+                  {bugs.length > 0 && (
+                    <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
+                      <Bug className="h-3 w-3" />
+                      <span>{bugs.length}</span>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleTrigger>
             )}
         </div>
         <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
-                <Edit className="h-4 w-4" />
-            </Button>
             {onStatusChange && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -167,7 +183,30 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, 
             )}
         </div>
       </CardFooter>
+      <CollapsibleContent>
+        <div className="px-6 pb-4 space-y-2">
+            {(devTasks.length > 0 || bugs.length > 0) && <Separator />}
+            {[...devTasks, ...bugs].map(item => {
+                const ItemIcon = workItemIcons[item.itemType];
+                return (
+                    <div key={item.id} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                            <ItemIcon className="h-3 w-3 text-muted-foreground" />
+                            <span 
+                                className="font-medium cursor-pointer hover:underline"
+                                onClick={() => onSubItemClick(item)}
+                            >
+                                [{item.storyId}] {item.title}
+                            </span>
+                        </div>
+                        <Badge variant="outline">{item.status}</Badge>
+                    </div>
+                )
+            })}
+        </div>
+      </CollapsibleContent>
     </Card>
+    </Collapsible>
   );
 }
 
@@ -355,6 +394,7 @@ export default function KanbanPage() {
                             onEdit={() => setSelectedStory(story)}
                             isMoveToDoneDisabled={isMoveToDoneDisabled}
                             subItems={subItems}
+                            onSubItemClick={setSelectedStory}
                           />
                         </div>
                       );
