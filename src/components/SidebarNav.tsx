@@ -40,6 +40,7 @@ import {
   Home,
   FileText,
   Server,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -59,6 +60,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/development/kanban`,
       label: "Kanban Board",
       icon: KanbanSquare,
+    },
+    {
+        href: `${basePath}/development/grooming`,
+        label: "Grooming",
+        icon: ChevronsUpDown,
     },
     {
       href: `${basePath}/development/backlog`,

@@ -601,7 +601,7 @@ export default function BacklogPage() {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
         <PageHeader
           title="Product Backlog"
-          description="Manage your epics, stories, and sprints."
+          description="Manage your epics and stories."
         >
           <Dialog open={addEpicOpen} onOpenChange={setAddEpicOpen}>
             <DialogTrigger asChild>
@@ -652,68 +652,6 @@ export default function BacklogPage() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={addSprintOpen} onOpenChange={setAddSprintOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Sprint
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add New Sprint</DialogTitle>
-                </DialogHeader>
-                <Form {...addSprintForm}>
-                    <form onSubmit={addSprintForm.handleSubmit(onAddSprintSubmit)} className="space-y-4">
-                    <FormField
-                        control={addSprintForm.control}
-                        name="title"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Title</FormLabel>
-                            <FormControl>
-                            <Input placeholder="Sprint title" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={addSprintForm.control}
-                        name="startDate"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Start Date</FormLabel>
-                            <FormControl>
-                                <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={addSprintForm.control}
-                        name="endDate"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>End Date</FormLabel>
-                            <FormControl>
-                                <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <DialogFooter>
-                      <Button type="submit" disabled={isAddSprintSubmitting}>
-                        {isAddSprintSubmitting ? 'Creating...' : 'Create Sprint'}
-                      </Button>
-                    </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-          </Dialog>
-          
           <Dialog open={addRequirementOpen} onOpenChange={setAddRequirementOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -974,7 +912,6 @@ export default function BacklogPage() {
           </Dialog>
         </PageHeader>
         <div className="flex-1 flex flex-col gap-8">
-            {/* Backlog Section */}
             <div className="bg-muted/50 rounded-lg p-4 flex flex-col">
                 <h3 className="text-lg font-semibold mb-4">Backlog</h3>
                 <div className="overflow-y-auto flex-1 -mr-4 pr-4">
@@ -1078,125 +1015,6 @@ export default function BacklogPage() {
                     })}
                   </Accordion>
                 </div>
-            </div>
-
-            {/* Sprints Section */}
-            <div className="bg-muted/50 rounded-lg p-4 flex flex-col">
-              <h3 className="text-lg font-semibold mb-4">Sprints</h3>
-              <Accordion type="multiple" className="w-full" defaultValue={sprints.map(s => s.id)}>
-                {sprints.map((sprint) => {
-                   const sprintItems = stories.filter((story) => story.sprintId === sprint.id);
-                   const topLevelSprintItems = sprintItems.filter(item => 
-                       !['Bug', 'Development Task'].includes(item.itemType) || 
-                       !sprintItems.some(parent => parent.id === item.epicId)
-                   );
-
-                  return (
-                    <AccordionItem value={sprint.id} key={sprint.id}>
-                       <div className="flex items-center justify-between py-2 hover:bg-muted/20 rounded-md">
-                        <AccordionTrigger className="flex-1 py-2 px-4 hover:no-underline">
-                          <div className="flex-1 text-left pr-2">
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-lg font-semibold">{sprint.title}</h3>
-                              {sprint.isCurrent && <Badge>Current</Badge>}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {sprint.startDate && sprint.endDate
-                                ? `${format(new Date(sprint.startDate), 'MMM d')} - ${format(new Date(sprint.endDate), 'MMM d, yyyy')}`
-                                : 'No dates set'}
-                            </p>
-                          </div>
-                        </AccordionTrigger>
-                        <div className="flex items-center px-4" onClick={(e) => e.stopPropagation()}>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleSetCurrentSprint(sprint.id)}
-                                  disabled={sprint.isCurrent}
-                                  className="h-8 w-8"
-                                  aria-label="Set as current sprint"
-                                >
-                                  <Star className={`h-4 w-4 ${sprint.isCurrent ? 'fill-yellow-400 text-yellow-500' : ''}`} />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent><p>Set as current sprint</p></TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => setEditingSprint(sprint)} className="h-8 w-8">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent><p>Edit sprint</p></TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span tabIndex={sprint.isCurrent ? -1 : 0}>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setSprintToDelete(sprint)}
-                                    className="h-8 w-8"
-                                    disabled={sprint.isCurrent}
-                                    aria-label="Delete sprint"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </span>
-                              </TooltipTrigger>
-                              {sprint.isCurrent ? (
-                                <TooltipContent>
-                                  <p>Cannot delete the current sprint.</p>
-                                </TooltipContent>
-                              ) : (
-                                <TooltipContent>
-                                  <p>Delete sprint</p>
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      </div>
-                      <AccordionContent>
-                        <div className="space-y-2">
-                          {topLevelSprintItems.length > 0 ? (
-                            topLevelSprintItems.map((story) => {
-                              const epic = epics.find((e) => e.id === story.epicId);
-                              const assignee = users.find((d) => d.id === story.assigneeId);
-                              const subItems = sprintItems.filter(item => item.epicId === story.id);
-                              
-                              return (
-                                <div key={story.id}>
-                                    <StoryCard
-                                        story={story}
-                                        epic={epic}
-                                        assignee={assignee}
-                                        onClick={() => setSelectedStory(story)}
-                                        onDelete={() => setStoryToDelete(story)}
-                                        subItems={subItems}
-                                    />
-                                    <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} users={users} title="Related Items" />
-                                </div>
-                              );
-                            })
-                          ) : (
-                               <p className="text-sm text-muted-foreground italic px-2">
-                                  No items in this sprint.
-                              </p>
-                          )}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )
-                })}
-              </Accordion>
             </div>
         </div>
       </div>
