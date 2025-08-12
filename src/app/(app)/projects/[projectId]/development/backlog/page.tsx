@@ -873,7 +873,7 @@ export default function BacklogPage() {
                                     name="estimatedHours"
                                     render={({ field }) => (
                                         <FormItem>
-                                        <FormLabel>Estimated Hours</FormLabel>
+                                        <FormLabel>Effort (hours)</FormLabel>
                                         <FormControl>
                                             <Input type="number" placeholder="0" {...field} value={field.value || ''} />
                                         </FormControl>
@@ -1429,7 +1429,7 @@ export default function BacklogPage() {
                             name="estimatedHours"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Estimated Hours</FormLabel>
+                                <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
                                     <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
                                 </FormControl>
