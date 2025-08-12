@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, MoreVertical } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -94,21 +95,11 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, 
                 {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                 </p>
             </div>
-            <div className="flex items-center gap-1">
+             <div className="flex items-center gap-1">
                 {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={onEdit}>
-                            <TrendingUp className="mr-2 h-4 w-4" />
-                            Edit
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
+                    <Edit className="h-4 w-4" />
+                </Button>
             </div>
         </div>
         <CardTitle className="text-base">{story.title}</CardTitle>
@@ -751,3 +742,4 @@ export default function KanbanPage() {
     </>
   );
 }
+
