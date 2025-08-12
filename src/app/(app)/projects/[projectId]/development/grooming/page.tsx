@@ -74,9 +74,31 @@ export default function GroomingPage() {
 
     const sprintForm = useForm<z.infer<typeof sprintSchema>>({
         resolver: zodResolver(sprintSchema),
+        defaultValues: {
+            title: '',
+            startDate: undefined,
+            endDate: undefined,
+        },
     });
 
     const watchedStartDate = useWatch({ control: sprintForm.control, name: "startDate" });
+
+    React.useEffect(() => {
+        if (isSprintDialogOpen && editingSprint) {
+            sprintForm.reset({
+                title: editingSprint.title,
+                startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
+                endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
+            });
+        } else if (isSprintDialogOpen && !editingSprint) {
+            sprintForm.reset({
+                title: '',
+                startDate: undefined,
+                endDate: undefined,
+            });
+        }
+    }, [isSprintDialogOpen, editingSprint, sprintForm]);
+
 
     React.useEffect(() => {
         if (watchedStartDate && projectSettings?.sprintDurationInWeeks) {
@@ -108,7 +130,7 @@ export default function GroomingPage() {
                 title="Grooming Board"
                 description="Plan your sprints by organizing the backlog."
             >
-                <Button onClick={() => setIsSprintDialogOpen(true)}>
+                <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Create Sprint
                 </Button>
@@ -131,7 +153,7 @@ export default function GroomingPage() {
             </div>
         </div>
 
-        <Dialog open={isSprintDialogOpen} onOpenChange={setIsSprintDialogOpen}>
+        <Dialog open={isSprintDialogOpen} onOpenChange={(isOpen) => { if(!isOpen) setEditingSprint(null); setIsSprintDialogOpen(isOpen); }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{editingSprint ? 'Edit Sprint' : 'Create New Sprint'}</DialogTitle>
