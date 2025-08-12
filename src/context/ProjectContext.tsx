@@ -198,17 +198,16 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
-    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees'],
-    '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings'],
+    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments'],
+    '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'holidays', 'impactedSystems'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
-    '/testing/bug-list': ['stories', 'employees', 'sprints'],
+    '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments'],
     '/project-details/project-dashboard': ['employees', 'allUsers'],
     '/project-details/initial-estimation': ['impactedSystems', 'horizontals'],
     '/project-details/environments': ['environments'],
-    '/project': ['impactedSystems', 'horizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers'],
     '/resources/resource-gantt': ['stories', 'employees'],
@@ -285,7 +284,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'stories', setState: setStories },
         { name: 'sprints', setState: setSprints },
         { name: 'employees', setState: setEmployees },
-        { name: 'allUsers', setState: setAllUsers },
         { name: 'testCases', setState: setTestCases },
         { name: 'risks', setState: setRisks },
         { name: 'assumptions', setState: setAssumptions },
@@ -323,13 +321,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
               } else {
                 setDoc(settingsDocRef, defaultProjectSettings).catch(e => console.error("Failed to set default project settings", e));
               }
-            });
-        }
-        
-        if (name === 'allUsers') {
-            return onSnapshot(collection(db, 'employees'), (snapshot) => {
-                const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-                setState(usersData);
             });
         }
 
@@ -470,7 +461,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             ) + 1
             : 1;
 
-        const defaultPrefix = story.itemType === 'Task' ? 'TASK' : 'ST';
+        const defaultPrefix = story.itemType === 'Development Task' ? 'TASK' : 'ST';
         const prefix = prefixOverride || defaultPrefix;
         const storyId = `${prefix}-${newIdNumber}`;
 
@@ -481,7 +472,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
 
         // If it's a sub-item (Bug/Task) linked to a story, inherit the sprint
-        if (['Bug', 'Task', 'Feature Change'].includes(story.itemType) && story.epicId) {
+        if (['Bug', 'Development Task', 'Feature Change'].includes(story.itemType) && story.epicId) {
             const parentStory = stories.find(s => s.id === story.epicId);
             if (parentStory && parentStory.sprintId) {
                 payload.sprintId = parentStory.sprintId;
@@ -1134,7 +1125,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const updateHoliday = async (id: string, data: Partial<Omit<Holiday, 'id'>>): Promise<boolean> => {
+  const updateHoliday = async (id: string, data: Partial<Omit<Holiday, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
       const payload: any = { ...data };
