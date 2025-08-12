@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -37,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -51,7 +50,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality } from '@/types';
+import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality, StoryStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -99,13 +98,7 @@ const storyFormSchema = z.object({
   environmentId: z.string().optional(),
 });
 
-const sprintFormSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
-
-function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[] }) {
+function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null }) {
   const Icon = workItemIcons[story.itemType];
   const bugEffort = subItems?.filter(i => i.itemType === 'Bug').reduce((sum, i) => sum + (i.estimatedHours || 0), 0) || 0;
   const bugCount = subItems?.filter(i => i.itemType === 'Bug').length || 0;
@@ -160,21 +153,35 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="flex justify-between items-center text-xs text-muted-foreground">
-          {epic && <Badge variant="secondary">{epic.title}</Badge>}
-          <div className="flex items-center gap-4">
-            {story.estimatedHours !== undefined && (
-              <div className="flex items-center gap-1" title="Development effort">
-                <CheckSquare className="h-3 w-3" />
-                <span>{story.estimatedHours}h</span>
-              </div>
-            )}
-            {bugCount > 0 && (
-              <div className="flex items-center gap-1" title={`${bugCount} bugs, ${bugEffort}h total effort`}>
-                <Bug className="h-3 w-3" />
-                <span>{bugCount} ({bugEffort}h)</span>
-              </div>
-            )}
-          </div>
+            <div className='flex items-center gap-2'>
+                {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                {sprint && (
+                    <Badge variant="outline" className="border-blue-500 text-blue-500">
+                        <FolderUp className="h-3 w-3 mr-1" />
+                        {sprint.title}
+                    </Badge>
+                )}
+                {story.status && (
+                     <Badge variant="outline">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {story.status}
+                    </Badge>
+                )}
+            </div>
+            <div className="flex items-center gap-4">
+                {story.estimatedHours !== undefined && (
+                <div className="flex items-center gap-1" title="Development effort">
+                    <CheckSquare className="h-3 w-3" />
+                    <span>{story.estimatedHours}h</span>
+                </div>
+                )}
+                {bugCount > 0 && (
+                <div className="flex items-center gap-1" title={`${bugCount} bugs, ${bugEffort}h total effort`}>
+                    <Bug className="h-3 w-3" />
+                    <span>{bugCount} ({bugEffort}h)</span>
+                </div>
+                )}
+            </div>
         </div>
       </CardContent>
     </Card>
@@ -230,33 +237,23 @@ export default function BacklogPage() {
     deleteStory, 
     deleteEpic, 
     updateEpic, 
-    updateSprint,
     addEpic,
-    addSprint,
-    deleteSprint,
-    setCurrentSprint,
     addStory,
     updateStory,
-    projectSettings,
   } = useProject();
   
   const { toast } = useToast();
 
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addRequirementOpen, setAddRequirementOpen] = useState(false);
-  const [addSprintOpen, setAddSprintOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
-  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
   
   const [isAddEpicSubmitting, setAddEpicSubmitting] = useState(false);
   const [isEditEpicSubmitting, setEditEpicSubmitting] = useState(false);
-  const [isAddSprintSubmitting, setAddSprintSubmitting] = useState(false);
-  const [isEditSprintSubmitting, setEditSprintSubmitting] = useState(false);
   const [isAddStorySubmitting, setAddStorySubmitting] = useState(false);
   const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
 
-  const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
 
@@ -281,17 +278,6 @@ export default function BacklogPage() {
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
   });
-  const watchedEditItemType = useWatch({ control: editStoryForm.control, name: 'itemType' });
-
-
-  const addSprintForm = useForm<z.infer<typeof sprintFormSchema>>({
-    resolver: zodResolver(sprintFormSchema),
-    defaultValues: { title: '' },
-  });
-  
-  const editSprintForm = useForm<z.infer<typeof sprintFormSchema>>({
-    resolver: zodResolver(sprintFormSchema),
-  });
 
   useEffect(() => {
     if (!addEpicOpen) {
@@ -308,48 +294,6 @@ export default function BacklogPage() {
     }
   }, [editingEpic, editEpicForm]);
   
-  useEffect(() => {
-    if (!editingSprint) {
-      setEditSprintSubmitting(false);
-    } else {
-       editSprintForm.reset({
-        title: editingSprint.title,
-        startDate: editingSprint.startDate ? format(new Date(editingSprint.startDate), 'yyyy-MM-dd') : '',
-        endDate: editingSprint.endDate ? format(new Date(editingSprint.endDate), 'yyyy-MM-dd') : '',
-      });
-    }
-  }, [editingSprint, editSprintForm]);
-  
-  useEffect(() => {
-    if (addSprintOpen) {
-      const { sprintDurationInWeeks = 2, sprintStartDay = 1 } = projectSettings || {};
-      const latestSprintEnd = sprints.length > 0 
-        ? new Date(Math.max(...sprints.map(s => s.endDate ? new Date(s.endDate).getTime() : 0)))
-        : new Date();
-
-      let nextStartDate = new Date(latestSprintEnd);
-      if (sprints.length > 0) {
-        nextStartDate.setDate(nextStartDate.getDate() + 1);
-      }
-      
-      while (nextStartDate.getDay() !== sprintStartDay) {
-        nextStartDate.setDate(nextStartDate.getDate() + 1);
-      }
-
-      const nextEndDate = new Date(nextStartDate);
-      nextEndDate.setDate(nextStartDate.getDate() + (sprintDurationInWeeks * 7) - 1);
-      
-      addSprintForm.reset({ 
-        title: `Sprint ${sprints.length + 1}`,
-        startDate: format(nextStartDate, 'yyyy-MM-dd'),
-        endDate: format(nextEndDate, 'yyyy-MM-dd'),
-       });
-    } else {
-      addSprintForm.reset();
-      setAddSprintSubmitting(false);
-    }
-  }, [addSprintOpen, sprints, projectSettings, addSprintForm]);
-
   useEffect(() => {
     if (!selectedStory) {
       setEditStorySubmitting(false);
@@ -376,37 +320,6 @@ export default function BacklogPage() {
       setAddStorySubmitting(false);
     }
   }, [addRequirementOpen, addStoryForm]);
-
-  const onAddSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
-    setAddSprintSubmitting(true);
-    const success = await addSprint({
-      title: values.title,
-      startDate: values.startDate ? new Date(values.startDate) : undefined,
-      endDate: values.endDate ? new Date(values.endDate) : undefined,
-    });
-    if (success) {
-      setAddSprintOpen(false);
-    } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not create sprint." });
-    }
-    setAddSprintSubmitting(false);
-  };
-  
-  const onEditSprintSubmit = async (values: z.infer<typeof sprintFormSchema>) => {
-    if (!editingSprint) return;
-    setEditSprintSubmitting(true);
-    const success = await updateSprint(editingSprint.id, {
-      title: values.title,
-      startDate: values.startDate ? new Date(values.startDate) : undefined,
-      endDate: values.endDate ? new Date(values.endDate) : undefined,
-    });
-    if (success) {
-      setEditingSprint(null);
-    } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not update sprint." });
-    }
-    setEditSprintSubmitting(false);
-  };
   
   const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     setAddEpicSubmitting(true);
@@ -498,13 +411,6 @@ export default function BacklogPage() {
     setStoryToDelete(null);
   };
     
-  const handleDeleteSprint = (sprintId: string) => {
-    setSprintToDelete(null);
-    deleteSprint(sprintId).then(success => {
-        if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete sprint." });
-    });
-  };
-  
   const handleDeleteEpic = (epicId: string) => {
     setEpicToDelete(null);
     deleteEpic(epicId).then(success => {
@@ -512,14 +418,10 @@ export default function BacklogPage() {
     });
   };
 
-  const handleSetCurrentSprint = (sprintId: string) => {
-    setCurrentSprint(sprintId).then(success => {
-        if (!success) toast({ variant: "destructive", title: "Error", description: "Could not set current sprint." });
-    });
-  };
+  const allWorkItems = stories.filter(
+    (story) => ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType)
+  );
 
-  const backlogStories = stories.filter((story) => story.sprintId === null || story.sprintId === undefined);
-  
   const subItemsByParentId = stories.reduce((acc, story) => {
       if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
           if (!acc[story.epicId]) {
@@ -530,8 +432,8 @@ export default function BacklogPage() {
       return acc;
   }, {} as Record<string, Story[]>);
 
-  const backlogItemsByEpic = backlogStories.reduce((acc, story) => {
-    if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId && backlogStories.some(s => s.id === story.epicId)) {
+  const backlogItemsByEpic = allWorkItems.reduce((acc, story) => {
+    if (story.itemType === 'Development Task' && story.epicId && allWorkItems.some(s => s.id === story.epicId)) {
         return acc;
     }
 
@@ -566,7 +468,6 @@ export default function BacklogPage() {
     });
   }, [epics, backlogItemsByEpic]);
   
-  const storiesInSprintToDelete = sprintToDelete ? stories.filter(story => story.sprintId === sprintToDelete.id).length : 0;
   const storiesInEpicToDelete = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
   const selectedStorySubItems = useMemo(() => {
@@ -948,7 +849,8 @@ export default function BacklogPage() {
                                 backlogItemsForGroup.map((story) => {
                                   const storyEpic = epics.find((e) => e.id === story.epicId);
                                   const assignee = users.find((d) => d.id === story.assigneeId);
-                                  const subItems = (subItemsByParentId[story.id] || []).filter(item => !item.sprintId);
+                                  const sprint = sprints.find(s => s.id === story.sprintId);
+                                  const subItems = subItemsByParentId[story.id] || [];
                                   
                                   return (
                                     <div key={story.id}>
@@ -960,6 +862,7 @@ export default function BacklogPage() {
                                               onClick={() => setSelectedStory(story)}
                                               onDelete={() => setStoryToDelete(story)}
                                               subItems={subItems}
+                                              sprint={sprint}
                                           />
                                           {['Requirement/Story', 'Feature Change'].includes(story.itemType) && (
                                           <div className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1018,27 +921,6 @@ export default function BacklogPage() {
             </div>
         </div>
       </div>
-      <AlertDialog open={!!sprintToDelete} onOpenChange={(isOpen) => !isOpen && setSprintToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {sprintToDelete && storiesInSprintToDelete > 0
-                ? `This sprint contains ${storiesInSprintToDelete} ${storiesInSprintToDelete === 1 ? 'story' : 'stories'}. Deleting the sprint will move them back to the backlog. This action cannot be undone.`
-                : 'This will permanently delete the sprint. This action cannot be undone.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => sprintToDelete && handleDeleteSprint(sprintToDelete.id)}
-              className={cn(buttonVariants({ variant: 'destructive' }))}
-            >
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={!!epicToDelete} onOpenChange={(isOpen) => !isOpen && setEpicToDelete(null)}>
         <AlertDialogContent>
@@ -1474,64 +1356,9 @@ export default function BacklogPage() {
           </Form>
         </DialogContent>
       </Dialog>
-      
-      <Dialog open={!!editingSprint} onOpenChange={setEditingSprint}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Edit Sprint</DialogTitle>
-            </DialogHeader>
-            <Form {...editSprintForm}>
-                <form onSubmit={editSprintForm.handleSubmit(onEditSprintSubmit)} className="space-y-4">
-                <FormField
-                    control={editSprintForm.control}
-                    name="title"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Title</FormLabel>
-                        <FormControl>
-                        <Input placeholder="Sprint title" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={editSprintForm.control}
-                    name="startDate"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Start Date</FormLabel>
-                        <FormControl>
-                            <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={editSprintForm.control}
-                    name="endDate"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>End Date</FormLabel>
-                        <FormControl>
-                            <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <DialogFooter>
-                  <Button type="submit" disabled={isEditSprintSubmitting}>
-                    {isEditSprintSubmitting ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-      </Dialog>
-
     </>
   );
 }
+    
+
     
