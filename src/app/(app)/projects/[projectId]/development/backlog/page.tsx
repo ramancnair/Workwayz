@@ -1093,9 +1093,9 @@ export default function BacklogPage() {
 
                   return (
                     <AccordionItem value={sprint.id} key={sprint.id}>
-                      <div className="flex items-center justify-between py-4">
-                        <AccordionTrigger className="flex-1 p-0 hover:no-underline">
-                          <div className="flex flex-col items-start text-left">
+                       <div className="flex items-center justify-between py-2 hover:bg-muted/20 rounded-md">
+                        <AccordionTrigger className="flex-1 py-2 px-4 hover:no-underline">
+                          <div className="flex-1 text-left pr-2">
                             <div className="flex items-center gap-2">
                               <h3 className="text-lg font-semibold">{sprint.title}</h3>
                               {sprint.isCurrent && <Badge>Current</Badge>}
@@ -1107,7 +1107,7 @@ export default function BacklogPage() {
                             </p>
                           </div>
                         </AccordionTrigger>
-                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center px-4" onClick={(e) => e.stopPropagation()}>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
