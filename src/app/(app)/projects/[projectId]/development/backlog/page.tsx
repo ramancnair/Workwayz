@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -568,6 +569,20 @@ export default function BacklogPage() {
   const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType)), [stories]);
 
   const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
+
+  const isEffortReadOnly = useMemo(() => {
+    if (!selectedStory) return false;
+    return (selectedStorySubItems.devTasks.length > 0)
+  }, [selectedStory, selectedStorySubItems]);
+
+  useEffect(() => {
+    if (selectedStory) {
+      const totalHours = selectedStorySubItems.devTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+       if (isEffortReadOnly && selectedStory.estimatedHours !== totalHours) {
+        updateStory(selectedStory.id, { estimatedHours: totalHours });
+      }
+    }
+  }, [selectedStory, selectedStorySubItems, isEffortReadOnly, updateStory]);
 
   return (
     <>
@@ -1431,8 +1446,9 @@ export default function BacklogPage() {
                                 <FormItem>
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={isEffortReadOnly} />
                                 </FormControl>
+                                {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked development tasks.</p>}
                                 <FormMessage />
                                 </FormItem>
                             )}

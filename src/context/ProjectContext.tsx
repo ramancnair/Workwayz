@@ -446,6 +446,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return false;
     }
   }
+  
+  const updateStoryEffort = async (storyId: string, allStories: Story[]) => {
+    if (!db || !projectId) return;
+
+    const devTasks = allStories.filter(s => s.itemType === 'Development Task' && s.epicId === storyId);
+    const totalHours = devTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+    
+    await updateDoc(doc(db, 'projects', projectId, 'stories', storyId), { estimatedHours: totalHours });
+  };
 
   // Story Actions
   const addStory = async (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string): Promise<boolean> => {
@@ -480,6 +489,10 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         }
         
         await addDoc(collection(projectDocRef, 'stories'), sanitizeForFirestore(payload));
+
+        if (story.itemType === 'Development Task' && story.epicId) {
+            await updateStoryEffort(story.epicId, [...stories, { ...story, id: 'temp', storyId: 'temp' }]);
+        }
         return true;
     } catch (e: any) {
         console.error("Firebase Error: Failed to add story.", { code: e.code, message: e.message, fullError: e });
@@ -490,12 +503,18 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
+      const storyToUpdate = stories.find(s => s.id === storyId);
       const { startDate, endDate, ...rest } = data;
       const payload: any = { ...rest };
       if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
       if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
 
       await updateDoc(doc(db, 'projects', projectId, 'stories', storyId), sanitizeForFirestore(payload));
+
+      if (storyToUpdate && storyToUpdate.itemType === 'Development Task' && storyToUpdate.epicId) {
+         const updatedStories = stories.map(s => s.id === storyId ? {...s, ...data} : s);
+         await updateStoryEffort(storyToUpdate.epicId, updatedStories);
+      }
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update story.", { id: storyId, code: e.code, message: e.message, fullError: e });
@@ -506,6 +525,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const deleteStory = async (storyId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
+      const storyToDelete = stories.find(s => s.id === storyId);
       const batch = writeBatch(db);
       const storyRef = doc(db, 'projects', projectId, 'stories', storyId);
   
@@ -521,6 +541,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   
       // 3. Commit the batch
       await batch.commit();
+
+      if (storyToDelete && storyToDelete.itemType === 'Development Task' && storyToDelete.epicId) {
+          const remainingStories = stories.filter(s => s.id !== storyId);
+          await updateStoryEffort(storyToDelete.epicId, remainingStories);
+      }
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete story and its references.", { id: storyId, code: e.code, message: e.message, fullError: e });
