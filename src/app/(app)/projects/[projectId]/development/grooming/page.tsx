@@ -110,66 +110,68 @@ function StoryItemCard({
     <Collapsible>
       <Card className="bg-card">
         <CollapsibleTrigger asChild>
-            <div className="cursor-pointer">
-                <CardHeader className="p-4">
-                    <div className="flex justify-between items-start">
-                        <div className="flex-1 pr-2">
-                            <div className="flex items-center gap-2">
-                                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                                <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
-                                {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
-                            </div>
-                            <p className="font-semibold break-words mt-1">{story.title}</p>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                            {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        {assignee && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        <Avatar className="h-6 w-6">
-                                            <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
-                                            <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                        {story.estimatedHours !== undefined && (
-                            <div className="flex items-center gap-1" title="Development effort">
-                                <Clock className="h-3 w-3" />
-                                <span>{story.estimatedHours}h</span>
-                            </div>
-                        )}
-                        {devTasks.length > 0 && (
-                            <div className="flex items-center gap-1" title={`${devTasks.length} development tasks`}>
-                                <CheckSquare className="h-3 w-3" />
-                                <span>{devTasks.length}</span>
-                            </div>
-                        )}
-                        {bugs.length > 0 && (
-                            <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
-                                <Bug className="h-3 w-3" />
-                                <span>{bugs.length}</span>
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </div>
+          <div className="p-4 cursor-pointer">
+              <div className="flex justify-between items-start">
+                  <div className="flex-1 pr-2">
+                      <div className="flex items-center gap-2">
+                          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                          <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+                          {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
+                      </div>
+                      <p className="font-semibold break-words mt-1">{story.title}</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                       {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                          <Edit className="h-4 w-4" />
+                      </Button>
+                  </div>
+              </div>
+          </div>
         </CollapsibleTrigger>
-        <CardFooter className="flex justify-end p-4 pt-0" onClick={(e) => e.stopPropagation()}>
+        <CardFooter className="flex justify-between items-center p-4 pt-0">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            {assignee && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger>
+                            <Avatar className="h-6 w-6">
+                                <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
+                                <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
+            {story.estimatedHours !== undefined && (
+                <div className="flex items-center gap-1" title="Development effort">
+                    <Clock className="h-3 w-3" />
+                    <span>{story.estimatedHours}h</span>
+                </div>
+            )}
+            {(devTasks.length > 0 || bugs.length > 0) && (
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center gap-2 cursor-pointer">
+                  {devTasks.length > 0 && (
+                    <div className="flex items-center gap-1" title={`${devTasks.length} development tasks`}>
+                      <CheckSquare className="h-3 w-3" />
+                      <span>{devTasks.length}</span>
+                    </div>
+                  )}
+                  {bugs.length > 0 && (
+                    <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
+                      <Bug className="h-3 w-3" />
+                      <span>{bugs.length}</span>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleTrigger>
+            )}
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7">
+              <Button variant="outline" size="sm" className="h-7" onClick={(e) => e.stopPropagation()}>
                 Move <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -839,6 +841,52 @@ export default function GroomingPage() {
                             />
                         </div>
                         </TabsContent>
+                         <TabsContent value="related">
+                           <div className="space-y-4 pt-4">
+                                <div>
+                                    <h4 className="text-sm font-medium mb-2">Development Tasks</h4>
+                                    {selectedStorySubItems.devTasks.length > 0 ? (
+                                        <div className="space-y-2 rounded-md border p-2">
+                                        {selectedStorySubItems.devTasks.map(item => {
+                                            const ItemIcon = workItemIcons[item.itemType];
+                                            return (
+                                                <div key={item.id} className="flex items-center justify-between text-sm">
+                                                    <div className='flex items-center gap-2'>
+                                                        {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                        <span className="cursor-pointer hover:underline" onClick={() => setEditingStory(item)}>[{item.storyId}] {item.title}</span>
+                                                    </div>
+                                                    <Badge variant="outline">{item.status}</Badge>
+                                                </div>
+                                            )
+                                        })}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground italic px-2">No development tasks linked.</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-medium mb-2">Bugs</h4>
+                                     {selectedStorySubItems.bugs.length > 0 ? (
+                                        <div className="space-y-2 rounded-md border p-2">
+                                        {selectedStorySubItems.bugs.map(item => {
+                                            const ItemIcon = workItemIcons[item.itemType];
+                                            return (
+                                                <div key={item.id} className="flex items-center justify-between text-sm">
+                                                    <div className='flex items-center gap-2'>
+                                                        {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                        <span className="cursor-pointer hover:underline" onClick={() => setEditingStory(item)}>[{item.storyId}] {item.title}</span>
+                                                    </div>
+                                                    <Badge variant="outline">{item.status}</Badge>
+                                                </div>
+                                            )
+                                        })}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </TabsContent>
                     </Tabs>
                     <DialogFooter>
                         <Button type="submit" disabled={isEditStorySubmitting}>
@@ -854,3 +902,4 @@ export default function GroomingPage() {
         </>
     );
 }
+
