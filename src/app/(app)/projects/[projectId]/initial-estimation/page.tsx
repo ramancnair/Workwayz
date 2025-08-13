@@ -1,7 +1,9 @@
 'use client';
 
 import { redirect } from 'next/navigation';
+import { use } from 'react';
 
-export default function InitialEstimationRootPage({ params }: { params: { projectId: string } }) {
-  redirect(`/projects/${params.projectId}/initial-estimation/ballpark`);
+export default function InitialEstimationRootPage({ params }: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = use(params);
+  redirect(`/projects/${projectId}/initial-estimation/ballpark`);
 }
