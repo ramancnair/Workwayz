@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -48,6 +49,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Separator } from '@/components/ui/separator';
 
 
 const sprintSchema = z.object({
@@ -69,7 +71,8 @@ function StoryItemCard({
     assignee,
     subItems,
     onMove, 
-    onEdit
+    onEdit,
+    onSubItemClick,
 }: { 
     story: Story, 
     epic?: Epic, 
@@ -77,157 +80,107 @@ function StoryItemCard({
     subItems?: Story[],
     onMove: (sprintId: string | null) => void,
     onEdit: () => void;
+    onSubItemClick: (story: Story) => void;
 }) {
   const { sprints } = useProject();
   const Icon = workItemIcons[story.itemType];
-  const bugEffort = subItems?.filter(i => i.itemType === 'Bug').reduce((sum, i) => sum + (i.estimatedHours || 0), 0) || 0;
-  const bugCount = subItems?.filter(i => i.itemType === 'Bug').length || 0;
-  const hasEffort = story.estimatedHours && story.estimatedHours > 0;
-  const sprint = sprints.find(s => s.id === story.sprintId);
-  
+  const devTasks = subItems?.filter(i => i.itemType === 'Development Task') || [];
+  const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
+
   return (
-    <Card className="bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md relative group">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit();
-        }}
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
-      <CardHeader className="p-4" onClick={onEdit}>
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1">
+    <Collapsible>
+      <Card className="bg-card">
+        <CardHeader className="p-4" onClick={onEdit}>
+          <div className="flex justify-between items-start">
             <div className="flex items-center gap-2">
               {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
               <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
-              {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
             </div>
-            <p className="font-semibold break-words">{story.title}</p>
+            <div className="flex items-center gap-1">
+              {epic && <Badge variant="secondary">{epic.title}</Badge>}
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          {assignee && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={assignee.avatar}
-                      alt={`${assignee.firstName} ${assignee.lastName}`}
-                      data-ai-hint="developer avatar"
-                    />
-                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-0" onClick={onEdit}>
-        <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <div className='flex items-center gap-2'>
-                {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                {sprint ? (
-                    <Badge variant="outline" className="border-blue-500 text-blue-500">
-                        <FolderUp className="h-3 w-3 mr-1" />
-                        {sprint.title}
-                    </Badge>
-                ) : (
-                    <Badge variant="outline" className="border-blue-500 text-blue-500">
-                        <Library className="h-3 w-3 mr-1" />
-                        Backlog
-                    </Badge>
-                )}
-                {story.status && (
-                     <Badge variant="outline">
-                        <Tag className="h-3 w-3 mr-1" />
-                        {story.status}
-                    </Badge>
-                )}
-            </div>
-            <div className="flex items-center gap-4">
-                {story.estimatedHours !== undefined && (
-                <div className="flex items-center gap-1" title="Development effort">
-                    <CheckSquare className="h-3 w-3" />
-                    <span>{story.estimatedHours}h</span>
-                </div>
-                )}
-                {bugCount > 0 && (
-                <div className="flex items-center gap-1" title={`${bugCount} bugs, ${bugEffort}h total effort`}>
-                    <Bug className="h-3 w-3" />
-                    <span>{bugCount} ({bugEffort}h)</span>
-                </div>
-                )}
-            </div>
-        </div>
-      </CardContent>
-       <CardFooter className="flex justify-end p-4 pt-0">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7">
-              Move to <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {story.sprintId !== null && (
-              <DropdownMenuItem onClick={() => onMove(null)}>
-                Backlog
-              </DropdownMenuItem>
-            )}
-            {sprints
-              .filter((sprint) => sprint.id !== story.sprintId)
-              .map((sprint) => (
-                <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
-                  {sprint.title}
+          <CardTitle className="text-base break-words mt-1">{story.title}</CardTitle>
+        </CardHeader>
+        <CardFooter className="flex justify-between items-center p-4 pt-0" onClick={(e) => e.stopPropagation()}>
+           <div className="flex items-center gap-4">
+              {story.estimatedHours !== undefined && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>{story.estimatedHours}h</span>
+                  </div>
+              )}
+               {(devTasks.length > 0 || bugs.length > 0) && (
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                    {devTasks.length > 0 && (
+                      <div className="flex items-center gap-1" title={`${devTasks.length} development tasks`}>
+                        <CheckSquare className="h-3 w-3" />
+                        <span>{devTasks.length}</span>
+                      </div>
+                    )}
+                    {bugs.length > 0 && (
+                      <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
+                        <Bug className="h-3 w-3" />
+                        <span>{bugs.length}</span>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleTrigger>
+              )}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7">
+                Move <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {story.sprintId !== null && (
+                <DropdownMenuItem onClick={() => onMove(null)}>
+                  Backlog
                 </DropdownMenuItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </CardFooter>
-    </Card>
+              )}
+              {sprints
+                .filter((sprint) => sprint.id !== story.sprintId)
+                .map((sprint) => (
+                  <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
+                    {sprint.title}
+                  </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </CardFooter>
+        <CollapsibleContent>
+            <div className="px-6 pb-4 space-y-2">
+                {(devTasks.length > 0 || bugs.length > 0) && <Separator />}
+                {[...devTasks, ...bugs].map(item => {
+                    const ItemIcon = workItemIcons[item.itemType];
+                    return (
+                        <div key={item.id} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                                <ItemIcon className="h-3 w-3 text-muted-foreground" />
+                                <span 
+                                    className="font-medium cursor-pointer hover:underline"
+                                    onClick={() => onSubItemClick(item)}
+                                >
+                                    [{item.storyId}] {item.title}
+                                </span>
+                            </div>
+                            <Badge variant="outline">{item.status}</Badge>
+                        </div>
+                    )
+                })}
+            </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
 
-function SubItemsDisplay({ items, onCardClick, users, title }: { items: Story[], onCardClick: (story: Story) => void, users: User[], title: string }) {
-    if (items.length === 0) return null;
-
-    return (
-        <Collapsible>
-            <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-start mt-1 text-xs text-muted-foreground">
-                    <ChevronsRight className="h-4 w-4 mr-2" />
-                    {items.length} {title}
-                </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-                <div className="pl-6 pt-2 space-y-2">
-                    {items.map(subItem => {
-                        const subItemAssignee = users.find((d) => d.id === subItem.assigneeId);
-                        return (
-                            <div key={subItem.id} className="flex items-start gap-2">
-                                <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
-                                <div className="flex-1">
-                                    <StoryItemCard
-                                        story={subItem}
-                                        assignee={subItemAssignee}
-                                        onEdit={() => onCardClick(subItem)}
-                                        onMove={() => {}} // Move is handled at parent level
-                                    />
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </CollapsibleContent>
-        </Collapsible>
-    );
-}
 
 function SprintColumn({ 
   sprint, 
@@ -306,8 +259,8 @@ function SprintColumn({
                                 subItems={subItems}
                                 onMove={(newSprintId) => onMoveStory(story.id, newSprintId)}
                                 onEdit={() => onEditStory(story)}
+                                onSubItemClick={onEditStory}
                             />
-                            <SubItemsDisplay items={subItems} onCardClick={onEditStory} users={employees} title="Related Items" />
                         </div>
                      );
                 })}
@@ -475,8 +428,8 @@ export default function GroomingPage() {
                                             subItems={subItems}
                                             onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
                                             onEdit={() => setEditingStory(story)}
+                                            onSubItemClick={setEditingStory}
                                         />
-                                        <SubItemsDisplay items={subItems} onCardClick={setEditingStory} users={employees} title="Related Items" />
                                     </div>
                                 );
                             })}
