@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, FolderUp, Library, Tag, ChevronsRight, CornerDownRight, Flag } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality } from '@/types';
@@ -109,26 +109,26 @@ function StoryItemCard({
   return (
     <Collapsible>
       <Card className="bg-card">
-        <CollapsibleTrigger asChild>
-          <div className="p-4 cursor-pointer">
-              <div className="flex justify-between items-start">
-                  <div className="flex-1 pr-2">
+         <div className="p-4">
+            <div className="flex justify-between items-start">
+                <div className="flex-1 pr-2">
+                    <CollapsibleTrigger className="w-full text-left">
                       <div className="flex items-center gap-2">
                           {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
                           <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
                           {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
                       </div>
                       <p className="font-semibold break-words mt-1">{story.title}</p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                       {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                          <Edit className="h-4 w-4" />
-                      </Button>
-                  </div>
-              </div>
+                    </CollapsibleTrigger>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                      {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                        <Edit className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
           </div>
-        </CollapsibleTrigger>
         <CardFooter className="flex justify-between items-center p-4 pt-0">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {assignee && (
@@ -662,10 +662,16 @@ export default function GroomingPage() {
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
-                            <TabsTrigger value="related">
-                                Related Items 
+                            <TabsTrigger value="devTasks">
+                                Development Tasks
                                 <Badge variant="secondary" className="ml-2">
-                                    {selectedStorySubItems.devTasks.length + selectedStorySubItems.bugs.length}
+                                    {selectedStorySubItems.devTasks.length}
+                                </Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="bugs">
+                                Bugs
+                                <Badge variant="secondary" className="ml-2">
+                                    {selectedStorySubItems.bugs.length}
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
@@ -841,50 +847,48 @@ export default function GroomingPage() {
                             />
                         </div>
                         </TabsContent>
-                         <TabsContent value="related">
+                         <TabsContent value="devTasks">
                            <div className="space-y-4 pt-4">
-                                <div>
-                                    <h4 className="text-sm font-medium mb-2">Development Tasks</h4>
-                                    {selectedStorySubItems.devTasks.length > 0 ? (
-                                        <div className="space-y-2 rounded-md border p-2">
-                                        {selectedStorySubItems.devTasks.map(item => {
-                                            const ItemIcon = workItemIcons[item.itemType];
-                                            return (
-                                                <div key={item.id} className="flex items-center justify-between text-sm">
-                                                    <div className='flex items-center gap-2'>
-                                                        {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                        <span className="cursor-pointer hover:underline" onClick={() => setEditingStory(item)}>[{item.storyId}] {item.title}</span>
-                                                    </div>
-                                                    <Badge variant="outline">{item.status}</Badge>
+                                {selectedStorySubItems.devTasks.length > 0 ? (
+                                    <div className="space-y-2 rounded-md border p-2">
+                                    {selectedStorySubItems.devTasks.map(item => {
+                                        const ItemIcon = workItemIcons[item.itemType];
+                                        return (
+                                            <div key={item.id} className="flex items-center justify-between text-sm">
+                                                <div className='flex items-center gap-2'>
+                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                    <span className="cursor-pointer hover:underline" onClick={() => setEditingStory(item)}>[{item.storyId}] {item.title}</span>
                                                 </div>
-                                            )
-                                        })}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground italic px-2">No development tasks linked.</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-medium mb-2">Bugs</h4>
-                                     {selectedStorySubItems.bugs.length > 0 ? (
-                                        <div className="space-y-2 rounded-md border p-2">
-                                        {selectedStorySubItems.bugs.map(item => {
-                                            const ItemIcon = workItemIcons[item.itemType];
-                                            return (
-                                                <div key={item.id} className="flex items-center justify-between text-sm">
-                                                    <div className='flex items-center gap-2'>
-                                                        {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                        <span className="cursor-pointer hover:underline" onClick={() => setEditingStory(item)}>[{item.storyId}] {item.title}</span>
-                                                    </div>
-                                                    <Badge variant="outline">{item.status}</Badge>
+                                                <Badge variant="outline">{item.status}</Badge>
+                                            </div>
+                                        )
+                                    })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic px-2">No development tasks linked.</p>
+                                )}
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="bugs">
+                           <div className="space-y-4 pt-4">
+                                {selectedStorySubItems.bugs.length > 0 ? (
+                                    <div className="space-y-2 rounded-md border p-2">
+                                    {selectedStorySubItems.bugs.map(item => {
+                                        const ItemIcon = workItemIcons[item.itemType];
+                                        return (
+                                            <div key={item.id} className="flex items-center justify-between text-sm">
+                                                <div className='flex items-center gap-2'>
+                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                    <span className="cursor-pointer hover:underline" onClick={() => setEditingStory(item)}>[{item.storyId}] {item.title}</span>
                                                 </div>
-                                            )
-                                        })}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
-                                    )}
-                                </div>
+                                                <Badge variant="outline">{item.status}</Badge>
+                                            </div>
+                                        )
+                                    })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
+                                )}
                             </div>
                         </TabsContent>
                     </Tabs>
