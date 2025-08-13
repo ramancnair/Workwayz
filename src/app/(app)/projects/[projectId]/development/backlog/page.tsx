@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -155,10 +155,15 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
         <div className="flex justify-between items-center text-xs text-muted-foreground">
             <div className='flex items-center gap-2'>
                 {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                {sprint && (
+                {sprint ? (
                     <Badge variant="outline" className="border-blue-500 text-blue-500">
                         <FolderUp className="h-3 w-3 mr-1" />
                         {sprint.title}
+                    </Badge>
+                ) : (
+                    <Badge variant="outline">
+                        <Library className="h-3 w-3 mr-1" />
+                        Backlog
                     </Badge>
                 )}
                 {story.status && (
