@@ -24,8 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
@@ -259,6 +257,7 @@ export default function GroomingPage() {
     
         if (over && active.id !== over.id) {
             const storyId = active.id as string;
+            // The droppable area for a sprint is now the sprint column itself, which has the sprint ID.
             const newSprintId = over.id === 'backlog-column' ? null : over.id as string;
             
             const story = stories.find(s => s.id === storyId);
