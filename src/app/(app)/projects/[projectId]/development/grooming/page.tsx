@@ -26,20 +26,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User } from '@/types';
 import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
-import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 
 const sprintSchema = z.object({
@@ -55,22 +62,71 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Feature Change': GitCommit,
 };
 
-function StoryItemCard({ story, epic, onMove }: { story: Story, epic?: Epic, onMove: (sprintId: string | null) => void }) {
+function StoryItemCard({ 
+    story, 
+    epic,
+    assignee,
+    onMove, 
+    onEdit
+}: { 
+    story: Story, 
+    epic?: Epic, 
+    assignee?: User,
+    onMove: (sprintId: string | null) => void,
+    onEdit: () => void;
+}) {
   const { sprints } = useProject();
   const Icon = workItemIcons[story.itemType];
   
   return (
-    <Card>
+    <Card className="bg-card">
       <CardHeader className="p-4 pb-2">
-        <div className="flex items-center gap-2">
-          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-          <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+        <div className="flex justify-between items-start">
+            <div className="flex items-center gap-2">
+                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+            </div>
+             <div className="flex items-center gap-1">
+                {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
+                    <Edit className="h-4 w-4" />
+                </Button>
+            </div>
         </div>
-        <CardTitle className="text-base">{story.title}</CardTitle>
+        <CardTitle className="text-base break-words">{story.title}</CardTitle>
       </CardHeader>
-      <CardFooter className="flex justify-between items-center p-4 pt-2">
-        <div>
-          {epic && <Badge variant="secondary">{epic.title}</Badge>}
+        <CardContent className="p-4 pt-0">
+          {assignee && (
+            <div className="flex items-center gap-2 mt-2">
+               <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage
+                          src={assignee.avatar}
+                          alt={`${assignee.firstName} ${assignee.lastName}`}
+                          data-ai-hint="developer avatar"
+                        />
+                        <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              <span className="text-xs text-muted-foreground">{assignee.firstName} {assignee.lastName}</span>
+            </div>
+          )}
+        </CardContent>
+      <CardFooter className="flex justify-between items-center p-4 pt-0">
+        <div className="flex items-center gap-4">
+            {story.estimatedHours !== undefined && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{story.estimatedHours}h</span>
+                </div>
+            )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -108,7 +164,8 @@ function SprintColumn({
   onPrev,
   onNext,
   showNav,
-  onMoveStory
+  onMoveStory,
+  onEditStory
 }: { 
   sprint: Sprint, 
   stories: Story[],
@@ -119,8 +176,9 @@ function SprintColumn({
   onNext: () => void,
   showNav: boolean,
   onMoveStory: (storyId: string, sprintId: string | null) => void;
+  onEditStory: (story: Story) => void;
 }) {
-    const { epics } = useProject();
+    const { epics, employees } = useProject();
 
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
@@ -153,12 +211,15 @@ function SprintColumn({
             <div className="flex-1 space-y-4 overflow-y-auto">
                 {stories.map(story => {
                      const epic = epics.find(e => e.id === story.epicId);
+                     const assignee = employees.find(e => e.id === story.assigneeId);
                      return (
                         <StoryItemCard 
                             key={story.id} 
                             story={story} 
-                            epic={epic} 
+                            epic={epic}
+                            assignee={assignee}
                             onMove={(newSprintId) => onMoveStory(story.id, newSprintId)}
+                            onEdit={() => onEditStory(story)}
                         />
                      );
                 })}
@@ -171,6 +232,7 @@ export default function GroomingPage() {
     const { 
         stories, 
         epics,
+        employees,
         sprints,
         projectSettings,
         moveStoryToSprint,
@@ -184,6 +246,7 @@ export default function GroomingPage() {
     const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false);
     const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
+    const [editingStory, setEditingStory] = useState<Story | null>(null);
     const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
 
     const backlogItems = useMemo(() => {
@@ -303,12 +366,15 @@ export default function GroomingPage() {
                         <div className="flex-1 space-y-4 overflow-y-auto">
                             {backlogItems.map(story => {
                                 const epic = epics.find(e => e.id === story.epicId);
+                                const assignee = employees.find(e => e.id === story.assigneeId);
                                 return (
                                     <StoryItemCard 
                                         key={story.id} 
                                         story={story} 
                                         epic={epic}
+                                        assignee={assignee}
                                         onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
+                                        onEdit={() => setEditingStory(story)}
                                     />
                                 );
                             })}
@@ -329,6 +395,7 @@ export default function GroomingPage() {
                             onNext={nextSprint}
                             showNav={sprintsWithStories.length > 1}
                             onMoveStory={moveStoryToSprint}
+                            onEditStory={setEditingStory}
                         />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
@@ -412,6 +479,18 @@ export default function GroomingPage() {
             </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={!!editingStory} onOpenChange={(isOpen) => !isOpen && setEditingStory(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit Story</DialogTitle>
+                </DialogHeader>
+                <p>Story editing form would go here. For now, it just shows that clicking the card works.</p>
+                <DialogFooter>
+                    <Button onClick={() => setEditingStory(null)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         </>
     );
 }
