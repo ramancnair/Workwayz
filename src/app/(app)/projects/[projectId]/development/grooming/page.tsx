@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, FolderUp, Library, Tag, ChevronsRight, CornerDownRight } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, FolderUp, Library, Tag, ChevronsRight, CornerDownRight, Flag } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User } from '@/types';
