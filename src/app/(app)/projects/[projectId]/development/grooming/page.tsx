@@ -2,7 +2,6 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story } from '@/types';
@@ -45,18 +44,23 @@ function SprintColumn({
   sprint, 
   stories,
   onEdit,
-  onDelete
+  onDelete,
+  onSetCurrent,
 }: { 
   sprint: Sprint, 
   stories: Story[],
   onEdit: (sprint: Sprint) => void,
   onDelete: (sprint: Sprint) => void,
+  onSetCurrent: (sprintId: string) => void,
 }) {
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-1/3">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">{sprint.title}</h3>
               <div className="flex gap-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onSetCurrent(sprint.id)}>
+                  <Star className={cn("h-4 w-4", sprint.isCurrent && "fill-yellow-400 text-yellow-500")} />
+                </Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(sprint)}>
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -83,6 +87,7 @@ export default function GroomingPage() {
         addSprint,
         updateSprint,
         deleteSprint,
+        setCurrentSprint,
     } = useProject();
     const { toast } = useToast();
     
@@ -90,11 +95,11 @@ export default function GroomingPage() {
     const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
 
-    const backlogItems = useMemo(() => {
+    const backlogItems = React.useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType));
     }, [stories]);
 
-    const sprintsWithStories = useMemo(() => {
+    const sprintsWithStories = React.useMemo(() => {
         return sprints.map(sprint => ({
             ...sprint,
             stories: stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType)),
@@ -164,6 +169,15 @@ export default function GroomingPage() {
         }
         setDeletingSprint(null);
     }
+    
+    const handleSetCurrentSprint = async (sprintId: string) => {
+        const success = await setCurrentSprint(sprintId);
+        if (success) {
+            toast({ title: 'Success', description: 'Current sprint updated.' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not set current sprint.' });
+        }
+    };
 
 
     return (
@@ -197,6 +211,7 @@ export default function GroomingPage() {
                         stories={sprint.stories} 
                         onEdit={() => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
                         onDelete={() => setDeletingSprint(sprint)}
+                        onSetCurrent={handleSetCurrentSprint}
                     />
                 ))}
             </div>
