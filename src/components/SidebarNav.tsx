@@ -268,9 +268,9 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         <SidebarMenu>
           <SidebarMenuItem>
             <Link href={`${basePath}/settings`}>
-              <SidebarMenuButton tooltip="Settings" isActive={pathname.startsWith(`${basePath}/settings`)}>
+              <SidebarMenuButton tooltip="Project Settings" isActive={pathname.startsWith(`${basePath}/settings`)}>
                 <Settings />
-                <span>Settings</span>
+                <span>Project Settings</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>

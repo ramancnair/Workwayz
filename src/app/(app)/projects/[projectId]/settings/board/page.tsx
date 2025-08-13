@@ -153,7 +153,7 @@ export default function BoardSettingsPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Settings" description="Manage your project settings." />
+      <PageHeader title="Project Settings" description="Manage your project settings." />
       <div className="grid gap-6">
         <Card>
           <CardHeader>
