@@ -63,6 +63,8 @@ interface ProjectContextType {
   weeklyOffDays: number[];
   impactedSystems: ImpactedSystem[];
   horizontals: Horizontal[];
+  initialImpactedSystems: ImpactedSystem[];
+  initialHorizontals: Horizontal[];
   environments: Environment[];
   
   // Project actions
@@ -143,6 +145,14 @@ interface ProjectContextType {
   updateImpactedSystem: (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => Promise<boolean>;
   deleteImpactedSystem: (systemId: string) => Promise<boolean>;
 
+  // Initial Estimation Actions
+  addInitialImpactedSystem: (system: Omit<ImpactedSystem, 'id'>) => Promise<boolean>;
+  updateInitialImpactedSystem: (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => Promise<boolean>;
+  deleteInitialImpactedSystem: (systemId: string) => Promise<boolean>;
+  addInitialHorizontal: (horizontal: Omit<Horizontal, 'id'>) => Promise<boolean>;
+  updateInitialHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
+  deleteInitialHorizontal: (horizontalId: string) => Promise<boolean>;
+
   // Horizontal actions
   addHorizontal: (horizontal: Omit<Horizontal, 'id'>) => Promise<boolean>;
   updateHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
@@ -198,12 +208,12 @@ const defaultEnvironments: Omit<Environment, 'id'>[] = [
     { name: 'Performance', order: 5 },
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
     '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments'],
-    '/development/grooming': ['stories', 'sprints', 'projectSettings'],
+    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'holidays', 'impactedSystems'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
@@ -211,7 +221,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
     '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments'],
     '/project-details/project-dashboard': ['employees', 'allUsers'],
-    '/project-details/initial-estimation': ['impactedSystems', 'horizontals'],
+    '/project-details/initial-estimation': ['initialImpactedSystems', 'initialHorizontals'],
     '/project-details/environments': ['environments'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers'],
@@ -248,6 +258,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [horizontals, setHorizontals] = useState<Horizontal[]>([]);
+  const [initialImpactedSystems, setInitialImpactedSystems] = useState<ImpactedSystem[]>([]);
+  const [initialHorizontals, setInitialHorizontals] = useState<Horizontal[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [worklogSubmissions, setWorklogSubmissions] = useState<WorklogSubmission[]>([]);
@@ -300,6 +312,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'releases', setState: setReleasesAndMilestones },
         { name: 'impactedSystems', setState: setImpactedSystems },
         { name: 'horizontals', setState: setHorizontals },
+        { name: 'initialImpactedSystems', setState: setInitialImpactedSystems },
+        { name: 'initialHorizontals', setState: setInitialHorizontals },
         { name: 'environments', setState: setEnvironments },
         { name: 'worklogs', setState: setWorklogs },
         { name: 'worklogSubmissions', setState: setWorklogSubmissions },
@@ -343,10 +357,10 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     return;
                 }
                 
-                if (name === 'horizontals' && querySnapshot.empty) {
+                if ((name === 'horizontals' || name === 'initialHorizontals') && querySnapshot.empty) {
                     const batch = writeBatch(db);
                     defaultHorizontals.forEach(h => {
-                        const docRef = doc(collection(rootProjectDocRef, 'horizontals'));
+                        const docRef = doc(collection(rootProjectDocRef, name));
                         batch.set(docRef, h);
                     });
                     batch.commit().catch(e => console.error("Failed to set default horizontals", e));
@@ -1163,72 +1177,96 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  // Impacted System Actions
+  // Impacted System Actions (live)
   const addImpactedSystem = async (system: Omit<ImpactedSystem, 'id'>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       await addDoc(collection(db, 'projects', projectId, 'impactedSystems'), sanitizeForFirestore(system));
       return true;
-    } catch (e: any) {
-      console.error("Firebase Error: Failed to add impacted system.", { code: e.code, message: e.message, fullError: e });
-      return false;
-    }
+    } catch (e) { console.error("Firebase Error", e); return false; }
   };
-
   const updateImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       await updateDoc(doc(db, 'projects', projectId, 'impactedSystems', systemId), sanitizeForFirestore(data));
       return true;
-    } catch (e: any) {
-      console.error("Firebase Error: Failed to update impacted system.", { id: systemId, code: e.code, message: e.message, fullError: e });
-      return false;
-    }
+    } catch (e) { console.error("Firebase Error", e); return false; }
   };
-
   const deleteImpactedSystem = async (systemId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       await deleteDoc(doc(db, 'projects', projectId, 'impactedSystems', systemId));
       return true;
-    } catch (e: any) {
-      console.error("Firebase Error: Failed to delete impacted system.", { id: systemId, code: e.code, message: e.message, fullError: e });
-      return false;
-    }
+    } catch (e) { console.error("Firebase Error", e); return false; }
+  };
+
+  // Initial Estimation Actions
+  const addInitialImpactedSystem = async (system: Omit<ImpactedSystem, 'id'>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await addDoc(collection(db, 'projects', projectId, 'initialImpactedSystems'), sanitizeForFirestore(system));
+      return true;
+    } catch (e) { console.error("Firebase Error", e); return false; }
+  };
+  const updateInitialImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await updateDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', systemId), sanitizeForFirestore(data));
+      return true;
+    } catch (e) { console.error("Firebase Error", e); return false; }
+  };
+  const deleteInitialImpactedSystem = async (systemId: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', systemId));
+      return true;
+    } catch (e) { console.error("Firebase Error", e); return false; }
   };
   
-  // Horizontal Actions
+  // Horizontal Actions (live)
   const addHorizontal = async (horizontal: Omit<Horizontal, 'id'>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       await addDoc(collection(db, 'projects', projectId, 'horizontals'), sanitizeForFirestore(horizontal));
       return true;
-    } catch (e) {
-      console.error("Firebase Error: Failed to add horizontal.", e);
-      return false;
-    }
+    } catch (e) { console.error("Firebase Error", e); return false; }
   };
-
   const updateHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       await updateDoc(doc(db, 'projects', projectId, 'horizontals', horizontalId), sanitizeForFirestore(data));
       return true;
-    } catch (e) {
-      console.error("Firebase Error: Failed to update horizontal.", e);
-      return false;
-    }
+    } catch (e) { console.error("Firebase Error", e); return false; }
   };
-
   const deleteHorizontal = async (horizontalId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       await deleteDoc(doc(db, 'projects', projectId, 'horizontals', horizontalId));
       return true;
-    } catch (e) {
-      console.error("Firebase Error: Failed to delete horizontal.", e);
-      return false;
-    }
+    } catch (e) { console.error("Firebase Error", e); return false; }
+  };
+
+  // Initial Horizontal Actions
+  const addInitialHorizontal = async (horizontal: Omit<Horizontal, 'id'>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await addDoc(collection(db, 'projects', projectId, 'initialHorizontals'), sanitizeForFirestore(horizontal));
+      return true;
+    } catch (e) { console.error("Firebase Error", e); return false; }
+  };
+  const updateInitialHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await updateDoc(doc(db, 'projects', projectId, 'initialHorizontals', horizontalId), sanitizeForFirestore(data));
+      return true;
+    } catch (e) { console.error("Firebase Error", e); return false; }
+  };
+  const deleteInitialHorizontal = async (horizontalId: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId, 'initialHorizontals', horizontalId));
+      return true;
+    } catch (e) { console.error("Firebase Error", e); return false; }
   };
 
   // Environment Actions
@@ -1378,6 +1416,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     weeklyOffDays,
     impactedSystems,
     horizontals,
+    initialImpactedSystems,
+    initialHorizontals,
     environments,
     isLoading,
     error,
@@ -1431,9 +1471,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addImpactedSystem,
     updateImpactedSystem,
     deleteImpactedSystem,
+    addInitialImpactedSystem,
+    updateInitialImpactedSystem,
+    deleteInitialImpactedSystem,
     addHorizontal,
     updateHorizontal,
     deleteHorizontal,
+    addInitialHorizontal,
+    updateInitialHorizontal,
+    deleteInitialHorizontal,
     addEnvironment,
     updateEnvironment,
     deleteEnvironment,

@@ -68,14 +68,14 @@ export default function InitialEstimationPage() {
   const { 
     project, 
     updateProject, 
-    impactedSystems, 
-    addImpactedSystem, 
-    updateImpactedSystem, 
-    deleteImpactedSystem,
-    horizontals,
-    addHorizontal,
-    updateHorizontal,
-    deleteHorizontal,
+    initialImpactedSystems, 
+    addInitialImpactedSystem, 
+    updateInitialImpactedSystem, 
+    deleteInitialImpactedSystem,
+    initialHorizontals,
+    addInitialHorizontal,
+    updateInitialHorizontal,
+    deleteInitialHorizontal,
   } = useProject();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -156,7 +156,7 @@ export default function InitialEstimationPage() {
 
   const handleDeleteSystemConfirm = async () => {
     if (!deletingSystem) return;
-    const success = await deleteImpactedSystem(deletingSystem.id);
+    const success = await deleteInitialImpactedSystem(deletingSystem.id);
     if (success) {
       toast({ title: "Success", description: "Impacted system deleted." });
     } else {
@@ -168,8 +168,8 @@ export default function InitialEstimationPage() {
   const onSystemSubmit = async (values: z.infer<typeof systemSchema>) => {
     setIsSystemSubmitting(true);
     const success = editingSystem
-      ? await updateImpactedSystem(editingSystem.id, values)
-      : await addImpactedSystem(values);
+      ? await updateInitialImpactedSystem(editingSystem.id, values)
+      : await addInitialImpactedSystem(values);
 
     if (success) {
       toast({ title: "Success", description: `System ${editingSystem ? 'updated' : 'added'} successfully.` });
@@ -182,7 +182,7 @@ export default function InitialEstimationPage() {
   };
 
   const onHorizontalSubmit = async (values: z.infer<typeof horizontalFormSchema>) => {
-    const success = await addHorizontal({
+    const success = await addInitialHorizontal({
       name: values.name,
       weightage: values.weightage,
       isEnabled: true
@@ -198,7 +198,7 @@ export default function InitialEstimationPage() {
   
   const handleDeleteHorizontalConfirm = async () => {
     if (!deletingHorizontal) return;
-    const success = await deleteHorizontal(deletingHorizontal.id);
+    const success = await deleteInitialHorizontal(deletingHorizontal.id);
     if (success) {
       toast({ title: "Success", description: "Horizontal deleted." });
     } else {
@@ -207,17 +207,17 @@ export default function InitialEstimationPage() {
     setDeletingHorizontal(null);
   };
 
-  const totalDevEffort = impactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
-  const totalDevCost = impactedSystems.reduce((acc, system) => acc + ((system.estimate || 0) * (system.dailyBillingRate || 0)), 0);
+  const totalDevEffort = initialImpactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
+  const totalDevCost = initialImpactedSystems.reduce((acc, system) => acc + ((system.estimate || 0) * (system.dailyBillingRate || 0)), 0);
 
   const averageDevRate = totalDevEffort > 0 ? totalDevCost / totalDevEffort : 0;
   
-  const totalHorizontalEffort = horizontals.reduce((acc, h) => {
+  const totalHorizontalEffort = initialHorizontals.reduce((acc, h) => {
       if (!h.isEnabled) return acc;
       return acc + (totalDevEffort * (h.weightage / 100));
   }, 0);
 
-  const totalHorizontalCost = horizontals.reduce((acc, h) => {
+  const totalHorizontalCost = initialHorizontals.reduce((acc, h) => {
     if (!h.isEnabled) return acc;
     const horizontalEffort = (totalDevEffort * (h.weightage / 100));
     const rate = h.dailyBillingRate === undefined ? averageDevRate : h.dailyBillingRate;
@@ -299,7 +299,7 @@ export default function InitialEstimationPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {impactedSystems.map((system) => (
+                {initialImpactedSystems.map((system) => (
                   <TableRow key={system.id}>
                     <TableCell className="font-medium">{system.name}</TableCell>
                     <TableCell>{system.estimate || 'N/A'}</TableCell>
@@ -350,7 +350,7 @@ export default function InitialEstimationPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {horizontals.map(h => {
+                        {initialHorizontals.map(h => {
                             const horizontalEffort = (totalDevEffort * (h.weightage / 100));
                             const rate = h.dailyBillingRate === undefined ? averageDevRate : h.dailyBillingRate;
                             const cost = horizontalEffort * rate;
@@ -359,7 +359,7 @@ export default function InitialEstimationPage() {
                                     <TableCell>
                                         <Checkbox
                                             checked={h.isEnabled}
-                                            onCheckedChange={(checked) => updateHorizontal(h.id, { isEnabled: !!checked })}
+                                            onCheckedChange={(checked) => updateInitialHorizontal(h.id, { isEnabled: !!checked })}
                                         />
                                     </TableCell>
                                     <TableCell className="font-medium">{h.name}</TableCell>
@@ -370,7 +370,7 @@ export default function InitialEstimationPage() {
                                             onBlur={(e) => {
                                                 const newWeightage = parseFloat(e.target.value);
                                                 if (!isNaN(newWeightage) && newWeightage !== h.weightage) {
-                                                    updateHorizontal(h.id, { weightage: newWeightage });
+                                                    updateInitialHorizontal(h.id, { weightage: newWeightage });
                                                 }
                                             }}
                                             className="w-24"
@@ -385,9 +385,9 @@ export default function InitialEstimationPage() {
                                             onBlur={(e) => {
                                                 const newRate = parseFloat(e.target.value);
                                                 if (!isNaN(newRate) && newRate !== h.dailyBillingRate) {
-                                                    updateHorizontal(h.id, { dailyBillingRate: newRate });
+                                                    updateInitialHorizontal(h.id, { dailyBillingRate: newRate });
                                                 } else if (e.target.value === '' && h.dailyBillingRate !== undefined) {
-                                                    updateHorizontal(h.id, { dailyBillingRate: undefined });
+                                                    updateInitialHorizontal(h.id, { dailyBillingRate: undefined });
                                                 }
                                             }}
                                             className="w-24"
