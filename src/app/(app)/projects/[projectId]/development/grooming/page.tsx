@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, FolderUp, Library, Tag, ChevronsRight, CornerDownRight } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User } from '@/types';
@@ -47,6 +47,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 
 
 const sprintSchema = z.object({
@@ -66,68 +67,107 @@ function StoryItemCard({
     story, 
     epic,
     assignee,
+    subItems,
     onMove, 
     onEdit
 }: { 
     story: Story, 
     epic?: Epic, 
     assignee?: User,
+    subItems?: Story[],
     onMove: (sprintId: string | null) => void,
     onEdit: () => void;
 }) {
   const { sprints } = useProject();
   const Icon = workItemIcons[story.itemType];
+  const bugEffort = subItems?.filter(i => i.itemType === 'Bug').reduce((sum, i) => sum + (i.estimatedHours || 0), 0) || 0;
+  const bugCount = subItems?.filter(i => i.itemType === 'Bug').length || 0;
+  const hasEffort = story.estimatedHours && story.estimatedHours > 0;
+  const sprint = sprints.find(s => s.id === story.sprintId);
   
   return (
-    <Card className="bg-card">
-      <CardHeader className="p-4 pb-2">
-        <div className="flex justify-between items-start">
+    <Card className="bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md relative group">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      <CardHeader className="p-4" onClick={onEdit}>
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1">
             <div className="flex items-center gap-2">
-                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+              {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+              <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+              {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
             </div>
-             <div className="flex items-center gap-1">
-                {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
-                    <Edit className="h-4 w-4" />
-                </Button>
-            </div>
-        </div>
-        <CardTitle className="text-base break-words">{story.title}</CardTitle>
-      </CardHeader>
-        <CardContent className="p-4 pt-0">
+            <p className="font-semibold break-words">{story.title}</p>
+          </div>
           {assignee && (
-            <div className="flex items-center gap-2 mt-2">
-               <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage
-                          src={assignee.avatar}
-                          alt={`${assignee.firstName} ${assignee.lastName}`}
-                          data-ai-hint="developer avatar"
-                        />
-                        <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              <span className="text-xs text-muted-foreground">{assignee.firstName} {assignee.lastName}</span>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src={assignee.avatar}
+                      alt={`${assignee.firstName} ${assignee.lastName}`}
+                      data-ai-hint="developer avatar"
+                    />
+                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
-        </CardContent>
-      <CardFooter className="flex justify-between items-center p-4 pt-0">
-        <div className="flex items-center gap-4">
-            {story.estimatedHours !== undefined && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>{story.estimatedHours}h</span>
-                </div>
-            )}
         </div>
+      </CardHeader>
+      <CardContent className="p-4 pt-0" onClick={onEdit}>
+        <div className="flex justify-between items-center text-xs text-muted-foreground">
+            <div className='flex items-center gap-2'>
+                {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                {sprint ? (
+                    <Badge variant="outline" className="border-blue-500 text-blue-500">
+                        <FolderUp className="h-3 w-3 mr-1" />
+                        {sprint.title}
+                    </Badge>
+                ) : (
+                    <Badge variant="outline" className="border-blue-500 text-blue-500">
+                        <Library className="h-3 w-3 mr-1" />
+                        Backlog
+                    </Badge>
+                )}
+                {story.status && (
+                     <Badge variant="outline">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {story.status}
+                    </Badge>
+                )}
+            </div>
+            <div className="flex items-center gap-4">
+                {story.estimatedHours !== undefined && (
+                <div className="flex items-center gap-1" title="Development effort">
+                    <CheckSquare className="h-3 w-3" />
+                    <span>{story.estimatedHours}h</span>
+                </div>
+                )}
+                {bugCount > 0 && (
+                <div className="flex items-center gap-1" title={`${bugCount} bugs, ${bugEffort}h total effort`}>
+                    <Bug className="h-3 w-3" />
+                    <span>{bugCount} ({bugEffort}h)</span>
+                </div>
+                )}
+            </div>
+        </div>
+      </CardContent>
+       <CardFooter className="flex justify-end p-4 pt-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-7">
@@ -154,6 +194,40 @@ function StoryItemCard({
   );
 }
 
+function SubItemsDisplay({ items, onCardClick, users, title }: { items: Story[], onCardClick: (story: Story) => void, users: User[], title: string }) {
+    if (items.length === 0) return null;
+
+    return (
+        <Collapsible>
+            <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-start mt-1 text-xs text-muted-foreground">
+                    <ChevronsRight className="h-4 w-4 mr-2" />
+                    {items.length} {title}
+                </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+                <div className="pl-6 pt-2 space-y-2">
+                    {items.map(subItem => {
+                        const subItemAssignee = users.find((d) => d.id === subItem.assigneeId);
+                        return (
+                            <div key={subItem.id} className="flex items-start gap-2">
+                                <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
+                                <div className="flex-1">
+                                    <StoryItemCard
+                                        story={subItem}
+                                        assignee={subItemAssignee}
+                                        onEdit={() => onCardClick(subItem)}
+                                        onMove={() => {}} // Move is handled at parent level
+                                    />
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
+    );
+}
 
 function SprintColumn({ 
   sprint, 
@@ -178,7 +252,17 @@ function SprintColumn({
   onMoveStory: (storyId: string, sprintId: string | null) => void;
   onEditStory: (story: Story) => void;
 }) {
-    const { epics, employees } = useProject();
+    const { epics, employees, stories: allStories } = useProject();
+
+     const subItemsByStoryId = useMemo(() => allStories.reduce((acc, story) => {
+        if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
+            if (!acc[story.epicId]) {
+                acc[story.epicId] = [];
+            }
+            acc[story.epicId].push(story);
+        }
+        return acc;
+      }, {} as Record<string, Story[]>), [allStories]);
 
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
@@ -212,15 +296,19 @@ function SprintColumn({
                 {stories.map(story => {
                      const epic = epics.find(e => e.id === story.epicId);
                      const assignee = employees.find(e => e.id === story.assigneeId);
+                     const subItems = subItemsByStoryId[story.id] || [];
                      return (
-                        <StoryItemCard 
-                            key={story.id} 
-                            story={story} 
-                            epic={epic}
-                            assignee={assignee}
-                            onMove={(newSprintId) => onMoveStory(story.id, newSprintId)}
-                            onEdit={() => onEditStory(story)}
-                        />
+                        <div key={story.id}>
+                            <StoryItemCard 
+                                story={story} 
+                                epic={epic}
+                                assignee={assignee}
+                                subItems={subItems}
+                                onMove={(newSprintId) => onMoveStory(story.id, newSprintId)}
+                                onEdit={() => onEditStory(story)}
+                            />
+                            <SubItemsDisplay items={subItems} onCardClick={onEditStory} users={employees} title="Related Items" />
+                        </div>
                      );
                 })}
             </div>
@@ -252,6 +340,16 @@ export default function GroomingPage() {
     const backlogItems = useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType));
     }, [stories]);
+    
+    const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
+        if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
+            if (!acc[story.epicId]) {
+                acc[story.epicId] = [];
+            }
+            acc[story.epicId].push(story);
+        }
+        return acc;
+    }, {} as Record<string, Story[]>), [stories]);
 
     const sprintsWithStories = useMemo(() => {
         return sprints.map(sprint => ({
@@ -367,15 +465,19 @@ export default function GroomingPage() {
                             {backlogItems.map(story => {
                                 const epic = epics.find(e => e.id === story.epicId);
                                 const assignee = employees.find(e => e.id === story.assigneeId);
+                                const subItems = subItemsByStoryId[story.id] || [];
                                 return (
-                                    <StoryItemCard 
-                                        key={story.id} 
-                                        story={story} 
-                                        epic={epic}
-                                        assignee={assignee}
-                                        onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
-                                        onEdit={() => setEditingStory(story)}
-                                    />
+                                    <div key={story.id}>
+                                        <StoryItemCard 
+                                            story={story} 
+                                            epic={epic}
+                                            assignee={assignee}
+                                            subItems={subItems}
+                                            onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
+                                            onEdit={() => setEditingStory(story)}
+                                        />
+                                        <SubItemsDisplay items={subItems} onCardClick={setEditingStory} users={employees} title="Related Items" />
+                                    </div>
                                 );
                             })}
                         </div>
