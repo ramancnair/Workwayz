@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
@@ -33,6 +33,7 @@ import { type Sprint, type Story } from '@/types';
 import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
 import { StoryCard } from '@/components/kanban/TaskCard'; 
+import { useWatch } from 'react-hook-form';
 
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -46,17 +47,35 @@ function SprintColumn({
   onEdit,
   onDelete,
   onSetCurrent,
+  onPrev,
+  onNext,
+  showNav,
 }: { 
   sprint: Sprint, 
   stories: Story[],
   onEdit: (sprint: Sprint) => void,
   onDelete: (sprint: Sprint) => void,
   onSetCurrent: (sprintId: string) => void,
+  onPrev: () => void,
+  onNext: () => void,
+  showNav: boolean,
 }) {
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">{sprint.title}</h3>
+              <div className="flex items-center gap-2">
+                {showNav && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev}>
+                        <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                )}
+                <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                 {showNav && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext}>
+                        <ChevronRight className="h-5 w-5" />
+                    </Button>
+                )}
+              </div>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onSetCurrent(sprint.id)}>
                   <Star className={cn("h-4 w-4", sprint.isCurrent && "fill-yellow-400 text-yellow-500")} />
@@ -202,22 +221,10 @@ export default function GroomingPage() {
                 title="Grooming Board"
                 description="Plan your sprints by organizing the backlog."
             >
-                <div className="flex items-center gap-2">
-                    {sprintsWithStories.length > 1 && (
-                        <>
-                         <Button variant="outline" size="icon" onClick={prevSprint}>
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={nextSprint}>
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                        </>
-                    )}
-                    <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Create Sprint
-                    </Button>
-                </div>
+                <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create Sprint
+                </Button>
             </PageHeader>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
                 {/* Backlog Column */}
@@ -240,6 +247,9 @@ export default function GroomingPage() {
                         onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
                         onDelete={(sprint) => setDeletingSprint(sprint)}
                         onSetCurrent={handleSetCurrentSprint}
+                        onPrev={prevSprint}
+                        onNext={nextSprint}
+                        showNav={sprintsWithStories.length > 1}
                     />
                   ) : (
                     <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
