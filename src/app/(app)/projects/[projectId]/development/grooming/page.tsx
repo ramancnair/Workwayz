@@ -1,7 +1,7 @@
 
 'use client';
 
-import * as React from 'react';
+import { useState, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -95,11 +95,11 @@ export default function GroomingPage() {
     const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
 
-    const backlogItems = React.useMemo(() => {
+    const backlogItems = useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType));
     }, [stories]);
 
-    const sprintsWithStories = React.useMemo(() => {
+    const sprintsWithStories = useMemo(() => {
         return sprints.map(sprint => ({
             ...sprint,
             stories: stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType)),
