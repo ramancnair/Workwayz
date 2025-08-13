@@ -1,7 +1,9 @@
 'use client';
 
 import { redirect } from "next/navigation";
+import { use } from "react";
 
-export default function DevelopmentPage({ params }: { params: { projectId: string } }) {
-    redirect(`/projects/${params.projectId}/development/dashboard`);
+export default function DevelopmentPage({ params }: { params: Promise<{ projectId: string }> }) {
+    const { projectId } = use(params);
+    redirect(`/projects/${projectId}/development/dashboard`);
 }
