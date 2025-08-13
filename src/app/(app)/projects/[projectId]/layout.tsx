@@ -19,6 +19,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isTestingPath = ['/testing/dashboard', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
+  const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
@@ -30,6 +31,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (isDevelopmentPath) return 'development';
     if (isTestingPath) return 'testing';
     if (isProjectPath) return 'project';
+    if (isInitialEstimationPath) return 'initial-estimation';
     if (isReleasesPath) return 'releases';
     if (isResourcesPath) return 'resources';
     if (isGovernancePath) return 'governance';
@@ -44,6 +46,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
       router.push(`${basePath}/testing/dashboard`);
     } else if (value === 'project') {
       router.push(`${basePath}/project-details/project-dashboard`);
+    } else if (value === 'initial-estimation') {
+      router.push(`${basePath}/initial-estimation`);
     } else if (value === 'releases') {
       router.push(`${basePath}/releases/project-releases`);
     } else if (value === 'resources') {
@@ -69,6 +73,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
               </div>
               <Tabs value={getTabValue()} onValueChange={onTabChange}>
                   <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
+                      <TabsTrigger value="initial-estimation" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Initial Estimation</TabsTrigger>
                       <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
                       <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                       <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>

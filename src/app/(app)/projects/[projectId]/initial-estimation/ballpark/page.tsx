@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -231,7 +232,7 @@ export default function InitialEstimationPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Initial Estimation" description="Define the project summary and impacted systems." />
+        <PageHeader title="Ballpark Estimation" description="Define the project summary and impacted systems for an initial estimate." />
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

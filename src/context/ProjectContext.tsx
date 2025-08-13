@@ -140,7 +140,7 @@ interface ProjectContextType {
   updateHoliday: (id: string, data: Partial<Omit<Holiday, 'id'>>) => Promise<boolean>;
   deleteHoliday: (id: string) => Promise<boolean>;
 
-  // Impacted System actions
+  // Impacted System Actions (live)
   addImpactedSystem: (system: Omit<ImpactedSystem, 'id'>) => Promise<boolean>;
   updateImpactedSystem: (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => Promise<boolean>;
   deleteImpactedSystem: (systemId: string) => Promise<boolean>;
@@ -153,7 +153,7 @@ interface ProjectContextType {
   updateInitialHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
   deleteInitialHorizontal: (horizontalId: string) => Promise<boolean>;
 
-  // Horizontal actions
+  // Horizontal Actions (live)
   addHorizontal: (horizontal: Omit<Horizontal, 'id'>) => Promise<boolean>;
   updateHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
   deleteHorizontal: (horizontalId: string) => Promise<boolean>;
@@ -221,8 +221,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
     '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments'],
     '/project-details/project-dashboard': ['employees', 'allUsers'],
-    '/project-details/initial-estimation': ['initialImpactedSystems', 'initialHorizontals'],
     '/project-details/environments': ['environments'],
+    '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers'],
     '/resources/resource-gantt': ['stories', 'employees'],

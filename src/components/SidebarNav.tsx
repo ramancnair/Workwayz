@@ -42,6 +42,7 @@ import {
   Server,
   ChevronsUpDown,
   Trash2,
+  DollarSign,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -109,14 +110,17 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: LayoutDashboard,
     },
     {
-      href: `${basePath}/project-details/initial-estimation`,
-      label: "Initial Estimation",
-      icon: Network,
-    },
-    {
       href: `${basePath}/project-details/environments`,
       label: "Environments",
       icon: Server,
+    },
+  ];
+
+  const initialEstimationMenuItems = [
+     {
+      href: `${basePath}/initial-estimation/ballpark`,
+      label: "Ballpark",
+      icon: DollarSign,
     },
   ];
   
@@ -202,6 +206,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const isTestingPath = ['/testing/dashboard', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
+  const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
@@ -213,6 +218,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const menuItems = isSettingsPath ? settingsMenuItems
     : isTestingPath ? testMenuItems 
     : isProjectPath ? projectMenuItems
+    : isInitialEstimationPath ? initialEstimationMenuItems
     : isReleasesPath ? releasesMenuItems
     : isResourcesPath ? resourcesMenuItems 
     : isGovernancePath ? governanceMenuItems 
