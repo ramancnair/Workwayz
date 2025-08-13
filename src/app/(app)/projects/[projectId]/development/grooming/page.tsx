@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
@@ -32,8 +32,23 @@ import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story } from '@/types';
 import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
-import { StoryCard } from '@/components/kanban/TaskCard'; 
-import { useWatch } from 'react-hook-form';
+import { StoryCard } from '@/components/kanban/TaskCard';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  Active,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { createPortal } from 'react-dom';
+
 
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -89,12 +104,27 @@ function SprintColumn({
               </div>
             </div>
             <div className="flex-1 space-y-4 overflow-y-auto">
-                {stories.map(story => (
-                    <StoryCard key={story.id} story={story} />
-                ))}
+              <SortableContext items={stories.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  {stories.map(story => (
+                      <StoryCard key={story.id} story={story} />
+                  ))}
+              </SortableContext>
             </div>
         </div>
     )
+}
+
+function DroppableColumn({ id, title, children, items }: { id: string, title: string, children: React.ReactNode, items: Story[] }) {
+  return (
+    <div id={id} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+      <h3 className="text-lg font-semibold mb-4">{title}</h3>
+      <div className="flex-1 space-y-4 overflow-y-auto">
+        <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
+          {children}
+        </SortableContext>
+      </div>
+    </div>
+  );
 }
 
 
@@ -103,6 +133,7 @@ export default function GroomingPage() {
         stories, 
         sprints,
         projectSettings,
+        moveStoryToSprint,
         addSprint,
         updateSprint,
         deleteSprint,
@@ -114,6 +145,7 @@ export default function GroomingPage() {
     const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
     const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
+    const [activeStory, setActiveStory] = useState<Story | null>(null);
 
     const backlogItems = useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType));
@@ -125,6 +157,8 @@ export default function GroomingPage() {
             stories: stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType)),
         })).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
     }, [sprints, stories]);
+    
+    const sensors = useSensors(useSensor(PointerSensor));
 
     useEffect(() => {
         const currentSprintIdx = sprintsWithStories.findIndex(s => s.isCurrent);
@@ -212,53 +246,85 @@ export default function GroomingPage() {
     const prevSprint = () => {
         setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprintsWithStories.length) % sprintsWithStories.length);
     };
-
+    
+    const handleDragStart = (event: { active: Active }) => {
+      const { active } = event;
+      const story = stories.find(s => s.id === active.id);
+      setActiveStory(story || null);
+    };
+    
+    const handleDragEnd = (event: DragEndEvent) => {
+        setActiveStory(null);
+        const { active, over } = event;
+    
+        if (over && active.id !== over.id) {
+            const storyId = active.id as string;
+            const newSprintId = over.id === 'backlog-column' ? null : over.id as string;
+            
+            const story = stories.find(s => s.id === storyId);
+            if (story && story.sprintId !== newSprintId) {
+                moveStoryToSprint(storyId, newSprintId);
+            }
+        }
+    };
 
     return (
         <>
-        <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full">
-            <PageHeader
-                title="Grooming Board"
-                description="Plan your sprints by organizing the backlog."
-            >
-                <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create Sprint
-                </Button>
-            </PageHeader>
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
-                {/* Backlog Column */}
-                <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
-                    <h3 className="text-lg font-semibold mb-4">Backlog</h3>
-                    <div className="flex-1 space-y-4 overflow-y-auto">
-                        {backlogItems.map(story => (
-                            <StoryCard key={story.id} story={story} />
-                        ))}
-                    </div>
-                </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+            <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full">
+                <PageHeader
+                    title="Grooming Board"
+                    description="Plan your sprints by organizing the backlog."
+                >
+                    <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create Sprint
+                    </Button>
+                </PageHeader>
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
+                    {/* Backlog Column */}
+                    <DroppableColumn id="backlog-column" title="Backlog" items={backlogItems}>
+                      {backlogItems.map(story => (
+                        <StoryCard key={story.id} story={story} />
+                      ))}
+                    </DroppableColumn>
 
-                {/* Sprint Column */}
-                <div className="h-full flex flex-col">
-                  {sprintsWithStories.length > 0 ? (
-                    <SprintColumn 
-                        key={sprintsWithStories[visibleSprintIndex].id} 
-                        sprint={sprintsWithStories[visibleSprintIndex]} 
-                        stories={sprintsWithStories[visibleSprintIndex].stories} 
-                        onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
-                        onDelete={(sprint) => setDeletingSprint(sprint)}
-                        onSetCurrent={handleSetCurrentSprint}
-                        onPrev={prevSprint}
-                        onNext={nextSprint}
-                        showNav={sprintsWithStories.length > 1}
-                    />
-                  ) : (
-                    <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
-                        <p className="text-muted-foreground">No sprints created yet.</p>
+                    {/* Sprint Column */}
+                    <div className="h-full flex flex-col">
+                    {sprintsWithStories.length > 0 ? (
+                        <DroppableColumn id={sprintsWithStories[visibleSprintIndex].id} title="" items={sprintsWithStories[visibleSprintIndex].stories}>
+                          <SprintColumn 
+                              key={sprintsWithStories[visibleSprintIndex].id} 
+                              sprint={sprintsWithStories[visibleSprintIndex]} 
+                              stories={sprintsWithStories[visibleSprintIndex].stories} 
+                              onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
+                              onDelete={(sprint) => setDeletingSprint(sprint)}
+                              onSetCurrent={handleSetCurrentSprint}
+                              onPrev={prevSprint}
+                              onNext={nextSprint}
+                              showNav={sprintsWithStories.length > 1}
+                          />
+                        </DroppableColumn>
+                    ) : (
+                        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
+                            <p className="text-muted-foreground">No sprints created yet.</p>
+                        </div>
+                    )}
                     </div>
-                  )}
                 </div>
             </div>
-        </div>
+            {createPortal(
+                <DragOverlay>
+                    {activeStory ? <StoryCard story={activeStory} /> : null}
+                </DragOverlay>,
+                document.body
+            )}
+        </DndContext>
 
         <Dialog open={isSprintDialogOpen} onOpenChange={(isOpen) => { if(!isOpen) setEditingSprint(null); setIsSprintDialogOpen(isOpen); }}>
             <DialogContent>

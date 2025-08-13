@@ -2,6 +2,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -112,6 +113,8 @@ export type User = {
   isDeleted?: boolean;
   deletedAt?: string; // ISO String
 };
+
+export type Employee = User;
 
 export type RiskSeverity = 1 | 2 | 3;
 export type RiskProbability = 1 | 2 | 3;
