@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -161,7 +162,7 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
                         {sprint.title}
                     </Badge>
                 ) : (
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="border-blue-500 text-blue-500">
                         <Library className="h-3 w-3 mr-1" />
                         Backlog
                     </Badge>
