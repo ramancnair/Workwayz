@@ -41,6 +41,7 @@ import {
   FileText,
   Server,
   ChevronsUpDown,
+  Trash2,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -266,6 +267,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
         <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
+          <SidebarMenuItem>
+            <Link href={`${basePath}/trash`}>
+              <SidebarMenuButton tooltip="Project Trash" isActive={pathname.startsWith(`${basePath}/trash`)}>
+                <Trash2 />
+                <span>Project Trash</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href={`${basePath}/settings`}>
               <SidebarMenuButton tooltip="Project Settings" isActive={pathname.startsWith(`${basePath}/settings`)}>

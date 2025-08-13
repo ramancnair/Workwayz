@@ -1,6 +1,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -45,6 +46,8 @@ export type Story = {
   impactedSystemId?: string;
   releaseId?: string;
   environmentId?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 };
 
 export type Sprint = {
@@ -71,6 +74,8 @@ export type TestCase = {
   releaseId?: string;
   sprintId?: string;
   environmentIds?: string[];
+  isDeleted?: boolean;
+  deletedAt?: string;
 };
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';

@@ -157,6 +157,10 @@ interface ProjectContextType {
   // Worklog actions
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
   submitWorklogForWeek: (employeeId: string, weekStartDate: string) => Promise<boolean>;
+  
+  // Trash actions
+  restoreItem: (id: string, collection: 'stories' | 'testCases') => Promise<boolean>;
+  permanentlyDeleteItem: (id: string, collection: 'stories' | 'testCases') => Promise<boolean>;
 
   isLoading: boolean;
   error: string | null;
@@ -221,6 +225,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/holidays': ['holidays', 'projectSettings'],
     '/settings/board': ['kanbanColumns'],
     '/settings/sprint': ['projectSettings'],
+    '/trash': ['stories', 'testCases'],
 };
 
 
@@ -362,7 +367,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
                     
                     const dateFields: Record<string, string[]> = {
-                        stories: ['startDate', 'endDate'],
+                        stories: ['startDate', 'endDate', 'deletedAt'],
+                        testCases: ['deletedAt'],
                         sprints: ['startDate', 'endDate'],
                         employees: ['onboardingDate', 'offloadingDate', 'employmentStartDate', 'employmentEndDate'],
                         assumptions: ['validationDate'],
@@ -475,7 +481,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         const storyId = `${prefix}-${newIdNumber}`;
 
         const { startDate, endDate, ...rest } = story;
-        const payload: any = { ...rest, storyId };
+        const payload: any = { ...rest, storyId, isDeleted: false, deletedAt: null };
         if (startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
         if (endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
 
@@ -525,30 +531,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const deleteStory = async (storyId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const storyToDelete = stories.find(s => s.id === storyId);
-      const batch = writeBatch(db);
       const storyRef = doc(db, 'projects', projectId, 'stories', storyId);
-  
-      // 1. Find all sub-items whose epicId points to the story being deleted
-      const q = query(collection(db, 'projects', projectId, 'stories'), where('epicId', '==', storyId));
-      const subItemsSnapshot = await getDocs(q);
-      subItemsSnapshot.forEach(subItemDoc => {
-        batch.update(subItemDoc.ref, { epicId: null });
-      });
-  
-      // 2. Delete the main story
-      batch.delete(storyRef);
-  
-      // 3. Commit the batch
-      await batch.commit();
-
-      if (storyToDelete && storyToDelete.itemType === 'Development Task' && storyToDelete.epicId) {
-          const remainingStories = stories.filter(s => s.id !== storyId);
-          await updateStoryEffort(storyToDelete.epicId, remainingStories);
-      }
+      await updateDoc(storyRef, { isDeleted: true, deletedAt: Timestamp.now() });
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to delete story and its references.", { id: storyId, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to soft-delete story.", { id: storyId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -800,7 +787,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             ) + 1
             : 1;
 
-        const payload = { ...testCase, testCaseId: `TC-${newIdNumber}` };
+        const payload = { ...testCase, testCaseId: `TC-${newIdNumber}`, isDeleted: false, deletedAt: null };
         await addDoc(collection(db, 'projects', projectId, 'testCases'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
@@ -823,10 +810,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const deleteTestCase = async (testCaseId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'testCases', testCaseId));
+      const testCaseRef = doc(db, 'projects', projectId, 'testCases', testCaseId);
+      await updateDoc(testCaseRef, { isDeleted: true, deletedAt: Timestamp.now() });
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to delete test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to soft-delete test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -1341,6 +1329,31 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         return false;
     }
   };
+  
+  // Trash actions
+  const restoreItem = async (id: string, collectionName: 'stories' | 'testCases'): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const itemRef = doc(db, 'projects', projectId, collectionName, id);
+      await updateDoc(itemRef, { isDeleted: false, deletedAt: null });
+      return true;
+    } catch (e) {
+      console.error(`Firebase Error: Failed to restore item from ${collectionName}.`, e);
+      return false;
+    }
+  };
+
+  const permanentlyDeleteItem = async (id: string, collectionName: 'stories' | 'testCases'): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const itemRef = doc(db, 'projects', projectId, collectionName, id);
+      await deleteDoc(itemRef);
+      return true;
+    } catch (e) {
+      console.error(`Firebase Error: Failed to permanently delete item from ${collectionName}.`, e);
+      return false;
+    }
+  };
 
 
   const value: ProjectContextType = {
@@ -1426,6 +1439,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     updateEnvironmentOrder,
     saveWorklog,
     submitWorklogForWeek,
+    restoreItem,
+    permanentlyDeleteItem,
   };
   
   if (isLoading) {
