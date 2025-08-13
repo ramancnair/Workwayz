@@ -203,6 +203,7 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
     '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments'],
+    '/development/grooming': ['stories', 'sprints', 'projectSettings'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'holidays', 'impactedSystems'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
