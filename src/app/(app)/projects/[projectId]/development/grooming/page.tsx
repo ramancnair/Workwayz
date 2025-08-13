@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,13 +26,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Star } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story } from '@/types';
 import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
-import { StoryCard } from '@/components/kanban/TaskCard'; // Re-using for consistency
+import { StoryCard } from '@/components/kanban/TaskCard'; 
 
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -54,7 +54,7 @@ function SprintColumn({
   onSetCurrent: (sprintId: string) => void,
 }) {
     return (
-        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-1/3">
+        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">{sprint.title}</h3>
               <div className="flex gap-1">
@@ -94,6 +94,7 @@ export default function GroomingPage() {
     const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false);
     const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
+    const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
 
     const backlogItems = useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType));
@@ -106,13 +107,19 @@ export default function GroomingPage() {
         })).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
     }, [sprints, stories]);
 
+    useEffect(() => {
+        const currentSprintIdx = sprintsWithStories.findIndex(s => s.isCurrent);
+        if (currentSprintIdx !== -1) {
+            setVisibleSprintIndex(currentSprintIdx);
+        } else if (sprintsWithStories.length > 0) {
+            setVisibleSprintIndex(0);
+        }
+    }, [sprintsWithStories]);
 
     const sprintForm = useForm<z.infer<typeof sprintSchema>>({
         resolver: zodResolver(sprintSchema),
         defaultValues: {
             title: '',
-            startDate: undefined,
-            endDate: undefined,
         },
     });
 
@@ -179,6 +186,14 @@ export default function GroomingPage() {
         }
     };
 
+    const nextSprint = () => {
+        setVisibleSprintIndex((prevIndex) => (prevIndex + 1) % sprintsWithStories.length);
+    };
+
+    const prevSprint = () => {
+        setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprintsWithStories.length) % sprintsWithStories.length);
+    };
+
 
     return (
         <>
@@ -187,14 +202,26 @@ export default function GroomingPage() {
                 title="Grooming Board"
                 description="Plan your sprints by organizing the backlog."
             >
-                <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create Sprint
-                </Button>
+                <div className="flex items-center gap-2">
+                    {sprintsWithStories.length > 1 && (
+                        <>
+                         <Button variant="outline" size="icon" onClick={prevSprint}>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={nextSprint}>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        </>
+                    )}
+                    <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create Sprint
+                    </Button>
+                </div>
             </PageHeader>
-            <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
                 {/* Backlog Column */}
-                <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-1/3">
+                <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
                     <h3 className="text-lg font-semibold mb-4">Backlog</h3>
                     <div className="flex-1 space-y-4 overflow-y-auto">
                         {backlogItems.map(story => (
@@ -203,17 +230,23 @@ export default function GroomingPage() {
                     </div>
                 </div>
 
-                {/* Sprint Columns */}
-                {sprintsWithStories.map(sprint => (
+                {/* Sprint Column */}
+                <div className="h-full flex flex-col">
+                  {sprintsWithStories.length > 0 ? (
                     <SprintColumn 
-                        key={sprint.id} 
-                        sprint={sprint} 
-                        stories={sprint.stories} 
-                        onEdit={() => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
-                        onDelete={() => setDeletingSprint(sprint)}
+                        key={sprintsWithStories[visibleSprintIndex].id} 
+                        sprint={sprintsWithStories[visibleSprintIndex]} 
+                        stories={sprintsWithStories[visibleSprintIndex].stories} 
+                        onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
+                        onDelete={(sprint) => setDeletingSprint(sprint)}
                         onSetCurrent={handleSetCurrentSprint}
                     />
-                ))}
+                  ) : (
+                    <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
+                        <p className="text-muted-foreground">No sprints created yet.</p>
+                    </div>
+                  )}
+                </div>
             </div>
         </div>
 
@@ -293,3 +326,4 @@ export default function GroomingPage() {
         </>
     );
 }
+
