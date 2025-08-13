@@ -110,24 +110,24 @@ function StoryItemCard({
     <Collapsible>
       <Card className="bg-card">
          <div className="p-4">
-            <div className="flex justify-between items-start">
-                <div className="flex-1 pr-2">
-                    <CollapsibleTrigger className="w-full text-left">
-                      <div className="flex items-center gap-2">
-                          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                          <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
-                          {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
-                      </div>
-                      <p className="font-semibold break-words mt-1">{story.title}</p>
-                    </CollapsibleTrigger>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                      {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                        <Edit className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
+            <CollapsibleTrigger className="w-full text-left">
+              <div className="flex justify-between items-start">
+                  <div className="flex-1 pr-2">
+                        <div className="flex items-center gap-2">
+                            {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                            <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+                            {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
+                        </div>
+                        <p className="font-semibold break-words mt-1">{story.title}</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                        {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                          <Edit className="h-4 w-4" />
+                      </Button>
+                  </div>
+              </div>
+            </CollapsibleTrigger>
           </div>
         <CardFooter className="flex justify-between items-center p-4 pt-0">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">

@@ -280,7 +280,7 @@ export default function BacklogPage() {
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
-  const parentStories = useMemo(() => stories.filter(s => s.itemType === 'Requirement/Story' || s.itemType === 'Feature Change'), [stories]);
+  const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType)), [stories]);
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
