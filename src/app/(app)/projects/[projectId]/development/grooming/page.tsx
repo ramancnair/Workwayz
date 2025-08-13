@@ -26,28 +26,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType } from '@/types';
 import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
-import { StoryCard } from '@/components/kanban/TaskCard';
+import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragOverlay,
-  Active,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { createPortal } from 'react-dom';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 const sprintSchema = z.object({
@@ -55,6 +47,57 @@ const sprintSchema = z.object({
   startDate: z.date().optional(),
   endDate: z.date().optional(),
 });
+
+const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'Requirement/Story': BookOpen,
+  Bug: Bug,
+  'Development Task': CheckSquare,
+  'Feature Change': GitCommit,
+};
+
+function StoryItemCard({ story, epic, onMove }: { story: Story, epic?: Epic, onMove: (sprintId: string | null) => void }) {
+  const { sprints } = useProject();
+  const Icon = workItemIcons[story.itemType];
+  
+  return (
+    <Card>
+      <CardHeader className="p-4 pb-2">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+          <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+        </div>
+        <CardTitle className="text-base">{story.title}</CardTitle>
+      </CardHeader>
+      <CardFooter className="flex justify-between items-center p-4 pt-2">
+        <div>
+          {epic && <Badge variant="secondary">{epic.title}</Badge>}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7">
+              Move to <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {story.sprintId !== null && (
+              <DropdownMenuItem onClick={() => onMove(null)}>
+                Backlog
+              </DropdownMenuItem>
+            )}
+            {sprints
+              .filter((sprint) => sprint.id !== story.sprintId)
+              .map((sprint) => (
+                <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
+                  {sprint.title}
+                </DropdownMenuItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardFooter>
+    </Card>
+  );
+}
+
 
 function SprintColumn({ 
   sprint, 
@@ -65,6 +108,7 @@ function SprintColumn({
   onPrev,
   onNext,
   showNav,
+  onMoveStory
 }: { 
   sprint: Sprint, 
   stories: Story[],
@@ -74,7 +118,10 @@ function SprintColumn({
   onPrev: () => void,
   onNext: () => void,
   showNav: boolean,
+  onMoveStory: (storyId: string, sprintId: string | null) => void;
 }) {
+    const { epics } = useProject();
+
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
             <div className="flex justify-between items-center mb-4">
@@ -104,33 +151,26 @@ function SprintColumn({
               </div>
             </div>
             <div className="flex-1 space-y-4 overflow-y-auto">
-              <SortableContext items={stories.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  {stories.map(story => (
-                      <StoryCard key={story.id} story={story} />
-                  ))}
-              </SortableContext>
+                {stories.map(story => {
+                     const epic = epics.find(e => e.id === story.epicId);
+                     return (
+                        <StoryItemCard 
+                            key={story.id} 
+                            story={story} 
+                            epic={epic} 
+                            onMove={(newSprintId) => onMoveStory(story.id, newSprintId)}
+                        />
+                     );
+                })}
             </div>
         </div>
     )
 }
 
-function DroppableColumn({ id, title, children, items }: { id: string, title: string, children: React.ReactNode, items: Story[] }) {
-  return (
-    <div id={id} className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
-      <h3 className="text-lg font-semibold mb-4">{title}</h3>
-      <div className="flex-1 space-y-4 overflow-y-auto">
-        <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
-          {children}
-        </SortableContext>
-      </div>
-    </div>
-  );
-}
-
-
 export default function GroomingPage() {
     const { 
         stories, 
+        epics,
         sprints,
         projectSettings,
         moveStoryToSprint,
@@ -145,7 +185,6 @@ export default function GroomingPage() {
     const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
     const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
-    const [activeStory, setActiveStory] = useState<Story | null>(null);
 
     const backlogItems = useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType));
@@ -158,8 +197,6 @@ export default function GroomingPage() {
         })).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
     }, [sprints, stories]);
     
-    const sensors = useSensors(useSensor(PointerSensor));
-
     useEffect(() => {
         const currentSprintIdx = sprintsWithStories.findIndex(s => s.isCurrent);
         if (currentSprintIdx !== -1) {
@@ -246,37 +283,9 @@ export default function GroomingPage() {
     const prevSprint = () => {
         setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprintsWithStories.length) % sprintsWithStories.length);
     };
-    
-    const handleDragStart = (event: { active: Active }) => {
-      const { active } = event;
-      const story = stories.find(s => s.id === active.id);
-      setActiveStory(story || null);
-    };
-    
-    const handleDragEnd = (event: DragEndEvent) => {
-        setActiveStory(null);
-        const { active, over } = event;
-    
-        if (over && active.id !== over.id) {
-            const storyId = active.id as string;
-            // The droppable area for a sprint is now the sprint column itself, which has the sprint ID.
-            const newSprintId = over.id === 'backlog-column' ? null : over.id as string;
-            
-            const story = stories.find(s => s.id === storyId);
-            if (story && story.sprintId !== newSprintId) {
-                moveStoryToSprint(storyId, newSprintId);
-            }
-        }
-    };
 
     return (
         <>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
             <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full">
                 <PageHeader
                     title="Grooming Board"
@@ -289,28 +298,38 @@ export default function GroomingPage() {
                 </PageHeader>
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
                     {/* Backlog Column */}
-                    <DroppableColumn id="backlog-column" title="Backlog" items={backlogItems}>
-                      {backlogItems.map(story => (
-                        <StoryCard key={story.id} story={story} />
-                      ))}
-                    </DroppableColumn>
+                    <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+                        <h3 className="text-lg font-semibold mb-4">Backlog</h3>
+                        <div className="flex-1 space-y-4 overflow-y-auto">
+                            {backlogItems.map(story => {
+                                const epic = epics.find(e => e.id === story.epicId);
+                                return (
+                                    <StoryItemCard 
+                                        key={story.id} 
+                                        story={story} 
+                                        epic={epic}
+                                        onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </div>
 
                     {/* Sprint Column */}
                     <div className="h-full flex flex-col">
                     {sprintsWithStories.length > 0 ? (
-                        <DroppableColumn id={sprintsWithStories[visibleSprintIndex].id} title="" items={sprintsWithStories[visibleSprintIndex].stories}>
-                          <SprintColumn 
-                              key={sprintsWithStories[visibleSprintIndex].id} 
-                              sprint={sprintsWithStories[visibleSprintIndex]} 
-                              stories={sprintsWithStories[visibleSprintIndex].stories} 
-                              onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
-                              onDelete={(sprint) => setDeletingSprint(sprint)}
-                              onSetCurrent={handleSetCurrentSprint}
-                              onPrev={prevSprint}
-                              onNext={nextSprint}
-                              showNav={sprintsWithStories.length > 1}
-                          />
-                        </DroppableColumn>
+                        <SprintColumn 
+                            key={sprintsWithStories[visibleSprintIndex].id} 
+                            sprint={sprintsWithStories[visibleSprintIndex]} 
+                            stories={sprintsWithStories[visibleSprintIndex].stories} 
+                            onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
+                            onDelete={(sprint) => setDeletingSprint(sprint)}
+                            onSetCurrent={handleSetCurrentSprint}
+                            onPrev={prevSprint}
+                            onNext={nextSprint}
+                            showNav={sprintsWithStories.length > 1}
+                            onMoveStory={moveStoryToSprint}
+                        />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
                             <p className="text-muted-foreground">No sprints created yet.</p>
@@ -319,13 +338,6 @@ export default function GroomingPage() {
                     </div>
                 </div>
             </div>
-            {createPortal(
-                <DragOverlay>
-                    {activeStory ? <StoryCard story={activeStory} /> : null}
-                </DragOverlay>,
-                document.body
-            )}
-        </DndContext>
 
         <Dialog open={isSprintDialogOpen} onOpenChange={(isOpen) => { if(!isOpen) setEditingSprint(null); setIsSprintDialogOpen(isOpen); }}>
             <DialogContent>
