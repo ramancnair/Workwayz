@@ -305,14 +305,14 @@ export default function BacklogPage() {
     if (!selectedStory) {
       setEditStorySubmitting(false);
     } else {
-      const isSubItem = ['Bug', 'Task'].includes(selectedStory.itemType);
+      const isBug = selectedStory.itemType === 'Bug';
       editStoryForm.reset({
         itemType: selectedStory.itemType,
         title: selectedStory.title,
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-        epicId: !isSubItem ? (selectedStory.epicId || 'unassigned') : undefined,
-        parentStoryId: isSubItem ? (selectedStory.epicId || 'unassigned') : undefined,
+        epicId: !isBug ? (selectedStory.epicId || 'unassigned') : undefined,
+        parentStoryId: isBug ? (selectedStory.epicId || 'unassigned') : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
@@ -389,15 +389,15 @@ export default function BacklogPage() {
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
     setEditStorySubmitting(true);
-    
-    const isSubItem = ['Bug', 'Task'].includes(selectedStory.itemType);
-    
+
+    const isBug = selectedStory.itemType === 'Bug';
+
     const success = await updateStory(selectedStory.id, {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: isSubItem 
+        epicId: isBug
             ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId)
             : (values.epicId === 'unassigned' ? undefined : values.epicId),
         estimatedHours: values.estimatedHours,
@@ -407,12 +407,12 @@ export default function BacklogPage() {
     });
 
     if (success) {
-      setSelectedStory(null);
+        setSelectedStory(null);
     } else {
-      toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+        toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
     setEditStorySubmitting(false);
-  };
+};
   
   const handleDeleteStory = async () => {
     if (!storyToDelete) return;
@@ -1345,6 +1345,7 @@ export default function BacklogPage() {
     
 
     
+
 
 
 
