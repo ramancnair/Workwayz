@@ -54,6 +54,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { format, parseISO } from 'date-fns';
 
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -64,7 +65,7 @@ const sprintSchema = z.object({
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
   Bug: Bug,
-  'Development Task': CheckSquare,
+  'Task': CheckSquare,
   'Feature Change': GitCommit,
 };
 
@@ -102,7 +103,7 @@ function StoryItemCard({
 }) {
   const { sprints } = useProject();
   const Icon = workItemIcons[story.itemType];
-  const devTasks = subItems?.filter(i => i.itemType === 'Development Task') || [];
+  const devTasks = subItems?.filter(i => i.itemType === 'Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
   const hasEffort = story.estimatedHours && story.estimatedHours > 0;
 
@@ -243,7 +244,7 @@ function SprintColumn({
     const { epics, employees, stories: allStories } = useProject();
 
      const subItemsByStoryId = useMemo(() => allStories.reduce((acc, story) => {
-        if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
+        if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
             if (!acc[story.epicId]) {
                 acc[story.epicId] = [];
             }
@@ -254,7 +255,7 @@ function SprintColumn({
 
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-1">
               <div className="flex items-center gap-2">
                 {showNav && (
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev}>
@@ -280,6 +281,11 @@ function SprintColumn({
                 </Button>
               </div>
             </div>
+            {(sprint.startDate && sprint.endDate) && (
+              <div className="text-xs text-muted-foreground mb-4 pl-1">
+                  {format(parseISO(sprint.startDate), 'MMM d')} - {format(parseISO(sprint.endDate), 'MMM d, yyyy')}
+              </div>
+            )}
             <div className="flex-1 space-y-4 overflow-y-auto">
                 {stories.map(story => {
                      const epic = epics.find(e => e.id === story.epicId);
@@ -329,11 +335,11 @@ export default function GroomingPage() {
     const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
 
     const backlogItems = useMemo(() => {
-        return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType));
+        return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
     }, [stories]);
     
     const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
-        if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
+        if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
             if (!acc[story.epicId]) {
                 acc[story.epicId] = [];
             }
@@ -345,7 +351,7 @@ export default function GroomingPage() {
     const sprintsWithStories = useMemo(() => {
         return sprints.map(sprint => ({
             ...sprint,
-            stories: stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType)),
+            stories: stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType)),
         })).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
     }, [sprints, stories]);
     
@@ -396,7 +402,7 @@ export default function GroomingPage() {
                 description: editingStory.description || '',
                 acceptanceCriteria: editingStory.acceptanceCriteria || '',
                 epicId: ['Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
-                parentStoryId: ['Bug', 'Development Task'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
+                parentStoryId: ['Bug', 'Task'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
                 assigneeId: editingStory.assigneeId || 'unassigned',
                 estimatedHours: editingStory.estimatedHours,
                 criticality: editingStory.criticality || 'Medium',
@@ -432,7 +438,7 @@ export default function GroomingPage() {
         if (!editingStory) return;
         setEditStorySubmitting(true);
         
-        const isSubItem = ['Bug', 'Development Task'].includes(editingStory.itemType);
+        const isSubItem = ['Bug', 'Task'].includes(editingStory.itemType);
 
         const success = await updateStory(editingStory.id, {
             title: values.title,
@@ -486,7 +492,7 @@ export default function GroomingPage() {
         if (!editingStory) return { devTasks: [], bugs: [] };
         const allSubItems = subItemsByStoryId[editingStory.id] || [];
         return {
-          devTasks: allSubItems.filter(item => item.itemType === 'Development Task'),
+          devTasks: allSubItems.filter(item => item.itemType === 'Task'),
           bugs: allSubItems.filter(item => item.itemType === 'Bug'),
         };
     }, [editingStory, subItemsByStoryId]);
@@ -661,7 +667,7 @@ export default function GroomingPage() {
                         <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
                             <TabsTrigger value="devTasks">
-                                Development Tasks
+                                Tasks
                                 <Badge variant="secondary" className="ml-2">
                                     {selectedStorySubItems.devTasks.length}
                                 </Badge>
@@ -863,7 +869,7 @@ export default function GroomingPage() {
                                     })}
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No development tasks linked.</p>
+                                    <p className="text-sm text-muted-foreground italic px-2">No tasks linked.</p>
                                 )}
                             </div>
                         </TabsContent>
@@ -904,3 +910,4 @@ export default function GroomingPage() {
         </>
     );
 }
+
