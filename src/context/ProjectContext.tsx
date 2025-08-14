@@ -345,7 +345,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             });
         }
 
-        const q = query(collection(rootProjectDocRef, name));
+        const isSoftDeletable = ['stories', 'testCases'].includes(name);
+
+        const q = isSoftDeletable
+          ? query(collection(rootProjectDocRef, name), where('isDeleted', '!=', true))
+          : query(collection(rootProjectDocRef, name));
+        
         return onSnapshot(q, 
             (querySnapshot) => {
                 if (name === 'kanbanColumns' && querySnapshot.empty) {
