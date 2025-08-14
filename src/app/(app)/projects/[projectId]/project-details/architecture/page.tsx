@@ -52,8 +52,8 @@ const environmentSchema = z.object({
   name: z.string().min(1, 'Environment name is required.'),
 });
 
-function SortableItem({ environment }: { environment: Environment }) {
-    const { updateEnvironment, deleteEnvironment } = useProject();
+function SortableItem({ environment, onDelete }: { environment: Environment, onDelete: (environment: Environment) => void }) {
+    const { updateEnvironment } = useProject();
     const { toast } = useToast();
     const {
         attributes,
@@ -98,7 +98,7 @@ function SortableItem({ environment }: { environment: Environment }) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => deleteEnvironment(environment.id)}
+              onClick={() => onDelete(environment)}
               aria-label="Delete environment"
             >
               <Trash2 className="h-4 w-4" />
@@ -185,7 +185,7 @@ export default function EnvironmentsPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Environments" description="Manage and reorder common testing environments for the project.">
+        <PageHeader title="Architecture" description="Manage and reorder common testing environments for the project.">
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Environment
@@ -201,7 +201,7 @@ export default function EnvironmentsPage() {
                 <SortableContext items={sortedEnvironments} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
                         {sortedEnvironments.map((env) => (
-                           <SortableItem key={env.id} environment={env} />
+                           <SortableItem key={env.id} environment={env} onDelete={setDeletingEnvironment} />
                         ))}
                     </div>
                 </SortableContext>
@@ -245,7 +245,7 @@ export default function EnvironmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the environment.
+              This action cannot be undone. This will permanently delete the environment "{deletingEnvironment?.name}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
