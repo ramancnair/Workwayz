@@ -523,7 +523,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         }
         return true;
     } catch (e: any) {
-        console.error("Firebase Error: Failed to add story.", {});
+        console.error("Firebase Error: Failed to add story.", e);
         return false;
     }
   };

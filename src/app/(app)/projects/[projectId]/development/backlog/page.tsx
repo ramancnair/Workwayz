@@ -386,14 +386,16 @@ export default function BacklogPage() {
     if (!selectedStory) return;
     setEditStorySubmitting(true);
     
+    const isSubItem = ['Bug', 'Task'].includes(selectedStory.itemType);
+    
     const success = await updateStory(selectedStory.id, {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: ['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) 
-            ? (values.epicId === 'unassigned' ? undefined : values.epicId) 
-            : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
+        epicId: isSubItem 
+            ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId)
+            : (values.epicId === 'unassigned' ? undefined : values.epicId),
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
@@ -1338,4 +1340,5 @@ export default function BacklogPage() {
     
 
     
+
 
