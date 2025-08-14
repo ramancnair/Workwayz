@@ -40,7 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
-import { type Story, type StoryStatus } from '@/types';
+import { type Story, type StoryStatus, type Epic } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -52,7 +52,7 @@ const taskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
   acceptanceCriteria: z.string().optional(),
-  epicId: z.string().optional(), // Represents the related story
+  epicId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
   sprintId: z.string().optional(),
@@ -72,15 +72,14 @@ const statusStyles: Record<StoryStatus, string> = {
 
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, sprints, holidays, weeklyOffDays, addStory, updateStory, deleteStory, impactedSystems } = useProject();
+  const { stories, employees, sprints, epics, holidays, weeklyOffDays, addStory, updateStory, deleteStory, impactedSystems } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Story | null>(null);
   const [deletingTask, setDeletingTask] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   
-  const tasks = stories.filter(story => story.itemType === 'Development Task');
+  const tasks = stories.filter(story => story.itemType === 'Task');
 
   const [filters, setFilters] = useState({
     status: 'all',
@@ -201,23 +200,14 @@ export default function DevelopmentTasksPage() {
     }
   }, [watchedStartDate, watchedEffortDays, form, holidays, weeklyOffDays]);
 
-  const storyOptions = useMemo(() => stories
-    .filter(s => s.itemType === 'Requirement/Story')
-    .map(story => ({
-      value: story.id,
-      label: `[${story.storyId}] ${story.title}`,
-    })), [stories]);
-
   useEffect(() => {
     if (isDialogOpen) {
       if (editingTask) {
-        const relatedStory = storyOptions.find(opt => opt.value === editingTask.epicId);
-        setRelatedStoryInputText(relatedStory?.label || '');
         form.reset({
           title: editingTask.title,
           description: editingTask.description || '',
           acceptanceCriteria: editingTask.acceptanceCriteria || '',
-          epicId: editingTask.epicId || '',
+          epicId: editingTask.epicId || 'unassigned',
           assigneeId: editingTask.assigneeId || 'unassigned',
           status: editingTask.status,
           sprintId: editingTask.sprintId || 'backlog',
@@ -227,12 +217,11 @@ export default function DevelopmentTasksPage() {
           impactedSystemId: editingTask.impactedSystemId || 'unassigned',
         });
       } else {
-        setRelatedStoryInputText('');
         form.reset({
           title: '',
           description: '',
           acceptanceCriteria: '',
-          epicId: '',
+          epicId: 'unassigned',
           assigneeId: 'unassigned',
           status: 'To Do',
           sprintId: 'backlog',
@@ -243,7 +232,7 @@ export default function DevelopmentTasksPage() {
         });
       }
     }
-  }, [isDialogOpen, editingTask, form, storyOptions]);
+  }, [isDialogOpen, editingTask, form]);
 
   const handleDialogOpen = (task: Story | null) => {
     setEditingTask(task);
@@ -266,11 +255,11 @@ export default function DevelopmentTasksPage() {
     
     const taskData: Omit<Story, 'id' | 'storyId'> = {
         title: values.title,
-        itemType: 'Development Task',
+        itemType: 'Task',
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: values.epicId === '' ? undefined : values.epicId, // Related story
+        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         effortDays: values.effortDays,
@@ -308,7 +297,7 @@ export default function DevelopmentTasksPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Development Tasks" description="Manage all development tasks for the project.">
+      <PageHeader title="Tasks" description="Manage all tasks for the project.">
         <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Task
@@ -490,40 +479,22 @@ export default function DevelopmentTasksPage() {
                       name="epicId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Related Story</FormLabel>
-                          <FormControl>
-                            <Input 
-                                list="story-options" 
-                                placeholder="Select a story..." 
-                                value={relatedStoryInputText}
-                                onChange={(e) => {
-                                    const inputText = e.target.value;
-                                    setRelatedStoryInputText(inputText);
-                                    
-                                    const matchingOption = storyOptions.find(opt => opt.label === inputText);
-                                    if (matchingOption) {
-                                        field.onChange(matchingOption.value);
-                                    } else {
-                                        field.onChange('');
-                                    }
-                                }}
-                                onBlur={() => {
-                                    // If text doesn't match a valid option, clear it
-                                    const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
-                                    if (!matchingOption) {
-                                        setRelatedStoryInputText('');
-                                        field.onChange('');
-                                    }
-                                }}
-                            />
-                          </FormControl>
-                          <datalist id="story-options">
-                            {storyOptions.map(option => (
-                              <option key={option.value} value={option.label}>
-                                {option.label}
-                              </option>
+                          <FormLabel>Epic</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select an epic" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {epics.map((epic) => (
+                                <SelectItem key={epic.id} value={epic.id}>
+                                {epic.title}
+                                </SelectItem>
                             ))}
-                          </datalist>
+                            </SelectContent>
+                        </Select>
                           <FormMessage />
                         </FormItem>
                       )}

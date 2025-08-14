@@ -42,7 +42,7 @@ export default function ResourceGanttPage() {
 
   const tasks = useMemo(() => {
     return stories.filter(story => 
-      story.itemType === 'Development Task' && 
+      story.itemType === 'Task' && 
       story.startDate && 
       story.endDate
     );
@@ -107,7 +107,7 @@ export default function ResourceGanttPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Resource Gantt Chart" description="Visualize the project timeline and resource allocation for development tasks.">
+      <PageHeader title="Resource Gantt Chart" description="Visualize the project timeline and resource allocation for tasks.">
         <div className="w-[200px]">
             <Select onValueChange={setSelectedResourceId} defaultValue="all">
                 <SelectTrigger>

@@ -216,7 +216,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments'],
     '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments'],
-    '/development/development-tasks': ['stories', 'employees', 'sprints', 'holidays', 'impactedSystems'],
+    '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
@@ -473,7 +473,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateStoryEffort = async (storyId: string, allStories: Story[]) => {
     if (!db || !projectId) return;
 
-    const devTasks = allStories.filter(s => s.itemType === 'Development Task' && s.epicId === storyId);
+    const devTasks = allStories.filter(s => s.itemType === 'Task' && s.epicId === storyId);
     const totalHours = devTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
     
     await updateDoc(doc(db, 'projects', projectId, 'stories', storyId), { estimatedHours: totalHours });
@@ -493,7 +493,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             ) + 1
             : 1;
 
-        const defaultPrefix = story.itemType === 'Development Task' ? 'TASK' : 'ST';
+        const defaultPrefix = story.itemType === 'Task' ? 'TASK' : 'ST';
         const prefix = prefixOverride || defaultPrefix;
         const storyId = `${prefix}-${newIdNumber}`;
 
@@ -503,8 +503,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         if (endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
 
 
-        // If it's a sub-item (Bug/Task) linked to a story, inherit the sprint
-        if (['Bug', 'Development Task', 'Feature Change'].includes(story.itemType) && story.epicId) {
+        // If it's a sub-item (Bug) linked to a story, inherit the sprint
+        if (['Bug'].includes(story.itemType) && story.epicId) {
             const parentStory = stories.find(s => s.id === story.epicId);
             if (parentStory && parentStory.sprintId) {
                 payload.sprintId = parentStory.sprintId;
@@ -513,7 +513,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         
         await addDoc(collection(projectDocRef, 'stories'), sanitizeForFirestore(payload));
 
-        if (story.itemType === 'Development Task' && story.epicId) {
+        if (story.itemType === 'Task' && story.epicId) {
             await updateStoryEffort(story.epicId, [...stories, { ...story, id: 'temp', storyId: 'temp' }]);
         }
         return true;
@@ -534,7 +534,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
       await updateDoc(doc(db, 'projects', projectId, 'stories', storyId), sanitizeForFirestore(payload));
 
-      if (storyToUpdate && storyToUpdate.itemType === 'Development Task' && storyToUpdate.epicId) {
+      if (storyToUpdate && storyToUpdate.itemType === 'Task' && storyToUpdate.epicId) {
          const updatedStories = stories.map(s => s.id === storyId ? {...s, ...data} : s);
          await updateStoryEffort(storyToUpdate.epicId, updatedStories);
       }

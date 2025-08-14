@@ -13,7 +13,7 @@ import { CSS } from '@dnd-kit/utilities';
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
   Bug: Bug,
-  'Development Task': CheckSquare,
+  'Task': CheckSquare,
   'Feature Change': GitCommit,
 };
 

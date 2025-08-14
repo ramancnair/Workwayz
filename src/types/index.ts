@@ -3,6 +3,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -25,7 +26,7 @@ export type Epic = {
 };
 
 export type StoryStatus = string;
-export type WorkItemType = 'Requirement/Story' | 'Bug' | 'Development Task' | 'Feature Change';
+export type WorkItemType = 'Requirement/Story' | 'Bug' | 'Task' | 'Feature Change';
 export type BugCriticality = 'Low' | 'Medium' | 'High' | 'Critical';
 
 export type Story = {
