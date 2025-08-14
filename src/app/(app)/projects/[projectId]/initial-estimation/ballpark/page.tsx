@@ -39,7 +39,7 @@ import {
   TableFooter,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, Save } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Save, CheckCircle } from 'lucide-react';
 import { type ImpactedSystem, type ImpactedSystemCategory, type Horizontal } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -77,6 +77,7 @@ export default function InitialEstimationPage() {
     addInitialHorizontal,
     updateInitialHorizontal,
     deleteInitialHorizontal,
+    confirmInitialEstimation
   } = useProject();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,6 +90,7 @@ export default function InitialEstimationPage() {
 
   const [isHorizontalFormOpen, setIsHorizontalFormOpen] = useState(false);
   const [deletingHorizontal, setDeletingHorizontal] = useState<Horizontal | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const estimationForm = useForm<z.infer<typeof estimationSchema>>({
     resolver: zodResolver(estimationSchema),
@@ -126,6 +128,17 @@ export default function InitialEstimationPage() {
       }
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
+  
+  const handleConfirmEstimation = async () => {
+    setIsConfirming(true);
+    const success = await confirmInitialEstimation();
+    if (success) {
+      toast({ title: 'Success', description: 'Initial estimation has been confirmed and copied to the project plan.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not confirm estimation.' });
+    }
+    setIsConfirming(false);
+  };
 
   const onSummarySubmit = async (values: z.infer<typeof estimationSchema>) => {
     setIsSubmitting(true);
@@ -232,7 +245,14 @@ export default function InitialEstimationPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Ballpark Estimation" description="Define the project summary and impacted systems for an initial estimate." />
+        <PageHeader title="Ballpark Estimation" description="Define the project summary and impacted systems for an initial estimate.">
+           {project?.status === 'Initial Estimation' && (
+              <Button onClick={handleConfirmEstimation} disabled={isConfirming}>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                {isConfirming ? 'Confirming...' : 'Confirm Estimation'}
+              </Button>
+            )}
+        </PageHeader>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -240,7 +260,7 @@ export default function InitialEstimationPage() {
                   <CardTitle>Project Summary</CardTitle>
                   <CardDescription>Provide a brief overview of the project's goals and scope.</CardDescription>
               </div>
-              {!isEditingSummary && (
+              {!isEditingSummary && project?.status === 'Initial Estimation' && (
                 <Button onClick={() => setIsEditingSummary(true)}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
@@ -248,7 +268,7 @@ export default function InitialEstimationPage() {
               )}
           </CardHeader>
           <CardContent>
-            {isEditingSummary ? (
+            {isEditingSummary && project?.status === 'Initial Estimation' ? (
                <Form {...estimationForm}>
                   <form onSubmit={estimationForm.handleSubmit(onSummarySubmit)} className="space-y-4">
                     <FormField
@@ -283,10 +303,12 @@ export default function InitialEstimationPage() {
               <CardTitle>Impacted Systems</CardTitle>
               <CardDescription>Manage all systems impacted by the project.</CardDescription>
             </div>
-            <Button onClick={() => handleSystemDialogOpen(null)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add System
-            </Button>
+            {project?.status === 'Initial Estimation' && (
+              <Button onClick={() => handleSystemDialogOpen(null)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add System
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             <Table>
@@ -307,12 +329,16 @@ export default function InitialEstimationPage() {
                     <TableCell>${system.dailyBillingRate || 'N/A'}</TableCell>
                     <TableCell>${((system.estimate || 0) * (system.dailyBillingRate || 0)).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleSystemDialogOpen(system)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingSystem(system)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                       {project?.status === 'Initial Estimation' && (
+                        <>
+                          <Button variant="ghost" size="icon" onClick={() => handleSystemDialogOpen(system)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingSystem(system)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -361,6 +387,7 @@ export default function InitialEstimationPage() {
                                         <Checkbox
                                             checked={h.isEnabled}
                                             onCheckedChange={(checked) => updateInitialHorizontal(h.id, { isEnabled: !!checked })}
+                                            disabled={project?.status !== 'Initial Estimation'}
                                         />
                                     </TableCell>
                                     <TableCell className="font-medium">{h.name}</TableCell>
@@ -375,6 +402,7 @@ export default function InitialEstimationPage() {
                                                 }
                                             }}
                                             className="w-24"
+                                            readOnly={project?.status !== 'Initial Estimation'}
                                         />
                                     </TableCell>
                                     <TableCell>{horizontalEffort.toFixed(2)}</TableCell>
@@ -392,20 +420,23 @@ export default function InitialEstimationPage() {
                                                 }
                                             }}
                                             className="w-24"
+                                            readOnly={project?.status !== 'Initial Estimation'}
                                         />
                                     </TableCell>
                                     <TableCell>${cost.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => setDeletingHorizontal(h)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {project?.status === 'Initial Estimation' && (
+                                            <Button variant="ghost" size="icon" onClick={() => setDeletingHorizontal(h)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             )
                         })}
                     </TableBody>
                      <TableFooter>
-                        {!isHorizontalFormOpen && (
+                        {project?.status === 'Initial Estimation' && !isHorizontalFormOpen && (
                           <TableRow>
                             <TableCell colSpan={7}>
                               <Button variant="link" onClick={() => setIsHorizontalFormOpen(true)} className="mt-4 p-0">
@@ -414,7 +445,7 @@ export default function InitialEstimationPage() {
                             </TableCell>
                           </TableRow>
                         )}
-                        {isHorizontalFormOpen && (
+                        {project?.status === 'Initial Estimation' && isHorizontalFormOpen && (
                             <TableRow>
                                 <TableCell colSpan={7}>
                                     <div className="mt-4 pt-4 border-t">

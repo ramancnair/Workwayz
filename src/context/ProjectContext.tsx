@@ -152,6 +152,7 @@ interface ProjectContextType {
   addInitialHorizontal: (horizontal: Omit<Horizontal, 'id'>) => Promise<boolean>;
   updateInitialHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
   deleteInitialHorizontal: (horizontalId: string) => Promise<boolean>;
+  confirmInitialEstimation: () => Promise<boolean>;
 
   // Horizontal Actions (live)
   addHorizontal: (horizontal: Omit<Horizontal, 'id'>) => Promise<boolean>;
@@ -377,21 +378,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     return;
                 }
                 
-                 if (name === 'impactedSystems' && querySnapshot.empty) {
-                    const checkAndCopySystems = async () => {
-                        const initialSystemsSnapshot = await getDocs(collection(rootProjectDocRef, 'initialImpactedSystems'));
-                        if (!initialSystemsSnapshot.empty) {
-                            const batch = writeBatch(db);
-                            initialSystemsSnapshot.docs.forEach(initialDoc => {
-                                const newDocRef = doc(collection(rootProjectDocRef, 'impactedSystems'));
-                                batch.set(newDocRef, initialDoc.data());
-                            });
-                            await batch.commit();
-                        }
-                    };
-                    checkAndCopySystems();
-                    return;
-                }
 
                 const data = querySnapshot.docs.map(doc => {
                     const docData = doc.data();
@@ -1239,6 +1225,41 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
   
+  const confirmInitialEstimation = async (): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const batch = writeBatch(db);
+      const projectDocRef = doc(db, 'projects', projectId);
+
+      // 1. Copy Impacted Systems
+      const initialSystemsSnapshot = await getDocs(collection(projectDocRef, 'initialImpactedSystems'));
+      if (!initialSystemsSnapshot.empty) {
+        initialSystemsSnapshot.docs.forEach(initialDoc => {
+          const newDocRef = doc(collection(projectDocRef, 'impactedSystems'));
+          batch.set(newDocRef, initialDoc.data());
+        });
+      }
+
+      // 2. Copy Horizontals
+      const initialHorizontalsSnapshot = await getDocs(collection(projectDocRef, 'initialHorizontals'));
+      if (!initialHorizontalsSnapshot.empty) {
+        initialHorizontalsSnapshot.docs.forEach(initialDoc => {
+          const newDocRef = doc(collection(projectDocRef, 'horizontals'));
+          batch.set(newDocRef, initialDoc.data());
+        });
+      }
+      
+      // 3. Update project status
+      batch.update(projectDocRef, { status: 'Not Started' });
+
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to confirm initial estimation.", e);
+      return false;
+    }
+  };
+
   // Horizontal Actions (live)
   const addHorizontal = async (horizontal: Omit<Horizontal, 'id'>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1496,6 +1517,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addInitialHorizontal,
     updateInitialHorizontal,
     deleteInitialHorizontal,
+    confirmInitialEstimation,
     addEnvironment,
     updateEnvironment,
     deleteEnvironment,
