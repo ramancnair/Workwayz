@@ -111,7 +111,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
     {
       href: `${basePath}/project-details/environments`,
-      label: "Environments",
+      label: "Architecture",
       icon: Server,
     },
   ];
