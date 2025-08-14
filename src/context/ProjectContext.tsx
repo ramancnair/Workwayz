@@ -523,7 +523,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         }
         return true;
     } catch (e: any) {
-        console.error("Firebase Error: Failed to add story.", { code: e.code, message: e.message });
+        console.error("Firebase Error: Failed to add story.", {});
         return false;
     }
   };
@@ -545,7 +545,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       }
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to update story.", { id: storyId, code: e.code, message: e.message, fullError: e });
+      console.error("Firebase Error: Failed to update story.", {});
       return false;
     }
   };
