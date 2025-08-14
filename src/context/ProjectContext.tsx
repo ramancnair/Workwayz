@@ -448,7 +448,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     });
     
     // Always fetch allUsers regardless of the page
-    const unsubAllUsers = onSnapshot(collection(db, 'employees'), (snapshot) => {
+    const unsubAllUsers = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot) => {
         const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
         setAllUsers(usersData);
     });
@@ -523,7 +523,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         }
         return true;
     } catch (e: any) {
-        console.error("Firebase Error: Failed to add story.", { code: e.code, message: e.message, fullError: e });
+        console.error("Firebase Error: Failed to add story.", { code: e.code, message: e.message });
         return false;
     }
   };
