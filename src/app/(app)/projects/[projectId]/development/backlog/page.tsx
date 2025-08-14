@@ -73,11 +73,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
   Bug: Bug,
-  'Development Task': CheckSquare,
+  'Task': CheckSquare,
   'Feature Change': GitCommit,
 };
 
-const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Bug', 'Development Task', 'Feature Change'];
+const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 
 const epicFormSchema = z.object({
@@ -311,7 +311,7 @@ export default function BacklogPage() {
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
         epicId: ['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
-        parentStoryId: ['Bug', 'Development Task'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
+        parentStoryId: ['Bug', 'Task'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
@@ -364,7 +364,7 @@ export default function BacklogPage() {
       itemType: values.itemType,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: ['Requirement/Story', 'Feature Change'].includes(values.itemType) 
+      epicId: ['Requirement/Story', 'Feature Change', 'Task'].includes(values.itemType) 
         ? (values.epicId === 'unassigned' ? undefined : values.epicId)
         : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
       status: 'To Do',
@@ -391,7 +391,7 @@ export default function BacklogPage() {
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: ['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) 
+        epicId: ['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) 
             ? (values.epicId === 'unassigned' ? undefined : values.epicId) 
             : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
         estimatedHours: values.estimatedHours,
@@ -426,11 +426,11 @@ export default function BacklogPage() {
   };
 
   const allWorkItems = stories.filter(
-    (story) => ['Requirement/Story', 'Development Task', 'Feature Change'].includes(story.itemType)
+    (story) => ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType)
   );
 
   const subItemsByParentId = stories.reduce((acc, story) => {
-      if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
+      if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
           if (!acc[story.epicId]) {
               acc[story.epicId] = [];
           }
@@ -440,7 +440,7 @@ export default function BacklogPage() {
   }, {} as Record<string, Story[]>);
 
   const backlogItemsByEpic = allWorkItems.reduce((acc, story) => {
-    if (story.itemType === 'Development Task' && story.epicId && allWorkItems.some(s => s.id === story.epicId)) {
+    if (story.itemType === 'Task' && story.epicId && allWorkItems.some(s => s.id === story.epicId)) {
         return acc;
     }
 
@@ -481,7 +481,7 @@ export default function BacklogPage() {
     if (!selectedStory) return { devTasks: [], bugs: [] };
     const allSubItems = subItemsByParentId[selectedStory.id] || [];
     return {
-      devTasks: allSubItems.filter(item => item.itemType === 'Development Task'),
+      devTasks: allSubItems.filter(item => item.itemType === 'Task'),
       bugs: allSubItems.filter(item => item.itemType === 'Bug'),
     };
   }, [selectedStory, subItemsByParentId]);
@@ -642,7 +642,7 @@ export default function BacklogPage() {
                                     )}
                                 />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {['Requirement/Story', 'Feature Change'].includes(watchedItemType) ? (
+                                {['Requirement/Story', 'Feature Change', 'Task'].includes(watchedItemType) ? (
                                     <FormField
                                         control={addStoryForm.control}
                                         name="epicId"
@@ -1028,7 +1028,7 @@ export default function BacklogPage() {
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) ? (
+                        {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? (
                             <FormField
                             control={editStoryForm.control}
                             name="epicId"
@@ -1200,7 +1200,7 @@ export default function BacklogPage() {
                     <TabsContent value="related">
                        <div className="space-y-4 pt-4">
                             <div>
-                                <h4 className="text-sm font-medium mb-2">Development Tasks</h4>
+                                <h4 className="text-sm font-medium mb-2">Tasks</h4>
                                 {selectedStorySubItems.devTasks.length > 0 ? (
                                     <div className="space-y-2 rounded-md border p-2">
                                     {selectedStorySubItems.devTasks.map(item => {
@@ -1217,7 +1217,7 @@ export default function BacklogPage() {
                                     })}
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No development tasks linked.</p>
+                                    <p className="text-sm text-muted-foreground italic px-2">No tasks linked.</p>
                                 )}
                             </div>
                             <div>
@@ -1338,3 +1338,4 @@ export default function BacklogPage() {
     
 
     
+
