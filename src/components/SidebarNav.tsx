@@ -110,7 +110,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: LayoutDashboard,
     },
     {
-      href: `${basePath}/project-details/environments`,
+      href: `${basePath}/project-details/architecture`,
       label: "Architecture",
       icon: Server,
     },
