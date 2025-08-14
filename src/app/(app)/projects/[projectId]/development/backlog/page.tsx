@@ -305,13 +305,14 @@ export default function BacklogPage() {
     if (!selectedStory) {
       setEditStorySubmitting(false);
     } else {
+      const isSubItem = ['Bug', 'Task'].includes(selectedStory.itemType);
       editStoryForm.reset({
         itemType: selectedStory.itemType,
         title: selectedStory.title,
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-        epicId: ['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
-        parentStoryId: ['Bug', 'Task'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
+        epicId: !isSubItem ? (selectedStory.epicId || 'unassigned') : undefined,
+        parentStoryId: isSubItem ? (selectedStory.epicId || 'unassigned') : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
@@ -357,6 +358,8 @@ export default function BacklogPage() {
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setAddStorySubmitting(true);
     
+    const isSubItem = ['Bug', 'Task'].includes(values.itemType);
+
     const newStory: Omit<Story, 'id' | 'storyId'> = {
       sprintId: null,
       title: values.title,
@@ -364,15 +367,16 @@ export default function BacklogPage() {
       itemType: values.itemType,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: ['Requirement/Story', 'Feature Change', 'Task'].includes(values.itemType) 
-        ? (values.epicId === 'unassigned' ? undefined : values.epicId)
-        : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
+      epicId: isSubItem
+        ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId)
+        : (values.epicId === 'unassigned' ? undefined : values.epicId),
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       criticality: values.itemType === 'Bug' ? values.criticality : undefined,
       releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
       environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
     };
+
     const success = await addStory(newStory);
     if (success) {
       setAddRequirementOpen(false);
@@ -401,6 +405,7 @@ export default function BacklogPage() {
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
     });
+
     if (success) {
       setSelectedStory(null);
     } else {
@@ -1340,5 +1345,6 @@ export default function BacklogPage() {
     
 
     
+
 
 
