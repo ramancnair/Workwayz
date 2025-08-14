@@ -221,7 +221,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
     '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments'],
     '/project-details/project-dashboard': ['employees', 'allUsers'],
-    '/project-details/architecture': ['environments'],
+    '/project-details/architecture': ['environments', 'impactedSystems'],
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers'],
@@ -374,6 +374,22 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         batch.set(docRef, h);
                     });
                     batch.commit().catch(e => console.error("Failed to set default environments", e));
+                    return;
+                }
+                
+                 if (name === 'impactedSystems' && querySnapshot.empty) {
+                    const checkAndCopySystems = async () => {
+                        const initialSystemsSnapshot = await getDocs(collection(rootProjectDocRef, 'initialImpactedSystems'));
+                        if (!initialSystemsSnapshot.empty) {
+                            const batch = writeBatch(db);
+                            initialSystemsSnapshot.docs.forEach(initialDoc => {
+                                const newDocRef = doc(collection(rootProjectDocRef, 'impactedSystems'));
+                                batch.set(newDocRef, initialDoc.data());
+                            });
+                            await batch.commit();
+                        }
+                    };
+                    checkAndCopySystems();
                     return;
                 }
 

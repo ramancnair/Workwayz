@@ -28,8 +28,8 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2, GripVertical } from 'lucide-react';
-import { type Environment } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
+import { type Environment, type ImpactedSystem, type ImpactedSystemCategory } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -47,10 +47,21 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const environmentSchema = z.object({
   name: z.string().min(1, 'Environment name is required.'),
 });
+
+const systemSchema = z.object({
+  name: z.string().min(1, 'System name is required.'),
+  description: z.string().min(1, 'Description is required.'),
+  category: z.enum(['Technology', 'Function']),
+});
+
+const systemCategories: ImpactedSystemCategory[] = ['Technology', 'Function'];
 
 function SortableItem({ environment, onDelete }: { environment: Environment, onDelete: (environment: Environment) => void }) {
     const { updateEnvironment } = useProject();
@@ -109,18 +120,40 @@ function SortableItem({ environment, onDelete }: { environment: Environment, onD
 
 
 export default function EnvironmentsPage() {
-  const { environments, addEnvironment, deleteEnvironment, updateEnvironmentOrder } = useProject();
+  const { 
+    environments, 
+    addEnvironment, 
+    deleteEnvironment, 
+    updateEnvironmentOrder,
+    impactedSystems,
+    addImpactedSystem,
+    updateImpactedSystem,
+    deleteImpactedSystem,
+  } = useProject();
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
-  const [deletingEnvironment, setDeletingEnvironment] = useState<Environment | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Environment State
+  const [isEnvDialogOpen, setIsEnvDialogOpen] = useState(false);
+  const [editingEnv, setEditingEnv] = useState<Environment | null>(null);
+  const [deletingEnv, setDeletingEnv] = useState<Environment | null>(null);
+  const [isEnvSubmitting, setIsEnvSubmitting] = useState(false);
   
   const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
-  const form = useForm<z.infer<typeof environmentSchema>>({
+  // System State
+  const [isSystemDialogOpen, setIsSystemDialogOpen] = useState(false);
+  const [editingSystem, setEditingSystem] = useState<ImpactedSystem | null>(null);
+  const [deletingSystem, setDeletingSystem] = useState<ImpactedSystem | null>(null);
+  const [isSystemSubmitting, setIsSystemSubmitting] = useState(false);
+
+  const envForm = useForm<z.infer<typeof environmentSchema>>({
     resolver: zodResolver(environmentSchema),
     defaultValues: { name: '' },
+  });
+  
+  const systemForm = useForm<z.infer<typeof systemSchema>>({
+    resolver: zodResolver(systemSchema),
+    defaultValues: { name: '', description: '', category: 'Technology' },
   });
   
   const sensors = useSensors(
@@ -128,45 +161,87 @@ export default function EnvironmentsPage() {
   );
 
   useEffect(() => {
-    if (isDialogOpen) {
-      if (editingEnvironment) {
-        form.reset({ name: editingEnvironment.name });
+    if (isEnvDialogOpen) {
+      if (editingEnv) {
+        envForm.reset({ name: editingEnv.name });
       } else {
-        form.reset({ name: '' });
+        envForm.reset({ name: '' });
       }
     }
-  }, [isDialogOpen, editingEnvironment, form]);
+  }, [isEnvDialogOpen, editingEnv, envForm]);
+  
+  useEffect(() => {
+    if (isSystemDialogOpen) {
+      if (editingSystem) {
+        systemForm.reset(editingSystem);
+      } else {
+        systemForm.reset({ name: '', description: '', category: 'Technology' });
+      }
+    }
+  }, [isSystemDialogOpen, editingSystem, systemForm]);
 
-  const handleDialogOpen = (environment: Environment | null) => {
-    setEditingEnvironment(environment);
-    setIsDialogOpen(true);
+  const handleEnvDialogOpen = (environment: Environment | null) => {
+    setEditingEnv(environment);
+    setIsEnvDialogOpen(true);
+  };
+  
+  const handleSystemDialogOpen = (system: ImpactedSystem | null) => {
+    setEditingSystem(system);
+    setIsSystemDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deletingEnvironment) return;
-    const success = await deleteEnvironment(deletingEnvironment.id);
+  const handleEnvDeleteConfirm = async () => {
+    if (!deletingEnv) return;
+    const success = await deleteEnvironment(deletingEnv.id);
     if (success) {
       toast({ title: "Success", description: "Environment deleted." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not delete environment." });
     }
-    setDeletingEnvironment(null);
+    setDeletingEnv(null);
+  };
+  
+  const handleSystemDeleteConfirm = async () => {
+    if (!deletingSystem) return;
+    const success = await deleteImpactedSystem(deletingSystem.id);
+    if (success) {
+      toast({ title: "Success", description: "Impacted system deleted." });
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete impacted system." });
+    }
+    setDeletingSystem(null);
   };
 
-  const onSubmit = async (values: z.infer<typeof environmentSchema>) => {
-    setIsSubmitting(true);
-    const success = editingEnvironment
-      ? await updateEnvironment(editingEnvironment.id, values)
+  const onEnvSubmit = async (values: z.infer<typeof environmentSchema>) => {
+    setIsEnvSubmitting(true);
+    const success = editingEnv
+      ? await updateEnvironment(editingEnv.id, values)
       : await addEnvironment(values);
 
     if (success) {
-      toast({ title: "Success", description: `Environment ${editingEnvironment ? 'updated' : 'added'} successfully.` });
-      setIsDialogOpen(false);
-      setEditingEnvironment(null);
+      toast({ title: "Success", description: `Environment ${editingEnv ? 'updated' : 'added'} successfully.` });
+      setIsEnvDialogOpen(false);
+      setEditingEnv(null);
     } else {
-      toast({ variant: "destructive", title: "Error", description: `Could not ${editingEnvironment ? 'update' : 'add'} environment.` });
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingEnv ? 'update' : 'add'} environment.` });
     }
-    setIsSubmitting(false);
+    setIsEnvSubmitting(false);
+  };
+  
+  const onSystemSubmit = async (values: z.infer<typeof systemSchema>) => {
+    setIsSystemSubmitting(true);
+    const success = editingSystem
+      ? await updateImpactedSystem(editingSystem.id, values)
+      : await addImpactedSystem(values);
+
+    if (success) {
+      toast({ title: "Success", description: `System ${editingSystem ? 'updated' : 'added'} successfully.` });
+      setIsSystemDialogOpen(false);
+      setEditingSystem(null);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingSystem ? 'update' : 'add'} system.` });
+    }
+    setIsSystemSubmitting(false);
   };
   
   function handleDragEnd(event: DragEndEvent) {
@@ -184,14 +259,62 @@ export default function EnvironmentsPage() {
 
   return (
     <>
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Architecture" description="Manage and reorder common testing environments for the project.">
-          <Button onClick={() => handleDialogOpen(null)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Environment
-          </Button>
-        </PageHeader>
+      <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+        <PageHeader title="Architecture" description="Manage impacted systems and testing environments for the project." />
+        
         <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Impacted Systems</CardTitle>
+              <CardDescription>A list of systems that will be affected by this project.</CardDescription>
+            </div>
+             <Button onClick={() => handleSystemDialogOpen(null)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add System
+            </Button>
+          </CardHeader>
+          <CardContent>
+             <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[30%]">Name</TableHead>
+                  <TableHead className="w-[50%]">Description</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {impactedSystems.map((system) => (
+                  <TableRow key={system.id}>
+                    <TableCell className="font-medium">{system.name}</TableCell>
+                    <TableCell>{system.description}</TableCell>
+                    <TableCell>{system.category}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleSystemDialogOpen(system)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeletingSystem(system)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+                <CardTitle>Environments</CardTitle>
+                <CardDescription>Manage and reorder testing environments for the project.</CardDescription>
+            </div>
+             <Button onClick={() => handleEnvDialogOpen(null)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Environment
+            </Button>
+          </CardHeader>
           <CardContent className="p-4">
              <DndContext
                 sensors={sensors}
@@ -201,7 +324,7 @@ export default function EnvironmentsPage() {
                 <SortableContext items={sortedEnvironments} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
                         {sortedEnvironments.map((env) => (
-                           <SortableItem key={env.id} environment={env} onDelete={setDeletingEnvironment} />
+                           <SortableItem key={env.id} environment={env} onDelete={setDeletingEnv} />
                         ))}
                     </div>
                 </SortableContext>
@@ -210,15 +333,15 @@ export default function EnvironmentsPage() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingEnvironment(null); }}>
+      <Dialog open={isEnvDialogOpen} onOpenChange={(open) => { setIsEnvDialogOpen(open); if (!open) setEditingEnv(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingEnvironment ? 'Edit Environment' : 'Add New Environment'}</DialogTitle>
+            <DialogTitle>{editingEnv ? 'Edit Environment' : 'Add New Environment'}</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Form {...envForm}>
+            <form onSubmit={envForm.handleSubmit(onEnvSubmit)} className="space-y-4">
               <FormField
-                control={form.control}
+                control={envForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -231,8 +354,8 @@ export default function EnvironmentsPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (editingEnvironment ? 'Saving...' : 'Creating...') : (editingEnvironment ? 'Save Changes' : 'Add Environment')}
+                <Button type="submit" disabled={isEnvSubmitting}>
+                  {isEnvSubmitting ? (editingEnv ? 'Saving...' : 'Creating...') : (editingEnv ? 'Save Changes' : 'Add Environment')}
                 </Button>
               </DialogFooter>
             </form>
@@ -240,18 +363,93 @@ export default function EnvironmentsPage() {
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={!!deletingEnvironment} onOpenChange={(isOpen) => !isOpen && setDeletingEnvironment(null)}>
+       <Dialog open={isSystemDialogOpen} onOpenChange={(open) => { setIsSystemDialogOpen(open); if (!open) setEditingSystem(null); }}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{editingSystem ? 'Edit System' : 'Add New System'}</DialogTitle>
+          </DialogHeader>
+          <Form {...systemForm}>
+            <form onSubmit={systemForm.handleSubmit(onSystemSubmit)} className="space-y-4">
+              <FormField
+                control={systemForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>System Name</FormLabel>
+                    <FormControl><Input placeholder="E.g., User Authentication API" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={systemForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl><Textarea placeholder="Describe the system and its impact..." {...field} rows={4} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                  control={systemForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {systemCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              <DialogFooter>
+                <Button type="submit" disabled={isSystemSubmitting}>
+                  {isSystemSubmitting ? (editingSystem ? 'Saving...' : 'Creating...') : (editingSystem ? 'Save Changes' : 'Create System')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={!!deletingEnv} onOpenChange={(isOpen) => !isOpen && setDeletingEnv(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the environment "{deletingEnvironment?.name}".
+              This action cannot be undone. This will permanently delete the environment "{deletingEnv?.name}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDeleteConfirm}
+              onClick={handleEnvDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={!!deletingSystem} onOpenChange={(isOpen) => !isOpen && setDeletingSystem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the system "{deletingSystem?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleSystemDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
