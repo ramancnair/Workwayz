@@ -39,16 +39,16 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
-import { type User, type UserRole, type Story } from '@/types';
+import { type User, type UserRole, type Story, type ImpactedSystem } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { buttonVariants } from '@/components/ui/button';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, subWeeks, addYears, subYears } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 const resourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
@@ -58,9 +58,283 @@ const resourceSchema = z.object({
   offloadingDate: z.string().optional(),
   clientEmpId: z.string().optional(),
   clientEmail: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
+  capabilities: z.array(z.string()).optional(),
 });
 
 const roles: UserRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM', 'Program Director'];
+
+function ResourceDialog({
+  isOpen,
+  setIsOpen,
+  editingUser,
+  setEditingUser,
+  allUsers,
+  projectUsers,
+  project,
+  impactedSystems,
+}: {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  editingUser: User | null;
+  setEditingUser: (user: User | null) => void;
+  allUsers: User[];
+  projectUsers: User[];
+  project: Project | null;
+  impactedSystems: ImpactedSystem[];
+}) {
+  const { addUserToProject, updateProjectUser } = useProject();
+  const { toast } = useToast();
+  const [userInputText, setUserInputText] = useState('');
+
+  const form = useForm<z.infer<typeof resourceSchema>>({
+    resolver: zodResolver(resourceSchema),
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editingUser) {
+        form.reset({
+          employeeId: editingUser.id,
+          role: editingUser.role,
+          availability: editingUser.availability,
+          onboardingDate: editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : '',
+          offloadingDate: editingUser.offloadingDate ? format(new Date(editingUser.offloadingDate), 'yyyy-MM-dd') : '',
+          clientEmpId: editingUser.clientEmpId || '',
+          clientEmail: editingUser.clientEmail || '',
+          capabilities: editingUser.capabilities || [],
+        });
+      } else {
+        form.reset({
+          employeeId: '',
+          role: undefined,
+          availability: 100,
+          onboardingDate: format(new Date(), 'yyyy-MM-dd'),
+          offloadingDate: project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
+          clientEmpId: '',
+          clientEmail: '',
+          capabilities: [],
+        });
+        setUserInputText('');
+      }
+    }
+  }, [isOpen, editingUser, form, project]);
+
+  const handleFormSubmit = async (values: z.infer<typeof resourceSchema>) => {
+    if (editingUser) {
+      const success = await updateProjectUser(editingUser.id, {
+        role: values.role as UserRole,
+        availability: values.availability,
+        onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
+        offloadingDate: values.offloadingDate ? new Date(values.offloadingDate).toISOString() : undefined,
+        clientEmpId: values.clientEmpId,
+        clientEmail: values.clientEmail,
+        capabilities: values.capabilities,
+      });
+
+      if (success) {
+        toast({ title: "Success", description: `${editingUser.firstName}'s details updated.` });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: `Could not update user.` });
+      }
+    } else {
+      const userToAdd = allUsers.find(emp => emp.id === values.employeeId);
+      if (!userToAdd) {
+          toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
+          return;
+      }
+      
+      const projectUserData: User = {
+        ...userToAdd,
+        role: values.role as UserRole,
+        availability: values.availability,
+        onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
+        offloadingDate: values.offloadingDate ? new Date(values.offloadingDate).toISOString() : undefined,
+        clientEmpId: values.clientEmpId,
+        clientEmail: values.clientEmail,
+        capabilities: values.capabilities,
+      };
+      
+      const success = await addUserToProject(projectUserData);
+
+      if (success) {
+        toast({ title: "Success", description: `${userToAdd.firstName} added to the project.` });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: `Could not add user to project. They may already be on the team.` });
+      }
+    }
+    
+    setIsOpen(false);
+    setEditingUser(null);
+  };
+  
+  const availableUsers = allUsers.filter(emp => !emp.isDeleted && !projectUsers.some(pe => pe.id === emp.id));
+  const availableUserOptions = availableUsers.map(emp => ({
+      value: emp.id,
+      label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
+  }));
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if(!open) setEditingUser(null); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editingUser ? 'Edit Resource' : 'Add User to Project'}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="employeeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>User</FormLabel>
+                   <FormControl>
+                     <Input 
+                        list="user-options"
+                        placeholder="Search for a user..."
+                        value={editingUser ? `${editingUser.firstName} ${editingUser.lastName}` : userInputText}
+                        readOnly={!!editingUser}
+                        onChange={(e) => {
+                            if (editingUser) return;
+                            const inputText = e.target.value;
+                            setUserInputText(inputText);
+
+                            const matchingOption = availableUserOptions.find(opt => opt.label === inputText);
+                            field.onChange(matchingOption ? matchingOption.value : '');
+                        }}
+                        onBlur={(e) => {
+                            if (editingUser) return;
+                            const matchingOption = availableUserOptions.find(opt => opt.label === e.target.value);
+                            if(!matchingOption) {
+                                setUserInputText('');
+                                field.onChange('');
+                            }
+                        }}
+                     />
+                    </FormControl>
+                    <datalist id="user-options">
+                        {availableUserOptions.map(emp => (
+                            <option key={emp.value} value={emp.label} />
+                        ))}
+                    </datalist>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField control={form.control} name="role" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+               <FormField control={form.control} name="availability" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Availability (%)</FormLabel>
+                  <FormControl><Input type="number" placeholder="100" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="capabilities"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Capabilities</FormLabel>
+                  <div className="grid grid-cols-2 gap-2 p-2 border rounded-md max-h-40 overflow-y-auto">
+                    {impactedSystems.map((system) => (
+                      <FormField
+                        key={system.id}
+                        control={form.control}
+                        name="capabilities"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={system.id}
+                              className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(system.id)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...(field.value || []), system.id])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== system.id
+                                          )
+                                        )
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {system.name}
+                              </FormLabel>
+                            </FormItem>
+                          )
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <FormField control={form.control} name="onboardingDate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Onboarding Date</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+               <FormField control={form.control} name="offloadingDate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Offloading Date</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField control={form.control} name="clientEmpId" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client ID</FormLabel>
+                  <FormControl><Input placeholder="Client Employee ID" {...field} value={field.value || ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="clientEmail" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client Email</FormLabel>
+                  <FormControl><Input type="email" placeholder="client.email@example.com" {...field} value={field.value || ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+
+            <DialogFooter>
+              <Button type="submit">
+                {editingUser ? 'Save Changes' : 'Add to Project'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 function CapacityPlanning() {
   const { sprints, impactedSystems, stories, employees, holidays, weeklyOffDays } = useProject();
@@ -245,229 +519,27 @@ export default function ResourcesPage() {
     project,
     employees: projectUsers, 
     allUsers,
-    addEmployee: addUserToProject, 
-    updateEmployee: updateProjectUser,
+    impactedSystems,
     deleteEmployee: removeUserFromProject 
   } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [userInputText, setUserInputText] = useState('');
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
-
-  const form = useForm<z.infer<typeof resourceSchema>>({
-    resolver: zodResolver(resourceSchema),
-  });
-  
-  useEffect(() => {
-    if(isDialogOpen) {
-      if (editingUser) {
-        form.reset({
-          employeeId: editingUser.id,
-          role: editingUser.role,
-          availability: editingUser.availability,
-          onboardingDate: editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : '',
-          offloadingDate: editingUser.offloadingDate ? format(new Date(editingUser.offloadingDate), 'yyyy-MM-dd') : '',
-          clientEmpId: editingUser.clientEmpId || '',
-          clientEmail: editingUser.clientEmail || '',
-        });
-      } else {
-        form.reset({
-          employeeId: '',
-          role: undefined,
-          availability: 100,
-          onboardingDate: format(new Date(), 'yyyy-MM-dd'),
-          offloadingDate: project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
-          clientEmpId: '',
-          clientEmail: '',
-        });
-        setUserInputText('');
-      }
-    }
-  }, [isDialogOpen, editingUser, form, project]);
-
-  const handleFormSubmit = async (values: z.infer<typeof resourceSchema>) => {
-    if (editingUser) {
-      // Update existing user
-      const success = await updateProjectUser(editingUser.id, {
-        role: values.role as UserRole,
-        availability: values.availability,
-        onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
-        offloadingDate: values.offloadingDate ? new Date(values.offloadingDate).toISOString() : undefined,
-        clientEmpId: values.clientEmpId,
-        clientEmail: values.clientEmail,
-      });
-
-      if (success) {
-        toast({ title: "Success", description: `${editingUser.firstName}'s details updated.` });
-      } else {
-        toast({ variant: "destructive", title: "Error", description: `Could not update user.` });
-      }
-    } else {
-      // Add new user
-      const userToAdd = allUsers.find(emp => emp.id === values.employeeId);
-      if (!userToAdd) {
-          toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
-          return;
-      }
-      
-      const projectUserData: User = {
-        ...userToAdd,
-        role: values.role as UserRole,
-        availability: values.availability,
-        onboardingDate: values.onboardingDate ? new Date(values.onboardingDate).toISOString() : undefined,
-        offloadingDate: values.offloadingDate ? new Date(values.offloadingDate).toISOString() : undefined,
-        clientEmpId: values.clientEmpId,
-        clientEmail: values.clientEmail,
-      };
-      
-      const success = await addUserToProject(projectUserData);
-
-      if (success) {
-        toast({ title: "Success", description: `${userToAdd.firstName} added to the project.` });
-      } else {
-        toast({ variant: "destructive", title: "Error", description: `Could not add user to project. They may already be on the team.` });
-      }
-    }
-    
-    setIsDialogOpen(false);
-    setEditingUser(null);
-  };
   
   const handleOpenDialog = (user: User | null) => {
     setEditingUser(user);
     setIsDialogOpen(true);
   }
 
-  const availableUsers = allUsers.filter(emp => !emp.isDeleted && !projectUsers.some(pe => pe.id === emp.id));
-  const availableUserOptions = availableUsers.map(emp => ({
-      value: emp.id,
-      label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
-  }));
-
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Resources" description="Manage users assigned to this project.">
-           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) setEditingUser(null); }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog(null)}>
+           <Button onClick={() => handleOpenDialog(null)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add User
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingUser ? 'Edit Resource' : 'Add User to Project'}</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
-                  <FormField
-                    control={form.control}
-                    name="employeeId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>User</FormLabel>
-                         <FormControl>
-                           <Input 
-                              list="user-options"
-                              placeholder="Search for a user..."
-                              value={editingUser ? `${editingUser.firstName} ${editingUser.lastName}` : userInputText}
-                              readOnly={!!editingUser}
-                              onChange={(e) => {
-                                  if (editingUser) return;
-                                  const inputText = e.target.value;
-                                  setUserInputText(inputText);
-
-                                  const matchingOption = availableUserOptions.find(opt => opt.label === inputText);
-                                  field.onChange(matchingOption ? matchingOption.value : '');
-                              }}
-                              onBlur={(e) => {
-                                  if (editingUser) return;
-                                  const matchingOption = availableUserOptions.find(opt => opt.label === e.target.value);
-                                  if(!matchingOption) {
-                                      setUserInputText('');
-                                      field.onChange('');
-                                  }
-                              }}
-                           />
-                          </FormControl>
-                          <datalist id="user-options">
-                              {availableUserOptions.map(emp => (
-                                  <option key={emp.value} value={emp.label} />
-                              ))}
-                          </datalist>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="role" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                     <FormField control={form.control} name="availability" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Availability (%)</FormLabel>
-                        <FormControl><Input type="number" placeholder="100" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <FormField control={form.control} name="onboardingDate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Onboarding Date</FormLabel>
-                        <FormControl><Input type="date" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                     <FormField control={form.control} name="offloadingDate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Offloading Date</FormLabel>
-                        <FormControl><Input type="date" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="clientEmpId" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Client ID</FormLabel>
-                        <FormControl><Input placeholder="Client Employee ID" {...field} value={field.value || ''} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="clientEmail" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Client Email</FormLabel>
-                        <FormControl><Input type="email" placeholder="client.email@example.com" {...field} value={field.value || ''} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-
-
-                  <DialogFooter>
-                    <Button type="submit">
-                      {editingUser ? 'Save Changes' : 'Add to Project'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+            </Button>
         </PageHeader>
         <Card>
           <Table>
@@ -476,12 +548,10 @@ export default function ResourcesPage() {
                 <TableHead>User ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>Capabilities</TableHead>
                 <TableHead>Availability</TableHead>
                 <TableHead>Onboarding Date</TableHead>
                 <TableHead>Offloading Date</TableHead>
-                <TableHead>Client ID</TableHead>
-                <TableHead>Client Email</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -491,12 +561,17 @@ export default function ResourcesPage() {
                   <TableCell className="font-medium">{user.empId}</TableCell>
                   <TableCell>{user.firstName} {user.lastName}</TableCell>
                   <TableCell>{user.role || 'N/A'}</TableCell>
-                  <TableCell>{user.email}</TableCell>
+                   <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {user.capabilities?.map(capId => {
+                        const system = impactedSystems.find(s => s.id === capId);
+                        return system ? <Badge key={capId} variant="secondary">{system.name}</Badge> : null;
+                      }) || 'N/A'}
+                    </div>
+                  </TableCell>
                   <TableCell>{user.availability ? `${user.availability}%` : 'N/A'}</TableCell>
                   <TableCell>{user.onboardingDate ? format(parseISO(user.onboardingDate), 'PPP') : 'N/A'}</TableCell>
                   <TableCell>{user.offloadingDate ? format(parseISO(user.offloadingDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell>{user.clientEmpId || 'N/A'}</TableCell>
-                  <TableCell>{user.clientEmail || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
                       <Edit className="h-4 w-4" />
@@ -513,6 +588,17 @@ export default function ResourcesPage() {
 
         <CapacityPlanning />
       </div>
+
+      <ResourceDialog 
+        isOpen={isDialogOpen}
+        setIsOpen={setIsDialogOpen}
+        editingUser={editingUser}
+        setEditingUser={setEditingUser}
+        allUsers={allUsers}
+        projectUsers={projectUsers}
+        project={project}
+        impactedSystems={impactedSystems}
+      />
       
       <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
         <AlertDialogContent>
@@ -547,4 +633,3 @@ export default function ResourcesPage() {
     </>
   );
 }
-

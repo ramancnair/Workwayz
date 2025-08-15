@@ -6,6 +6,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -116,6 +117,7 @@ export type User = {
   leavePeriods?: LeavePeriod[];
   isDeleted?: boolean;
   deletedAt?: string; // ISO String
+  capabilities?: string[];
 };
 
 export type Employee = User;

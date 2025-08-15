@@ -90,8 +90,8 @@ interface ProjectContextType {
   setCurrentSprint: (sprintId: string) => Promise<boolean>;
 
   // Employee actions
-  addEmployee: (employee: Employee) => Promise<boolean>;
-  updateEmployee: (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>) => Promise<boolean>;
+  addUserToProject: (employee: Employee) => Promise<boolean>;
+  updateProjectUser: (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>) => Promise<boolean>;
   deleteEmployee: (employeeId: string) => Promise<boolean>;
   addLeavePeriod: (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>) => Promise<boolean>;
   deleteLeavePeriod: (employeeId: string, leavePeriodId: string) => Promise<boolean>;
@@ -213,8 +213,8 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
-    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments'],
-    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments'],
+    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems'],
+    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
@@ -225,7 +225,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/project-details/architecture': ['environments', 'impactedSystems'],
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
-    '/resources/project-resources': ['employees', 'allUsers'],
+    '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays'],
     '/resources/resource-gantt': ['stories', 'employees'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
     '/resources/leave-tracker': ['employees', 'holidays'],
@@ -714,7 +714,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Employee Actions
-  const addEmployee = async (employee: Employee): Promise<boolean> => {
+  const addUserToProject = async (employee: Employee): Promise<boolean> => {
     if (!db || !projectId) return false;
     
     // Check if employee is already in the project
@@ -733,7 +733,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
-  const updateEmployee = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>): Promise<boolean> => {
+  const updateProjectUser = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const { onboardingDate, offloadingDate, ...rest } = data;
@@ -1483,8 +1483,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     updateSprint,
     deleteSprint,
     setCurrentSprint,
-    addEmployee,
-    updateEmployee,
+    addUserToProject,
+    updateProjectUser,
     deleteEmployee,
     addLeavePeriod,
     deleteLeavePeriod,
