@@ -435,36 +435,37 @@ function CapacityPlanning() {
     if (!periodStart || !periodEnd) return [];
 
     return impactedSystems.map(system => {
-      const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
-      
-      let totalCapacityHours = 0;
-      resourcesForSystem.forEach(emp => {
-        const availabilityFactor = (emp.availability || 100) / 100;
-        totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
-      });
-
-      const utilizedHours = stories
-        .filter(story => {
-          if (story.itemType !== 'Sub Task' || story.impactedSystemId !== system.id) return false;
-          if (!story.startDate || !story.endDate) return false;
-          const taskStart = parseISO(story.startDate);
-          const taskEnd = parseISO(story.endDate);
-          return taskStart <= periodEnd && taskEnd >= periodStart;
-        })
-        .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+        const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
         
-      const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+        let totalCapacityHours = 0;
+        resourcesForSystem.forEach(emp => {
+            const availabilityFactor = (emp.availability || 100) / 100;
+            totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
+        });
       
-      return {
-        systemId: system.id,
-        systemName: system.name,
-        totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
-        utilizedHours: parseFloat(utilizedHours.toFixed(2)),
-        remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
-        utilization: parseFloat(utilization.toFixed(2)),
-      };
+        const utilizedHours = stories
+            .filter(story => {
+                const isSubTaskForSystem = story.itemType === 'Sub Task' && story.impactedSystemId === system.id;
+                if (!isSubTaskForSystem || !story.startDate || !story.endDate) return false;
+                
+                const taskStart = parseISO(story.startDate);
+                const taskEnd = parseISO(story.endDate);
+                // Check for overlap
+                return taskStart <= periodEnd && taskEnd >= periodStart;
+            })
+            .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+        
+        const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+      
+        return {
+            systemId: system.id,
+            systemName: system.name,
+            totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
+            utilizedHours: parseFloat(utilizedHours.toFixed(2)),
+            remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
+            utilization: parseFloat(utilization.toFixed(2)),
+        };
     });
-
   }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod]);
 
   const handleDateChange = (changeFn: (date: Date, amount: number) => Date) => {
@@ -526,6 +527,7 @@ function CapacityPlanning() {
             <TableHeader>
                 <TableRow>
                     <TableHead className="w-[25%]">Impacted System</TableHead>
+                    <TableHead>Total Capacity (days)</TableHead>
                     <TableHead>Total Capacity (hrs)</TableHead>
                     <TableHead>Utilized (hrs)</TableHead>
                     <TableHead>Remaining (hrs)</TableHead>
@@ -536,6 +538,7 @@ function CapacityPlanning() {
                 {capacityData.map(data => (
                     <TableRow key={data.systemId}>
                         <TableCell className="font-medium">{data.systemName}</TableCell>
+                        <TableCell>{(data.totalCapacityHours / 8).toFixed(2)}</TableCell>
                         <TableCell>{data.totalCapacityHours}</TableCell>
                         <TableCell>{data.utilizedHours}</TableCell>
                         <TableCell>{data.remainingHours}</TableCell>
@@ -604,10 +607,13 @@ export default function ResourcesPage() {
                   <TableCell>{user.role || 'N/A'}</TableCell>
                    <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {user.capabilities && user.capabilities.length > 0 ? user.capabilities.map(capId => {
-                        const system = impactedSystems.find(s => s.id === capId);
-                        return system ? <Badge key={capId} variant="secondary">{system.name}</Badge> : null;
-                      }) : 'N/A'}
+                      {user.capabilities && user.capabilities.length > 0
+                        ? user.capabilities.map(capId => {
+                            const system = impactedSystems.find(s => s.id === capId);
+                            return system ? <Badge key={capId} variant="secondary">{system.name}</Badge> : null;
+                          })
+                        : 'N/A'
+                      }
                     </div>
                   </TableCell>
                   <TableCell>{user.availability ? `${user.availability}%` : 'N/A'}</TableCell>
@@ -674,4 +680,5 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
