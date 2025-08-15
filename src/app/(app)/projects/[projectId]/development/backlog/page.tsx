@@ -291,6 +291,12 @@ export default function BacklogPage() {
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
     resolver: zodResolver(subTaskFormSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      impactedSystemId: 'unassigned',
+      estimatedHours: 0
+    }
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -380,7 +386,7 @@ export default function BacklogPage() {
       itemType: values.itemType,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: ['Task'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
+      epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
       parentStoryId: ['Bug'].includes(values.itemType) ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
@@ -479,7 +485,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   };
 
   const allWorkItems = stories.filter(
-    (story) => !story.parentStoryId
+    (story) => !story.parentStoryId && !story.isDeleted
   );
 
   const subItemsByParentId = stories.reduce((acc, story) => {
@@ -1287,7 +1293,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                     <FormMessage/></FormItem>
                                                 )}/>
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field}/></FormControl><FormMessage/></FormItem>
+                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
@@ -1418,6 +1424,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
