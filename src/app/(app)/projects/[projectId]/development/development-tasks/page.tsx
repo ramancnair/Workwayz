@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -248,12 +247,7 @@ export default function DevelopmentTasksPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Sub-Tasks" description="Manage all sub-tasks for the project.">
-        <Button onClick={() => handleDialogOpen(null)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Sub-Task
-        </Button>
-      </PageHeader>
+      <PageHeader title="Sub-Tasks" description="Manage all sub-tasks for the project." />
       <Card>
         <CardContent className="p-4">
             <div className="flex items-center gap-4">
