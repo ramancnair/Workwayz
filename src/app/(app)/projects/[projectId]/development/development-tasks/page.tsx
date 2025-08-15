@@ -47,6 +47,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { format, parseISO } from 'date-fns';
 
 const subTaskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -56,6 +57,16 @@ const subTaskSchema = z.object({
   status: z.enum(['To Do', 'In Progress', 'Done']),
   estimatedHours: z.coerce.number().optional(),
   impactedSystemId: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+}).refine(data => {
+    if (data.startDate && data.endDate) {
+        return new Date(data.endDate) >= new Date(data.startDate);
+    }
+    return true;
+}, {
+    message: "End date must be on or after start date.",
+    path: ['endDate'],
 });
 
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
@@ -165,6 +176,8 @@ export default function DevelopmentTasksPage() {
           status: editingSubTask.status,
           estimatedHours: editingSubTask.estimatedHours,
           impactedSystemId: editingSubTask.impactedSystemId || 'unassigned',
+          startDate: editingSubTask.startDate ? format(parseISO(editingSubTask.startDate), 'yyyy-MM-dd') : '',
+          endDate: editingSubTask.endDate ? format(parseISO(editingSubTask.endDate), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
@@ -175,6 +188,8 @@ export default function DevelopmentTasksPage() {
           status: 'To Do',
           estimatedHours: 0,
           impactedSystemId: 'unassigned',
+          startDate: '',
+          endDate: '',
         });
       }
     }
@@ -210,6 +225,8 @@ export default function DevelopmentTasksPage() {
         status: values.status,
         estimatedHours: values.estimatedHours,
         impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
+        startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
+        endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         // Inherit from parent
         epicId: parentStory?.epicId,
         sprintId: parentStory?.sprintId,
@@ -297,6 +314,8 @@ export default function DevelopmentTasksPage() {
               <TableHead>Assignee</TableHead>
               <TableHead>Impacted System</TableHead>
               <SortableHeader columnId="estimatedHours">Effort</SortableHeader>
+              <SortableHeader columnId="startDate">Start Date</SortableHeader>
+              <SortableHeader columnId="endDate">End Date</SortableHeader>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -339,6 +358,8 @@ export default function DevelopmentTasksPage() {
                   </TableCell>
                   <TableCell>{impactedSystem?.name || 'N/A'}</TableCell>
                   <TableCell>{task.estimatedHours ? `${task.estimatedHours}h` : 'N/A'}</TableCell>
+                  <TableCell>{task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A'}</TableCell>
+                  <TableCell>{task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(task)}>
                         <Edit className="h-4 w-4" />
@@ -485,6 +506,22 @@ export default function DevelopmentTasksPage() {
                           )}
                         />
                   </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="startDate" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Start Date</FormLabel>
+                            <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="endDate" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>End Date</FormLabel>
+                            <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingSubTask ? 'Saving...' : 'Creating...') : (editingSubTask ? 'Save Changes' : 'Create Sub-Task')}

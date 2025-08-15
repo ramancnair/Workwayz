@@ -90,6 +90,16 @@ const subTaskFormSchema = z.object({
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+}).refine(data => {
+    if (data.startDate && data.endDate) {
+        return new Date(data.endDate) >= new Date(data.startDate);
+    }
+    return true;
+}, {
+    message: "End date must be on or after start date.",
+    path: ['endDate'],
 });
 
 
@@ -395,6 +405,8 @@ export default function GroomingPage() {
           impactedSystemId: 'unassigned',
           estimatedHours: 0,
           assigneeId: 'unassigned',
+          startDate: '',
+          endDate: '',
         }
     });
 
@@ -429,6 +441,8 @@ export default function GroomingPage() {
                 impactedSystemId: editingStory.impactedSystemId || 'unassigned',
                 estimatedHours: editingStory.estimatedHours,
                 assigneeId: editingStory.assigneeId || 'unassigned',
+                startDate: editingStory.startDate ? format(new Date(editingStory.startDate), 'yyyy-MM-dd') : '',
+                endDate: editingStory.endDate ? format(new Date(editingStory.endDate), 'yyyy-MM-dd') : '',
             });
         } else {
              editStoryForm.reset({
@@ -505,6 +519,8 @@ export default function GroomingPage() {
             impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
             estimatedHours: values.estimatedHours,
             assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+            startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
+            endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         });
 
         if (success) {
@@ -530,6 +546,8 @@ export default function GroomingPage() {
           impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
           estimatedHours: values.estimatedHours,
           assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+          startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
+          endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
       };
 
       const success = await addStory(newSubTask, 'SUB');
@@ -739,27 +757,45 @@ export default function GroomingPage() {
                         <FormField control={subTaskForm.control} name="description" render={({field}) => (
                             <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
-                        <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
-                            <FormItem><FormLabel>Impacted System</FormLabel>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                                <FormItem><FormLabel>Impacted System</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
+                                        <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                <FormMessage/></FormItem>
+                            )}/>
+                            <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
+                            <FormItem>
+                                <FormLabel>Assigned To</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                </SelectContent>
                                 </Select>
-                            <FormMessage/></FormItem>
-                        )}/>
-                        <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
-                           <FormItem>
-                            <FormLabel>Assigned To</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
-                              <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage/>
-                           </FormItem>
-                        )}/>
+                                <FormMessage/>
+                            </FormItem>
+                            )}/>
+                        </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Start Date</FormLabel>
+                                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>End Date</FormLabel>
+                                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        </div>
                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                             <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -1012,32 +1048,50 @@ export default function GroomingPage() {
                                                 <FormField control={subTaskForm.control} name="description" render={({field}) => (
                                                     <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
-                                                <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
-                                                    <FormItem><FormLabel>Impacted System</FormLabel>
+                                                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                                    <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                                                        <FormItem><FormLabel>Impacted System</FormLabel>
+                                                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
+                                                                <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                            </Select>
+                                                        <FormMessage/></FormItem>
+                                                    )}/>
+                                                    <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
+                                                    <FormItem>
+                                                        <FormLabel>Assigned To</FormLabel>
                                                         <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                            <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                        <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                            {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                        </SelectContent>
                                                         </Select>
-                                                    <FormMessage/></FormItem>
-                                                )}/>
-                                                <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
-                                                   <FormItem>
-                                                    <FormLabel>Assigned To</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                                      <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
-                                                      <SelectContent>
-                                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                        {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                                                      </SelectContent>
-                                                    </Select>
-                                                    <FormMessage/>
-                                                   </FormItem>
-                                                )}/>
+                                                        <FormMessage/>
+                                                    </FormItem>
+                                                    )}/>
+                                                </div>
+                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Start Date</FormLabel>
+                                                            <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )} />
+                                                    <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>End Date</FormLabel>
+                                                            <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )} />
+                                                </div>
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                                     <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
-                                                  <Button variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
+                                                  <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
                                                   <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
                                                 </div>
                                             </div>
@@ -1087,6 +1141,7 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
 
