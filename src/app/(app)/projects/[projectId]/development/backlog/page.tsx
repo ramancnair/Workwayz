@@ -323,13 +323,21 @@ export default function BacklogPage() {
     }
   }, [editingEpic, editEpicForm]);
   
-  useEffect(() => {
+    useEffect(() => {
     if (!selectedStory) {
         setEditStorySubmitting(false);
         setShowAddSubTask(false);
         subTaskForm.reset();
+    } else if (selectedStory.itemType === 'Sub Task') {
+        subTaskForm.reset({
+            title: selectedStory.title,
+            description: selectedStory.description || '',
+            impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
+            estimatedHours: selectedStory.estimatedHours,
+            assigneeId: selectedStory.assigneeId || 'unassigned',
+        });
     } else {
-        const isSubItem = ['Bug', 'Sub Task'].includes(selectedStory.itemType);
+        const isSubItem = ['Bug'].includes(selectedStory.itemType);
         editStoryForm.reset({
             itemType: selectedStory.itemType,
             title: selectedStory.title,
@@ -344,7 +352,7 @@ export default function BacklogPage() {
             environmentId: selectedStory.environmentId || 'unassigned',
         });
     }
-  }, [selectedStory, editStoryForm]);
+  }, [selectedStory, editStoryForm, subTaskForm]);
   
   useEffect(() => {
     if (!addRequirementOpen) {
@@ -443,6 +451,27 @@ export default function BacklogPage() {
     }
     setEditStorySubmitting(false);
 };
+
+const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
+    if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
+    setEditStorySubmitting(true);
+    
+    const success = await updateStory(selectedStory.id, {
+        title: values.title,
+        description: values.description,
+        impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
+        estimatedHours: values.estimatedHours,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+    });
+
+    if (success) {
+        setSelectedStory(null);
+    } else {
+        toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
+    }
+    setEditStorySubmitting(false);
+};
+
 
 const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!selectedStory) return;
@@ -1006,6 +1035,54 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           {selectedStory && (
             <>
+              {selectedStory.itemType === 'Sub Task' ? (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Edit Sub Task</DialogTitle>
+                    <DialogDescription>Make changes to your sub task here.</DialogDescription>
+                  </DialogHeader>
+                  <Form {...subTaskForm}>
+                    <div className='space-y-4'>
+                        <FormField control={subTaskForm.control} name="title" render={({field}) => (
+                            <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="description" render={({field}) => (
+                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                            <FormItem><FormLabel>Impacted System</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
+                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            <FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
+                            <FormItem>
+                            <FormLabel>Assigned To</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage/>
+                            </FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <DialogFooter>
+                            <Button type="button" onClick={subTaskForm.handleSubmit(onEditSubTaskSubmit)} disabled={isEditStorySubmitting}>
+                                {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                  </Form>
+                </>
+              ) : (
+              <>
               <DialogHeader>
                 <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
                 <DialogDescription>
@@ -1399,6 +1476,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                   </DialogFooter>
                 </form>
               </Form>
+              </>
+              )}
             </>
           )}
         </DialogContent>
@@ -1452,6 +1531,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
