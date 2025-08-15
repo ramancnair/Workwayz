@@ -321,14 +321,13 @@ export default function BacklogPage() {
       setShowAddSubTask(false);
       subTaskForm.reset();
     } else {
-      const isBug = selectedStory.itemType === 'Bug';
       editStoryForm.reset({
         itemType: selectedStory.itemType,
         title: selectedStory.title,
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-        epicId: !isBug ? (selectedStory.epicId || 'unassigned') : undefined,
-        parentStoryId: isBug ? (selectedStory.epicId || 'unassigned') : undefined,
+        epicId: ['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
+        parentStoryId: ['Bug', 'Sub Task'].includes(selectedStory.itemType) ? selectedStory.parentStoryId || 'unassigned' : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
@@ -374,8 +373,6 @@ export default function BacklogPage() {
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setAddStorySubmitting(true);
     
-    const isSubItem = ['Bug', 'Task'].includes(values.itemType);
-
     const newStory: Omit<Story, 'id' | 'storyId'> = {
       sprintId: null,
       title: values.title,
@@ -383,9 +380,8 @@ export default function BacklogPage() {
       itemType: values.itemType,
       acceptanceCriteria: values.acceptanceCriteria,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: isSubItem
-        ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId)
-        : (values.epicId === 'unassigned' ? undefined : values.epicId),
+      epicId: ['Task'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
+      parentStoryId: ['Bug'].includes(values.itemType) ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       criticality: values.itemType === 'Bug' ? values.criticality : undefined,
@@ -405,23 +401,30 @@ export default function BacklogPage() {
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
     setEditStorySubmitting(true);
-
-    const isBug = selectedStory.itemType === 'Bug';
-    const isTask = selectedStory.itemType === 'Task';
-
-    const success = await updateStory(selectedStory.id, {
+    
+    const payload: Partial<Story> = {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: (isBug || isTask)
-            ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId)
-            : (values.epicId === 'unassigned' ? undefined : values.epicId),
         estimatedHours: values.estimatedHours,
-        criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-    });
+    };
+
+    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
+        payload.epicId = values.epicId === 'unassigned' ? undefined : values.epicId;
+    }
+
+    if (['Bug', 'Sub Task'].includes(selectedStory.itemType)) {
+        payload.parentStoryId = values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId;
+    }
+    
+    if (selectedStory.itemType === 'Bug') {
+        payload.criticality = values.criticality;
+    }
+
+    const success = await updateStory(selectedStory.id, payload);
 
     if (success) {
         setSelectedStory(null);
@@ -476,25 +479,20 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   };
 
   const allWorkItems = stories.filter(
-    (story) => ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType)
+    (story) => !story.parentStoryId
   );
 
   const subItemsByParentId = stories.reduce((acc, story) => {
-      const parentId = story.parentStoryId || (['Bug', 'Task'].includes(story.itemType) ? story.epicId : undefined);
-      if (parentId) {
-          if (!acc[parentId]) {
-              acc[parentId] = [];
+      if (story.parentStoryId) {
+          if (!acc[story.parentStoryId]) {
+              acc[story.parentStoryId] = [];
           }
-          acc[parentId].push(story);
+          acc[story.parentStoryId].push(story);
       }
       return acc;
   }, {} as Record<string, Story[]>);
 
   const backlogItemsByEpic = allWorkItems.reduce((acc, story) => {
-    if (story.itemType === 'Task' && story.epicId && allWorkItems.some(s => s.id === story.epicId)) {
-        return acc;
-    }
-
     const key = story.epicId || 'unassigned';
     if (!acc[key]) {
         acc[key] = [];
@@ -1273,7 +1271,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 {showAddSubTask ? (
                                     <div className='border p-4 mt-2 rounded-md'>
                                         <Form {...subTaskForm}>
-                                            <form onSubmit={subTaskForm.handleSubmit(handleAddSubTask)} className='space-y-4'>
+                                            <div className='space-y-4'>
                                                 <FormField control={subTaskForm.control} name="title" render={({field}) => (
                                                     <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
@@ -1291,8 +1289,11 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                                     <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
-                                                <div className='flex justify-end gap-2'><Button variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button><Button type="submit">Save Sub Task</Button></div>
-                                            </form>
+                                                <div className='flex justify-end gap-2'>
+                                                  <Button variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
+                                                  <Button onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
+                                                </div>
+                                            </div>
                                         </Form>
                                     </div>
                                 ) : (
@@ -1417,6 +1418,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
