@@ -31,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem } from '@/types';
 import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -82,6 +82,13 @@ const storyFormSchema = z.object({
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
+});
+
+const subTaskFormSchema = z.object({
+    title: z.string().min(1, 'Title is required.'),
+    description: z.string().optional(),
+    impactedSystemId: z.string().optional(),
+    estimatedHours: z.coerce.number().optional(),
 });
 
 
@@ -318,6 +325,7 @@ export default function GroomingPage() {
         employees,
         sprints,
         projectSettings,
+        impactedSystems,
         moveStoryToSprint,
         addSprint,
         updateSprint,
@@ -376,6 +384,10 @@ export default function GroomingPage() {
         resolver: zodResolver(storyFormSchema),
     });
 
+    const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
+        resolver: zodResolver(subTaskFormSchema),
+    });
+
     const watchedStartDate = useWatch({ control: sprintForm.control, name: "startDate" });
 
     React.useEffect(() => {
@@ -397,20 +409,29 @@ export default function GroomingPage() {
     }, [isSprintDialogOpen, editingSprint, sprintForm]);
     
     useEffect(() => {
-        if (editingStory) {
+        if (!editingStory) return;
+        
+        if (editingStory.itemType === 'Sub Task') {
+            subTaskForm.reset({
+                title: editingStory.title,
+                description: editingStory.description || '',
+                impactedSystemId: editingStory.impactedSystemId || 'unassigned',
+                estimatedHours: editingStory.estimatedHours,
+            });
+        } else {
              editStoryForm.reset({
                 title: editingStory.title,
                 description: editingStory.description || '',
                 acceptanceCriteria: editingStory.acceptanceCriteria || '',
                 epicId: editingStory.itemType === 'Task' ? editingStory.epicId || 'unassigned' : (['Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined),
-                parentStoryId: ['Bug', 'Sub Task'].includes(editingStory.itemType) ? editingStory.parentStoryId || 'unassigned' : undefined,
+                parentStoryId: ['Bug'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
                 assigneeId: editingStory.assigneeId || 'unassigned',
                 estimatedHours: editingStory.estimatedHours,
                 criticality: editingStory.criticality || 'Medium',
                 environmentId: editingStory.environmentId || 'unassigned',
             });
         }
-    }, [editingStory, editStoryForm]);
+    }, [editingStory, editStoryForm, subTaskForm]);
 
 
     React.useEffect(() => {
@@ -439,7 +460,7 @@ export default function GroomingPage() {
         if (!editingStory) return;
         setEditStorySubmitting(true);
         
-        const isSubItem = ['Bug', 'Sub Task'].includes(editingStory.itemType);
+        const isSubItem = ['Bug'].includes(editingStory.itemType);
 
         const success = await updateStory(editingStory.id, {
             title: values.title,
@@ -461,6 +482,26 @@ export default function GroomingPage() {
         }
         setEditStorySubmitting(false);
     };
+
+    const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
+        if (!editingStory || editingStory.itemType !== 'Sub Task') return;
+        setEditStorySubmitting(true);
+        
+        const success = await updateStory(editingStory.id, {
+            title: values.title,
+            description: values.description,
+            impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
+            estimatedHours: values.estimatedHours,
+        });
+
+        if (success) {
+            setEditingStory(null);
+        } else {
+            toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
+        }
+        setEditStorySubmitting(false);
+    };
+
 
     const handleDeleteConfirm = async () => {
         if (!deletingSprint) return;
@@ -643,6 +684,41 @@ export default function GroomingPage() {
         <Dialog open={!!editingStory} onOpenChange={(isOpen) => !isOpen && setEditingStory(null)}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             {editingStory && (
+                <>
+                {editingStory.itemType === 'Sub Task' ? (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Edit Sub Task</DialogTitle>
+                    <DialogDescription>Make changes to your sub task here.</DialogDescription>
+                  </DialogHeader>
+                  <Form {...subTaskForm}>
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4">
+                        <FormField control={subTaskForm.control} name="title" render={({field}) => (
+                            <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="description" render={({field}) => (
+                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                            <FormItem><FormLabel>Impacted System</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
+                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            <FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <DialogFooter>
+                            <Button type="submit" disabled={isEditStorySubmitting}>
+                                {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                  </Form>
+                </>
+              ) : (
                 <>
                 <DialogHeader>
                     <DialogTitle>Edit {editingStory.itemType}</DialogTitle>
@@ -905,6 +981,8 @@ export default function GroomingPage() {
                     </DialogFooter>
                     </form>
                 </Form>
+                </>
+                )}
                 </>
             )}
             </DialogContent>
