@@ -89,25 +89,12 @@ export default function DevelopmentTasksPage() {
   const subTasks = stories.filter(story => story.itemType === 'Sub Task');
   const parentStories = stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType));
 
-  const [filters, setFilters] = useState({
-    status: 'all',
-    assigneeId: 'all',
-    impactedSystemId: 'all',
-    parentStoryId: 'all',
-  });
+  const [filterText, setFilterText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
 
   const form = useForm<z.infer<typeof subTaskSchema>>({
     resolver: zodResolver(subTaskSchema),
   });
-
-  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({ status: 'all', assigneeId: 'all', impactedSystemId: 'all', parentStoryId: 'all' });
-  };
   
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
@@ -118,20 +105,11 @@ export default function DevelopmentTasksPage() {
   };
   
   const filteredAndSortedSubTasks = useMemo(() => {
-    let filtered = [...subTasks];
-
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(t => t.status === filters.status);
-    }
-    if (filters.assigneeId !== 'all') {
-      filtered = filtered.filter(t => t.assigneeId === filters.assigneeId);
-    }
-    if (filters.impactedSystemId !== 'all') {
-      filtered = filtered.filter(t => t.impactedSystemId === filters.impactedSystemId);
-    }
-    if (filters.parentStoryId !== 'all') {
-        filtered = filtered.filter(t => t.parentStoryId === filters.parentStoryId);
-    }
+    let filtered = subTasks.filter(t => 
+        t.title.toLowerCase().includes(filterText.toLowerCase()) ||
+        t.storyId.toLowerCase().includes(filterText.toLowerCase()) ||
+        (t.description && t.description.toLowerCase().includes(filterText.toLowerCase()))
+    );
 
     if (sorting) {
       filtered.sort((a, b) => {
@@ -162,7 +140,7 @@ export default function DevelopmentTasksPage() {
     }
 
     return filtered;
-  }, [subTasks, filters, sorting, stories]);
+  }, [subTasks, filterText, sorting, stories]);
 
 
   useEffect(() => {
@@ -270,38 +248,13 @@ export default function DevelopmentTasksPage() {
       </PageHeader>
       <Card>
         <CardContent className="p-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by status..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-               <Select value={filters.parentStoryId} onValueChange={(v) => handleFilterChange('parentStoryId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by parent story..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Stories</SelectItem>
-                  {parentStories.map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.assigneeId} onValueChange={(v) => handleFilterChange('assigneeId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by assignee..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Assignees</SelectItem>
-                  {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.impactedSystemId} onValueChange={(v) => handleFilterChange('impactedSystemId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by system..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Systems</SelectItem>
-                  {impactedSystems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button variant="ghost" onClick={clearFilters}>
-                <X className="mr-2 h-4 w-4" /> Clear Filters
-              </Button>
+            <div className="flex items-center gap-4">
+                <Input 
+                    placeholder="Filter by ID, title, or description..."
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                    className="max-w-sm"
+                />
             </div>
           </CardContent>
         <Table>
