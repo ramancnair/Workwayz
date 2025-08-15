@@ -433,38 +433,36 @@ function CapacityPlanning() {
 
   const capacityData = useMemo(() => {
     if (!periodStart || !periodEnd) return [];
-    
-    const relevantTasks = stories.filter(story => {
-      if (story.itemType !== 'Sub Task' || !story.startDate || !story.endDate) return false;
-      const taskStart = parseISO(story.startDate);
-      const taskEnd = parseISO(story.endDate);
-      return taskStart <= periodEnd && taskEnd >= periodStart;
-    });
 
     return impactedSystems.map(system => {
-        const systemTasks = relevantTasks.filter(t => t.impactedSystemId === system.id);
-        const resourcesForSystemIds = new Set(systemTasks.map(t => t.assigneeId).filter(Boolean));
-        
-        let totalCapacityHours = 0;
-        resourcesForSystemIds.forEach(empId => {
-            const employee = employees.find(e => e.id === empId);
-            if (employee) {
-                const availabilityFactor = (employee.availability || 100) / 100;
-                totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
-            }
-        });
+      const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
+      
+      let totalCapacityHours = 0;
+      resourcesForSystem.forEach(emp => {
+        const availabilityFactor = (emp.availability || 100) / 100;
+        totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
+      });
 
-        const utilizedHours = systemTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-        const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+      const utilizedHours = stories
+        .filter(story => {
+          if (story.itemType !== 'Sub Task' || story.impactedSystemId !== system.id) return false;
+          if (!story.startDate || !story.endDate) return false;
+          const taskStart = parseISO(story.startDate);
+          const taskEnd = parseISO(story.endDate);
+          return taskStart <= periodEnd && taskEnd >= periodStart;
+        })
+        .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
         
-        return {
-            systemId: system.id,
-            systemName: system.name,
-            totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
-            utilizedHours: parseFloat(utilizedHours.toFixed(2)),
-            remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
-            utilization: parseFloat(utilization.toFixed(2)),
-        };
+      const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+      
+      return {
+        systemId: system.id,
+        systemName: system.name,
+        totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
+        utilizedHours: parseFloat(utilizedHours.toFixed(2)),
+        remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
+        utilization: parseFloat(utilization.toFixed(2)),
+      };
     });
 
   }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod]);
@@ -676,3 +674,4 @@ export default function ResourcesPage() {
     </>
   );
 }
+
