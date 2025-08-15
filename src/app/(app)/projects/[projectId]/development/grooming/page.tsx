@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem, Holiday } from '@/types';
 import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -54,7 +54,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const sprintSchema = z.object({
@@ -245,6 +245,8 @@ function StoryItemCard({
 function SprintColumn({ 
   sprint, 
   stories,
+  holidays,
+  weeklyOffDays,
   onEdit,
   onDelete,
   onSetCurrent,
@@ -256,6 +258,8 @@ function SprintColumn({
 }: { 
   sprint: Sprint, 
   stories: Story[],
+  holidays: Holiday[],
+  weeklyOffDays: number[],
   onEdit: (sprint: Sprint) => void,
   onDelete: (sprint: Sprint) => void,
   onSetCurrent: (sprintId: string) => void,
@@ -267,15 +271,50 @@ function SprintColumn({
 }) {
     const { epics, employees, stories: allStories } = useProject();
 
-     const subItemsByStoryId = useMemo(() => allStories.reduce((acc, story) => {
-        if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
-            if (!acc[story.parentStoryId]) {
-                acc[story.parentStoryId] = [];
-            }
-            acc[story.parentStoryId].push(story);
+    const subItemsByStoryId = useMemo(() => allStories.reduce((acc, story) => {
+      if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
+          if (!acc[story.parentStoryId]) {
+              acc[story.parentStoryId] = [];
+          }
+          acc[story.parentStoryId].push(story);
+      }
+      return acc;
+    }, {} as Record<string, Story[]>), [allStories]);
+    
+    const { totalCapacity, utilizedCapacity } = useMemo(() => {
+        if (!sprint.startDate || !sprint.endDate) {
+            return { totalCapacity: 0, utilizedCapacity: 0 };
         }
-        return acc;
-      }, {} as Record<string, Story[]>), [allStories]);
+
+        const start = parseISO(sprint.startDate);
+        const end = parseISO(sprint.endDate);
+
+        const holidayDates = holidays.map(h => parseISO(h.date));
+
+        const workingDays = eachDayOfInterval({ start, end }).filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(h => isSameDay(day, h));
+            return !isWeekend && !isHoliday;
+        }).length;
+        
+        const sprintAssigneeIds = new Set(stories.map(s => s.assigneeId).filter(Boolean));
+        const sprintAssignees = employees.filter(emp => sprintAssigneeIds.has(emp.id));
+
+        const totalCapacityHours = sprintAssignees.reduce((acc, emp) => {
+            const availability = (emp.availability || 100) / 100;
+            return acc + (workingDays * 8 * availability);
+        }, 0);
+
+        const utilizedHours = stories.reduce((acc, story) => acc + (story.estimatedHours || 0), 0);
+
+        return {
+            totalCapacity: totalCapacityHours,
+            utilizedCapacity: utilizedHours
+        };
+    }, [sprint.startDate, sprint.endDate, stories, employees, holidays, weeklyOffDays]);
+
+    const remainingCapacity = totalCapacity - utilizedCapacity;
 
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
@@ -305,11 +344,18 @@ function SprintColumn({
                 </Button>
               </div>
             </div>
-            {(sprint.startDate && sprint.endDate) && (
-              <div className="text-xs text-muted-foreground mb-4 pl-1">
-                  {format(parseISO(sprint.startDate), 'MMM d')} - {format(parseISO(sprint.endDate), 'MMM d, yyyy')}
-              </div>
-            )}
+            <div className="flex justify-between items-center text-xs text-muted-foreground mb-4 pl-1">
+                {(sprint.startDate && sprint.endDate) && (
+                    <div>{format(parseISO(sprint.startDate), 'MMM d')} - {format(parseISO(sprint.endDate), 'MMM d, yyyy')}</div>
+                )}
+                <div className='flex gap-2 font-semibold'>
+                    <span>Total: {totalCapacity.toFixed(0)}h</span>
+                    <span>Utilized: {utilizedCapacity.toFixed(0)}h</span>
+                    <span className={remainingCapacity < 0 ? 'text-red-500' : 'text-green-600'}>
+                        Remaining: {remainingCapacity.toFixed(0)}h
+                    </span>
+                </div>
+            </div>
             <div className="flex-1 space-y-4 overflow-y-auto">
                 {stories.map(story => {
                      const epic = epics.find(e => e.id === story.epicId);
@@ -350,6 +396,8 @@ export default function GroomingPage() {
         setCurrentSprint,
         updateStory,
         environments,
+        holidays,
+        weeklyOffDays,
     } = useProject();
     const { toast } = useToast();
     
@@ -672,6 +720,8 @@ export default function GroomingPage() {
                             key={sprintsWithStories[visibleSprintIndex].id} 
                             sprint={sprintsWithStories[visibleSprintIndex]} 
                             stories={sprintsWithStories[visibleSprintIndex].stories} 
+                            holidays={holidays}
+                            weeklyOffDays={weeklyOffDays}
                             onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
                             onDelete={(sprint) => setDeletingSprint(sprint)}
                             onSetCurrent={handleSetCurrentSprint}
@@ -1220,11 +1270,3 @@ export default function GroomingPage() {
         </>
     );
 }
-
-
-
-
-
-
-
-
