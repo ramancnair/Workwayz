@@ -326,6 +326,7 @@ export default function GroomingPage() {
         sprints,
         projectSettings,
         impactedSystems,
+        addStory,
         moveStoryToSprint,
         addSprint,
         updateSprint,
@@ -342,6 +343,7 @@ export default function GroomingPage() {
     const [editingStory, setEditingStory] = useState<Story | null>(null);
     const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
     const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
+    const [showAddSubTask, setShowAddSubTask] = useState(false);
 
     const backlogItems = useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
@@ -386,6 +388,12 @@ export default function GroomingPage() {
 
     const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
         resolver: zodResolver(subTaskFormSchema),
+        defaultValues: {
+          title: '',
+          description: '',
+          impactedSystemId: 'unassigned',
+          estimatedHours: 0
+        }
     });
 
     const watchedStartDate = useWatch({ control: sprintForm.control, name: "startDate" });
@@ -409,9 +417,10 @@ export default function GroomingPage() {
     }, [isSprintDialogOpen, editingSprint, sprintForm]);
     
     useEffect(() => {
-        if (!editingStory) return;
-        
-        if (editingStory.itemType === 'Sub Task') {
+        if (!editingStory) {
+          setShowAddSubTask(false);
+          subTaskForm.reset();
+        } else if (editingStory.itemType === 'Sub Task') {
             subTaskForm.reset({
                 title: editingStory.title,
                 description: editingStory.description || '',
@@ -423,7 +432,7 @@ export default function GroomingPage() {
                 title: editingStory.title,
                 description: editingStory.description || '',
                 acceptanceCriteria: editingStory.acceptanceCriteria || '',
-                epicId: editingStory.itemType === 'Task' ? editingStory.epicId || 'unassigned' : (['Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined),
+                epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
                 parentStoryId: ['Bug'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
                 assigneeId: editingStory.assigneeId || 'unassigned',
                 estimatedHours: editingStory.estimatedHours,
@@ -500,6 +509,32 @@ export default function GroomingPage() {
             toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
         }
         setEditStorySubmitting(false);
+    };
+
+    const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
+      if (!editingStory) return;
+
+      const newSubTask: Omit<Story, 'id' | 'storyId'> = {
+          title: values.title,
+          description: values.description || '',
+          itemType: 'Sub Task',
+          status: 'To Do',
+          epicId: editingStory.epicId, // Inherit epic
+          parentStoryId: editingStory.id, // Link to parent story
+          sprintId: editingStory.sprintId, // Inherit sprint
+          releaseId: editingStory.releaseId, // Inherit release
+          impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
+          estimatedHours: values.estimatedHours,
+      };
+
+      const success = await addStory(newSubTask, 'SUB');
+      if (success) {
+          toast({ title: 'Success', description: 'Sub-task added.' });
+          subTaskForm.reset();
+          setShowAddSubTask(false);
+      } else {
+          toast({ variant: "destructive", title: "Error", description: "Could not add sub-task." });
+      }
     };
 
 
@@ -930,7 +965,7 @@ export default function GroomingPage() {
                         </div>
                         </TabsContent>
                          <TabsContent value="subTasks">
-                           <div className="space-y-4 pt-4">
+                             <div className="space-y-4 pt-4">
                                 {selectedStorySubItems.subTasks.length > 0 ? (
                                     <div className="space-y-2 rounded-md border p-2">
                                     {selectedStorySubItems.subTasks.map(item => {
@@ -947,7 +982,38 @@ export default function GroomingPage() {
                                     })}
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
+                                  <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
+                                )}
+                                {showAddSubTask ? (
+                                    <div className='border p-4 mt-2 rounded-md'>
+                                        <Form {...subTaskForm}>
+                                            <div className='space-y-4'>
+                                                <FormField control={subTaskForm.control} name="title" render={({field}) => (
+                                                    <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
+                                                )}/>
+                                                <FormField control={subTaskForm.control} name="description" render={({field}) => (
+                                                    <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
+                                                )}/>
+                                                <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                                                    <FormItem><FormLabel>Impacted System</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                            <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                        </Select>
+                                                    <FormMessage/></FormItem>
+                                                )}/>
+                                                <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                                )}/>
+                                                <div className='flex justify-end gap-2'>
+                                                  <Button variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
+                                                  <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
+                                                </div>
+                                            </div>
+                                        </Form>
+                                    </div>
+                                ) : (
+                                    <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Sub-Task</Button>
                                 )}
                             </div>
                         </TabsContent>
@@ -990,5 +1056,6 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
