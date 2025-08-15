@@ -56,6 +56,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -269,7 +270,7 @@ function SprintColumn({
   onMoveStory: (storyId: string, sprintId: string | null) => void;
   onEditStory: (story: Story) => void;
 }) {
-    const { epics, employees, stories: allStories } = useProject();
+    const { epics, employees, stories: allStories, impactedSystems } = useProject();
 
     const subItemsByStoryId = useMemo(() => allStories.reduce((acc, story) => {
       if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
@@ -281,14 +282,11 @@ function SprintColumn({
       return acc;
     }, {} as Record<string, Story[]>), [allStories]);
     
-    const { totalCapacity, utilizedCapacity } = useMemo(() => {
-        if (!sprint.startDate || !sprint.endDate) {
-            return { totalCapacity: 0, utilizedCapacity: 0 };
-        }
+    const capacityBySystem = useMemo(() => {
+        if (!sprint.startDate || !sprint.endDate) return [];
 
         const start = parseISO(sprint.startDate);
         const end = parseISO(sprint.endDate);
-
         const holidayDates = holidays.map(h => parseISO(h.date));
 
         const workingDays = eachDayOfInterval({ start, end }).filter(day => {
@@ -298,23 +296,40 @@ function SprintColumn({
             return !isWeekend && !isHoliday;
         }).length;
         
-        const sprintAssigneeIds = new Set(stories.map(s => s.assigneeId).filter(Boolean));
-        const sprintAssignees = employees.filter(emp => sprintAssigneeIds.has(emp.id));
+        const sprintStoryIds = new Set(stories.map(s => s.id));
+        const subTasksInSprint = allStories.filter(story => 
+            story.itemType === 'Sub Task' && 
+            story.parentStoryId && 
+            sprintStoryIds.has(story.parentStoryId)
+        );
 
-        const totalCapacityHours = sprintAssignees.reduce((acc, emp) => {
-            const availability = (emp.availability || 100) / 100;
-            return acc + (workingDays * 8 * availability);
-        }, 0);
+        return impactedSystems.map(system => {
+            const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
+            
+            let totalCapacityHours = 0;
+            resourcesForSystem.forEach(emp => {
+                const availabilityFactor = (emp.availability || 100) / 100;
+                totalCapacityHours += workingDays * 8 * availabilityFactor;
+            });
 
-        const utilizedHours = stories.reduce((acc, story) => acc + (story.estimatedHours || 0), 0);
+            const utilizedHours = subTasksInSprint
+                .filter(task => task.impactedSystemId === system.id)
+                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+            
+            const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
 
-        return {
-            totalCapacity: totalCapacityHours,
-            utilizedCapacity: utilizedHours
-        };
-    }, [sprint.startDate, sprint.endDate, stories, employees, holidays, weeklyOffDays]);
+            return {
+                systemId: system.id,
+                systemName: system.name,
+                totalCapacity: totalCapacityHours,
+                utilized: utilizedHours,
+                remaining: totalCapacityHours - utilizedHours,
+                utilization: utilization
+            }
+        }).filter(sys => sys.totalCapacity > 0 || sys.utilized > 0);
+    }, [sprint, stories, allStories, impactedSystems, employees, holidays, weeklyOffDays]);
 
-    const remainingCapacity = totalCapacity - utilizedCapacity;
+    const totalSprintUtilized = capacityBySystem.reduce((sum, sys) => sum + sys.utilized, 0);
 
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
@@ -344,18 +359,41 @@ function SprintColumn({
                 </Button>
               </div>
             </div>
-            <div className="flex justify-between items-center text-xs text-muted-foreground mb-4 pl-1">
+            <div className="text-xs text-muted-foreground mb-2 pl-1">
                 {(sprint.startDate && sprint.endDate) && (
                     <div>{format(parseISO(sprint.startDate), 'MMM d')} - {format(parseISO(sprint.endDate), 'MMM d, yyyy')}</div>
                 )}
-                <div className='flex gap-2 font-semibold'>
-                    <span>Total: {totalCapacity.toFixed(0)}h</span>
-                    <span>Utilized: {utilizedCapacity.toFixed(0)}h</span>
-                    <span className={remainingCapacity < 0 ? 'text-red-500' : 'text-green-600'}>
-                        Remaining: {remainingCapacity.toFixed(0)}h
-                    </span>
-                </div>
             </div>
+
+            <Collapsible className="mb-4">
+                <CollapsibleTrigger className="w-full">
+                    <Card className="p-2">
+                        <div className="flex justify-between items-center text-xs font-semibold">
+                            <span>Sprint Capacity</span>
+                            <div className="flex items-center gap-1">
+                                <span>{totalSprintUtilized.toFixed(0)}h Utilized</span>
+                                <ChevronDown className="h-4 w-4" />
+                            </div>
+                        </div>
+                    </Card>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-2">
+                    {capacityBySystem.map(sys => (
+                         <Card key={sys.systemId} className="p-2 text-xs">
+                             <div className="font-semibold mb-1">{sys.systemName}</div>
+                             <Progress value={sys.utilization} className="h-2 mb-1" />
+                             <div className="flex justify-between text-muted-foreground">
+                                 <span>Utilized: {sys.utilized.toFixed(0)}h</span>
+                                 <span className={sys.remaining < 0 ? 'text-red-500' : ''}>
+                                    Remaining: {sys.remaining.toFixed(0)}h
+                                </span>
+                                 <span>Total: {sys.totalCapacity.toFixed(0)}h</span>
+                             </div>
+                         </Card>
+                    ))}
+                </CollapsibleContent>
+            </Collapsible>
+
             <div className="flex-1 space-y-4 overflow-y-auto">
                 {stories.map(story => {
                      const epic = epics.find(e => e.id === story.epicId);
@@ -1270,3 +1308,4 @@ export default function GroomingPage() {
         </>
     );
 }
+
