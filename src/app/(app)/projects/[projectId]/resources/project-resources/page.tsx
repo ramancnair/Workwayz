@@ -62,6 +62,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const resourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
@@ -379,6 +381,7 @@ function CapacityPlanning() {
   const [viewType, setViewType] = useState<'sprint' | 'month' | 'week'>('sprint');
   const [selectedSprintId, setSelectedSprintId] = useState<string>('');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [unit, setUnit] = useState<'hours' | 'days'>('hours');
 
   const currentSprint = useMemo(() => sprints.find(s => s.isCurrent), [sprints]);
   
@@ -489,6 +492,13 @@ function CapacityPlanning() {
     return '';
   }, [viewType, selectedSprintId, currentDate, sprints]);
 
+  const displayValue = useCallback((valueInHours: number) => {
+    if (unit === 'days') {
+        return (valueInHours / 8).toFixed(2);
+    }
+    return valueInHours.toFixed(2);
+  }, [unit]);
+
   return (
     <Card>
       <CardHeader>
@@ -496,41 +506,51 @@ function CapacityPlanning() {
         <CardDescription>View resource capacity based on assigned sub-tasks for each impacted system.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap items-center gap-4 mb-4">
-            <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)} className="w-auto">
-              <TabsList>
-                <TabsTrigger value="sprint">Sprint</TabsTrigger>
-                <TabsTrigger value="month">Month</TabsTrigger>
-                <TabsTrigger value="week">Week</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
-            {viewType === 'sprint' ? (
-                 <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-                    <SelectTrigger className="w-[250px]">
-                        <SelectValue placeholder="Select Sprint" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                    </SelectContent>
-                 </Select>
-            ) : (
-                <div className="flex items-center gap-2 border rounded-md p-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subMonths : subWeeks)}> <ChevronLeft /> </Button>
-                    <span className="font-semibold text-sm w-48 text-center">{periodTitle}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addMonths : addWeeks)}> <ChevronRight /> </Button>
-                </div>
-            )}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-4">
+                <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)} className="w-auto">
+                <TabsList>
+                    <TabsTrigger value="sprint">Sprint</TabsTrigger>
+                    <TabsTrigger value="month">Month</TabsTrigger>
+                    <TabsTrigger value="week">Week</TabsTrigger>
+                </TabsList>
+                </Tabs>
+                
+                {viewType === 'sprint' ? (
+                    <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+                        <SelectTrigger className="w-[250px]">
+                            <SelectValue placeholder="Select Sprint" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                ) : (
+                    <div className="flex items-center gap-2 border rounded-md p-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subMonths : subWeeks)}> <ChevronLeft /> </Button>
+                        <span className="font-semibold text-sm w-48 text-center">{periodTitle}</span>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addMonths : addWeeks)}> <ChevronRight /> </Button>
+                    </div>
+                )}
+            </div>
+            <div className="flex items-center space-x-2">
+                <Label htmlFor="unit-switch">Days</Label>
+                <Switch
+                    id="unit-switch"
+                    checked={unit === 'hours'}
+                    onCheckedChange={(checked) => setUnit(checked ? 'hours' : 'days')}
+                />
+                <Label htmlFor="unit-switch">Hours</Label>
+            </div>
         </div>
         
         <Table>
             <TableHeader>
                 <TableRow>
                     <TableHead className="w-[25%]">Impacted System</TableHead>
-                    <TableHead>Total Capacity (days)</TableHead>
-                    <TableHead>Total Capacity (hrs)</TableHead>
-                    <TableHead>Utilized (hrs)</TableHead>
-                    <TableHead>Remaining (hrs)</TableHead>
+                    <TableHead>Total Capacity ({unit})</TableHead>
+                    <TableHead>Utilized ({unit})</TableHead>
+                    <TableHead>Remaining ({unit})</TableHead>
                     <TableHead className="w-[25%]">Utilization</TableHead>
                 </TableRow>
             </TableHeader>
@@ -538,14 +558,13 @@ function CapacityPlanning() {
                 {capacityData.map(data => (
                     <TableRow key={data.systemId}>
                         <TableCell className="font-medium">{data.systemName}</TableCell>
-                        <TableCell>{(data.totalCapacityHours / 8).toFixed(2)}</TableCell>
-                        <TableCell>{data.totalCapacityHours}</TableCell>
-                        <TableCell>{data.utilizedHours}</TableCell>
-                        <TableCell>{data.remainingHours}</TableCell>
+                        <TableCell>{displayValue(data.totalCapacityHours)}</TableCell>
+                        <TableCell>{displayValue(data.utilizedHours)}</TableCell>
+                        <TableCell>{displayValue(data.remainingHours)}</TableCell>
                         <TableCell>
                             <div className="flex items-center gap-2">
                                 <Progress value={data.utilization} className="w-full h-3" />
-                                <span className="text-xs font-semibold">{data.utilization}%</span>
+                                <span className="text-xs font-semibold">{data.utilization.toFixed(0)}%</span>
                             </div>
                         </TableCell>
                     </TableRow>
@@ -680,5 +699,6 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
