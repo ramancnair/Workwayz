@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, GripVertical } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, GripVertical, Save } from 'lucide-react';
 import { type Environment, type ImpactedSystem, type ImpactedSystemCategory } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -50,6 +50,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const summarySchema = z.object({
+  summary: z.string().optional(),
+});
 
 const environmentSchema = z.object({
   name: z.string().min(1, 'Environment name is required.'),
@@ -121,6 +125,8 @@ function SortableItem({ environment, onDelete }: { environment: Environment, onD
 
 export default function EnvironmentsPage() {
   const { 
+    project,
+    updateProject,
     environments, 
     addEnvironment, 
     deleteEnvironment, 
@@ -131,6 +137,9 @@ export default function EnvironmentsPage() {
     deleteImpactedSystem,
   } = useProject();
   const { toast } = useToast();
+  
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [isSummarySubmitting, setIsSummarySubmitting] = useState(false);
 
   // Environment State
   const [isEnvDialogOpen, setIsEnvDialogOpen] = useState(false);
@@ -145,6 +154,11 @@ export default function EnvironmentsPage() {
   const [editingSystem, setEditingSystem] = useState<ImpactedSystem | null>(null);
   const [deletingSystem, setDeletingSystem] = useState<ImpactedSystem | null>(null);
   const [isSystemSubmitting, setIsSystemSubmitting] = useState(false);
+  
+  const summaryForm = useForm<z.infer<typeof summarySchema>>({
+    resolver: zodResolver(summarySchema),
+    defaultValues: { summary: project?.summary || '' },
+  });
 
   const envForm = useForm<z.infer<typeof environmentSchema>>({
     resolver: zodResolver(environmentSchema),
@@ -159,6 +173,15 @@ export default function EnvironmentsPage() {
   const sensors = useSensors(
     useSensor(PointerSensor)
   );
+
+  useEffect(() => {
+    if (project) {
+        summaryForm.reset({ summary: project.summary || '' });
+        if (!project.summary) {
+            setIsEditingSummary(true);
+        }
+    }
+  }, [project, summaryForm]);
 
   useEffect(() => {
     if (isEnvDialogOpen) {
@@ -179,6 +202,18 @@ export default function EnvironmentsPage() {
       }
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
+  
+  const onSummarySubmit = async (values: z.infer<typeof summarySchema>) => {
+    setIsSummarySubmitting(true);
+    const success = await updateProject({ summary: values.summary });
+    if (success) {
+      toast({ title: 'Success', description: 'Project summary updated.' });
+      setIsEditingSummary(false);
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update project summary.' });
+    }
+    setIsSummarySubmitting(false);
+  };
 
   const handleEnvDialogOpen = (environment: Environment | null) => {
     setEditingEnv(environment);
@@ -262,6 +297,52 @@ export default function EnvironmentsPage() {
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
         <PageHeader title="Architecture" description="Manage impacted systems and testing environments for the project." />
         
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                  <CardTitle>Project Summary</CardTitle>
+                  <CardDescription>A high-level overview of the project's goals and technical scope.</CardDescription>
+              </div>
+              {!isEditingSummary && (
+                <Button onClick={() => setIsEditingSummary(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+          </CardHeader>
+          <CardContent>
+            {isEditingSummary ? (
+               <Form {...summaryForm}>
+                  <form onSubmit={summaryForm.handleSubmit(onSummarySubmit)} className="space-y-4">
+                    <FormField
+                      control={summaryForm.control}
+                      name="summary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea rows={5} placeholder="Enter project summary..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end gap-2">
+                        <Button type="button" variant="ghost" onClick={() => setIsEditingSummary(false)} disabled={isSummarySubmitting}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={isSummarySubmitting}>
+                            <Save className="mr-2 h-4 w-4" />
+                            {isSummarySubmitting ? 'Saving...' : 'Save'}
+                        </Button>
+                    </div>
+                  </form>
+                </Form>
+            ) : (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{project?.summary || "No summary provided."}</p>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
