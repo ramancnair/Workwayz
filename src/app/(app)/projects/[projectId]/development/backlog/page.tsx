@@ -120,7 +120,7 @@ const subTaskFormSchema = z.object({
     path: ['endDate'],
 });
 
-function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null }) {
+function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint, onSubItemClick }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, onSubItemClick: (item: Story) => void; }) {
   const Icon = workItemIcons[story.itemType];
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
@@ -240,7 +240,15 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
                         <div key={item.id} className="flex items-center justify-between text-xs pl-4">
                             <div className="flex items-center gap-2">
                                 <ItemIcon className="h-3 w-3 text-muted-foreground" />
-                                <span className="font-medium">[{item.storyId}] {item.title}</span>
+                                 <span
+                                    className="font-medium cursor-pointer hover:underline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onSubItemClick(item);
+                                    }}
+                                  >
+                                    [{item.storyId}] {item.title}
+                                  </span>
                             </div>
                             <Badge variant="outline">{item.status}</Badge>
                         </div>
@@ -1030,6 +1038,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                   onDelete={() => setStoryToDelete(story)}
                                   subItems={subItems}
                                   sprint={sprint}
+                                  onSubItemClick={(item) => setSelectedStory(item)}
                               />
                             </div>
                           )
@@ -1686,6 +1695,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

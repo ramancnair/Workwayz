@@ -246,7 +246,10 @@ function StoryCard({
                             <ItemIcon className="h-3 w-3 text-muted-foreground" />
                             <span 
                                 className="font-medium cursor-pointer hover:underline"
-                                onClick={() => onSubItemClick(item)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSubItemClick(item);
+                                }}
                             >
                                 [{item.storyId}] {item.title}
                             </span>
@@ -947,6 +950,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
