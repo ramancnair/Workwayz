@@ -38,8 +38,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
-import { type User, type UserRole, type Story, type ImpactedSystem } from '@/types';
+import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check, ChevronsUpDown } from 'lucide-react';
+import { type User, type UserRole, type Story, type ImpactedSystem, type Project } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 
 const resourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
@@ -85,6 +98,7 @@ function ResourceDialog({
   const { addUserToProject, updateProjectUser } = useProject();
   const { toast } = useToast();
   const [userInputText, setUserInputText] = useState('');
+  const [isCapabilitiesOpen, setCapabilitiesOpen] = useState(false);
 
   const form = useForm<z.infer<typeof resourceSchema>>({
     resolver: zodResolver(resourceSchema),
@@ -103,6 +117,10 @@ function ResourceDialog({
           clientEmail: editingUser.clientEmail || '',
           capabilities: editingUser.capabilities || [],
         });
+        const user = allUsers.find(u => u.id === editingUser.id);
+        if (user) {
+          setUserInputText(`${user.firstName} ${user.lastName} (${user.empId})`);
+        }
       } else {
         form.reset({
           employeeId: '',
@@ -117,7 +135,7 @@ function ResourceDialog({
         setUserInputText('');
       }
     }
-  }, [isOpen, editingUser, form, project]);
+  }, [isOpen, editingUser, form, project, allUsers]);
 
   const handleFormSubmit = async (values: z.infer<typeof resourceSchema>) => {
     if (editingUser) {
@@ -191,7 +209,7 @@ function ResourceDialog({
                      <Input 
                         list="user-options"
                         placeholder="Search for a user..."
-                        value={editingUser ? `${editingUser.firstName} ${editingUser.lastName}` : userInputText}
+                        value={userInputText}
                         readOnly={!!editingUser}
                         onChange={(e) => {
                             if (editingUser) return;
@@ -246,44 +264,64 @@ function ResourceDialog({
             <FormField
               control={form.control}
               name="capabilities"
-              render={() => (
-                <FormItem>
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
                   <FormLabel>Capabilities</FormLabel>
-                  <div className="grid grid-cols-2 gap-2 p-2 border rounded-md max-h-40 overflow-y-auto">
-                    {impactedSystems.map((system) => (
-                      <FormField
-                        key={system.id}
-                        control={form.control}
-                        name="capabilities"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={system.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(system.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...(field.value || []), system.id])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== system.id
-                                          )
-                                        )
-                                  }}
+                   <Popover open={isCapabilitiesOpen} onOpenChange={setCapabilitiesOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between",
+                            !field.value?.length && "text-muted-foreground"
+                          )}
+                        >
+                          <span className="truncate">
+                            {field.value && field.value.length > 0
+                              ? `${field.value.length} selected`
+                              : "Select capabilities"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search system..." />
+                        <CommandList>
+                            <CommandEmpty>No system found.</CommandEmpty>
+                            <CommandGroup>
+                            {impactedSystems.map((system) => (
+                                <CommandItem
+                                key={system.id}
+                                onSelect={() => {
+                                    const selected = field.value || [];
+                                    const isSelected = selected.includes(system.id);
+                                    field.onChange(
+                                    isSelected
+                                        ? selected.filter((id) => id !== system.id)
+                                        : [...selected, system.id]
+                                    );
+                                }}
+                                >
+                                <Check
+                                    className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value?.includes(system.id)
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
                                 />
-                              </FormControl>
-                              <FormLabel className="font-normal">
                                 {system.name}
-                              </FormLabel>
-                            </FormItem>
-                          )
-                        }}
-                      />
-                    ))}
-                  </div>
+                                </CommandItem>
+                            ))}
+                            </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -293,14 +331,14 @@ function ResourceDialog({
                <FormField control={form.control} name="onboardingDate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Onboarding Date</FormLabel>
-                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
                <FormField control={form.control} name="offloadingDate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Offloading Date</FormLabel>
-                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormControl><Input type="date" {...field} value={field.value || ''}/></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -373,11 +411,12 @@ function CapacityPlanning() {
     };
   }, [viewType, selectedSprintId, sprints, currentDate]);
 
-  const workingDays = useMemo(() => {
-    if (!periodStart || !periodEnd) return 0;
-    
+  const getWorkingDays = useCallback((start: Date, end: Date): number => {
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+        return 0;
+    }
     const holidayDates = holidays.map(h => parseISO(h.date));
-    const interval = eachDayOfInterval({ start: periodStart, end: periodEnd });
+    const interval = eachDayOfInterval({ start, end });
     
     return interval.filter(day => {
       const dayOfWeek = day.getDay();
@@ -385,31 +424,33 @@ function CapacityPlanning() {
       const isHoliday = holidayDates.some(h => isSameDay(day, h));
       return !isWeekend && !isHoliday;
     }).length;
-  }, [periodStart, periodEnd, holidays, weeklyOffDays]);
+  }, [holidays, weeklyOffDays]);
+
+  const workingDaysInPeriod = useMemo(() => {
+    if (!periodStart || !periodEnd) return 0;
+    return getWorkingDays(periodStart, periodEnd);
+  }, [periodStart, periodEnd, getWorkingDays]);
 
   const capacityData = useMemo(() => {
     if (!periodStart || !periodEnd) return [];
     
-    // Filter tasks that fall within the selected period
     const relevantTasks = stories.filter(story => {
       if (story.itemType !== 'Sub Task' || !story.startDate || !story.endDate) return false;
       const taskStart = parseISO(story.startDate);
       const taskEnd = parseISO(story.endDate);
-      // Check for overlap
       return taskStart <= periodEnd && taskEnd >= periodStart;
     });
 
     return impactedSystems.map(system => {
         const systemTasks = relevantTasks.filter(t => t.impactedSystemId === system.id);
+        const resourcesForSystemIds = new Set(systemTasks.map(t => t.assigneeId).filter(Boolean));
         
         let totalCapacityHours = 0;
-        const resourcesForSystem = new Set(systemTasks.map(t => t.assigneeId).filter(Boolean));
-        
-        resourcesForSystem.forEach(empId => {
+        resourcesForSystemIds.forEach(empId => {
             const employee = employees.find(e => e.id === empId);
             if (employee) {
                 const availabilityFactor = (employee.availability || 100) / 100;
-                totalCapacityHours += workingDays * 8 * availabilityFactor;
+                totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
             }
         });
 
@@ -426,7 +467,7 @@ function CapacityPlanning() {
         };
     });
 
-  }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDays]);
+  }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod]);
 
   const handleDateChange = (changeFn: (date: Date, amount: number) => Date) => {
     setCurrentDate(prev => changeFn(prev, 1));
@@ -434,7 +475,11 @@ function CapacityPlanning() {
 
   const periodTitle = useMemo(() => {
     if (viewType === 'sprint') {
-        return sprints.find(s => s.id === selectedSprintId)?.title || 'Select a Sprint';
+        const sprint = sprints.find(s => s.id === selectedSprintId)
+        if (!sprint) return "Select a Sprint";
+        const start = sprint.startDate ? format(parseISO(sprint.startDate), 'MMM d') : '?';
+        const end = sprint.endDate ? format(parseISO(sprint.endDate), 'MMM d') : '?';
+        return `${sprint.title} (${start} - ${end})`;
     }
     if (viewType === 'month') {
         return format(currentDate, 'MMMM yyyy');
@@ -463,7 +508,7 @@ function CapacityPlanning() {
             
             {viewType === 'sprint' ? (
                  <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-[250px]">
                         <SelectValue placeholder="Select Sprint" />
                     </SelectTrigger>
                     <SelectContent>
@@ -472,11 +517,9 @@ function CapacityPlanning() {
                  </Select>
             ) : (
                 <div className="flex items-center gap-2 border rounded-md p-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subYears : subWeeks)}> <ChevronsLeft /> </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subMonths : subWeeks)}> <ChevronLeft /> </Button>
-                    <span className="font-semibold text-sm w-36 text-center">{periodTitle}</span>
+                    <span className="font-semibold text-sm w-48 text-center">{periodTitle}</span>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addMonths : addWeeks)}> <ChevronRight /> </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addYears : addWeeks)}> <ChevronsRight /> </Button>
                 </div>
             )}
         </div>
@@ -563,10 +606,10 @@ export default function ResourcesPage() {
                   <TableCell>{user.role || 'N/A'}</TableCell>
                    <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {user.capabilities?.map(capId => {
+                      {user.capabilities && user.capabilities.length > 0 ? user.capabilities.map(capId => {
                         const system = impactedSystems.find(s => s.id === capId);
                         return system ? <Badge key={capId} variant="secondary">{system.name}</Badge> : null;
-                      }) || 'N/A'}
+                      }) : 'N/A'}
                     </div>
                   </TableCell>
                   <TableCell>{user.availability ? `${user.availability}%` : 'N/A'}</TableCell>
