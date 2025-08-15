@@ -332,7 +332,7 @@ export default function BacklogPage() {
         title: selectedStory.title,
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-        epicId: ['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
+        epicId: selectedStory.epicId || 'unassigned',
         parentStoryId: ['Bug', 'Sub Task'].includes(selectedStory.itemType) ? selectedStory.parentStoryId || 'unassigned' : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
@@ -416,14 +416,12 @@ export default function BacklogPage() {
         estimatedHours: values.estimatedHours,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
     };
-
-    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
-        payload.epicId = values.epicId === 'unassigned' ? undefined : values.epicId;
-    }
-
-    if (['Bug', 'Sub Task'].includes(selectedStory.itemType)) {
+    
+    if (selectedStory.itemType === 'Bug' || selectedStory.itemType === 'Sub Task') {
         payload.parentStoryId = values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId;
+        payload.epicId = undefined; // Sub-items don't have direct epic link in this model
     }
     
     if (selectedStory.itemType === 'Bug') {
@@ -1049,10 +1047,16 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                   <Tabs defaultValue="details" className="w-full">
                     <TabsList>
                         <TabsTrigger value="details">Details</TabsTrigger>
-                        <TabsTrigger value="related">
-                            Related Items 
+                        <TabsTrigger value="subTasks">
+                            Sub-Tasks
                             <Badge variant="secondary" className="ml-2">
-                                {selectedStorySubItems.devTasks.length + selectedStorySubItems.bugs.length + selectedStorySubItems.subTasks.length}
+                                {selectedStorySubItems.subTasks.length}
+                            </Badge>
+                        </TabsTrigger>
+                         <TabsTrigger value="bugs">
+                            Bugs
+                            <Badge variant="secondary" className="ml-2">
+                                {selectedStorySubItems.bugs.length}
                             </Badge>
                         </TabsTrigger>
                     </TabsList>
@@ -1254,8 +1258,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         )}
                       </div>
                     </TabsContent>
-                    <TabsContent value="related">
-                       <div className="space-y-4 pt-4">
+                    <TabsContent value="subTasks">
+                        <div className="space-y-4 pt-4">
                             <div>
                                 <h4 className="text-sm font-medium mb-2">Sub-Tasks</h4>
                                 {selectedStorySubItems.subTasks.length > 0 && (
@@ -1297,7 +1301,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
-                                                  <Button onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
+                                                  <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
                                                 </div>
                                             </div>
                                         </Form>
@@ -1306,6 +1310,10 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Sub-Task</Button>
                                 )}
                             </div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="bugs">
+                       <div className="space-y-4 pt-4">
                             <div>
                                 <h4 className="text-sm font-medium mb-2">Bugs</h4>
                                  {selectedStorySubItems.bugs.length > 0 ? (
@@ -1424,6 +1432,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
