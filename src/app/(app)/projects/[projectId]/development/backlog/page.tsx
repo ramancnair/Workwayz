@@ -124,7 +124,14 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
   const Icon = workItemIcons[story.itemType];
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
-  const hasEffort = story.estimatedHours && story.estimatedHours > 0;
+  
+  const isReadyForDev = useMemo(() => {
+    if (!story.estimatedHours || story.estimatedHours <= 0) return false;
+    if (!story.impactedSystemIds || story.impactedSystemIds.length === 0) return true; // No systems, so ready
+    
+    const subTaskSystemIds = new Set(subTasks.map(st => st.impactedSystemId).filter(Boolean));
+    return story.impactedSystemIds.every(id => subTaskSystemIds.has(id));
+  }, [story.estimatedHours, story.impactedSystemIds, subTasks]);
 
   return (
     <Collapsible>
@@ -149,7 +156,7 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
               <div className="flex items-center gap-2">
                 {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
                 <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
-                {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
+                {isReadyForDev && <Flag className="h-4 w-4 text-green-500" />}
               </div>
               <p className="font-semibold break-words">{story.title}</p>
             </div>
@@ -1679,6 +1686,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

@@ -119,7 +119,15 @@ function StoryCard({
   
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
-  const hasEffort = story.estimatedHours && story.estimatedHours > 0;
+  
+  const isReadyForDev = useMemo(() => {
+    if (!story.estimatedHours || story.estimatedHours <= 0) return false;
+    if (!story.impactedSystemIds || story.impactedSystemIds.length === 0) return true; // No systems, so ready
+    
+    const subTaskSystemIds = new Set(subTasks.map(st => st.impactedSystemId).filter(Boolean));
+    return story.impactedSystemIds.every(id => subTaskSystemIds.has(id));
+  }, [story.estimatedHours, story.impactedSystemIds, subTasks]);
+
 
   return (
     <Collapsible>
@@ -132,7 +140,7 @@ function StoryCard({
                     <p className="text-xs font-semibold text-muted-foreground">
                     {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                     </p>
-                    {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
+                    {isReadyForDev && <Flag className="h-4 w-4 text-green-500" />}
                 </div>
                 <p className="font-semibold break-words">{story.title}</p>
             </CollapsibleTrigger>
@@ -939,6 +947,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
