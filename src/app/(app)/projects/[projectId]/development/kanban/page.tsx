@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -54,12 +54,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
-  Bug: Bug,
-  'Development Task': CheckSquare,
+  'Bug': Bug,
+  'Task': CheckSquare,
   'Feature Change': GitCommit,
+  'Sub Task': CheckSquare,
 };
 
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
@@ -76,49 +78,90 @@ const storyFormSchema = z.object({
   environmentId: z.string().optional(),
 });
 
-function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, className, isMoveToDoneDisabled, subItems, onSubItemClick }: { story: Story; epic?: Epic; parentStory?: Story; columns: KanbanColumn[]; onStatusChange?: (newStatus: StoryStatus) => void; onEdit: () => void; className?: string; isMoveToDoneDisabled?: boolean; subItems?: Story[], onSubItemClick: (story: Story) => void; }) {
+function StoryCard({ 
+  story, 
+  epic, 
+  assignee,
+  parentStory, 
+  columns, 
+  onStatusChange, 
+  onEdit, 
+  className, 
+  isMoveToDoneDisabled, 
+  subItems, 
+  onSubItemClick 
+}: { 
+  story: Story; 
+  epic?: Epic; 
+  assignee?: User;
+  parentStory?: Story; 
+  columns: KanbanColumn[]; 
+  onStatusChange?: (newStatus: StoryStatus) => void; 
+  onEdit: () => void; 
+  className?: string; 
+  isMoveToDoneDisabled?: boolean; 
+  subItems?: Story[], 
+  onSubItemClick: (story: Story) => void; 
+}) {
 
   const Icon = workItemIcons[story.itemType];
   const doneColumn = columns.find(c => c.isDoneColumn);
   
-  const devTasks = subItems?.filter(i => i.itemType === 'Development Task') || [];
+  const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
+  const hasEffort = story.estimatedHours && story.estimatedHours > 0;
 
   return (
     <Collapsible>
     <Card className={cn("bg-card", className)}>
-      <CardHeader>
+      <div className="p-4">
         <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2">
-                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                <p className="text-xs font-semibold text-muted-foreground">
-                {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
-                </p>
-            </div>
-             <div className="flex items-center gap-1">
+            <CollapsibleTrigger className="flex-1 pr-2 text-left space-y-1">
+                <div className="flex items-center gap-2">
+                    {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                    <p className="text-xs font-semibold text-muted-foreground">
+                    {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
+                    </p>
+                    {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
+                </div>
+                <p className="font-semibold break-words">{story.title}</p>
+            </CollapsibleTrigger>
+            <div className="flex items-center gap-1 flex-shrink-0">
                 {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
                     <Edit className="h-4 w-4" />
                 </Button>
             </div>
         </div>
-        <CardTitle className="text-base">{story.title}</CardTitle>
-      </CardHeader>
-      <CardFooter className="flex justify-between items-center" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-4">
+      </div>
+      <CardFooter className="flex justify-between items-center p-4 pt-0" onClick={(e) => e.stopPropagation()}>
+         <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            {assignee && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger>
+                            <Avatar className="h-6 w-6">
+                                <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
+                                <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
             {story.estimatedHours !== undefined && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>{story.estimatedHours}h</span>
+                <div className="flex items-center gap-1" title="Development effort">
+                    <Clock className="h-3 w-3" />
+                    <span>{story.estimatedHours}h</span>
                 </div>
             )}
-             {(devTasks.length > 0 || bugs.length > 0) && (
+            {(subTasks.length > 0 || bugs.length > 0) && (
               <CollapsibleTrigger asChild>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                  {devTasks.length > 0 && (
-                    <div className="flex items-center gap-1" title={`${devTasks.length} development tasks`}>
+                <div className="flex items-center gap-2 cursor-pointer">
+                  {subTasks.length > 0 && (
+                    <div className="flex items-center gap-1" title={`${subTasks.length} sub-tasks`}>
                       <CheckSquare className="h-3 w-3" />
-                      <span>{devTasks.length}</span>
+                      <span>{subTasks.length}</span>
                     </div>
                   )}
                   {bugs.length > 0 && (
@@ -130,7 +173,7 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, 
                 </div>
               </CollapsibleTrigger>
             )}
-        </div>
+          </div>
         <div className="flex items-center gap-1">
             {onStatusChange && (
                 <DropdownMenu>
@@ -176,8 +219,8 @@ function StoryCard({ story, epic, parentStory, columns, onStatusChange, onEdit, 
       </CardFooter>
       <CollapsibleContent>
         <div className="px-6 pb-4 space-y-2">
-            {(devTasks.length > 0 || bugs.length > 0) && <Separator />}
-            {[...devTasks, ...bugs].map(item => {
+            {(subTasks.length > 0 || bugs.length > 0) && <Separator />}
+            {[...subTasks, ...bugs].map(item => {
                 const ItemIcon = workItemIcons[item.itemType];
                 return (
                     <div key={item.id} className="flex items-center justify-between text-xs">
@@ -221,11 +264,11 @@ export default function KanbanPage() {
   }, {} as Record<string, Story>), [stories]);
   
   const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
-    if (['Bug', 'Development Task'].includes(story.itemType) && story.epicId) {
-        if (!acc[story.epicId]) {
-            acc[story.epicId] = [];
+    if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
+        if (!acc[story.parentStoryId]) {
+            acc[story.parentStoryId] = [];
         }
-        acc[story.epicId].push(story);
+        acc[story.parentStoryId].push(story);
     }
     return acc;
   }, {} as Record<string, Story[]>), [stories]);
@@ -234,12 +277,13 @@ export default function KanbanPage() {
     if (!selectedStory) {
       setEditStorySubmitting(false);
     } else {
+      const isSubItem = ['Bug', 'Sub Task'].includes(selectedStory.itemType);
       editStoryForm.reset({
         title: selectedStory.title,
         description: selectedStory.description || '',
         acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-        epicId: ['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
-        parentStoryId: ['Bug', 'Development Task'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
+        epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
+        parentStoryId: isSubItem ? selectedStory.parentStoryId || 'unassigned' : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
@@ -252,14 +296,15 @@ export default function KanbanPage() {
     if (!selectedStory) return;
     setEditStorySubmitting(true);
     
-    const isSubItem = ['Bug', 'Development Task'].includes(selectedStory.itemType);
+    const isSubItem = ['Bug', 'Sub Task'].includes(selectedStory.itemType);
 
     const success = await updateStory(selectedStory.id, {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
+        epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
+        parentStoryId: isSubItem ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
@@ -290,23 +335,21 @@ export default function KanbanPage() {
       ? baseSprintStories
       : baseSprintStories.filter(story => story.assigneeId === selectedAssigneeId);
 
-    // Only show parent items (Stories/Feature Changes) or sub-items whose parent is not in the sprint
     return filteredByAssignee.filter(item => {
-      const isSubItem = ['Bug', 'Development Task'].includes(item.itemType);
+      const isSubItem = ['Bug', 'Sub Task', 'Task'].includes(item.itemType);
       if (!isSubItem) {
-        return true; // Always show parent items
+        return true; 
       }
-      // Hide sub-item if its parent is also in the sprint
-      return !baseSprintStories.some(parent => parent.id === item.epicId);
+      return !baseSprintStories.some(parent => parent.id === item.parentStoryId);
     });
   }, [baseSprintStories, selectedAssigneeId]);
 
 
  const selectedStorySubItems = useMemo(() => {
-    if (!selectedStory) return { devTasks: [], bugs: [] };
+    if (!selectedStory) return { subTasks: [], bugs: [] };
     const allSubItems = subItemsByStoryId[selectedStory.id] || [];
     return {
-      devTasks: allSubItems.filter(item => item.itemType === 'Development Task'),
+      subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
       bugs: allSubItems.filter(item => item.itemType === 'Bug'),
     };
   }, [selectedStory, subItemsByStoryId]);
@@ -369,16 +412,19 @@ export default function KanbanPage() {
                 <div className="flex-1 space-y-4 overflow-y-auto">
                   {itemsInColumn.map((story) => {
                       const epic = epics.find(e => e.id === story.epicId);
-                      const parentStory = story.epicId && !['Requirement/Story', 'Feature Change'].includes(story.itemType) ? allStoriesById[story.epicId] : undefined;
+                      const assignee = users.find(u => u.id === story.assigneeId);
+                      const parentStory = story.parentStoryId ? allStoriesById[story.parentStoryId] : undefined;
                       const subItems = subItemsByStoryId[story.id] || [];
+                      const allSubItemsDone = subItems.every(sub => sub.status === doneColumnName);
 
-                      const isMoveToDoneDisabled = ['Requirement/Story', 'Feature Change'].includes(story.itemType) && subItems.some(sub => sub.status !== doneColumnName);
+                      const isMoveToDoneDisabled = ['Requirement/Story', 'Feature Change'].includes(story.itemType) && !allSubItemsDone;
 
                       return (
                         <div key={story.id}>
                           <StoryCard 
                             story={story} 
                             epic={epic}
+                            assignee={assignee}
                             parentStory={parentStory}
                             columns={sortedColumns}
                             onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
@@ -424,10 +470,16 @@ export default function KanbanPage() {
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
-                            <TabsTrigger value="related">
-                                Related Items 
+                            <TabsTrigger value="subTasks">
+                                Sub-Tasks
                                 <Badge variant="secondary" className="ml-2">
-                                    {selectedStorySubItems.devTasks.length + selectedStorySubItems.bugs.length}
+                                    {selectedStorySubItems.subTasks.length}
+                                </Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="bugs">
+                                Bugs
+                                <Badge variant="secondary" className="ml-2">
+                                    {selectedStorySubItems.bugs.length}
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
@@ -460,7 +512,7 @@ export default function KanbanPage() {
                                     )}
                                 />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) ? (
+                                {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? (
                                     <FormField
                                     control={editStoryForm.control}
                                     name="epicId"
@@ -603,50 +655,48 @@ export default function KanbanPage() {
                                 />
                             </div>
                         </TabsContent>
-                        <TabsContent value="related">
-                             <div className="space-y-4 pt-4">
-                                <div>
-                                    <h4 className="text-sm font-medium mb-2">Development Tasks</h4>
-                                    {selectedStorySubItems.devTasks.length > 0 ? (
-                                        <div className="space-y-2 rounded-md border p-2">
-                                        {selectedStorySubItems.devTasks.map(item => {
-                                            const ItemIcon = workItemIcons[item.itemType];
-                                            return (
-                                                <div key={item.id} className="flex items-center justify-between text-sm">
-                                                    <div className='flex items-center gap-2'>
-                                                        {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                        <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
-                                                    </div>
-                                                    <Badge variant="outline">{item.status}</Badge>
+                        <TabsContent value="subTasks">
+                           <div className="space-y-4 pt-4">
+                                {selectedStorySubItems.subTasks.length > 0 ? (
+                                    <div className="space-y-2 rounded-md border p-2">
+                                    {selectedStorySubItems.subTasks.map(item => {
+                                        const ItemIcon = workItemIcons[item.itemType];
+                                        return (
+                                            <div key={item.id} className="flex items-center justify-between text-sm">
+                                                <div className='flex items-center gap-2'>
+                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                    <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
                                                 </div>
-                                            )
-                                        })}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground italic px-2">No development tasks linked.</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-medium mb-2">Bugs</h4>
-                                    {selectedStorySubItems.bugs.length > 0 ? (
-                                        <div className="space-y-2 rounded-md border p-2">
-                                        {selectedStorySubItems.bugs.map(item => {
-                                            const ItemIcon = workItemIcons[item.itemType];
-                                            return (
-                                                <div key={item.id} className="flex items-center justify-between text-sm">
-                                                    <div className='flex items-center gap-2'>
-                                                        {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                        <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
-                                                    </div>
-                                                    <Badge variant="outline">{item.status}</Badge>
+                                                <Badge variant="outline">{item.status}</Badge>
+                                            </div>
+                                        )
+                                    })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
+                                )}
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="bugs">
+                           <div className="space-y-4 pt-4">
+                                {selectedStorySubItems.bugs.length > 0 ? (
+                                    <div className="space-y-2 rounded-md border p-2">
+                                    {selectedStorySubItems.bugs.map(item => {
+                                        const ItemIcon = workItemIcons[item.itemType];
+                                        return (
+                                            <div key={item.id} className="flex items-center justify-between text-sm">
+                                                <div className='flex items-center gap-2'>
+                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                    <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
                                                 </div>
-                                            )
-                                        })}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
-                                    )}
-                                </div>
+                                                <Badge variant="outline">{item.status}</Badge>
+                                            </div>
+                                        )
+                                    })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
+                                )}
                             </div>
                         </TabsContent>
                     </Tabs>
@@ -742,3 +792,5 @@ export default function KanbanPage() {
     </>
   );
 }
+
+    
