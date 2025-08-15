@@ -55,6 +55,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
@@ -76,6 +77,7 @@ const storyFormSchema = z.object({
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
+  impactedSystemIds: z.array(z.string()).optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -315,6 +317,7 @@ export default function KanbanPage() {
         estimatedHours: selectedStory.estimatedHours,
         criticality: selectedStory.criticality || 'Medium',
         environmentId: selectedStory.environmentId || 'unassigned',
+        impactedSystemIds: selectedStory.impactedSystemIds || [],
       });
     }
   }, [selectedStory, editStoryForm, subTaskForm]);
@@ -335,6 +338,7 @@ export default function KanbanPage() {
         estimatedHours: values.estimatedHours,
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+        impactedSystemIds: values.impactedSystemIds,
     });
     if (success) {
       setSelectedStory(null);
@@ -579,6 +583,53 @@ export default function KanbanPage() {
                           </TabsList>
                           <TabsContent value="details" className="pt-4">
                               <div className="space-y-4">
+                                  {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
+                                    <FormField
+                                        control={editStoryForm.control}
+                                        name="impactedSystemIds"
+                                        render={() => (
+                                        <FormItem>
+                                            <FormLabel>Impacted Systems</FormLabel>
+                                            <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
+                                            {impactedSystems.map((system) => (
+                                                <FormField
+                                                key={system.id}
+                                                control={editStoryForm.control}
+                                                name="impactedSystemIds"
+                                                render={({ field }) => {
+                                                    return (
+                                                    <FormItem
+                                                        key={system.id}
+                                                        className="flex flex-row items-start space-x-3 space-y-0"
+                                                    >
+                                                        <FormControl>
+                                                        <Checkbox
+                                                            checked={field.value?.includes(system.id)}
+                                                            onCheckedChange={(checked) => {
+                                                            return checked
+                                                                ? field.onChange([...(field.value || []), system.id])
+                                                                : field.onChange(
+                                                                    field.value?.filter(
+                                                                    (value) => value !== system.id
+                                                                    )
+                                                                )
+                                                            }}
+                                                        />
+                                                        </FormControl>
+                                                        <FormLabel className="font-normal">
+                                                        {system.name}
+                                                        </FormLabel>
+                                                    </FormItem>
+                                                    )
+                                                }}
+                                                />
+                                            ))}
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                  )}
                                   <FormField
                                       control={editStoryForm.control}
                                       name="description"
@@ -888,5 +939,6 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 

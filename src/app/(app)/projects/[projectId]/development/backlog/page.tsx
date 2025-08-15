@@ -68,6 +68,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -98,6 +99,7 @@ const storyFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
   releaseId: z.string().optional(),
   environmentId: z.string().optional(),
+  impactedSystemIds: z.array(z.string()).optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -293,7 +295,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [] },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -360,6 +362,7 @@ export default function BacklogPage() {
             criticality: selectedStory.criticality || 'Medium',
             releaseId: selectedStory.releaseId || 'unassigned',
             environmentId: selectedStory.environmentId || 'unassigned',
+            impactedSystemIds: selectedStory.impactedSystemIds || [],
         });
     }
   }, [selectedStory, editStoryForm, subTaskForm]);
@@ -414,6 +417,7 @@ export default function BacklogPage() {
       criticality: values.itemType === 'Bug' ? values.criticality : undefined,
       releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
       environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+      impactedSystemIds: values.impactedSystemIds,
     };
 
     const success = await addStory(newStory);
@@ -437,6 +441,7 @@ export default function BacklogPage() {
         estimatedHours: values.estimatedHours,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+        impactedSystemIds: values.impactedSystemIds,
     };
     
     if (['Task', 'Requirement/Story', 'Feature Change'].includes(selectedStory.itemType)) {
@@ -733,6 +738,53 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     </FormItem>
                                     )}
                                 />
+                                {['Requirement/Story', 'Feature Change'].includes(watchedItemType) && (
+                                <FormField
+                                    control={addStoryForm.control}
+                                    name="impactedSystemIds"
+                                    render={() => (
+                                    <FormItem>
+                                        <FormLabel>Impacted Systems</FormLabel>
+                                        <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
+                                        {impactedSystems.map((system) => (
+                                            <FormField
+                                            key={system.id}
+                                            control={addStoryForm.control}
+                                            name="impactedSystemIds"
+                                            render={({ field }) => {
+                                                return (
+                                                <FormItem
+                                                    key={system.id}
+                                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                                >
+                                                    <FormControl>
+                                                    <Checkbox
+                                                        checked={field.value?.includes(system.id)}
+                                                        onCheckedChange={(checked) => {
+                                                        return checked
+                                                            ? field.onChange([...(field.value || []), system.id])
+                                                            : field.onChange(
+                                                                field.value?.filter(
+                                                                (value) => value !== system.id
+                                                                )
+                                                            )
+                                                        }}
+                                                    />
+                                                    </FormControl>
+                                                    <FormLabel className="font-normal">
+                                                    {system.name}
+                                                    </FormLabel>
+                                                </FormItem>
+                                                )
+                                            }}
+                                            />
+                                        ))}
+                                        </div>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                )}
                                 <FormField
                                     control={addStoryForm.control}
                                     name="acceptanceCriteria"
@@ -1188,6 +1240,53 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </FormItem>
                             )}
                         />
+                        {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
+                          <FormField
+                            control={editStoryForm.control}
+                            name="impactedSystemIds"
+                            render={() => (
+                              <FormItem>
+                                <FormLabel>Impacted Systems</FormLabel>
+                                <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
+                                  {impactedSystems.map((system) => (
+                                    <FormField
+                                      key={system.id}
+                                      control={editStoryForm.control}
+                                      name="impactedSystemIds"
+                                      render={({ field }) => {
+                                        return (
+                                          <FormItem
+                                            key={system.id}
+                                            className="flex flex-row items-start space-x-3 space-y-0"
+                                          >
+                                            <FormControl>
+                                              <Checkbox
+                                                checked={field.value?.includes(system.id)}
+                                                onCheckedChange={(checked) => {
+                                                  return checked
+                                                    ? field.onChange([...(field.value || []), system.id])
+                                                    : field.onChange(
+                                                        field.value?.filter(
+                                                          (value) => value !== system.id
+                                                        )
+                                                      )
+                                                }}
+                                              />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                              {system.name}
+                                            </FormLabel>
+                                          </FormItem>
+                                        )
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
                         <FormField
                             control={editStoryForm.control}
                             name="acceptanceCriteria"
@@ -1580,6 +1679,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

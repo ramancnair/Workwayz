@@ -55,6 +55,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format, parseISO } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -82,6 +83,7 @@ const storyFormSchema = z.object({
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
+  impactedSystemIds: z.array(z.string()).optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -455,6 +457,7 @@ export default function GroomingPage() {
                 estimatedHours: editingStory.estimatedHours,
                 criticality: editingStory.criticality || 'Medium',
                 environmentId: editingStory.environmentId || 'unassigned',
+                impactedSystemIds: editingStory.impactedSystemIds || [],
             });
         }
     }, [editingStory, editStoryForm, subTaskForm]);
@@ -498,6 +501,7 @@ export default function GroomingPage() {
             estimatedHours: values.estimatedHours,
             criticality: editingStory.itemType === 'Bug' ? values.criticality : undefined,
             environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+            impactedSystemIds: values.impactedSystemIds,
         });
 
         if (success) {
@@ -848,6 +852,53 @@ export default function GroomingPage() {
                         </TabsList>
                         <TabsContent value="details" className="pt-4">
                         <div className="space-y-4">
+                             {['Requirement/Story', 'Feature Change'].includes(editingStory.itemType) && (
+                                <FormField
+                                    control={editStoryForm.control}
+                                    name="impactedSystemIds"
+                                    render={() => (
+                                    <FormItem>
+                                        <FormLabel>Impacted Systems</FormLabel>
+                                        <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
+                                        {impactedSystems.map((system) => (
+                                            <FormField
+                                            key={system.id}
+                                            control={editStoryForm.control}
+                                            name="impactedSystemIds"
+                                            render={({ field }) => {
+                                                return (
+                                                <FormItem
+                                                    key={system.id}
+                                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                                >
+                                                    <FormControl>
+                                                    <Checkbox
+                                                        checked={field.value?.includes(system.id)}
+                                                        onCheckedChange={(checked) => {
+                                                        return checked
+                                                            ? field.onChange([...(field.value || []), system.id])
+                                                            : field.onChange(
+                                                                field.value?.filter(
+                                                                (value) => value !== system.id
+                                                                )
+                                                            )
+                                                        }}
+                                                    />
+                                                    </FormControl>
+                                                    <FormLabel className="font-normal">
+                                                    {system.name}
+                                                    </FormLabel>
+                                                </FormItem>
+                                                )
+                                            }}
+                                            />
+                                        ))}
+                                        </div>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            )}
                             <FormField
                                 control={editStoryForm.control}
                                 name="description"
@@ -1141,6 +1192,7 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
 
