@@ -67,6 +67,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Bug: Bug,
   'Task': CheckSquare,
   'Feature Change': GitCommit,
+  'Sub Task': CheckSquare,
 };
 
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
@@ -103,7 +104,7 @@ function StoryItemCard({
 }) {
   const { sprints } = useProject();
   const Icon = workItemIcons[story.itemType];
-  const devTasks = subItems?.filter(i => i.itemType === 'Task') || [];
+  const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
   const hasEffort = story.estimatedHours && story.estimatedHours > 0;
 
@@ -149,13 +150,13 @@ function StoryItemCard({
                     <span>{story.estimatedHours}h</span>
                 </div>
             )}
-            {(devTasks.length > 0 || bugs.length > 0) && (
+            {(subTasks.length > 0 || bugs.length > 0) && (
               <CollapsibleTrigger asChild>
                 <div className="flex items-center gap-2 cursor-pointer">
-                  {devTasks.length > 0 && (
-                    <div className="flex items-center gap-1" title={`${devTasks.length} development tasks`}>
+                  {subTasks.length > 0 && (
+                    <div className="flex items-center gap-1" title={`${subTasks.length} sub-tasks`}>
                       <CheckSquare className="h-3 w-3" />
-                      <span>{devTasks.length}</span>
+                      <span>{subTasks.length}</span>
                     </div>
                   )}
                   {bugs.length > 0 && (
@@ -192,8 +193,8 @@ function StoryItemCard({
         </CardFooter>
         <CollapsibleContent>
             <div className="px-6 pb-4 space-y-2">
-                {(devTasks.length > 0 || bugs.length > 0) && <Separator />}
-                {[...devTasks, ...bugs].map(item => {
+                {(subTasks.length > 0 || bugs.length > 0) && <Separator />}
+                {[...subTasks, ...bugs].map(item => {
                     const ItemIcon = workItemIcons[item.itemType];
                     return (
                         <div key={item.id} className="flex items-center justify-between text-xs">
@@ -244,11 +245,11 @@ function SprintColumn({
     const { epics, employees, stories: allStories } = useProject();
 
      const subItemsByStoryId = useMemo(() => allStories.reduce((acc, story) => {
-        if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
-            if (!acc[story.epicId]) {
-                acc[story.epicId] = [];
+        if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
+            if (!acc[story.parentStoryId]) {
+                acc[story.parentStoryId] = [];
             }
-            acc[story.epicId].push(story);
+            acc[story.parentStoryId].push(story);
         }
         return acc;
       }, {} as Record<string, Story[]>), [allStories]);
@@ -338,15 +339,15 @@ export default function GroomingPage() {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
     }, [stories]);
     
-    const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
-        if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
-            if (!acc[story.epicId]) {
-                acc[story.epicId] = [];
+     const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
+        if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
+            if (!acc[story.parentStoryId]) {
+                acc[story.parentStoryId] = [];
             }
-            acc[story.epicId].push(story);
+            acc[story.parentStoryId].push(story);
         }
         return acc;
-    }, {} as Record<string, Story[]>), [stories]);
+      }, {} as Record<string, Story[]>), [stories]);
 
     const sprintsWithStories = useMemo(() => {
         return sprints.map(sprint => ({
@@ -397,12 +398,12 @@ export default function GroomingPage() {
     
     useEffect(() => {
         if (editingStory) {
-            editStoryForm.reset({
+             editStoryForm.reset({
                 title: editingStory.title,
                 description: editingStory.description || '',
                 acceptanceCriteria: editingStory.acceptanceCriteria || '',
-                epicId: ['Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
-                parentStoryId: ['Bug', 'Task'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
+                epicId: editingStory.itemType === 'Task' ? editingStory.epicId || 'unassigned' : (['Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined),
+                parentStoryId: ['Bug', 'Sub Task'].includes(editingStory.itemType) ? editingStory.parentStoryId || 'unassigned' : undefined,
                 assigneeId: editingStory.assigneeId || 'unassigned',
                 estimatedHours: editingStory.estimatedHours,
                 criticality: editingStory.criticality || 'Medium',
@@ -438,14 +439,15 @@ export default function GroomingPage() {
         if (!editingStory) return;
         setEditStorySubmitting(true);
         
-        const isSubItem = ['Bug', 'Task'].includes(editingStory.itemType);
+        const isSubItem = ['Bug', 'Sub Task'].includes(editingStory.itemType);
 
         const success = await updateStory(editingStory.id, {
             title: values.title,
             description: values.description,
             acceptanceCriteria: values.acceptanceCriteria,
             assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-            epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId),
+            epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
+            parentStoryId: isSubItem ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
             estimatedHours: values.estimatedHours,
             criticality: editingStory.itemType === 'Bug' ? values.criticality : undefined,
             environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
@@ -489,10 +491,10 @@ export default function GroomingPage() {
     };
     
     const selectedStorySubItems = useMemo(() => {
-        if (!editingStory) return { devTasks: [], bugs: [] };
+        if (!editingStory) return { subTasks: [], bugs: [] };
         const allSubItems = subItemsByStoryId[editingStory.id] || [];
         return {
-          devTasks: allSubItems.filter(item => item.itemType === 'Task'),
+          subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
           bugs: allSubItems.filter(item => item.itemType === 'Bug'),
         };
     }, [editingStory, subItemsByStoryId]);
@@ -666,10 +668,10 @@ export default function GroomingPage() {
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
-                            <TabsTrigger value="devTasks">
-                                Tasks
+                            <TabsTrigger value="subTasks">
+                                Sub-Tasks
                                 <Badge variant="secondary" className="ml-2">
-                                    {selectedStorySubItems.devTasks.length}
+                                    {selectedStorySubItems.subTasks.length}
                                 </Badge>
                             </TabsTrigger>
                             <TabsTrigger value="bugs">
@@ -708,7 +710,7 @@ export default function GroomingPage() {
                                 )}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {['Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? (
+                            {['Requirement/Story', 'Feature Change', 'Task'].includes(editingStory.itemType) ? (
                                 <FormField
                                 control={editStoryForm.control}
                                 name="epicId"
@@ -851,11 +853,11 @@ export default function GroomingPage() {
                             />
                         </div>
                         </TabsContent>
-                         <TabsContent value="devTasks">
+                         <TabsContent value="subTasks">
                            <div className="space-y-4 pt-4">
-                                {selectedStorySubItems.devTasks.length > 0 ? (
+                                {selectedStorySubItems.subTasks.length > 0 ? (
                                     <div className="space-y-2 rounded-md border p-2">
-                                    {selectedStorySubItems.devTasks.map(item => {
+                                    {selectedStorySubItems.subTasks.map(item => {
                                         const ItemIcon = workItemIcons[item.itemType];
                                         return (
                                             <div key={item.id} className="flex items-center justify-between text-sm">
@@ -869,7 +871,7 @@ export default function GroomingPage() {
                                     })}
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No tasks linked.</p>
+                                    <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
                                 )}
                             </div>
                         </TabsContent>
@@ -910,4 +912,5 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
