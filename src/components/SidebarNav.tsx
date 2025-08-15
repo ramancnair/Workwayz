@@ -43,6 +43,7 @@ import {
   ChevronsUpDown,
   Trash2,
   DollarSign,
+  Component,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -75,8 +76,8 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
      {
       href: `${basePath}/development/development-tasks`,
-      label: "Development Tasks",
-      icon: CheckSquare,
+      label: "Sub-Tasks",
+      icon: Component,
     },
   ];
 

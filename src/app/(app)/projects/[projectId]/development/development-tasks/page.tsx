@@ -46,19 +46,15 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { format, addDays, parseISO, isSameDay } from 'date-fns';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
-const taskSchema = z.object({
+const subTaskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
-  acceptanceCriteria: z.string().optional(),
-  epicId: z.string().optional(),
+  parentStoryId: z.string().min(1, 'A parent story is required.'),
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
-  sprintId: z.string().optional(),
-  effortDays: z.coerce.number().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  estimatedHours: z.coerce.number().optional(),
   impactedSystemId: z.string().optional(),
 });
 
@@ -72,57 +68,34 @@ const statusStyles: Record<StoryStatus, string> = {
 
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, sprints, epics, holidays, weeklyOffDays, addStory, updateStory, deleteStory, impactedSystems } = useProject();
+  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Story | null>(null);
-  const [deletingTask, setDeletingTask] = useState<Story | null>(null);
+  const [editingSubTask, setEditingSubTask] = useState<Story | null>(null);
+  const [deletingSubTask, setDeletingSubTask] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const tasks = stories.filter(story => story.itemType === 'Task');
+  const subTasks = stories.filter(story => story.itemType === 'Sub Task');
+  const parentStories = stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType));
 
   const [filters, setFilters] = useState({
     status: 'all',
     assigneeId: 'all',
     impactedSystemId: 'all',
-    sprintId: 'all',
+    parentStoryId: 'all',
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
 
-  const form = useForm<z.infer<typeof taskSchema>>({
-    resolver: zodResolver(taskSchema),
+  const form = useForm<z.infer<typeof subTaskSchema>>({
+    resolver: zodResolver(subTaskSchema),
   });
 
-  const watchedStartDate = useWatch({ control: form.control, name: 'startDate' });
-  const watchedEffortDays = useWatch({ control: form.control, name: 'effortDays' });
-  
-  const holidayDates = holidays.map(h => new Date(h.date));
-
-  const calculateBusinessEndDate = (startDate: Date, effortDays: number) => {
-    let currentDate = new Date(startDate);
-    let daysAdded = 0;
-    while (daysAdded < effortDays) {
-      if (daysAdded > 0) {
-        currentDate = addDays(currentDate, 1);
-      }
-      
-      const dayOfWeek = currentDate.getDay();
-      const isWeekend = weeklyOffDays.includes(dayOfWeek);
-      const isHoliday = holidayDates.some(holiday => isSameDay(currentDate, holiday));
-
-      if (!isWeekend && !isHoliday) {
-        daysAdded++;
-      }
-    }
-    return currentDate;
-  };
-  
-   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
 
   const clearFilters = () => {
-    setFilters({ status: 'all', assigneeId: 'all', impactedSystemId: 'all', sprintId: 'all' });
+    setFilters({ status: 'all', assigneeId: 'all', impactedSystemId: 'all', parentStoryId: 'all' });
   };
   
   const handleSort = (columnId: string) => {
@@ -133,8 +106,8 @@ export default function DevelopmentTasksPage() {
     }
   };
   
-  const filteredAndSortedTasks = useMemo(() => {
-    let filtered = [...tasks];
+  const filteredAndSortedSubTasks = useMemo(() => {
+    let filtered = [...subTasks];
 
     if (filters.status !== 'all') {
       filtered = filtered.filter(t => t.status === filters.status);
@@ -145,21 +118,17 @@ export default function DevelopmentTasksPage() {
     if (filters.impactedSystemId !== 'all') {
       filtered = filtered.filter(t => t.impactedSystemId === filters.impactedSystemId);
     }
-    if (filters.sprintId !== 'all') {
-      if (filters.sprintId === 'backlog') {
-        filtered = filtered.filter(t => !t.sprintId);
-      } else {
-        filtered = filtered.filter(t => t.sprintId === filters.sprintId);
-      }
+    if (filters.parentStoryId !== 'all') {
+        filtered = filtered.filter(t => t.parentStoryId === filters.parentStoryId);
     }
 
     if (sorting) {
       filtered.sort((a, b) => {
         let valA: any, valB: any;
 
-        if (sorting.id === 'sprintId') {
-            valA = sprints.find(s => s.id === a.sprintId)?.title || 'Backlog';
-            valB = sprints.find(s => s.id === b.sprintId)?.title || 'Backlog';
+        if (sorting.id === 'parentStoryId') {
+            valA = stories.find(s => s.id === a.parentStoryId)?.title || '';
+            valB = stories.find(s => s.id === b.parentStoryId)?.title || '';
         } else {
             valA = (a as any)[sorting.id];
             valB = (b as any)[sorting.id];
@@ -169,9 +138,7 @@ export default function DevelopmentTasksPage() {
         if (valB === null || valB === undefined) return -1;
         
         let comparison = 0;
-        if (['startDate', 'endDate'].includes(sorting.id) && valA && valB) {
-            comparison = new Date(valA).getTime() - new Date(valB).getTime();
-        } else if (typeof valA === 'string' && typeof valB === 'string') {
+        if (typeof valA === 'string' && typeof valB === 'string') {
           comparison = valA.localeCompare(valB, undefined, { numeric: true });
         } else if (valA > valB) {
           comparison = 1;
@@ -184,103 +151,84 @@ export default function DevelopmentTasksPage() {
     }
 
     return filtered;
-  }, [tasks, filters, sorting, sprints]);
+  }, [subTasks, filters, sorting, stories]);
 
-  useEffect(() => {
-    if (watchedStartDate && watchedEffortDays !== undefined && watchedEffortDays > 0) {
-      try {
-        const startDate = parseISO(watchedStartDate);
-        const newEndDate = calculateBusinessEndDate(startDate, watchedEffortDays);
-        form.setValue('endDate', format(newEndDate, 'yyyy-MM-dd'), { shouldValidate: true });
-      } catch (e) {
-        form.setValue('endDate', '', { shouldValidate: true });
-      }
-    } else if (watchedEffortDays === 0) {
-       form.setValue('endDate', watchedStartDate);
-    }
-  }, [watchedStartDate, watchedEffortDays, form, holidays, weeklyOffDays]);
 
   useEffect(() => {
     if (isDialogOpen) {
-      if (editingTask) {
+      if (editingSubTask) {
         form.reset({
-          title: editingTask.title,
-          description: editingTask.description || '',
-          acceptanceCriteria: editingTask.acceptanceCriteria || '',
-          epicId: editingTask.epicId || 'unassigned',
-          assigneeId: editingTask.assigneeId || 'unassigned',
-          status: editingTask.status,
-          sprintId: editingTask.sprintId || 'backlog',
-          effortDays: editingTask.effortDays,
-          startDate: editingTask.startDate ? format(parseISO(editingTask.startDate), 'yyyy-MM-dd') : '',
-          endDate: editingTask.endDate ? format(parseISO(editingTask.endDate), 'yyyy-MM-dd') : '',
-          impactedSystemId: editingTask.impactedSystemId || 'unassigned',
+          title: editingSubTask.title,
+          description: editingSubTask.description || '',
+          parentStoryId: editingSubTask.parentStoryId,
+          assigneeId: editingSubTask.assigneeId || 'unassigned',
+          status: editingSubTask.status,
+          estimatedHours: editingSubTask.estimatedHours,
+          impactedSystemId: editingSubTask.impactedSystemId || 'unassigned',
         });
       } else {
         form.reset({
           title: '',
           description: '',
-          acceptanceCriteria: '',
-          epicId: 'unassigned',
+          parentStoryId: undefined,
           assigneeId: 'unassigned',
           status: 'To Do',
-          sprintId: 'backlog',
-          effortDays: 0,
-          startDate: '',
-          endDate: '',
+          estimatedHours: 0,
           impactedSystemId: 'unassigned',
         });
       }
     }
-  }, [isDialogOpen, editingTask, form]);
+  }, [isDialogOpen, editingSubTask, form]);
 
   const handleDialogOpen = (task: Story | null) => {
-    setEditingTask(task);
+    setEditingSubTask(task);
     setIsDialogOpen(true);
   };
   
   const handleDeleteConfirm = async () => {
-    if (!deletingTask) return;
-    const success = await deleteStory(deletingTask.id);
+    if (!deletingSubTask) return;
+    const success = await deleteStory(deletingSubTask.id);
     if (success) {
-      toast({ title: "Success", description: "Task deleted." });
+      toast({ title: "Success", description: "Sub-task deleted." });
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not delete task." });
+      toast({ variant: "destructive", title: "Error", description: "Could not delete sub-task." });
     }
-    setDeletingTask(null);
+    setDeletingSubTask(null);
   };
 
-  const onSubmit = async (values: z.infer<typeof taskSchema>) => {
+  const onSubmit = async (values: z.infer<typeof subTaskSchema>) => {
     setIsSubmitting(true);
     
-    const taskData: Omit<Story, 'id' | 'storyId'> = {
+    const parentStory = parentStories.find(p => p.id === values.parentStoryId);
+
+    const subTaskData: Omit<Story, 'id' | 'storyId'> = {
         title: values.title,
-        itemType: 'Task',
+        itemType: 'Sub Task',
         description: values.description,
-        acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+        parentStoryId: values.parentStoryId,
         status: values.status,
-        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        effortDays: values.effortDays,
-        startDate: values.startDate,
-        endDate: values.endDate,
+        estimatedHours: values.estimatedHours,
         impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
+        // Inherit from parent
+        epicId: parentStory?.epicId,
+        sprintId: parentStory?.sprintId,
+        releaseId: parentStory?.releaseId,
     };
 
     let success = false;
-    if (editingTask) {
-      success = await updateStory(editingTask.id, taskData);
+    if (editingSubTask) {
+      success = await updateStory(editingSubTask.id, subTaskData);
     } else {
-      success = await addStory(taskData, 'TASK');
+      success = await addStory(subTaskData, 'SUB');
     }
 
     if (success) {
-      toast({ title: "Success", description: `Task ${editingTask ? 'updated' : 'added'} successfully.` });
+      toast({ title: "Success", description: `Sub-task ${editingSubTask ? 'updated' : 'added'} successfully.` });
       setIsDialogOpen(false);
-      setEditingTask(null);
+      setEditingSubTask(null);
     } else {
-      toast({ variant: "destructive", title: "Error", description: `Could not ${editingTask ? 'update' : 'add'} task.` });
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingSubTask ? 'update' : 'add'} sub-task.` });
     }
     setIsSubmitting(false);
   };
@@ -297,10 +245,10 @@ export default function DevelopmentTasksPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Tasks" description="Manage all tasks for the project.">
+      <PageHeader title="Sub-Tasks" description="Manage all sub-tasks for the project.">
         <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Task
+            Add Sub-Task
         </Button>
       </PageHeader>
       <Card>
@@ -313,12 +261,11 @@ export default function DevelopmentTasksPage() {
                   {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
+               <Select value={filters.parentStoryId} onValueChange={(v) => handleFilterChange('parentStoryId', v)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by parent story..."/></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Sprints</SelectItem>
-                  <SelectItem value="backlog">Backlog</SelectItem>
-                  {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                  <SelectItem value="all">All Stories</SelectItem>
+                  {parentStories.map(s => <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={filters.assigneeId} onValueChange={(v) => handleFilterChange('assigneeId', v)}>
@@ -345,29 +292,40 @@ export default function DevelopmentTasksPage() {
             <TableRow>
               <SortableHeader columnId="storyId">ID</SortableHeader>
               <SortableHeader columnId="title" className="w-[30%]">Title</SortableHeader>
+              <SortableHeader columnId="parentStoryId">Parent Story</SortableHeader>
               <SortableHeader columnId="status">Status</SortableHeader>
-              <SortableHeader columnId="sprintId">Sprint</SortableHeader>
               <TableHead>Assignee</TableHead>
               <TableHead>Impacted System</TableHead>
-              <SortableHeader columnId="effortDays">Effort</SortableHeader>
+              <SortableHeader columnId="estimatedHours">Effort</SortableHeader>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAndSortedTasks.map((task) => {
+            {filteredAndSortedSubTasks.map((task) => {
               const assignee = employees.find(e => e.id === task.assigneeId);
               const impactedSystem = impactedSystems.find(s => s.id === task.impactedSystemId);
-              const sprint = sprints.find(s => s.id === task.sprintId);
+              const parentStory = stories.find(s => s.id === task.parentStoryId);
               return (
                 <TableRow key={task.id}>
                   <TableCell className="font-medium">{task.storyId}</TableCell>
                   <TableCell>{task.title}</TableCell>
                   <TableCell>
+                    {parentStory ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant="secondary">[{parentStory.storyId}]</Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>{parentStory.title}</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : 'N/A'}
+                  </TableCell>
+                  <TableCell>
                     <Badge className={cn('font-semibold', statusStyles[task.status])}>
                       {task.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{sprint?.title || 'Backlog'}</TableCell>
                   <TableCell>
                     {assignee ? (
                       <div className="flex items-center gap-2">
@@ -380,12 +338,12 @@ export default function DevelopmentTasksPage() {
                     ) : "Unassigned"}
                   </TableCell>
                   <TableCell>{impactedSystem?.name || 'N/A'}</TableCell>
-                  <TableCell>{task.effortDays ? `${task.effortDays}d` : 'N/A'}</TableCell>
+                  <TableCell>{task.estimatedHours ? `${task.estimatedHours}h` : 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(task)}>
                         <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeletingTask(task)}>
+                    <Button variant="ghost" size="icon" onClick={() => setDeletingSubTask(task)}>
                         <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -397,14 +355,32 @@ export default function DevelopmentTasksPage() {
       </Card>
     </div>
 
-    <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingTask(null); }}>
+    <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingSubTask(null); }}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingTask ? 'Edit Task' : 'Add New Task'}</DialogTitle>
-            <DialogDescription>Make changes to the task details here.</DialogDescription>
+            <DialogTitle>{editingSubTask ? 'Edit Sub-Task' : 'Add New Sub-Task'}</DialogTitle>
+            <DialogDescription>Make changes to the sub-task details here.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="parentStoryId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Parent Story</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select a parent story" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                            {parentStories.map(s => (
+                                <SelectItem key={s.id} value={s.id}>[{s.storyId}] {s.title}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <FormField
                   control={form.control}
                   name="title"
@@ -412,7 +388,7 @@ export default function DevelopmentTasksPage() {
                     <FormItem>
                       <FormLabel>Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Task title" {...field} />
+                        <Input placeholder="Sub-task title" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -425,7 +401,7 @@ export default function DevelopmentTasksPage() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe the task..." {...field} />
+                        <Textarea placeholder="Describe the sub-task..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -473,107 +449,45 @@ export default function DevelopmentTasksPage() {
                     )}
                   />
                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="epicId"
+                      name="impactedSystemId"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Epic</FormLabel>
+                          <FormItem>
+                          <FormLabel>Impacted System</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select an epic" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {epics.map((epic) => (
-                                <SelectItem key={epic.id} value={epic.id}>
-                                {epic.title}
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
+                              <FormControl>
+                              <SelectTrigger><SelectValue placeholder="Select an impacted system" /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="unassigned">None</SelectItem>
+                              {impactedSystems.map(system => (
+                                  <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
                           <FormMessage />
-                        </FormItem>
+                          </FormItem>
                       )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="sprintId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Sprint</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="backlog">Backlog</SelectItem>
-                            {sprints.map(sprint => (
-                                <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
-                 <FormField
-                    control={form.control}
-                    name="impactedSystemId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Impacted System</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select an impacted system" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="unassigned">None</SelectItem>
-                            {impactedSystems.map(system => (
-                                <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField control={form.control} name="startDate" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Start Date</FormLabel>
-                            <FormControl>
-                                <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="effortDays" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Effort (days)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="endDate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Date</FormLabel>
-                        <FormControl>
-                           <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                </div>
+                      />
+                      <FormField
+                          control={form.control}
+                          name="estimatedHours"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Effort (hours)</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                  </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (editingTask ? 'Saving...' : 'Creating...') : (editingTask ? 'Save Changes' : 'Create Task')}
+                    {isSubmitting ? (editingSubTask ? 'Saving...' : 'Creating...') : (editingSubTask ? 'Save Changes' : 'Create Sub-Task')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -581,12 +495,12 @@ export default function DevelopmentTasksPage() {
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={!!deletingTask} onOpenChange={(isOpen) => !isOpen && setDeletingTask(null)}>
+      <AlertDialog open={!!deletingSubTask} onOpenChange={(isOpen) => !isOpen && setDeletingSubTask(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the task.
+              This action cannot be undone. This will permanently delete the sub-task.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -603,3 +517,4 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
