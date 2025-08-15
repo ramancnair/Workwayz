@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem } from '@/types';
@@ -356,7 +356,8 @@ export default function GroomingPage() {
     const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false);
     const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
-    const [editingStory, setEditingStory] = useState<Story | null>(null);
+    const [selectionStack, setSelectionStack] = useState<Story[]>([]);
+    const selectedStory = selectionStack[selectionStack.length - 1] || null;
     const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
     const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
     const [showAddSubTask, setShowAddSubTask] = useState(false);
@@ -414,6 +415,23 @@ export default function GroomingPage() {
           endDate: '',
         }
     });
+    
+    const handleSetSelectedStory = (story: Story | null) => {
+        if (story) {
+            setSelectionStack([story]);
+        } else {
+            setSelectionStack([]);
+        }
+    };
+    
+    const handleDrillDown = (story: Story) => {
+        setSelectionStack(prev => [...prev, story]);
+    }
+    
+    const handleGoBack = () => {
+        setSelectionStack(prev => prev.slice(0, prev.length - 1));
+    }
+
 
     const watchedStartDate = useWatch({ control: sprintForm.control, name: "startDate" });
 
@@ -436,34 +454,34 @@ export default function GroomingPage() {
     }, [isSprintDialogOpen, editingSprint, sprintForm]);
     
     useEffect(() => {
-        if (!editingStory) {
+        if (!selectedStory) {
           setShowAddSubTask(false);
           subTaskForm.reset();
-        } else if (editingStory.itemType === 'Sub Task') {
+        } else if (selectedStory.itemType === 'Sub Task') {
             subTaskForm.reset({
-                title: editingStory.title,
-                description: editingStory.description || '',
-                impactedSystemId: editingStory.impactedSystemId || 'unassigned',
-                estimatedHours: editingStory.estimatedHours,
-                assigneeId: editingStory.assigneeId || 'unassigned',
-                startDate: editingStory.startDate ? format(new Date(editingStory.startDate), 'yyyy-MM-dd') : '',
-                endDate: editingStory.endDate ? format(new Date(editingStory.endDate), 'yyyy-MM-dd') : '',
+                title: selectedStory.title,
+                description: selectedStory.description || '',
+                impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
+                estimatedHours: selectedStory.estimatedHours,
+                assigneeId: selectedStory.assigneeId || 'unassigned',
+                startDate: selectedStory.startDate ? format(new Date(selectedStory.startDate), 'yyyy-MM-dd') : '',
+                endDate: selectedStory.endDate ? format(new Date(selectedStory.endDate), 'yyyy-MM-dd') : '',
             });
         } else {
              editStoryForm.reset({
-                title: editingStory.title,
-                description: editingStory.description || '',
-                acceptanceCriteria: editingStory.acceptanceCriteria || '',
-                epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
-                parentStoryId: ['Bug'].includes(editingStory.itemType) ? editingStory.parentStoryId || 'unassigned' : undefined,
-                assigneeId: editingStory.assigneeId || 'unassigned',
-                estimatedHours: editingStory.estimatedHours,
-                criticality: editingStory.criticality || 'Medium',
-                environmentId: editingStory.environmentId || 'unassigned',
-                impactedSystemIds: editingStory.impactedSystemIds || [],
+                title: selectedStory.title,
+                description: selectedStory.description || '',
+                acceptanceCriteria: selectedStory.acceptanceCriteria || '',
+                epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
+                parentStoryId: ['Bug'].includes(selectedStory.itemType) ? selectedStory.parentStoryId || 'unassigned' : undefined,
+                assigneeId: selectedStory.assigneeId || 'unassigned',
+                estimatedHours: selectedStory.estimatedHours,
+                criticality: selectedStory.criticality || 'Medium',
+                environmentId: selectedStory.environmentId || 'unassigned',
+                impactedSystemIds: selectedStory.impactedSystemIds || [],
             });
         }
-    }, [editingStory, editStoryForm, subTaskForm]);
+    }, [selectedStory, editStoryForm, subTaskForm]);
 
 
     React.useEffect(() => {
@@ -489,12 +507,12 @@ export default function GroomingPage() {
     };
     
     const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
-        if (!editingStory) return;
+        if (!selectedStory) return;
         setEditStorySubmitting(true);
         
-        const isSubItem = ['Bug'].includes(editingStory.itemType);
+        const isSubItem = ['Bug'].includes(selectedStory.itemType);
 
-        const success = await updateStory(editingStory.id, {
+        const success = await updateStory(selectedStory.id, {
             title: values.title,
             description: values.description,
             acceptanceCriteria: values.acceptanceCriteria,
@@ -502,25 +520,25 @@ export default function GroomingPage() {
             epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
             parentStoryId: isSubItem ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
             estimatedHours: values.estimatedHours,
-            criticality: editingStory.itemType === 'Bug' ? values.criticality : undefined,
+            criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
             environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
             impactedSystemIds: values.impactedSystemIds,
         });
 
         if (success) {
-          setEditingStory(null);
+          handleSetSelectedStory(null);
           toast({ title: 'Success', description: 'Story updated.' });
         } else {
-          toast({ variant: "destructive", title: `Error Editing ${editingStory.itemType}`, description: "Could not save your changes." });
+          toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
         }
         setEditStorySubmitting(false);
     };
 
     const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
-        if (!editingStory || editingStory.itemType !== 'Sub Task') return;
+        if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
         setEditStorySubmitting(true);
         
-        const success = await updateStory(editingStory.id, {
+        const success = await updateStory(selectedStory.id, {
             title: values.title,
             description: values.description,
             impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
@@ -531,7 +549,7 @@ export default function GroomingPage() {
         });
 
         if (success) {
-            setEditingStory(null);
+            handleSetSelectedStory(null);
         } else {
             toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
         }
@@ -539,17 +557,17 @@ export default function GroomingPage() {
     };
 
     const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
-      if (!editingStory) return;
+      if (!selectedStory) return;
 
       const newSubTask: Omit<Story, 'id' | 'storyId'> = {
           title: values.title,
           description: values.description || '',
           itemType: 'Sub Task',
           status: 'To Do',
-          epicId: editingStory.epicId, // Inherit epic
-          parentStoryId: editingStory.id, // Link to parent story
-          sprintId: editingStory.sprintId, // Inherit sprint
-          releaseId: editingStory.releaseId, // Inherit release
+          epicId: selectedStory.epicId, // Inherit epic
+          parentStoryId: selectedStory.id, // Link to parent story
+          sprintId: selectedStory.sprintId, // Inherit sprint
+          releaseId: selectedStory.releaseId, // Inherit release
           impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
           estimatedHours: values.estimatedHours,
           assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
@@ -597,13 +615,13 @@ export default function GroomingPage() {
     };
     
     const selectedStorySubItems = useMemo(() => {
-        if (!editingStory) return { subTasks: [], bugs: [] };
-        const allSubItems = subItemsByStoryId[editingStory.id] || [];
+        if (!selectedStory) return { subTasks: [], bugs: [] };
+        const allSubItems = subItemsByStoryId[selectedStory.id] || [];
         return {
           subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
           bugs: allSubItems.filter(item => item.itemType === 'Bug'),
         };
-    }, [editingStory, subItemsByStoryId]);
+    }, [selectedStory, subItemsByStoryId]);
 
     const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType)), [stories]);
     const sortedEnvironments = useMemo(() => [...environments].sort((a,b) => a.order - b.order), [environments]);
@@ -638,8 +656,8 @@ export default function GroomingPage() {
                                             assignee={assignee}
                                             subItems={subItems}
                                             onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
-                                            onEdit={() => setEditingStory(story)}
-                                            onSubItemClick={setEditingStory}
+                                            onEdit={() => handleSetSelectedStory(story)}
+                                            onSubItemClick={handleDrillDown}
                                         />
                                     </div>
                                 );
@@ -661,7 +679,7 @@ export default function GroomingPage() {
                             onNext={nextSprint}
                             showNav={sprintsWithStories.length > 1}
                             onMoveStory={moveStoryToSprint}
-                            onEditStory={setEditingStory}
+                            onEditStory={(story) => handleSetSelectedStory(story)}
                         />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
@@ -746,14 +764,21 @@ export default function GroomingPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={!!editingStory} onOpenChange={(isOpen) => !isOpen && setEditingStory(null)}>
+        <Dialog open={!!selectedStory} onOpenChange={(isOpen) => !isOpen && handleSetSelectedStory(null)}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            {editingStory && (
+            {selectedStory && (
                 <>
-                {editingStory.itemType === 'Sub Task' ? (
+                {selectedStory.itemType === 'Sub Task' ? (
                 <>
                   <DialogHeader>
-                    <DialogTitle>Edit Sub Task</DialogTitle>
+                    <div className="flex items-center gap-2">
+                        {selectionStack.length > 1 && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleGoBack}>
+                                <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                        )}
+                        <DialogTitle>Edit Sub Task</DialogTitle>
+                    </div>
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
@@ -817,9 +842,9 @@ export default function GroomingPage() {
               ) : (
                 <>
                 <DialogHeader>
-                    <DialogTitle>Edit {editingStory.itemType}</DialogTitle>
+                    <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
                     <DialogDescription>
-                    Make changes to your {editingStory.itemType.toLowerCase()} here. Click save when you're done.
+                    Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...editStoryForm}>
@@ -855,7 +880,7 @@ export default function GroomingPage() {
                         </TabsList>
                         <TabsContent value="details" className="pt-4">
                         <div className="space-y-4">
-                             {['Requirement/Story', 'Feature Change'].includes(editingStory.itemType) && (
+                             {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
                                 <FormField
                                     control={editStoryForm.control}
                                     name="impactedSystemIds"
@@ -929,7 +954,7 @@ export default function GroomingPage() {
                                 )}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {['Requirement/Story', 'Feature Change', 'Task'].includes(editingStory.itemType) ? (
+                            {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? (
                                 <FormField
                                 control={editStoryForm.control}
                                 name="epicId"
@@ -1006,7 +1031,7 @@ export default function GroomingPage() {
                                 )}
                             />
                             </div>
-                            {editingStory.itemType === 'Bug' && (
+                            {selectedStory.itemType === 'Bug' && (
                                 <>
                                     <FormField
                                     control={editStoryForm.control}
@@ -1082,7 +1107,7 @@ export default function GroomingPage() {
                                             <div key={item.id} className="flex items-center justify-between text-sm">
                                                 <div className='flex items-center gap-2'>
                                                     {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => setEditingStory(item)}>[{item.storyId}] {item.title}</span>
+                                                    <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
                                                 </div>
                                                 <Badge variant="outline">{item.status}</Badge>
                                             </div>
@@ -1166,7 +1191,7 @@ export default function GroomingPage() {
                                             <div key={item.id} className="flex items-center justify-between text-sm">
                                                 <div className='flex items-center gap-2'>
                                                     {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => setEditingStory(item)}>[{item.storyId}] {item.title}</span>
+                                                    <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
                                                 </div>
                                                 <Badge variant="outline">{item.status}</Badge>
                                             </div>
@@ -1195,6 +1220,7 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
 

@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -285,7 +285,10 @@ export default function BacklogPage() {
 
   const [addEpicOpen, setAddEpicOpen] = useState(false);
   const [addRequirementOpen, setAddRequirementOpen] = useState(false);
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  
+  const [selectionStack, setSelectionStack] = useState<Story[]>([]);
+  const selectedStory = selectionStack[selectionStack.length - 1] || null;
+
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
   
   const [isAddEpicSubmitting, setAddEpicSubmitting] = useState(false);
@@ -332,6 +335,23 @@ export default function BacklogPage() {
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
   });
+  
+  const handleSetSelectedStory = (story: Story | null) => {
+    if (story) {
+        setSelectionStack([story]);
+    } else {
+        setSelectionStack([]);
+    }
+  };
+
+  const handleDrillDown = (story: Story) => {
+    setSelectionStack(prev => [...prev, story]);
+  }
+
+  const handleGoBack = () => {
+    setSelectionStack(prev => prev.slice(0, prev.length - 1));
+  }
+
 
   useEffect(() => {
     if (!addEpicOpen) {
@@ -475,7 +495,7 @@ export default function BacklogPage() {
     const success = await updateStory(selectedStory.id, payload);
 
     if (success) {
-        setSelectedStory(null);
+        handleSetSelectedStory(null);
     } else {
         toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
@@ -497,7 +517,7 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     });
 
     if (success) {
-        setSelectedStory(null);
+        handleSetSelectedStory(null);
     } else {
         toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
     }
@@ -1034,11 +1054,11 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                   story={story}
                                   epic={storyEpic}
                                   assignee={assignee}
-                                  onClick={() => setSelectedStory(story)}
+                                  onClick={() => handleSetSelectedStory(story)}
                                   onDelete={() => setStoryToDelete(story)}
                                   subItems={subItems}
                                   sprint={sprint}
-                                  onSubItemClick={(item) => setSelectedStory(item)}
+                                  onSubItemClick={(item) => handleSetSelectedStory(item)}
                               />
                             </div>
                           )
@@ -1110,14 +1130,21 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={!!selectedStory} onOpenChange={(open) => setSelectedStory(open ? selectedStory : null)}>
+      <Dialog open={!!selectedStory} onOpenChange={(open) => !open && handleSetSelectedStory(null)}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           {selectedStory && (
             <>
               {selectedStory.itemType === 'Sub Task' ? (
                 <>
                   <DialogHeader>
-                    <DialogTitle>Edit Sub Task</DialogTitle>
+                    <div className="flex items-center gap-2">
+                        {selectionStack.length > 1 && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleGoBack}>
+                                <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                        )}
+                        <DialogTitle>Edit Sub Task</DialogTitle>
+                    </div>
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
@@ -1498,7 +1525,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                             <div key={item.id} className="flex items-center justify-between text-sm">
                                                 <div className='flex items-center gap-2'>
                                                     {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
+                                                    <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
                                                 </div>
                                                 <Badge variant="outline">{item.status}</Badge>
                                             </div>
@@ -1585,7 +1612,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                             <div key={item.id} className="flex items-center justify-between text-sm">
                                                 <div className='flex items-center gap-2'>
                                                     {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
+                                                    <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
                                                 </div>
                                                 <Badge variant="outline">{item.status}</Badge>
                                             </div>
@@ -1612,7 +1639,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               <DropdownMenuItem onClick={() => {
                                   if (!selectedStory) return;
                                   moveStoryToSprint(selectedStory.id, null);
-                                  setSelectedStory(null);
+                                  handleSetSelectedStory(null);
                               }}>
                                   Backlog
                               </DropdownMenuItem>
@@ -1625,7 +1652,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                   onClick={() => {
                                       if (!selectedStory) return;
                                       moveStoryToSprint(selectedStory.id, sprint.id);
-                                      setSelectedStory(null);
+                                      handleSetSelectedStory(null);
                                   }}
                                   >
                                   {sprint.title}
@@ -1695,6 +1722,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

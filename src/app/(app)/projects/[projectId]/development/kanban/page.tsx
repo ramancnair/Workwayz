@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment, ImpactedSystem } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -271,7 +271,8 @@ export default function KanbanPage() {
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [selectionStack, setSelectionStack] = useState<Story[]>([]);
+  const selectedStory = selectionStack[selectionStack.length - 1] || null;
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
   const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
 
@@ -289,6 +290,23 @@ export default function KanbanPage() {
           assigneeId: 'unassigned',
       }
   });
+
+  const handleSetSelectedStory = (story: Story | null) => {
+    if (story) {
+        setSelectionStack([story]);
+    } else {
+        setSelectionStack([]);
+    }
+  };
+  
+  const handleDrillDown = (story: Story) => {
+    setSelectionStack(prev => [...prev, story]);
+  }
+  
+  const handleGoBack = () => {
+    setSelectionStack(prev => prev.slice(0, prev.length - 1));
+  }
+
 
   const allStoriesById = useMemo(() => stories.reduce((acc, story) => {
     acc[story.id] = story;
@@ -352,7 +370,7 @@ export default function KanbanPage() {
         impactedSystemIds: values.impactedSystemIds,
     });
     if (success) {
-      setSelectedStory(null);
+      handleSetSelectedStory(null);
     } else {
       toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
@@ -371,7 +389,7 @@ export default function KanbanPage() {
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
     });
     if (success) {
-      setSelectedStory(null);
+      handleSetSelectedStory(null);
     } else {
       toast({ variant: "destructive", title: `Error Editing Sub Task`, description: "Could not save your changes." });
     }
@@ -489,10 +507,10 @@ export default function KanbanPage() {
                             parentStory={parentStory}
                             columns={sortedColumns}
                             onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
-                            onEdit={() => setSelectedStory(story)}
+                            onEdit={() => handleSetSelectedStory(story)}
                             isMoveToDoneDisabled={isMoveToDoneDisabled}
                             subItems={subItems}
-                            onSubItemClick={setSelectedStory}
+                            onSubItemClick={handleDrillDown}
                           />
                         </div>
                       );
@@ -503,14 +521,21 @@ export default function KanbanPage() {
         </div>
       </div>
 
-      <Dialog open={!!selectedStory} onOpenChange={setSelectedStory}>
+      <Dialog open={!!selectedStory} onOpenChange={(isOpen) => !isOpen && handleSetSelectedStory(null)}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           {selectedStory && (
             <>
               {selectedStory.itemType === 'Sub Task' ? (
                 <>
                   <DialogHeader>
-                    <DialogTitle>Edit Sub Task</DialogTitle>
+                    <div className="flex items-center gap-2">
+                        {selectionStack.length > 1 && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleGoBack}>
+                                <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                        )}
+                        <DialogTitle>Edit Sub Task</DialogTitle>
+                    </div>
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
@@ -821,7 +846,7 @@ export default function KanbanPage() {
                                               <div key={item.id} className="flex items-center justify-between text-sm">
                                                   <div className='flex items-center gap-2'>
                                                       {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                      <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
+                                                      <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
                                                   </div>
                                                   <Badge variant="outline">{item.status}</Badge>
                                               </div>
@@ -843,7 +868,7 @@ export default function KanbanPage() {
                                               <div key={item.id} className="flex items-center justify-between text-sm">
                                                   <div className='flex items-center gap-2'>
                                                       {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                      <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
+                                                      <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
                                                   </div>
                                                   <Badge variant="outline">{item.status}</Badge>
                                               </div>
@@ -867,7 +892,7 @@ export default function KanbanPage() {
                               onClick={() => {
                                 if (selectedStory) {
                                     setDeletingStory(selectedStory);
-                                    setSelectedStory(null);
+                                    handleSetSelectedStory(null);
                                 }
                               }}
                             >
@@ -893,7 +918,7 @@ export default function KanbanPage() {
                                 <DropdownMenuItem onClick={() => {
                                     if (!selectedStory) return;
                                     moveStoryToSprint(selectedStory.id, null);
-                                    setSelectedStory(null);
+                                    handleSetSelectedStory(null);
                                 }}>
                                     Backlog
                                 </DropdownMenuItem>
@@ -906,7 +931,7 @@ export default function KanbanPage() {
                                     onClick={() => {
                                         if (!selectedStory) return;
                                         moveStoryToSprint(selectedStory.id, sprint.id);
-                                        setSelectedStory(null);
+                                        handleSetSelectedStory(null);
                                     }}
                                     >
                                     {sprint.title}
@@ -950,6 +975,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
