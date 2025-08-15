@@ -51,7 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality, StoryStatus } from '@/types';
+import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality, StoryStatus, ImpactedSystem } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -75,6 +75,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Bug: Bug,
   'Task': CheckSquare,
   'Feature Change': GitCommit,
+  'Sub Task': CheckSquare,
 };
 
 const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
@@ -97,6 +98,13 @@ const storyFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
   releaseId: z.string().optional(),
   environmentId: z.string().optional(),
+});
+
+const subTaskFormSchema = z.object({
+    title: z.string().min(1, 'Title is required'),
+    description: z.string().optional(),
+    impactedSystemId: z.string().optional(),
+    estimatedHours: z.coerce.number().optional(),
 });
 
 function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null }) {
@@ -238,6 +246,7 @@ export default function BacklogPage() {
     employees: users, 
     releasesAndMilestones,
     environments,
+    impactedSystems,
     moveStoryToSprint, 
     moveStoryToEpic, 
     deleteStory, 
@@ -262,6 +271,7 @@ export default function BacklogPage() {
 
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
+  const [showAddSubTask, setShowAddSubTask] = useState(false);
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   
@@ -277,6 +287,10 @@ export default function BacklogPage() {
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
     defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned' },
+  });
+  
+  const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
+    resolver: zodResolver(subTaskFormSchema),
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -304,6 +318,8 @@ export default function BacklogPage() {
   useEffect(() => {
     if (!selectedStory) {
       setEditStorySubmitting(false);
+      setShowAddSubTask(false);
+      subTaskForm.reset();
     } else {
       const isBug = selectedStory.itemType === 'Bug';
       editStoryForm.reset({
@@ -391,13 +407,14 @@ export default function BacklogPage() {
     setEditStorySubmitting(true);
 
     const isBug = selectedStory.itemType === 'Bug';
+    const isTask = selectedStory.itemType === 'Task';
 
     const success = await updateStory(selectedStory.id, {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: isBug
+        epicId: (isBug || isTask)
             ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId)
             : (values.epicId === 'unassigned' ? undefined : values.epicId),
         estimatedHours: values.estimatedHours,
@@ -412,6 +429,32 @@ export default function BacklogPage() {
         toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
     setEditStorySubmitting(false);
+};
+
+const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
+    if (!selectedStory) return;
+
+    const newSubTask: Omit<Story, 'id' | 'storyId'> = {
+        title: values.title,
+        description: values.description || '',
+        itemType: 'Sub Task',
+        status: 'To Do',
+        epicId: selectedStory.epicId, // Inherit epic
+        parentStoryId: selectedStory.id, // Link to parent story
+        sprintId: selectedStory.sprintId, // Inherit sprint
+        releaseId: selectedStory.releaseId, // Inherit release
+        impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
+        estimatedHours: values.estimatedHours,
+    };
+
+    const success = await addStory(newSubTask, 'SUB');
+    if (success) {
+        toast({ title: 'Success', description: 'Sub-task added.' });
+        subTaskForm.reset();
+        setShowAddSubTask(false);
+    } else {
+        toast({ variant: "destructive", title: "Error", description: "Could not add sub-task." });
+    }
 };
   
   const handleDeleteStory = async () => {
@@ -437,11 +480,12 @@ export default function BacklogPage() {
   );
 
   const subItemsByParentId = stories.reduce((acc, story) => {
-      if (['Bug', 'Task'].includes(story.itemType) && story.epicId) {
-          if (!acc[story.epicId]) {
-              acc[story.epicId] = [];
+      const parentId = story.parentStoryId || (['Bug', 'Task'].includes(story.itemType) ? story.epicId : undefined);
+      if (parentId) {
+          if (!acc[parentId]) {
+              acc[parentId] = [];
           }
-          acc[story.epicId].push(story);
+          acc[parentId].push(story);
       }
       return acc;
   }, {} as Record<string, Story[]>);
@@ -485,11 +529,12 @@ export default function BacklogPage() {
   const epicToDeleteStoryCount = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
   const selectedStorySubItems = useMemo(() => {
-    if (!selectedStory) return { devTasks: [], bugs: [] };
+    if (!selectedStory) return { devTasks: [], bugs: [], subTasks: [] };
     const allSubItems = subItemsByParentId[selectedStory.id] || [];
     return {
       devTasks: allSubItems.filter(item => item.itemType === 'Task'),
       bugs: allSubItems.filter(item => item.itemType === 'Bug'),
+      subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
     };
   }, [selectedStory, subItemsByParentId]);
 
@@ -497,12 +542,13 @@ export default function BacklogPage() {
 
   const isEffortReadOnly = useMemo(() => {
     if (!selectedStory) return false;
-    return (selectedStorySubItems.devTasks.length > 0)
+    return (selectedStorySubItems.devTasks.length > 0 || selectedStorySubItems.subTasks.length > 0);
   }, [selectedStory, selectedStorySubItems]);
 
   useEffect(() => {
     if (selectedStory) {
-      const totalHours = selectedStorySubItems.devTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+      const allSubEffortItems = [...selectedStorySubItems.devTasks, ...selectedStorySubItems.subTasks];
+      const totalHours = allSubEffortItems.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
        if (isEffortReadOnly && selectedStory.estimatedHours !== totalHours) {
         updateStory(selectedStory.id, { estimatedHours: totalHours });
       }
@@ -1002,7 +1048,7 @@ export default function BacklogPage() {
                         <TabsTrigger value="related">
                             Related Items 
                             <Badge variant="secondary" className="ml-2">
-                                {selectedStorySubItems.devTasks.length + selectedStorySubItems.bugs.length}
+                                {selectedStorySubItems.devTasks.length + selectedStorySubItems.bugs.length + selectedStorySubItems.subTasks.length}
                             </Badge>
                         </TabsTrigger>
                     </TabsList>
@@ -1207,10 +1253,10 @@ export default function BacklogPage() {
                     <TabsContent value="related">
                        <div className="space-y-4 pt-4">
                             <div>
-                                <h4 className="text-sm font-medium mb-2">Tasks</h4>
-                                {selectedStorySubItems.devTasks.length > 0 ? (
+                                <h4 className="text-sm font-medium mb-2">Sub-Tasks</h4>
+                                {selectedStorySubItems.subTasks.length > 0 && (
                                     <div className="space-y-2 rounded-md border p-2">
-                                    {selectedStorySubItems.devTasks.map(item => {
+                                    {selectedStorySubItems.subTasks.map(item => {
                                         const ItemIcon = workItemIcons[item.itemType];
                                         return (
                                             <div key={item.id} className="flex items-center justify-between text-sm">
@@ -1223,8 +1269,34 @@ export default function BacklogPage() {
                                         )
                                     })}
                                     </div>
+                                )}
+                                {showAddSubTask ? (
+                                    <div className='border p-4 mt-2 rounded-md'>
+                                        <Form {...subTaskForm}>
+                                            <form onSubmit={subTaskForm.handleSubmit(handleAddSubTask)} className='space-y-4'>
+                                                <FormField control={subTaskForm.control} name="title" render={({field}) => (
+                                                    <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
+                                                )}/>
+                                                <FormField control={subTaskForm.control} name="description" render={({field}) => (
+                                                    <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
+                                                )}/>
+                                                <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                                                    <FormItem><FormLabel>Impacted System</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                            <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                        </Select>
+                                                    <FormMessage/></FormItem>
+                                                )}/>
+                                                <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field}/></FormControl><FormMessage/></FormItem>
+                                                )}/>
+                                                <div className='flex justify-end gap-2'><Button variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button><Button type="submit">Save Sub Task</Button></div>
+                                            </form>
+                                        </Form>
+                                    </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No tasks linked.</p>
+                                    <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Sub-Task</Button>
                                 )}
                             </div>
                             <div>
@@ -1345,6 +1417,7 @@ export default function BacklogPage() {
     
 
     
+
 
 
 
