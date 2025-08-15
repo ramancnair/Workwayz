@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -38,7 +39,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns } from 'lucide-react';
 import { type Story, type StoryStatus, type Epic } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { format, parseISO } from 'date-fns';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 const subTaskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -76,6 +78,19 @@ const statusStyles: Record<StoryStatus, string> = {
   'Done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
 };
 
+type ColumnId = 'storyId' | 'title' | 'parentStoryId' | 'status' | 'assigneeId' | 'impactedSystemId' | 'estimatedHours' | 'startDate' | 'endDate';
+
+const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
+    storyId: { label: 'ID', defaultVisible: true },
+    title: { label: 'Title', defaultVisible: true },
+    parentStoryId: { label: 'Parent Story', defaultVisible: true },
+    status: { label: 'Status', defaultVisible: true },
+    assigneeId: { label: 'Assignee', defaultVisible: true },
+    impactedSystemId: { label: 'Impacted System', defaultVisible: true },
+    estimatedHours: { label: 'Effort', defaultVisible: false },
+    startDate: { label: 'Start Date', defaultVisible: false },
+    endDate: { label: 'End Date', defaultVisible: false },
+};
 
 export default function DevelopmentTasksPage() {
   const { stories, employees, addStory, updateStory, deleteStory, impactedSystems } = useProject();
@@ -90,6 +105,12 @@ export default function DevelopmentTasksPage() {
 
   const [filterText, setFilterText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
+  const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() =>
+    Object.entries(columnConfig).reduce((acc, [key, { defaultVisible }]) => {
+      acc[key as ColumnId] = defaultVisible;
+      return acc;
+    }, {} as Record<ColumnId, boolean>)
+  );
 
   const form = useForm<z.infer<typeof subTaskSchema>>({
     resolver: zodResolver(subTaskSchema),
@@ -247,7 +268,7 @@ export default function DevelopmentTasksPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Sub-Tasks" description="Manage all sub-tasks for the project." />
+      <PageHeader title="Sub-Tasks" description="A comprehensive list of all sub-tasks for the project." />
       <Card>
         <CardContent className="p-4">
             <div className="flex items-center gap-4">
@@ -257,20 +278,47 @@ export default function DevelopmentTasksPage() {
                     onChange={(e) => setFilterText(e.target.value)}
                     className="max-w-sm"
                 />
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline">
+                            <Columns className="mr-2 h-4 w-4" />
+                            Columns
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {Object.entries(columnConfig).map(([key, { label }]) => (
+                            <DropdownMenuCheckboxItem
+                                key={key}
+                                className="capitalize"
+                                checked={columnVisibility[key as ColumnId]}
+                                onCheckedChange={(value) =>
+                                setColumnVisibility((prev) => ({
+                                    ...prev,
+                                    [key]: !!value,
+                                }))
+                                }
+                            >
+                                {label}
+                            </DropdownMenuCheckboxItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
           </CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <SortableHeader columnId="storyId">ID</SortableHeader>
-              <SortableHeader columnId="title" className="w-[30%]">Title</SortableHeader>
-              <SortableHeader columnId="parentStoryId">Parent Story</SortableHeader>
-              <SortableHeader columnId="status">Status</SortableHeader>
-              <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
-              <SortableHeader columnId="impactedSystemId">Impacted System</SortableHeader>
-              <SortableHeader columnId="estimatedHours">Effort</SortableHeader>
-              <SortableHeader columnId="startDate">Start Date</SortableHeader>
-              <SortableHeader columnId="endDate">End Date</SortableHeader>
+              {columnVisibility.storyId && <SortableHeader columnId="storyId">ID</SortableHeader>}
+              {columnVisibility.title && <SortableHeader columnId="title" className="w-[30%]">Title</SortableHeader>}
+              {columnVisibility.parentStoryId && <SortableHeader columnId="parentStoryId">Parent Story</SortableHeader>}
+              {columnVisibility.status && <SortableHeader columnId="status">Status</SortableHeader>}
+              {columnVisibility.assigneeId && <SortableHeader columnId="assigneeId">Assignee</SortableHeader>}
+              {columnVisibility.impactedSystemId && <SortableHeader columnId="impactedSystemId">Impacted System</SortableHeader>}
+              {columnVisibility.estimatedHours && <SortableHeader columnId="estimatedHours">Effort</SortableHeader>}
+              {columnVisibility.startDate && <SortableHeader columnId="startDate">Start Date</SortableHeader>}
+              {columnVisibility.endDate && <SortableHeader columnId="endDate">End Date</SortableHeader>}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -281,9 +329,9 @@ export default function DevelopmentTasksPage() {
               const parentStory = stories.find(s => s.id === task.parentStoryId);
               return (
                 <TableRow key={task.id}>
-                  <TableCell className="font-medium">{task.storyId}</TableCell>
-                  <TableCell>{task.title}</TableCell>
-                  <TableCell>
+                  {columnVisibility.storyId && <TableCell className="font-medium">{task.storyId}</TableCell>}
+                  {columnVisibility.title && <TableCell>{task.title}</TableCell>}
+                  {columnVisibility.parentStoryId && <TableCell>
                     {parentStory ? (
                       <TooltipProvider>
                         <Tooltip>
@@ -294,13 +342,13 @@ export default function DevelopmentTasksPage() {
                         </Tooltip>
                       </TooltipProvider>
                     ) : 'N/A'}
-                  </TableCell>
-                  <TableCell>
+                  </TableCell>}
+                  {columnVisibility.status && <TableCell>
                     <Badge className={cn('font-semibold', statusStyles[task.status])}>
                       {task.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
+                  </TableCell>}
+                  {columnVisibility.assigneeId && <TableCell>
                     {assignee ? (
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
@@ -310,11 +358,11 @@ export default function DevelopmentTasksPage() {
                         {assignee.firstName} {assignee.lastName}
                       </div>
                     ) : "Unassigned"}
-                  </TableCell>
-                  <TableCell>{impactedSystem?.name || 'N/A'}</TableCell>
-                  <TableCell>{task.estimatedHours ? `${task.estimatedHours}h` : 'N/A'}</TableCell>
-                  <TableCell>{task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell>{task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A'}</TableCell>
+                  </TableCell>}
+                  {columnVisibility.impactedSystemId && <TableCell>{impactedSystem?.name || 'N/A'}</TableCell>}
+                  {columnVisibility.estimatedHours && <TableCell>{task.estimatedHours ? `${task.estimatedHours}h` : 'N/A'}</TableCell>}
+                  {columnVisibility.startDate && <TableCell>{task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A'}</TableCell>}
+                  {columnVisibility.endDate && <TableCell>{task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A'}</TableCell>}
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(task)}>
                         <Edit className="h-4 w-4" />
