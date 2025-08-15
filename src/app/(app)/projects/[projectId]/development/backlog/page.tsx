@@ -110,132 +110,128 @@ const subTaskFormSchema = z.object({
 
 function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null }) {
   const Icon = workItemIcons[story.itemType];
-  const bugEffort = subItems?.filter(i => i.itemType === 'Bug').reduce((sum, i) => sum + (i.estimatedHours || 0), 0) || 0;
-  const bugCount = subItems?.filter(i => i.itemType === 'Bug').length || 0;
+  const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
+  const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
   const hasEffort = story.estimatedHours && story.estimatedHours > 0;
 
   return (
-    <Card
-      className={cn("bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md relative group", className)}
-      onClick={onClick}
-    >
-       <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
+    <Collapsible>
+      <Card
+        className={cn("bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md relative group", className)}
+        onClick={onClick}
       >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-      <CardHeader className="p-4">
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-              <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
-              {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <CardHeader className="p-4">
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+                {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
+              </div>
+              <p className="font-semibold break-words">{story.title}</p>
             </div>
-            <p className="font-semibold break-words">{story.title}</p>
+            {assignee && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={assignee.avatar}
+                        alt={`${assignee.firstName} ${assignee.lastName}`}
+                        data-ai-hint="developer avatar"
+                      />
+                      <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
-          {assignee && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={assignee.avatar}
-                      alt={`${assignee.firstName} ${assignee.lastName}`}
-                      data-ai-hint="developer avatar"
-                    />
-                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <div className='flex items-center gap-2'>
-                {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                {sprint ? (
-                    <Badge variant="outline" className="border-blue-500 text-blue-500">
-                        <FolderUp className="h-3 w-3 mr-1" />
-                        {sprint.title}
-                    </Badge>
-                ) : (
-                    <Badge variant="outline" className="border-blue-500 text-blue-500">
-                        <Library className="h-3 w-3 mr-1" />
-                        Backlog
-                    </Badge>
-                )}
-                {story.status && (
-                     <Badge variant="outline">
-                        <Tag className="h-3 w-3 mr-1" />
-                        {story.status}
-                    </Badge>
-                )}
-            </div>
-            <div className="flex items-center gap-4">
-                {story.estimatedHours !== undefined && (
-                <div className="flex items-center gap-1" title="Development effort">
-                    <CheckSquare className="h-3 w-3" />
-                    <span>{story.estimatedHours}h</span>
-                </div>
-                )}
-                {bugCount > 0 && (
-                <div className="flex items-center gap-1" title={`${bugCount} bugs, ${bugEffort}h total effort`}>
-                    <Bug className="h-3 w-3" />
-                    <span>{bugCount} ({bugEffort}h)</span>
-                </div>
-                )}
-            </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SubItemsDisplay({ items, onCardClick, onDelete, users, title }: { items: Story[], onCardClick: (story: Story) => void, onDelete: (story: Story) => void, users: User[], title: string }) {
-    if (items.length === 0) return null;
-
-    return (
-        <Collapsible>
-            <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-start mt-1 text-xs text-muted-foreground">
-                    <ChevronsRight className="h-4 w-4 mr-2" />
-                    {items.length} {title}
-                </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-                <div className="pl-6 pt-2 space-y-2">
-                    {items.map(subItem => {
-                        const subItemAssignee = users.find((d) => d.id === subItem.assigneeId);
-                        return (
-                            <div key={subItem.id} className="flex items-start gap-2">
-                                <CornerDownRight className="h-4 w-4 mt-5 text-muted-foreground" />
-                                <div className="flex-1">
-                                    <StoryCard
-                                        story={subItem}
-                                        assignee={subItemAssignee}
-                                        onClick={() => onCardClick(subItem)}
-                                        onDelete={() => onDelete(subItem)}
-                                    />
-                                </div>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <div className='flex items-center gap-2'>
+                  {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                  {sprint ? (
+                      <Badge variant="outline" className="border-blue-500 text-blue-500">
+                          <FolderUp className="h-3 w-3 mr-1" />
+                          {sprint.title}
+                      </Badge>
+                  ) : (
+                      <Badge variant="outline" className="border-blue-500 text-blue-500">
+                          <Library className="h-3 w-3 mr-1" />
+                          Backlog
+                      </Badge>
+                  )}
+                  {story.status && (
+                       <Badge variant="outline">
+                          <Tag className="h-3 w-3 mr-1" />
+                          {story.status}
+                      </Badge>
+                  )}
+              </div>
+              <div className="flex items-center gap-4">
+                  {(subTasks.length > 0 || bugs.length > 0) && (
+                    <CollapsibleTrigger asChild>
+                      <div className="flex items-center gap-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        {subTasks.length > 0 && (
+                          <div className="flex items-center gap-1" title={`${subTasks.length} sub-tasks`}>
+                            <CheckSquare className="h-3 w-3" />
+                            <span>{subTasks.length}</span>
+                          </div>
+                        )}
+                        {bugs.length > 0 && (
+                          <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
+                            <Bug className="h-3 w-3" />
+                            <span>{bugs.length}</span>
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleTrigger>
+                  )}
+                  {story.estimatedHours !== undefined && (
+                  <div className="flex items-center gap-1" title="Development effort">
+                      <Clock className="h-3 w-3" />
+                      <span>{story.estimatedHours}h</span>
+                  </div>
+                  )}
+              </div>
+          </div>
+        </CardContent>
+        <CollapsibleContent>
+            <div className="px-4 pb-4 space-y-2">
+                {(subTasks.length > 0 || bugs.length > 0) && <Separator />}
+                {[...subTasks, ...bugs].map(item => {
+                    const ItemIcon = workItemIcons[item.itemType];
+                    return (
+                        <div key={item.id} className="flex items-center justify-between text-xs pl-4">
+                            <div className="flex items-center gap-2">
+                                <ItemIcon className="h-3 w-3 text-muted-foreground" />
+                                <span className="font-medium">[{item.storyId}] {item.title}</span>
                             </div>
-                        )
-                    })}
-                </div>
-            </CollapsibleContent>
-        </Collapsible>
-    );
+                            <Badge variant="outline">{item.status}</Badge>
+                        </div>
+                    )
+                })}
+            </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
 }
 
 
@@ -949,18 +945,15 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                           
                           return (
                             <div key={story.id}>
-                              <div className="relative">
-                                  <StoryCard
-                                      story={story}
-                                      epic={storyEpic}
-                                      assignee={assignee}
-                                      onClick={() => setSelectedStory(story)}
-                                      onDelete={() => setStoryToDelete(story)}
-                                      subItems={subItems}
-                                      sprint={sprint}
-                                  />
-                              </div>
-                              <SubItemsDisplay items={subItems} onCardClick={setSelectedStory} onDelete={setStoryToDelete} users={users} title="Related Items" />
+                              <StoryCard
+                                  story={story}
+                                  epic={storyEpic}
+                                  assignee={assignee}
+                                  onClick={() => setSelectedStory(story)}
+                                  onDelete={() => setStoryToDelete(story)}
+                                  subItems={subItems}
+                                  sprint={sprint}
+                              />
                             </div>
                           )
                         })
@@ -1042,7 +1035,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
-                    <div className='space-y-4'>
+                    <div className='space-y-4 py-4'>
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -1531,6 +1524,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
