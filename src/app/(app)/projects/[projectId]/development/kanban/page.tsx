@@ -499,7 +499,7 @@ export default function KanbanPage() {
                         <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
                             <FormItem><FormLabel>Impacted System</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
                                     <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                 </Select>
                             <FormMessage/></FormItem>
@@ -865,3 +865,4 @@ export default function KanbanPage() {
     </>
   );
 }
+
