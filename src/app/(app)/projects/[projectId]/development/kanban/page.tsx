@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment } from '@/types';
+import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment, ImpactedSystem } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -76,6 +76,13 @@ const storyFormSchema = z.object({
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
+});
+
+const subTaskFormSchema = z.object({
+    title: z.string().min(1, 'Title is required.'),
+    description: z.string().optional(),
+    impactedSystemId: z.string().optional(),
+    estimatedHours: z.coerce.number().optional(),
 });
 
 function StoryCard({ 
@@ -246,7 +253,7 @@ function StoryCard({
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -256,6 +263,10 @@ export default function KanbanPage() {
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
+  });
+
+  const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
+      resolver: zodResolver(subTaskFormSchema),
   });
 
   const allStoriesById = useMemo(() => stories.reduce((acc, story) => {
@@ -276,8 +287,15 @@ export default function KanbanPage() {
   useEffect(() => {
     if (!selectedStory) {
       setEditStorySubmitting(false);
+    } else if (selectedStory.itemType === 'Sub Task') {
+       subTaskForm.reset({
+            title: selectedStory.title,
+            description: selectedStory.description || '',
+            impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
+            estimatedHours: selectedStory.estimatedHours,
+        });
     } else {
-      const isSubItem = ['Bug', 'Sub Task'].includes(selectedStory.itemType);
+      const isSubItem = ['Bug'].includes(selectedStory.itemType); // Sub Task handled separately
       editStoryForm.reset({
         title: selectedStory.title,
         description: selectedStory.description || '',
@@ -290,13 +308,13 @@ export default function KanbanPage() {
         environmentId: selectedStory.environmentId || 'unassigned',
       });
     }
-  }, [selectedStory, editStoryForm]);
+  }, [selectedStory, editStoryForm, subTaskForm]);
 
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
     setEditStorySubmitting(true);
     
-    const isSubItem = ['Bug', 'Sub Task'].includes(selectedStory.itemType);
+    const isSubItem = ['Bug'].includes(selectedStory.itemType);
 
     const success = await updateStory(selectedStory.id, {
         title: values.title,
@@ -313,6 +331,24 @@ export default function KanbanPage() {
       setSelectedStory(null);
     } else {
       toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+    }
+    setEditStorySubmitting(false);
+  };
+  
+  const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
+    if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
+    setEditStorySubmitting(true);
+    
+    const success = await updateStory(selectedStory.id, {
+        title: values.title,
+        description: values.description,
+        impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
+        estimatedHours: values.estimatedHours,
+    });
+    if (success) {
+      setSelectedStory(null);
+    } else {
+      toast({ variant: "destructive", title: `Error Editing Sub Task`, description: "Could not save your changes." });
     }
     setEditStorySubmitting(false);
   };
@@ -446,325 +482,362 @@ export default function KanbanPage() {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           {selectedStory && (
             <>
-              <DialogHeader>
-                <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
-                <DialogDescription>
-                  Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...editStoryForm}>
-                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4">
-                   <FormField
-                        control={editStoryForm.control}
-                        name="title"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Title</FormLabel>
-                            <FormControl>
-                            <Input placeholder="Story title" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <Tabs defaultValue="details" className="w-full">
-                        <TabsList>
-                            <TabsTrigger value="details">Details</TabsTrigger>
-                            <TabsTrigger value="subTasks">
-                                Sub-Tasks
-                                <Badge variant="secondary" className="ml-2">
-                                    {selectedStorySubItems.subTasks.length}
-                                </Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="bugs">
-                                Bugs
-                                <Badge variant="secondary" className="ml-2">
-                                    {selectedStorySubItems.bugs.length}
-                                </Badge>
-                            </TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="details" className="pt-4">
-                            <div className="space-y-4">
-                                <FormField
-                                    control={editStoryForm.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Description</FormLabel>
-                                        <FormControl>
-                                        <Textarea placeholder="Describe the story..." {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={editStoryForm.control}
-                                    name="acceptanceCriteria"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Acceptance Criteria</FormLabel>
-                                        <FormControl>
-                                        <Textarea placeholder="Define acceptance criteria for this story..." {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? (
-                                    <FormField
-                                    control={editStoryForm.control}
-                                    name="epicId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Epic</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Assign to an epic" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                                            {epics.map((epic) => (
-                                                <SelectItem key={epic.id} value={epic.id}>
-                                                {epic.title}
-                                                </SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
-                                ) : (
-                                    <FormField
-                                    control={editStoryForm.control}
-                                    name="parentStoryId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Related Item</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Link to a story or feature change" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            <SelectItem value="unassigned">None</SelectItem>
-                                            {parentStories.map(story => (
-                                                <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
-                                )}
-                                <FormField
-                                    control={editStoryForm.control}
-                                    name="assigneeId"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Assignee</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                            <SelectValue placeholder="Assign to a resource" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                                            {users.map((emp) => (
-                                            <SelectItem key={emp.id} value={emp.id}>
-                                                {emp.firstName} {emp.lastName}
-                                            </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                </div>
-                                {selectedStory.itemType === 'Bug' && (
-                                    <>
-                                        <FormField
-                                        control={editStoryForm.control}
-                                        name="criticality"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormLabel>Criticality</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Set criticality" />
-                                                </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                {bugCriticalities.map((c) => (
-                                                    <SelectItem key={c} value={c}>
-                                                    {c}
-                                                    </SelectItem>
-                                                ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                        />
-                                         <FormField
-                                            control={editStoryForm.control}
-                                            name="environmentId"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                <FormLabel>Environment</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                                    <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select an environment" />
-                                                    </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                    <SelectItem value="unassigned">None</SelectItem>
-                                                    {sortedEnvironments.map(env => (
-                                                        <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
-                                                    ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </>
-                                )}
-                                <FormField
-                                    control={editStoryForm.control}
-                                    name="estimatedHours"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Estimated Hours</FormLabel>
-                                        <FormControl>
-                                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="subTasks">
-                           <div className="space-y-4 pt-4">
-                                {selectedStorySubItems.subTasks.length > 0 ? (
-                                    <div className="space-y-2 rounded-md border p-2">
-                                    {selectedStorySubItems.subTasks.map(item => {
-                                        const ItemIcon = workItemIcons[item.itemType];
-                                        return (
-                                            <div key={item.id} className="flex items-center justify-between text-sm">
-                                                <div className='flex items-center gap-2'>
-                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
-                                                </div>
-                                                <Badge variant="outline">{item.status}</Badge>
-                                            </div>
-                                        )
-                                    })}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
-                                )}
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="bugs">
-                           <div className="space-y-4 pt-4">
-                                {selectedStorySubItems.bugs.length > 0 ? (
-                                    <div className="space-y-2 rounded-md border p-2">
-                                    {selectedStorySubItems.bugs.map(item => {
-                                        const ItemIcon = workItemIcons[item.itemType];
-                                        return (
-                                            <div key={item.id} className="flex items-center justify-between text-sm">
-                                                <div className='flex items-center gap-2'>
-                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
-                                                </div>
-                                                <Badge variant="outline">{item.status}</Badge>
-                                            </div>
-                                        )
-                                    })}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
-                                )}
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                  <DialogFooter className="flex justify-between items-center pt-4">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => {
-                              if (selectedStory) {
-                                  setDeletingStory(selectedStory);
-                                  setSelectedStory(null);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete {selectedStory.itemType}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Delete {selectedStory.itemType}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+              {selectedStory.itemType === 'Sub Task' ? (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Edit Sub Task</DialogTitle>
+                    <DialogDescription>Make changes to your sub task here.</DialogDescription>
+                  </DialogHeader>
+                  <Form {...subTaskForm}>
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4">
+                        <FormField control={subTaskForm.control} name="title" render={({field}) => (
+                            <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="description" render={({field}) => (
+                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                            <FormItem><FormLabel>Impacted System</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            <FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                        )}/>
+                        <DialogFooter>
+                            <Button type="submit" disabled={isEditStorySubmitting}>
+                                {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                  </Form>
+                </>
+              ) : (
+                <>
+                <DialogHeader>
+                  <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
+                  <DialogDescription>
+                    Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...editStoryForm}>
+                  <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4">
+                     <FormField
+                          control={editStoryForm.control}
+                          name="title"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Title</FormLabel>
+                              <FormControl>
+                              <Input placeholder="Story title" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <Tabs defaultValue="details" className="w-full">
+                          <TabsList>
+                              <TabsTrigger value="details">Details</TabsTrigger>
+                              <TabsTrigger value="subTasks">
+                                  Sub-Tasks
+                                  <Badge variant="secondary" className="ml-2">
+                                      {selectedStorySubItems.subTasks.length}
+                                  </Badge>
+                              </TabsTrigger>
+                              <TabsTrigger value="bugs">
+                                  Bugs
+                                  <Badge variant="secondary" className="ml-2">
+                                      {selectedStorySubItems.bugs.length}
+                                  </Badge>
+                              </TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="details" className="pt-4">
+                              <div className="space-y-4">
+                                  <FormField
+                                      control={editStoryForm.control}
+                                      name="description"
+                                      render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Description</FormLabel>
+                                          <FormControl>
+                                          <Textarea placeholder="Describe the story..." {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                      </FormItem>
+                                      )}
+                                  />
+                                  <FormField
+                                      control={editStoryForm.control}
+                                      name="acceptanceCriteria"
+                                      render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Acceptance Criteria</FormLabel>
+                                          <FormControl>
+                                          <Textarea placeholder="Define acceptance criteria for this story..." {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                      </FormItem>
+                                      )}
+                                  />
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? (
+                                      <FormField
+                                      control={editStoryForm.control}
+                                      name="epicId"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                          <FormLabel>Epic</FormLabel>
+                                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                              <FormControl>
+                                              <SelectTrigger>
+                                                  <SelectValue placeholder="Assign to an epic" />
+                                              </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                                              {epics.map((epic) => (
+                                                  <SelectItem key={epic.id} value={epic.id}>
+                                                  {epic.title}
+                                                  </SelectItem>
+                                              ))}
+                                              </SelectContent>
+                                          </Select>
+                                          <FormMessage />
+                                          </FormItem>
+                                      )}
+                                      />
+                                  ) : (
+                                      <FormField
+                                      control={editStoryForm.control}
+                                      name="parentStoryId"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                          <FormLabel>Related Item</FormLabel>
+                                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                              <FormControl>
+                                              <SelectTrigger>
+                                                  <SelectValue placeholder="Link to a story or feature change" />
+                                              </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                              <SelectItem value="unassigned">None</SelectItem>
+                                              {parentStories.map(story => (
+                                                  <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
+                                              ))}
+                                              </SelectContent>
+                                          </Select>
+                                          <FormMessage />
+                                          </FormItem>
+                                      )}
+                                      />
+                                  )}
+                                  <FormField
+                                      control={editStoryForm.control}
+                                      name="assigneeId"
+                                      render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Assignee</FormLabel>
+                                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                          <FormControl>
+                                              <SelectTrigger>
+                                              <SelectValue placeholder="Assign to a resource" />
+                                              </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                                              {users.map((emp) => (
+                                              <SelectItem key={emp.id} value={emp.id}>
+                                                  {emp.firstName} {emp.lastName}
+                                              </SelectItem>
+                                              ))}
+                                          </SelectContent>
+                                          </Select>
+                                          <FormMessage />
+                                      </FormItem>
+                                      )}
+                                  />
+                                  </div>
+                                  {selectedStory.itemType === 'Bug' && (
+                                      <>
+                                          <FormField
+                                          control={editStoryForm.control}
+                                          name="criticality"
+                                          render={({ field }) => (
+                                              <FormItem>
+                                              <FormLabel>Criticality</FormLabel>
+                                              <Select onValueChange={field.onChange} value={field.value}>
+                                                  <FormControl>
+                                                  <SelectTrigger>
+                                                      <SelectValue placeholder="Set criticality" />
+                                                  </SelectTrigger>
+                                                  </FormControl>
+                                                  <SelectContent>
+                                                  {bugCriticalities.map((c) => (
+                                                      <SelectItem key={c} value={c}>
+                                                      {c}
+                                                      </SelectItem>
+                                                  ))}
+                                                  </SelectContent>
+                                              </Select>
+                                              <FormMessage />
+                                              </FormItem>
+                                          )}
+                                          />
+                                           <FormField
+                                              control={editStoryForm.control}
+                                              name="environmentId"
+                                              render={({ field }) => (
+                                                  <FormItem>
+                                                  <FormLabel>Environment</FormLabel>
+                                                  <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                      <FormControl>
+                                                      <SelectTrigger>
+                                                          <SelectValue placeholder="Select an environment" />
+                                                      </SelectTrigger>
+                                                      </FormControl>
+                                                      <SelectContent>
+                                                      <SelectItem value="unassigned">None</SelectItem>
+                                                      {sortedEnvironments.map(env => (
+                                                          <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                                      ))}
+                                                      </SelectContent>
+                                                  </Select>
+                                                  <FormMessage />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      </>
+                                  )}
+                                  <FormField
+                                      control={editStoryForm.control}
+                                      name="estimatedHours"
+                                      render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Estimated Hours</FormLabel>
+                                          <FormControl>
+                                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                                          </FormControl>
+                                          <FormMessage />
+                                      </FormItem>
+                                      )}
+                                  />
+                              </div>
+                          </TabsContent>
+                          <TabsContent value="subTasks">
+                             <div className="space-y-4 pt-4">
+                                  {selectedStorySubItems.subTasks.length > 0 ? (
+                                      <div className="space-y-2 rounded-md border p-2">
+                                      {selectedStorySubItems.subTasks.map(item => {
+                                          const ItemIcon = workItemIcons[item.itemType];
+                                          return (
+                                              <div key={item.id} className="flex items-center justify-between text-sm">
+                                                  <div className='flex items-center gap-2'>
+                                                      {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                      <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
+                                                  </div>
+                                                  <Badge variant="outline">{item.status}</Badge>
+                                              </div>
+                                          )
+                                      })}
+                                      </div>
+                                  ) : (
+                                      <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
+                                  )}
+                              </div>
+                          </TabsContent>
+                          <TabsContent value="bugs">
+                             <div className="space-y-4 pt-4">
+                                  {selectedStorySubItems.bugs.length > 0 ? (
+                                      <div className="space-y-2 rounded-md border p-2">
+                                      {selectedStorySubItems.bugs.map(item => {
+                                          const ItemIcon = workItemIcons[item.itemType];
+                                          return (
+                                              <div key={item.id} className="flex items-center justify-between text-sm">
+                                                  <div className='flex items-center gap-2'>
+                                                      {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                      <span className="cursor-pointer hover:underline" onClick={() => setSelectedStory(item)}>[{item.storyId}] {item.title}</span>
+                                                  </div>
+                                                  <Badge variant="outline">{item.status}</Badge>
+                                              </div>
+                                          )
+                                      })}
+                                      </div>
+                                  ) : (
+                                      <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
+                                  )}
+                              </div>
+                          </TabsContent>
+                      </Tabs>
+                    <DialogFooter className="flex justify-between items-center pt-4">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => {
+                                if (selectedStory) {
+                                    setDeletingStory(selectedStory);
+                                    setSelectedStory(null);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete {selectedStory.itemType}</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete {selectedStory.itemType}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
 
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm">
-                              Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                              {selectedStory.sprintId !== null && (
-                              <DropdownMenuItem onClick={() => {
-                                  if (!selectedStory) return;
-                                  moveStoryToSprint(selectedStory.id, null);
-                                  setSelectedStory(null);
-                              }}>
-                                  Backlog
-                              </DropdownMenuItem>
-                              )}
-                              {sprints
-                              .filter((sprint) => sprint.id !== selectedStory.sprintId)
-                              .map((sprint) => (
-                                  <DropdownMenuItem
-                                  key={sprint.id}
-                                  onClick={() => {
-                                      if (!selectedStory) return;
-                                      moveStoryToSprint(selectedStory.id, sprint.id);
-                                      setSelectedStory(null);
-                                  }}
-                                  >
-                                  {sprint.title}
-                                  </DropdownMenuItem>
-                              ))}
-                          </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button type="submit" disabled={isEditStorySubmitting}>
-                        {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                      </Button>
-                    </div>
-                  </DialogFooter>
-                </form>
-              </Form>
+                      <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {selectedStory.sprintId !== null && (
+                                <DropdownMenuItem onClick={() => {
+                                    if (!selectedStory) return;
+                                    moveStoryToSprint(selectedStory.id, null);
+                                    setSelectedStory(null);
+                                }}>
+                                    Backlog
+                                </DropdownMenuItem>
+                                )}
+                                {sprints
+                                .filter((sprint) => sprint.id !== selectedStory.sprintId)
+                                .map((sprint) => (
+                                    <DropdownMenuItem
+                                    key={sprint.id}
+                                    onClick={() => {
+                                        if (!selectedStory) return;
+                                        moveStoryToSprint(selectedStory.id, sprint.id);
+                                        setSelectedStory(null);
+                                    }}
+                                    >
+                                    {sprint.title}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button type="submit" disabled={isEditStorySubmitting}>
+                          {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                      </div>
+                    </DialogFooter>
+                  </form>
+                </Form>
+                </>
+              )}
             </>
           )}
         </DialogContent>
@@ -792,5 +865,3 @@ export default function KanbanPage() {
     </>
   );
 }
-
-    
