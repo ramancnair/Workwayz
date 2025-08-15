@@ -118,6 +118,14 @@ export default function DevelopmentTasksPage() {
         if (sorting.id === 'parentStoryId') {
             valA = stories.find(s => s.id === a.parentStoryId)?.title || '';
             valB = stories.find(s => s.id === b.parentStoryId)?.title || '';
+        } else if (sorting.id === 'assigneeId') {
+            const assigneeA = employees.find(e => e.id === a.assigneeId);
+            const assigneeB = employees.find(e => e.id === b.assigneeId);
+            valA = assigneeA ? `${assigneeA.firstName} ${assigneeA.lastName}` : 'zzz';
+            valB = assigneeB ? `${assigneeB.firstName} ${assigneeB.lastName}` : 'zzz';
+        } else if (sorting.id === 'impactedSystemId') {
+            valA = impactedSystems.find(s => s.id === a.impactedSystemId)?.name || '';
+            valB = impactedSystems.find(s => s.id === b.impactedSystemId)?.name || '';
         } else {
             valA = (a as any)[sorting.id];
             valB = (b as any)[sorting.id];
@@ -140,7 +148,7 @@ export default function DevelopmentTasksPage() {
     }
 
     return filtered;
-  }, [subTasks, filterText, sorting, stories]);
+  }, [subTasks, filterText, sorting, stories, employees, impactedSystems]);
 
 
   useEffect(() => {
@@ -264,8 +272,8 @@ export default function DevelopmentTasksPage() {
               <SortableHeader columnId="title" className="w-[30%]">Title</SortableHeader>
               <SortableHeader columnId="parentStoryId">Parent Story</SortableHeader>
               <SortableHeader columnId="status">Status</SortableHeader>
-              <TableHead>Assignee</TableHead>
-              <TableHead>Impacted System</TableHead>
+              <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
+              <SortableHeader columnId="impactedSystemId">Impacted System</SortableHeader>
               <SortableHeader columnId="estimatedHours">Effort</SortableHeader>
               <SortableHeader columnId="startDate">Start Date</SortableHeader>
               <SortableHeader columnId="endDate">End Date</SortableHeader>
@@ -507,4 +515,3 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
-
