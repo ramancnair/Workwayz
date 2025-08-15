@@ -89,6 +89,7 @@ const subTaskFormSchema = z.object({
     description: z.string().optional(),
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
+    assigneeId: z.string().optional(),
 });
 
 
@@ -392,7 +393,8 @@ export default function GroomingPage() {
           title: '',
           description: '',
           impactedSystemId: 'unassigned',
-          estimatedHours: 0
+          estimatedHours: 0,
+          assigneeId: 'unassigned',
         }
     });
 
@@ -426,6 +428,7 @@ export default function GroomingPage() {
                 description: editingStory.description || '',
                 impactedSystemId: editingStory.impactedSystemId || 'unassigned',
                 estimatedHours: editingStory.estimatedHours,
+                assigneeId: editingStory.assigneeId || 'unassigned',
             });
         } else {
              editStoryForm.reset({
@@ -433,7 +436,7 @@ export default function GroomingPage() {
                 description: editingStory.description || '',
                 acceptanceCriteria: editingStory.acceptanceCriteria || '',
                 epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
-                parentStoryId: ['Bug'].includes(editingStory.itemType) ? editingStory.epicId || 'unassigned' : undefined,
+                parentStoryId: ['Bug'].includes(editingStory.itemType) ? editingStory.parentStoryId || 'unassigned' : undefined,
                 assigneeId: editingStory.assigneeId || 'unassigned',
                 estimatedHours: editingStory.estimatedHours,
                 criticality: editingStory.criticality || 'Medium',
@@ -501,6 +504,7 @@ export default function GroomingPage() {
             description: values.description,
             impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
             estimatedHours: values.estimatedHours,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         });
 
         if (success) {
@@ -525,6 +529,7 @@ export default function GroomingPage() {
           releaseId: editingStory.releaseId, // Inherit release
           impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
           estimatedHours: values.estimatedHours,
+          assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       };
 
       const success = await addStory(newSubTask, 'SUB');
@@ -741,6 +746,19 @@ export default function GroomingPage() {
                                     <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                 </Select>
                             <FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
+                           <FormItem>
+                            <FormLabel>Assigned To</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
+                              <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage/>
+                           </FormItem>
                         )}/>
                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                             <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
@@ -997,10 +1015,23 @@ export default function GroomingPage() {
                                                 <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
                                                     <FormItem><FormLabel>Impacted System</FormLabel>
                                                         <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
                                                             <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                                         </Select>
                                                     <FormMessage/></FormItem>
+                                                )}/>
+                                                <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
+                                                   <FormItem>
+                                                    <FormLabel>Assigned To</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                      <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
+                                                      <SelectContent>
+                                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                        {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                      </SelectContent>
+                                                    </Select>
+                                                    <FormMessage/>
+                                                   </FormItem>
                                                 )}/>
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                                     <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
@@ -1056,6 +1087,7 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
 

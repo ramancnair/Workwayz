@@ -83,6 +83,7 @@ const subTaskFormSchema = z.object({
     description: z.string().optional(),
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
+    assigneeId: z.string().optional(),
 });
 
 function StoryCard({ 
@@ -267,6 +268,13 @@ export default function KanbanPage() {
 
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
       resolver: zodResolver(subTaskFormSchema),
+      defaultValues: {
+          title: '',
+          description: '',
+          impactedSystemId: 'unassigned',
+          estimatedHours: 0,
+          assigneeId: 'unassigned',
+      }
   });
 
   const allStoriesById = useMemo(() => stories.reduce((acc, story) => {
@@ -293,6 +301,7 @@ export default function KanbanPage() {
             description: selectedStory.description || '',
             impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
             estimatedHours: selectedStory.estimatedHours,
+            assigneeId: selectedStory.assigneeId || 'unassigned',
         });
     } else {
       const isSubItem = ['Bug'].includes(selectedStory.itemType); // Sub Task handled separately
@@ -344,6 +353,7 @@ export default function KanbanPage() {
         description: values.description,
         impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
         estimatedHours: values.estimatedHours,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
     });
     if (success) {
       setSelectedStory(null);
@@ -503,6 +513,19 @@ export default function KanbanPage() {
                                     <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                 </Select>
                             <FormMessage/></FormItem>
+                        )}/>
+                        <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
+                           <FormItem>
+                            <FormLabel>Assigned To</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
+                              <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage/>
+                           </FormItem>
                         )}/>
                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                             <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
@@ -865,4 +888,5 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
