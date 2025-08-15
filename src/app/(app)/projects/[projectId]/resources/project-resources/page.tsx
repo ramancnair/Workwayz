@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,15 +38,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Trash2, Edit } from 'lucide-react';
-import { type User, type UserRole } from '@/types';
-import { Card } from '@/components/ui/card';
+import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
+import { type User, type UserRole, type Story } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { buttonVariants } from '@/components/ui/button';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, subWeeks, addYears, subYears } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 
 const resourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
@@ -59,6 +61,184 @@ const resourceSchema = z.object({
 });
 
 const roles: UserRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM', 'Program Director'];
+
+function CapacityPlanning() {
+  const { sprints, impactedSystems, stories, employees, holidays, weeklyOffDays } = useProject();
+  const [viewType, setViewType] = useState<'sprint' | 'month' | 'week'>('sprint');
+  const [selectedSprintId, setSelectedSprintId] = useState<string>('');
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const currentSprint = useMemo(() => sprints.find(s => s.isCurrent), [sprints]);
+  
+  useEffect(() => {
+    if (currentSprint) {
+      setSelectedSprintId(currentSprint.id);
+    } else if (sprints.length > 0) {
+      setSelectedSprintId(sprints[0].id);
+    }
+  }, [currentSprint, sprints]);
+  
+  const { periodStart, periodEnd } = useMemo(() => {
+    if (viewType === 'sprint') {
+      const sprint = sprints.find(s => s.id === selectedSprintId);
+      return {
+        periodStart: sprint?.startDate ? parseISO(sprint.startDate) : null,
+        periodEnd: sprint?.endDate ? parseISO(sprint.endDate) : null,
+      };
+    }
+    if (viewType === 'month') {
+      return {
+        periodStart: startOfMonth(currentDate),
+        periodEnd: endOfMonth(currentDate),
+      };
+    }
+    // week view
+    return {
+      periodStart: startOfWeek(currentDate, { weekStartsOn: 1 }), // Monday
+      periodEnd: endOfWeek(currentDate, { weekStartsOn: 1 }), // Sunday
+    };
+  }, [viewType, selectedSprintId, sprints, currentDate]);
+
+  const workingDays = useMemo(() => {
+    if (!periodStart || !periodEnd) return 0;
+    
+    const holidayDates = holidays.map(h => parseISO(h.date));
+    const interval = eachDayOfInterval({ start: periodStart, end: periodEnd });
+    
+    return interval.filter(day => {
+      const dayOfWeek = day.getDay();
+      const isWeekend = weeklyOffDays.includes(dayOfWeek);
+      const isHoliday = holidayDates.some(h => isSameDay(day, h));
+      return !isWeekend && !isHoliday;
+    }).length;
+  }, [periodStart, periodEnd, holidays, weeklyOffDays]);
+
+  const capacityData = useMemo(() => {
+    if (!periodStart || !periodEnd) return [];
+    
+    // Filter tasks that fall within the selected period
+    const relevantTasks = stories.filter(story => {
+      if (story.itemType !== 'Sub Task' || !story.startDate || !story.endDate) return false;
+      const taskStart = parseISO(story.startDate);
+      const taskEnd = parseISO(story.endDate);
+      // Check for overlap
+      return taskStart <= periodEnd && taskEnd >= periodStart;
+    });
+
+    return impactedSystems.map(system => {
+        const systemTasks = relevantTasks.filter(t => t.impactedSystemId === system.id);
+        
+        let totalCapacityHours = 0;
+        const resourcesForSystem = new Set(systemTasks.map(t => t.assigneeId).filter(Boolean));
+        
+        resourcesForSystem.forEach(empId => {
+            const employee = employees.find(e => e.id === empId);
+            if (employee) {
+                const availabilityFactor = (employee.availability || 100) / 100;
+                totalCapacityHours += workingDays * 8 * availabilityFactor;
+            }
+        });
+
+        const utilizedHours = systemTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+        const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+        
+        return {
+            systemId: system.id,
+            systemName: system.name,
+            totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
+            utilizedHours: parseFloat(utilizedHours.toFixed(2)),
+            remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
+            utilization: parseFloat(utilization.toFixed(2)),
+        };
+    });
+
+  }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDays]);
+
+  const handleDateChange = (changeFn: (date: Date, amount: number) => Date) => {
+    setCurrentDate(prev => changeFn(prev, 1));
+  };
+
+  const periodTitle = useMemo(() => {
+    if (viewType === 'sprint') {
+        return sprints.find(s => s.id === selectedSprintId)?.title || 'Select a Sprint';
+    }
+    if (viewType === 'month') {
+        return format(currentDate, 'MMMM yyyy');
+    }
+    if (viewType === 'week') {
+        return `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d, yyyy')}`;
+    }
+    return '';
+  }, [viewType, selectedSprintId, currentDate, sprints]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Capacity Planning</CardTitle>
+        <CardDescription>View resource capacity based on assigned sub-tasks for each impacted system.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-4 mb-4">
+            <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="sprint">Sprint</TabsTrigger>
+                <TabsTrigger value="month">Month</TabsTrigger>
+                <TabsTrigger value="week">Week</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {viewType === 'sprint' ? (
+                 <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+                    <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select Sprint" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                    </SelectContent>
+                 </Select>
+            ) : (
+                <div className="flex items-center gap-2 border rounded-md p-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subYears : subWeeks)}> <ChevronsLeft /> </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subMonths : subWeeks)}> <ChevronLeft /> </Button>
+                    <span className="font-semibold text-sm w-36 text-center">{periodTitle}</span>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addMonths : addWeeks)}> <ChevronRight /> </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addYears : addWeeks)}> <ChevronsRight /> </Button>
+                </div>
+            )}
+        </div>
+        
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead className="w-[25%]">Impacted System</TableHead>
+                    <TableHead>Total Capacity (hrs)</TableHead>
+                    <TableHead>Utilized (hrs)</TableHead>
+                    <TableHead>Remaining (hrs)</TableHead>
+                    <TableHead className="w-[25%]">Utilization</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {capacityData.map(data => (
+                    <TableRow key={data.systemId}>
+                        <TableCell className="font-medium">{data.systemName}</TableCell>
+                        <TableCell>{data.totalCapacityHours}</TableCell>
+                        <TableCell>{data.utilizedHours}</TableCell>
+                        <TableCell>{data.remainingHours}</TableCell>
+                        <TableCell>
+                            <div className="flex items-center gap-2">
+                                <Progress value={data.utilization} className="w-full h-3" />
+                                <span className="text-xs font-semibold">{data.utilization}%</span>
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function ResourcesPage() {
   const { 
@@ -330,6 +510,8 @@ export default function ResourcesPage() {
             </TableBody>
           </Table>
         </Card>
+
+        <CapacityPlanning />
       </div>
       
       <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
@@ -365,3 +547,4 @@ export default function ResourcesPage() {
     </>
   );
 }
+
