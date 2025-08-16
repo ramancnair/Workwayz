@@ -47,6 +47,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const assumptionSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
@@ -79,6 +80,8 @@ export default function AssumptionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  const [selectedAssumptions, setSelectedAssumptions] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const form = useForm<z.infer<typeof assumptionSchema>>({
     resolver: zodResolver(assumptionSchema),
@@ -137,6 +140,24 @@ export default function AssumptionsPage() {
     setDeletingAssumption(null);
   };
 
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedAssumptions.length === 0) return;
+    
+    const promises = selectedAssumptions.map(id => deleteAssumption(id));
+    const results = await Promise.all(promises);
+
+    const successCount = results.filter(Boolean).length;
+    if (successCount > 0) {
+        toast({ title: "Success", description: `${successCount} assumption(s) deleted.` });
+    }
+    if (successCount < selectedAssumptions.length) {
+        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedAssumptions.length - successCount} assumption(s).` });
+    }
+    
+    setSelectedAssumptions([]);
+    setShowBulkDeleteConfirm(false);
+  };
+
   const onSubmit = async (values: z.infer<typeof assumptionSchema>) => {
     setIsSubmitting(true);
     const assumptionData = {
@@ -163,6 +184,12 @@ export default function AssumptionsPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Assumptions" description="Manage and track all project assumptions.">
+          {selectedAssumptions.length > 0 && (
+            <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Selected ({selectedAssumptions.length})
+            </Button>
+          )}
           <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">
@@ -208,6 +235,15 @@ export default function AssumptionsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                    <Checkbox
+                        checked={assumptions.length > 0 && selectedAssumptions.length === assumptions.length}
+                        onCheckedChange={(value) =>
+                            setSelectedAssumptions(value ? assumptions.map(item => item.id) : [])
+                        }
+                        aria-label="Select all"
+                    />
+                </TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead className="w-[40%]">Description</TableHead>
                 <TableHead>Category</TableHead>
@@ -220,7 +256,20 @@ export default function AssumptionsPage() {
               {assumptions.map((assumption) => {
                 const owner = users.find(e => e.id === assumption.ownerId);
                 return (
-                    <TableRow key={assumption.id}>
+                    <TableRow key={assumption.id} data-state={selectedAssumptions.includes(assumption.id) && "selected"}>
+                        <TableCell>
+                            <Checkbox
+                                checked={selectedAssumptions.includes(assumption.id)}
+                                onCheckedChange={(value) =>
+                                    setSelectedAssumptions(
+                                        value
+                                        ? [...selectedAssumptions, assumption.id]
+                                        : selectedAssumptions.filter((id) => id !== assumption.id)
+                                    )
+                                }
+                                aria-label="Select row"
+                            />
+                        </TableCell>
                         <TableCell className="font-medium">{assumption.assumptionId}</TableCell>
                         <TableCell className="break-words">{assumption.description}</TableCell>
                         <TableCell>
@@ -340,6 +389,26 @@ export default function AssumptionsPage() {
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+       <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected {selectedAssumptions.length} assumption(s). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Delete Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

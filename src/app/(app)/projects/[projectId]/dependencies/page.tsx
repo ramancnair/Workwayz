@@ -47,6 +47,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const dependencySchema = z.object({
   description: z.string().min(1, 'Description is required.'),
@@ -80,6 +81,8 @@ export default function DependenciesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  const [selectedDependencies, setSelectedDependencies] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const form = useForm<z.infer<typeof dependencySchema>>({
     resolver: zodResolver(dependencySchema),
@@ -139,6 +142,24 @@ export default function DependenciesPage() {
     setDeletingDependency(null);
   };
 
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedDependencies.length === 0) return;
+    
+    const promises = selectedDependencies.map(id => deleteDependency(id));
+    const results = await Promise.all(promises);
+
+    const successCount = results.filter(Boolean).length;
+    if (successCount > 0) {
+        toast({ title: "Success", description: `${successCount} dependency(s) deleted.` });
+    }
+    if (successCount < selectedDependencies.length) {
+        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedDependencies.length - successCount} dependency(s).` });
+    }
+    
+    setSelectedDependencies([]);
+    setShowBulkDeleteConfirm(false);
+  };
+
   const onSubmit = async (values: z.infer<typeof dependencySchema>) => {
     setIsSubmitting(true);
     const dependencyData = {
@@ -165,6 +186,12 @@ export default function DependenciesPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Dependencies" description="Manage and track all project dependencies.">
+          {selectedDependencies.length > 0 && (
+            <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Selected ({selectedDependencies.length})
+            </Button>
+          )}
           <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">
@@ -210,6 +237,15 @@ export default function DependenciesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                 <TableHead className="w-10">
+                    <Checkbox
+                        checked={dependencies.length > 0 && selectedDependencies.length === dependencies.length}
+                        onCheckedChange={(value) =>
+                            setSelectedDependencies(value ? dependencies.map(item => item.id) : [])
+                        }
+                        aria-label="Select all"
+                    />
+                </TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead className="w-[30%]">Description</TableHead>
                 <TableHead>Depends On</TableHead>
@@ -222,7 +258,20 @@ export default function DependenciesPage() {
             <TableBody>
               {dependencies.map((dependency) => {
                 return (
-                    <TableRow key={dependency.id}>
+                    <TableRow key={dependency.id} data-state={selectedDependencies.includes(dependency.id) && "selected"}>
+                        <TableCell>
+                            <Checkbox
+                                checked={selectedDependencies.includes(dependency.id)}
+                                onCheckedChange={(value) =>
+                                    setSelectedDependencies(
+                                        value
+                                        ? [...selectedDependencies, dependency.id]
+                                        : selectedDependencies.filter((id) => id !== dependency.id)
+                                    )
+                                }
+                                aria-label="Select row"
+                            />
+                        </TableCell>
                         <TableCell className="font-medium">{dependency.dependencyId}</TableCell>
                         <TableCell className="break-words">{dependency.description}</TableCell>
                         <TableCell>{dependency.dependencyOn}</TableCell>
@@ -349,6 +398,26 @@ export default function DependenciesPage() {
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected {selectedDependencies.length} dependency(s). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Delete Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

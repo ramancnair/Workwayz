@@ -47,6 +47,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const issueSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
@@ -87,6 +88,8 @@ export default function IssuesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const form = useForm<z.infer<typeof issueSchema>>({
     resolver: zodResolver(issueSchema),
@@ -145,6 +148,24 @@ export default function IssuesPage() {
     setDeletingIssue(null);
   };
 
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedIssues.length === 0) return;
+    
+    const promises = selectedIssues.map(id => deleteIssue(id));
+    const results = await Promise.all(promises);
+
+    const successCount = results.filter(Boolean).length;
+    if (successCount > 0) {
+        toast({ title: "Success", description: `${successCount} issue(s) deleted.` });
+    }
+    if (successCount < selectedIssues.length) {
+        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedIssues.length - successCount} issue(s).` });
+    }
+    
+    setSelectedIssues([]);
+    setShowBulkDeleteConfirm(false);
+  };
+
   const onSubmit = async (values: z.infer<typeof issueSchema>) => {
     setIsSubmitting(true);
     const issueData = {
@@ -174,6 +195,12 @@ export default function IssuesPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Issues" description="Manage and track all project issues.">
+          {selectedIssues.length > 0 && (
+            <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Selected ({selectedIssues.length})
+            </Button>
+          )}
           <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">
@@ -219,6 +246,15 @@ export default function IssuesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                    <Checkbox
+                        checked={issues.length > 0 && selectedIssues.length === issues.length}
+                        onCheckedChange={(value) =>
+                            setSelectedIssues(value ? issues.map(item => item.id) : [])
+                        }
+                        aria-label="Select all"
+                    />
+                </TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead className="w-[40%]">Description</TableHead>
                 <TableHead>Priority</TableHead>
@@ -232,7 +268,20 @@ export default function IssuesPage() {
               {issues.map((issue) => {
                 const assignee = users.find(e => e.id === issue.assigneeId);
                 return (
-                    <TableRow key={issue.id}>
+                    <TableRow key={issue.id} data-state={selectedIssues.includes(issue.id) && "selected"}>
+                         <TableCell>
+                            <Checkbox
+                                checked={selectedIssues.includes(issue.id)}
+                                onCheckedChange={(value) =>
+                                    setSelectedIssues(
+                                        value
+                                        ? [...selectedIssues, issue.id]
+                                        : selectedIssues.filter((id) => id !== issue.id)
+                                    )
+                                }
+                                aria-label="Select row"
+                            />
+                        </TableCell>
                         <TableCell className="font-medium">{issue.issueId}</TableCell>
                         <TableCell className="break-words">{issue.description}</TableCell>
                         <TableCell>
@@ -355,6 +404,26 @@ export default function IssuesPage() {
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+       <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected {selectedIssues.length} issue(s). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Delete Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
