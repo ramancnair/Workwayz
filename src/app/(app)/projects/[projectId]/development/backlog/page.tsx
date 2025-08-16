@@ -343,6 +343,12 @@ export default function BacklogPage() {
 
   const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
     resolver: zodResolver(autoGenFormSchema),
+    defaultValues: {
+      'Requirement/Story': 0,
+      'Feature Change': 0,
+      'Task': 0,
+      'Bug': 0,
+    }
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -1792,6 +1798,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
