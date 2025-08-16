@@ -368,12 +368,12 @@ function SprintColumn({
             <div className="space-y-3 mb-4">
               <div className="text-sm font-semibold text-muted-foreground">Capacity</div>
               {capacityBySystem.map(sys => (
-                   <div key={sys.systemId} className="grid grid-cols-[1fr_120px] items-center gap-4 text-xs">
+                   <div key={sys.systemId} className="grid grid-cols-[1fr_140px] items-center gap-4 text-xs">
                        <div className="font-semibold">{sys.systemName}</div>
                        <div className="flex items-center gap-2">
                             <Progress value={sys.utilization} className="h-2" />
-                            <span className={cn("w-12 text-right", sys.remaining < 0 && "text-red-500")}>
-                              {sys.utilized.toFixed(0)}h
+                            <span className={cn("w-24 text-right", sys.remaining < 0 && "text-red-500")}>
+                              {sys.utilized.toFixed(0)}/{sys.totalCapacity.toFixed(0)}h
                             </span>
                        </div>
                    </div>
@@ -1295,5 +1295,6 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
