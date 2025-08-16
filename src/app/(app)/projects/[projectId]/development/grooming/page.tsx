@@ -365,34 +365,21 @@ function SprintColumn({
                 )}
             </div>
 
-            <Collapsible className="mb-4">
-                <CollapsibleTrigger className="w-full">
-                    <Card className="p-2">
-                        <div className="flex justify-between items-center text-xs font-semibold">
-                            <span>Sprint Capacity</span>
-                            <div className="flex items-center gap-1">
-                                <span>{totalSprintUtilized.toFixed(0)}h Utilized</span>
-                                <ChevronDown className="h-4 w-4" />
-                            </div>
-                        </div>
-                    </Card>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 space-y-2">
-                    {capacityBySystem.map(sys => (
-                         <Card key={sys.systemId} className="p-2 text-xs">
-                             <div className="font-semibold mb-1">{sys.systemName}</div>
-                             <Progress value={sys.utilization} className="h-2 mb-1" />
-                             <div className="flex justify-between text-muted-foreground">
-                                 <span>Utilized: {sys.utilized.toFixed(0)}h</span>
-                                 <span className={sys.remaining < 0 ? 'text-red-500' : ''}>
-                                    Remaining: {sys.remaining.toFixed(0)}h
-                                </span>
-                                 <span>Total: {sys.totalCapacity.toFixed(0)}h</span>
-                             </div>
-                         </Card>
-                    ))}
-                </CollapsibleContent>
-            </Collapsible>
+            <div className="space-y-3 mb-4">
+              <div className="text-sm font-semibold text-muted-foreground">Capacity</div>
+              {capacityBySystem.map(sys => (
+                   <div key={sys.systemId} className="grid grid-cols-[1fr_120px] items-center gap-4 text-xs">
+                       <div className="font-semibold">{sys.systemName}</div>
+                       <div className="flex items-center gap-2">
+                            <Progress value={sys.utilization} className="h-2" />
+                            <span className={cn("w-12 text-right", sys.remaining < 0 && "text-red-500")}>
+                              {sys.utilized.toFixed(0)}h
+                            </span>
+                       </div>
+                   </div>
+              ))}
+            </div>
+
 
             <div className="flex-1 space-y-4 overflow-y-auto">
                 {stories.map(story => {
@@ -1308,4 +1295,5 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
