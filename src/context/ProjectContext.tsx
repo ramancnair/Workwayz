@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -102,6 +102,9 @@ interface ProjectContextType {
   autoGenerateTestCases: (counts: Record<string, number>) => Promise<boolean>;
   updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
+  
+  // Bug actions
+  autoGenerateBugs: (counts: Record<string, number>) => Promise<boolean>;
 
   // Risk actions
   addRisk: (risk: Omit<Risk, 'id' | 'riskId'>) => Promise<boolean>;
@@ -986,6 +989,59 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
+  const autoGenerateBugs = async (counts: Record<string, number>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+
+    const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
+    const criticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
+    
+    try {
+      const batch = writeBatch(db);
+      const storiesSnapshot = await getDocs(collection(db, 'projects', projectId, 'stories'));
+      let currentIdCounter = storiesSnapshot.size > 0
+        ? Math.max(0, ...storiesSnapshot.docs.map(doc => parseInt(doc.data().storyId.replace(/^[A-Z]+-/, ''), 10) || 0)) + 1
+        : 1;
+
+      const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story');
+
+      for (const environmentId in counts) {
+        const count = counts[environmentId];
+        if (count === 0) continue;
+        const environmentName = environments.find(e => e.id === environmentId)?.name || 'Unknown Env';
+
+        for (let i = 0; i < count; i++) {
+          const newBugRef = doc(collection(db, 'projects', projectId, 'stories'));
+          const relatedStory = getRandomItem(storiesToLink);
+
+          const newBug: Omit<Story, 'id'> = {
+            storyId: `BUG-${currentIdCounter}`,
+            title: `Autogen bug in ${environmentName}: Login fails on ${relatedStory?.storyId || 'general function'}`,
+            description: `Auto-generated bug for ${environmentName}. Steps to reproduce: 1. Login. 2. Navigate to ${relatedStory?.title || 'a page'}. 3. Observe error.`,
+            itemType: 'Bug',
+            status: 'To Do',
+            epicId: relatedStory?.id,
+            sprintId: relatedStory?.sprintId,
+            assigneeId: getRandomItem(employees.filter(e => e.role === 'Developer'))?.id,
+            criticality: getRandomItem(criticalities),
+            environmentId: environmentId,
+            isDeleted: false,
+            deletedAt: null,
+          };
+          
+          batch.set(newBugRef, sanitizeForFirestore(newBug));
+          currentIdCounter++;
+        }
+      }
+      
+      await batch.commit();
+      return true;
+
+    } catch(e) {
+      console.error("Firebase Error: Failed to auto-generate bugs.", e);
+      return false;
+    }
+  };
+
   // Risk Actions
   const addRisk = async (risk: Omit<Risk, 'id' | 'riskId'>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1630,6 +1686,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     deleteLeavePeriod,
     addTestCase,
     autoGenerateTestCases,
+    autoGenerateBugs,
     updateTestCase,
     deleteTestCase,
     addRisk,

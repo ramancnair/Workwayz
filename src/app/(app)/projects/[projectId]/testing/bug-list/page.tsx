@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
+import { Bot } from 'lucide-react';
 
 const statusStyles: Record<StoryStatus, string> = {
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
@@ -71,11 +73,43 @@ const bugFormSchema = z.object({
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, updateStory, environments } = useProject();
+  const { stories, employees, sprints, updateStory, environments, autoGenerateBugs } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const bugs = stories.filter(story => story.itemType === 'Bug');
+
+  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
+  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
+
+  const autoGenFormSchema = useMemo(() => {
+    const shape: Record<string, z.ZodNumber> = {};
+    sortedEnvironments.forEach(env => {
+      shape[env.id] = z.coerce.number().min(0).default(0);
+    });
+    return z.object(shape);
+  }, [sortedEnvironments]);
+
+  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
+    resolver: zodResolver(autoGenFormSchema),
+    defaultValues: sortedEnvironments.reduce((acc, env) => {
+        acc[env.id] = 0;
+        return acc;
+    }, {} as Record<string, number>),
+  });
+
+  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
+    setIsAutoGenSubmitting(true);
+    const success = await autoGenerateBugs(values);
+    if(success) {
+        toast({ title: "Success", description: "Bugs generated successfully."});
+        setIsAutoGenOpen(false);
+    } else {
+        toast({ variant: "destructive", title: "Error", description: "Could not generate bugs." });
+    }
+    setIsAutoGenSubmitting(false);
+  }
 
   const form = useForm<z.infer<typeof bugFormSchema>>({
     resolver: zodResolver(bugFormSchema),
@@ -123,14 +157,53 @@ export default function BugListPage() {
     }
     setIsSubmitting(false);
   };
-  
-  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
-
 
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Bug List" description="A list of all bugs reported in the project." />
+      <PageHeader title="Bug List" description="A list of all bugs reported in the project.">
+        <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+          <DialogTrigger asChild>
+              <Button variant="outline">
+                  <Bot className="mr-2 h-4 w-4" />
+                  Bugs Autogen
+              </Button>
+          </DialogTrigger>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Auto-Generate Bugs</DialogTitle>
+                  <DialogDescription>Enter the number of bugs to create for each environment.</DialogDescription>
+              </DialogHeader>
+              <Form {...autoGenForm}>
+                  <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                          {sortedEnvironments.map(env => (
+                              <FormField
+                                  key={env.id}
+                                  control={autoGenForm.control}
+                                  name={env.id}
+                                  render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>{env.name}</FormLabel>
+                                      <FormControl>
+                                      <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                                  )}
+                              />
+                          ))}
+                      </div>
+                      <DialogFooter>
+                          <Button type="submit" disabled={isAutoGenSubmitting}>
+                              {isAutoGenSubmitting ? 'Generating...' : 'Generate Bugs'}
+                          </Button>
+                      </DialogFooter>
+                  </form>
+              </Form>
+          </DialogContent>
+        </Dialog>
+      </PageHeader>
       <Card>
         <Table>
           <TableHeader>
