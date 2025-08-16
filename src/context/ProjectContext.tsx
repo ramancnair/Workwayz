@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -72,6 +72,7 @@ interface ProjectContextType {
   
   // Story actions
   addStory: (story: Omit<Story, 'id' | 'storyId'>, prefix?: string) => Promise<boolean>;
+  autoGenerateStories: (counts: Record<WorkItemType, number>) => Promise<boolean>;
   updateStory: (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>) => Promise<boolean>;
   deleteStory: (storyId: string) => Promise<boolean>;
   moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<boolean>;
@@ -531,6 +532,71 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     } catch (e: any) {
         console.error("Firebase Error: Failed to add story.", e);
         return false;
+    }
+  };
+
+  const autoGenerateStories = async (counts: Record<WorkItemType, number>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    
+    const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
+    
+    try {
+      const batch = writeBatch(db);
+      let currentIdCounter = stories.length;
+
+      const prefixMap: Record<WorkItemType, string> = {
+          'Requirement/Story': 'ST',
+          'Feature Change': 'FC',
+          'Task': 'TASK',
+          'Bug': 'BUG',
+          'Sub Task': 'SUB',
+      };
+      
+      const itemTypes = Object.keys(counts) as WorkItemType[];
+      
+      for (const itemType of itemTypes) {
+        const count = counts[itemType];
+        for (let i = 0; i < count; i++) {
+          currentIdCounter++;
+          const newStoryRef = doc(collection(db, 'projects', projectId, 'stories'));
+
+          const newStory: Omit<Story, 'id'> = {
+            storyId: `${prefixMap[itemType]}-${currentIdCounter}`,
+            title: `Auto-generated ${itemType} ${i + 1}`,
+            description: `This is an auto-generated description for ${itemType.toLowerCase()}.`,
+            itemType: itemType,
+            status: 'To Do',
+            epicId: getRandomItem(epics)?.id,
+            sprintId: null,
+            estimatedHours: Math.floor(Math.random() * 20) + 1,
+            impactedSystemIds: [getRandomItem(impactedSystems)?.id].filter(Boolean) as string[],
+          };
+          batch.set(newStoryRef, newStory);
+
+          const numSubTasks = Math.floor(Math.random() * 3) + 2; // 2 to 4 subtasks
+          for (let j = 0; j < numSubTasks; j++) {
+            currentIdCounter++;
+            const newSubTaskRef = doc(collection(db, 'projects', projectId, 'stories'));
+            const subTask: Omit<Story, 'id'> = {
+              storyId: `SUB-${currentIdCounter}`,
+              title: `Auto-generated sub-task ${j + 1} for ${newStory.storyId}`,
+              itemType: 'Sub Task',
+              status: 'To Do',
+              parentStoryId: newStoryRef.id,
+              epicId: newStory.epicId,
+              estimatedHours: Math.floor(Math.random() * 8) + 1,
+              impactedSystemId: getRandomItem(impactedSystems)?.id,
+            };
+            batch.set(newSubTaskRef, subTask);
+          }
+        }
+      }
+
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to auto-generate stories.", e);
+      return false;
     }
   };
 
@@ -1471,6 +1537,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     error,
     updateProject,
     addStory,
+    autoGenerateStories,
     updateStory,
     deleteStory,
     moveStoryToSprint,

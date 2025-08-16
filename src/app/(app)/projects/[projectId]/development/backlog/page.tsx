@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft, Bot } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -119,6 +119,14 @@ const subTaskFormSchema = z.object({
     message: "End date must be on or after start date.",
     path: ['endDate'],
 });
+
+const autoGenFormSchema = z.object({
+  'Requirement/Story': z.coerce.number().min(0).default(0),
+  'Feature Change': z.coerce.number().min(0).default(0),
+  'Task': z.coerce.number().min(0).default(0),
+  'Bug': z.coerce.number().min(0).default(0),
+});
+
 
 function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint, onSubItemClick }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, onSubItemClick: (item: Story) => void; }) {
   const Icon = workItemIcons[story.itemType];
@@ -279,6 +287,7 @@ export default function BacklogPage() {
     addEpic,
     addStory,
     updateStory,
+    autoGenerateStories
   } = useProject();
   
   const { toast } = useToast();
@@ -299,6 +308,9 @@ export default function BacklogPage() {
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
   const [showAddSubTask, setShowAddSubTask] = useState(false);
+  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
+  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   
@@ -327,6 +339,10 @@ export default function BacklogPage() {
       startDate: '',
       endDate: '',
     }
+  });
+
+  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
+    resolver: zodResolver(autoGenFormSchema),
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -408,6 +424,18 @@ export default function BacklogPage() {
       setAddStorySubmitting(false);
     }
   }, [addRequirementOpen, addStoryForm]);
+
+  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
+    setIsAutoGenSubmitting(true);
+    const success = await autoGenerateStories(values);
+    if(success) {
+        toast({ title: "Success", description: "Test data generated successfully."});
+        setIsAutoGenOpen(false);
+    } else {
+        toast({ variant: "destructive", title: "Error", description: "Could not generate test data." });
+    }
+    setIsAutoGenSubmitting(false);
+  }
   
   const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     setAddEpicSubmitting(true);
@@ -654,6 +682,48 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
           title="Product Backlog"
           description="Manage your epics and stories."
         >
+          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">
+                    <Bot className="mr-2 h-4 w-4" />
+                    Auto-Generate
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Auto-Generate Requirements</DialogTitle>
+                    <DialogDescription>Enter the number of each item type to create for testing.</DialogDescription>
+                </DialogHeader>
+                <Form {...autoGenForm}>
+                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            {workItemTypes.map(itemType => (
+                                <FormField
+                                    key={itemType}
+                                    control={autoGenForm.control}
+                                    name={itemType}
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{itemType}</FormLabel>
+                                        <FormControl>
+                                        <Input type="number" placeholder="0" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            ))}
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit" disabled={isAutoGenSubmitting}>
+                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Items'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={addEpicOpen} onOpenChange={setAddEpicOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -1722,6 +1792,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
