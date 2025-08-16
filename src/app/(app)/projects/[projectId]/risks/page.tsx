@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -38,12 +39,13 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Bot } from 'lucide-react';
 import type { Risk, RiskSeverity, RiskProbability } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
+import { Input } from '@/components/ui/input';
 
 const riskSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
@@ -52,6 +54,10 @@ const riskSchema = z.object({
   mitigationPlan: z.string().min(1, 'Mitigation Plan is required.'),
   residualRisk: z.string().min(1, 'Residual Risk is required.'),
   contingencyPlan: z.string().min(1, 'Contingency Plan is required.'),
+});
+
+const autoGenFormSchema = z.object({
+    count: z.coerce.number().min(1, "Please enter a valid number.").default(5),
 });
 
 const severityOptions: { value: RiskSeverity, label: string }[] = [
@@ -78,12 +84,14 @@ function getRiskPotential(severity: number, probability: number) {
 }
 
 export default function RisksPage() {
-  const { risks, addRisk, updateRisk, deleteRisk } = useProject();
+  const { risks, addRisk, updateRisk, deleteRisk, autoGenerateRisks } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
   const [deletingRisk, setDeletingRisk] = useState<Risk | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
+  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof riskSchema>>({
     resolver: zodResolver(riskSchema),
@@ -95,6 +103,11 @@ export default function RisksPage() {
         residualRisk: '',
         contingencyPlan: '',
     }
+  });
+
+  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
+    resolver: zodResolver(autoGenFormSchema),
+    defaultValues: { count: 5 },
   });
 
   useEffect(() => {
@@ -113,6 +126,18 @@ export default function RisksPage() {
       }
     }
   }, [isDialogOpen, editingRisk, form]);
+
+  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
+    setIsAutoGenSubmitting(true);
+    const success = await autoGenerateRisks(values.count);
+    if(success) {
+        toast({ title: "Success", description: `${values.count} risks generated successfully.`});
+        setIsAutoGenOpen(false);
+    } else {
+        toast({ variant: "destructive", title: "Error", description: "Could not generate risks." });
+    }
+    setIsAutoGenSubmitting(false);
+  }
 
   const handleDialogOpen = (risk: Risk | null) => {
     setEditingRisk(risk);
@@ -156,6 +181,42 @@ export default function RisksPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Risks" description="Manage and track all project risks.">
+          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">
+                    <Bot className="mr-2 h-4 w-4" />
+                    Autogen Risks
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Auto-Generate Risks</DialogTitle>
+                    <DialogDescription>Enter the number of risks to create for testing.</DialogDescription>
+                </DialogHeader>
+                <Form {...autoGenForm}>
+                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
+                        <FormField
+                            control={autoGenForm.control}
+                            name="count"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Number of Risks</FormLabel>
+                                <FormControl>
+                                <Input type="number" placeholder="5" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <Button type="submit" disabled={isAutoGenSubmitting}>
+                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Items'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Risk

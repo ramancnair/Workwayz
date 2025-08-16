@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -39,7 +40,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Bot } from 'lucide-react';
 import { type Issue, type IssuePriority, type IssueStatus } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -53,6 +54,10 @@ const issueSchema = z.object({
   status: z.enum(['Open', 'In Progress', 'Resolved', 'Closed']),
   assigneeId: z.string().optional(),
   resolvedDate: z.string().optional(),
+});
+
+const autoGenFormSchema = z.object({
+    count: z.coerce.number().min(1, "Please enter a valid number.").default(5),
 });
 
 const priorities: IssuePriority[] = ['Low', 'Medium', 'High', 'Critical'];
@@ -74,15 +79,22 @@ const statusStyles: Record<IssueStatus, string> = {
 
 
 export default function IssuesPage() {
-  const { issues, employees: users, addIssue, updateIssue, deleteIssue } = useProject();
+  const { issues, employees: users, addIssue, updateIssue, deleteIssue, autoGenerateIssues } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
   const [deletingIssue, setDeletingIssue] = useState<Issue | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
+  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof issueSchema>>({
     resolver: zodResolver(issueSchema),
+  });
+
+  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
+    resolver: zodResolver(autoGenFormSchema),
+    defaultValues: { count: 5 },
   });
 
   useEffect(() => {
@@ -104,6 +116,18 @@ export default function IssuesPage() {
       }
     }
   }, [isDialogOpen, editingIssue, form]);
+
+  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
+    setIsAutoGenSubmitting(true);
+    const success = await autoGenerateIssues(values.count);
+    if(success) {
+        toast({ title: "Success", description: `${values.count} issues generated successfully.`});
+        setIsAutoGenOpen(false);
+    } else {
+        toast({ variant: "destructive", title: "Error", description: "Could not generate issues." });
+    }
+    setIsAutoGenSubmitting(false);
+  }
 
   const handleDialogOpen = (issue: Issue | null) => {
     setEditingIssue(issue);
@@ -150,6 +174,42 @@ export default function IssuesPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Issues" description="Manage and track all project issues.">
+          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">
+                    <Bot className="mr-2 h-4 w-4" />
+                    Autogen Issues
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Auto-Generate Issues</DialogTitle>
+                    <DialogDescription>Enter the number of issues to create for testing.</DialogDescription>
+                </DialogHeader>
+                <Form {...autoGenForm}>
+                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
+                        <FormField
+                            control={autoGenForm.control}
+                            name="count"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Number of Issues</FormLabel>
+                                <FormControl>
+                                <Input type="number" placeholder="5" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <Button type="submit" disabled={isAutoGenSubmitting}>
+                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Items'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Issue

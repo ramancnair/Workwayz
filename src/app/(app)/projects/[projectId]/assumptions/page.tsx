@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -39,7 +40,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Bot } from 'lucide-react';
 import { type Assumption, type AssumptionCategory, type AssumptionStatus } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +56,10 @@ const assumptionSchema = z.object({
   validationDate: z.string().optional(),
 });
 
+const autoGenFormSchema = z.object({
+    count: z.coerce.number().min(1, "Please enter a valid number.").default(5),
+});
+
 const categories: AssumptionCategory[] = ['Technical', 'Resource', 'Business', 'External'];
 const statuses: AssumptionStatus[] = ['Active', 'Validated', 'Invalidated'];
 
@@ -66,15 +71,22 @@ const statusStyles: Record<AssumptionStatus, string> = {
 
 
 export default function AssumptionsPage() {
-  const { assumptions, employees: users, addAssumption, updateAssumption, deleteAssumption } = useProject();
+  const { assumptions, employees: users, addAssumption, updateAssumption, deleteAssumption, autoGenerateAssumptions } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAssumption, setEditingAssumption] = useState<Assumption | null>(null);
   const [deletingAssumption, setDeletingAssumption] = useState<Assumption | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
+  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof assumptionSchema>>({
     resolver: zodResolver(assumptionSchema),
+  });
+
+  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
+    resolver: zodResolver(autoGenFormSchema),
+    defaultValues: { count: 5 },
   });
 
   useEffect(() => {
@@ -96,6 +108,18 @@ export default function AssumptionsPage() {
       }
     }
   }, [isDialogOpen, editingAssumption, form]);
+
+  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
+    setIsAutoGenSubmitting(true);
+    const success = await autoGenerateAssumptions(values.count);
+    if(success) {
+        toast({ title: "Success", description: `${values.count} assumptions generated successfully.`});
+        setIsAutoGenOpen(false);
+    } else {
+        toast({ variant: "destructive", title: "Error", description: "Could not generate assumptions." });
+    }
+    setIsAutoGenSubmitting(false);
+  }
 
   const handleDialogOpen = (assumption: Assumption | null) => {
     setEditingAssumption(assumption);
@@ -139,6 +163,42 @@ export default function AssumptionsPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Assumptions" description="Manage and track all project assumptions.">
+          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">
+                    <Bot className="mr-2 h-4 w-4" />
+                    Autogen Assumptions
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Auto-Generate Assumptions</DialogTitle>
+                    <DialogDescription>Enter the number of assumptions to create for testing.</DialogDescription>
+                </DialogHeader>
+                <Form {...autoGenForm}>
+                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
+                        <FormField
+                            control={autoGenForm.control}
+                            name="count"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Number of Assumptions</FormLabel>
+                                <FormControl>
+                                <Input type="number" placeholder="5" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <Button type="submit" disabled={isAutoGenSubmitting}>
+                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Items'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Assumption
