@@ -604,18 +604,22 @@ export default function KanbanPage() {
                       <Tabs defaultValue="details" className="w-full">
                           <TabsList>
                               <TabsTrigger value="details">Details</TabsTrigger>
-                              <TabsTrigger value="subTasks">
-                                  Sub-Tasks
-                                  <Badge variant="secondary" className="ml-2">
-                                      {selectedStorySubItems.subTasks.length}
-                                  </Badge>
-                              </TabsTrigger>
-                              <TabsTrigger value="bugs">
-                                  Bugs
-                                  <Badge variant="secondary" className="ml-2">
-                                      {selectedStorySubItems.bugs.length}
-                                  </Badge>
-                              </TabsTrigger>
+                              {!['Task', 'Bug'].includes(selectedStory.itemType) && (
+                                <>
+                                  <TabsTrigger value="subTasks">
+                                      Sub-Tasks
+                                      <Badge variant="secondary" className="ml-2">
+                                          {selectedStorySubItems.subTasks.length}
+                                      </Badge>
+                                  </TabsTrigger>
+                                  <TabsTrigger value="bugs">
+                                      Bugs
+                                      <Badge variant="secondary" className="ml-2">
+                                          {selectedStorySubItems.bugs.length}
+                                      </Badge>
+                                  </TabsTrigger>
+                                </>
+                              )}
                           </TabsList>
                           <TabsContent value="details" className="pt-4">
                               <div className="space-y-4">
@@ -975,6 +979,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
