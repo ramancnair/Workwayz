@@ -99,6 +99,7 @@ interface ProjectContextType {
 
   // TestCase actions
   addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => Promise<boolean>;
+  autoGenerateTestCases: (counts: Record<string, number>) => Promise<boolean>;
   updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
 
@@ -906,6 +907,61 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         return false;
     }
   };
+  
+  const autoGenerateTestCases = async (counts: Record<string, number>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+
+    const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
+
+    try {
+      const batch = writeBatch(db);
+      const testCasesSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCases'));
+      let currentIdCounter = testCasesSnapshot.size > 0
+        ? Math.max(0, ...testCasesSnapshot.docs
+            .map(doc => doc.data().testCaseId)
+            .filter((id: string | undefined) => id && typeof id === 'string')
+            .map((id: string) => parseInt(id.replace('TC-', ''), 10) || 0)
+        ) + 1
+        : 1;
+
+      const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story');
+
+      for (const environmentId in counts) {
+        const count = counts[environmentId];
+        const environmentName = environments.find(e => e.id === environmentId)?.name || 'Unknown Env';
+
+        for (let i = 0; i < count; i++) {
+          const newTestCaseRef = doc(collection(db, 'projects', projectId, 'testCases'));
+          const relatedStory = getRandomItem(storiesToLink);
+
+          const newTestCase: Omit<TestCase, 'id'> = {
+            testCaseId: `TC-${currentIdCounter}`,
+            title: `Auto-gen TC for ${environmentName} #${i + 1}`,
+            type: Math.random() > 0.3 ? 'Functional' : 'Non-functional',
+            description: `Auto-generated test steps for ${environmentName}.`,
+            expectedResult: 'The system should perform as expected.',
+            status: 'Not Run',
+            storyId: relatedStory?.id,
+            sprintId: relatedStory?.sprintId,
+            assigneeId: getRandomItem(employees)?.id,
+            environmentIds: [environmentId],
+            isDeleted: false,
+            deletedAt: null,
+          };
+          
+          batch.set(newTestCaseRef, sanitizeForFirestore(newTestCase));
+          currentIdCounter++;
+        }
+      }
+      
+      await batch.commit();
+      return true;
+
+    } catch(e) {
+      console.error("Firebase Error: Failed to auto-generate test cases.", e);
+      return false;
+    }
+  };
 
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1214,7 +1270,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
   
   // Settings Actions
-  const updateProjectSettings = async (settings: Partial<Omit<ProjectSettings, 'id'>>): Promise<boolean> => {
+  const updateProjectSettings = async (settings: Partial<Omit<ProjectSettings, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
       const settingsRef = doc(db, 'projects', projectId, 'settings', 'main');
@@ -1226,17 +1282,17 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
-  const setWeeklyOffDays = async (days: number[]): Promise<boolean> => {
+  const setWeeklyOffDays = async (days: number[]) => {
     if (!db || !projectId) return false;
     return updateProjectSettings({ weeklyOffDays: days });
   };
   
-  const updateSprintSettings = async (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>): Promise<boolean> => {
+  const updateSprintSettings = async (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>) => {
      if (!db || !projectId) return false;
      return updateProjectSettings(settings);
   };
 
-  const addHoliday = async (holiday: Omit<Holiday, 'id'>): Promise<boolean> => {
+  const addHoliday = async (holiday: Omit<Holiday, 'id'>) => {
     if (!db || !projectId) return false;
     try {
       const payload: any = { ...holiday };
@@ -1274,21 +1330,21 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Impacted System Actions (live)
-  const addImpactedSystem = async (system: Omit<ImpactedSystem, 'id'>): Promise<boolean> => {
+  const addImpactedSystem = async (system: Omit<ImpactedSystem, 'id'>) => {
     if (!db || !projectId) return false;
     try {
       await addDoc(collection(db, 'projects', projectId, 'impactedSystems'), sanitizeForFirestore(system));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
-  const updateImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>): Promise<boolean> => {
+  const updateImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
       await updateDoc(doc(db, 'projects', projectId, 'impactedSystems', systemId), sanitizeForFirestore(data));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
-  const deleteImpactedSystem = async (systemId: string): Promise<boolean> => {
+  const deleteImpactedSystem = async (systemId: string) => {
     if (!db || !projectId) return false;
     try {
       await deleteDoc(doc(db, 'projects', projectId, 'impactedSystems', systemId));
@@ -1297,21 +1353,21 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Initial Estimation Actions
-  const addInitialImpactedSystem = async (system: Omit<ImpactedSystem, 'id'>): Promise<boolean> => {
+  const addInitialImpactedSystem = async (system: Omit<ImpactedSystem, 'id'>) => {
     if (!db || !projectId) return false;
     try {
       await addDoc(collection(db, 'projects', projectId, 'initialImpactedSystems'), sanitizeForFirestore(system));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
-  const updateInitialImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>): Promise<boolean> => {
+  const updateInitialImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
       await updateDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', systemId), sanitizeForFirestore(data));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
-  const deleteInitialImpactedSystem = async (systemId: string): Promise<boolean> => {
+  const deleteInitialImpactedSystem = async (systemId: string) => {
     if (!db || !projectId) return false;
     try {
       await deleteDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', systemId));
@@ -1355,21 +1411,21 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Horizontal Actions (live)
-  const addHorizontal = async (horizontal: Omit<Horizontal, 'id'>): Promise<boolean> => {
+  const addHorizontal = async (horizontal: Omit<Horizontal, 'id'>) => {
     if (!db || !projectId) return false;
     try {
       await addDoc(collection(db, 'projects', projectId, 'horizontals'), sanitizeForFirestore(horizontal));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
-  const updateHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>): Promise<boolean> => {
+  const updateHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
       await updateDoc(doc(db, 'projects', projectId, 'horizontals', horizontalId), sanitizeForFirestore(data));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
-  const deleteHorizontal = async (horizontalId: string): Promise<boolean> => {
+  const deleteHorizontal = async (horizontalId: string) => {
     if (!db || !projectId) return false;
     try {
       await deleteDoc(doc(db, 'projects', projectId, 'horizontals', horizontalId));
@@ -1378,7 +1434,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Initial Horizontal Actions
-  const addInitialHorizontal = async (horizontal: Omit<Horizontal, 'id'>): Promise<boolean> => {
+  const addInitialHorizontal = async (horizontal: Omit<Horizontal, 'id'>) => {
     if (!db || !projectId) return false;
     try {
       await addDoc(collection(db, 'projects', projectId, 'initialHorizontals'), sanitizeForFirestore(horizontal));
@@ -1392,7 +1448,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
-  const deleteInitialHorizontal = async (horizontalId: string): Promise<boolean> => {
+  const deleteInitialHorizontal = async (horizontalId: string) => {
     if (!db || !projectId) return false;
     try {
       await deleteDoc(doc(db, 'projects', projectId, 'initialHorizontals', horizontalId));
@@ -1573,6 +1629,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addLeavePeriod,
     deleteLeavePeriod,
     addTestCase,
+    autoGenerateTestCases,
     updateTestCase,
     deleteTestCase,
     addRisk,
