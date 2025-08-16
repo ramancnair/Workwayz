@@ -840,252 +840,244 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         </FormItem>
                         )}
                     />
-                    <Tabs defaultValue="details" className="w-full">
-                        <TabsList>
-                            <TabsTrigger value="details">Details</TabsTrigger>
-                            <TabsTrigger value="related" disabled>Related Items</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="details" className="pt-4">
-                            <div className="space-y-4">
-                                <FormField
-                                    control={addStoryForm.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Description</FormLabel>
-                                        <FormControl>
-                                        <Textarea placeholder={`Describe the ${watchedItemType.toLowerCase()}...`} {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                {['Requirement/Story', 'Feature Change'].includes(watchedItemType) && (
-                                <FormField
+                    <div className="space-y-4 pt-4">
+                        <FormField
+                            control={addStoryForm.control}
+                            name="description"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <FormControl>
+                                <Textarea placeholder={`Describe the ${watchedItemType.toLowerCase()}...`} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        {['Requirement/Story', 'Feature Change'].includes(watchedItemType) && (
+                        <FormField
+                            control={addStoryForm.control}
+                            name="impactedSystemIds"
+                            render={() => (
+                            <FormItem>
+                                <FormLabel>Impacted Systems</FormLabel>
+                                <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
+                                {impactedSystems.map((system) => (
+                                    <FormField
+                                    key={system.id}
                                     control={addStoryForm.control}
                                     name="impactedSystemIds"
-                                    render={() => (
-                                    <FormItem>
-                                        <FormLabel>Impacted Systems</FormLabel>
-                                        <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
-                                        {impactedSystems.map((system) => (
-                                            <FormField
+                                    render={({ field }) => {
+                                        return (
+                                        <FormItem
                                             key={system.id}
-                                            control={addStoryForm.control}
-                                            name="impactedSystemIds"
-                                            render={({ field }) => {
-                                                return (
-                                                <FormItem
-                                                    key={system.id}
-                                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                                >
-                                                    <FormControl>
-                                                    <Checkbox
-                                                        checked={field.value?.includes(system.id)}
-                                                        onCheckedChange={(checked) => {
-                                                        return checked
-                                                            ? field.onChange([...(field.value || []), system.id])
-                                                            : field.onChange(
-                                                                field.value?.filter(
-                                                                (value) => value !== system.id
-                                                                )
-                                                            )
-                                                        }}
-                                                    />
-                                                    </FormControl>
-                                                    <FormLabel className="font-normal">
-                                                    {system.name}
-                                                    </FormLabel>
-                                                </FormItem>
-                                                )
-                                            }}
+                                            className="flex flex-row items-start space-x-3 space-y-0"
+                                        >
+                                            <FormControl>
+                                            <Checkbox
+                                                checked={field.value?.includes(system.id)}
+                                                onCheckedChange={(checked) => {
+                                                return checked
+                                                    ? field.onChange([...(field.value || []), system.id])
+                                                    : field.onChange(
+                                                        field.value?.filter(
+                                                        (value) => value !== system.id
+                                                        )
+                                                    )
+                                                }}
                                             />
-                                        ))}
-                                        </div>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                )}
-                                <FormField
-                                    control={addStoryForm.control}
-                                    name="acceptanceCriteria"
-                                    render={({ field }) => (
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                            {system.name}
+                                            </FormLabel>
+                                        </FormItem>
+                                        )
+                                    }}
+                                    />
+                                ))}
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        )}
+                        <FormField
+                            control={addStoryForm.control}
+                            name="acceptanceCriteria"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Acceptance Criteria</FormLabel>
+                                <FormControl>
+                                <Textarea placeholder={`Define acceptance criteria for this ${watchedItemType.toLowerCase()}...`} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {['Requirement/Story', 'Feature Change', 'Task'].includes(watchedItemType) ? (
+                            <FormField
+                                control={addStoryForm.control}
+                                name="epicId"
+                                render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Acceptance Criteria</FormLabel>
+                                    <FormLabel>Epic</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                         <FormControl>
-                                        <Textarea placeholder={`Define acceptance criteria for this ${watchedItemType.toLowerCase()}...`} {...field} />
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Assign to an epic" />
+                                        </SelectTrigger>
                                         </FormControl>
-                                        <FormMessage />
+                                        <SelectContent>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {epics.map(epic => (
+                                            <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
                                     </FormItem>
-                                    )}
-                                />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {['Requirement/Story', 'Feature Change', 'Task'].includes(watchedItemType) ? (
-                                    <FormField
-                                        control={addStoryForm.control}
-                                        name="epicId"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormLabel>Epic</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                                <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Assign to an epic" />
-                                                </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {epics.map(epic => (
-                                                    <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
-                                                ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                ) : (
-                                    <FormField
-                                    control={addStoryForm.control}
-                                    name="parentStoryId" 
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Parent Item</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Link to a story or feature change" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            <SelectItem value="unassigned">None</SelectItem>
-                                            {parentStories.map(story => (
-                                                <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
                                 )}
-                                <FormField
-                                    control={addStoryForm.control}
-                                    name="assigneeId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Assignee</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Assign to a resource" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                                            {users.map(emp => (
-                                                <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                    control={addStoryForm.control}
-                                    name="releaseId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Release</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Assign to a release" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                                            {releases.map(release => (
-                                                <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
-                                    <FormField
-                                    control={addStoryForm.control}
-                                    name="estimatedHours"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Effort (hours)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="0" {...field} value={field.value || ''} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
-                                </div>
-                                {watchedItemType === 'Bug' && (
-                                    <>
-                                    <FormField
-                                    control={addStoryForm.control}
-                                    name="criticality"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Criticality</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Set criticality" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            {bugCriticalities.map((c) => (
-                                                <SelectItem key={c} value={c}>
-                                                {c}
-                                                </SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
-                                    <FormField
-                                    control={addStoryForm.control}
-                                    name="environmentId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Environment</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select an environment" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            <SelectItem value="unassigned">None</SelectItem>
-                                            {sortedEnvironments.map(env => (
-                                                <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
-                                    </>
-                                )}
-                            </div>
-                        </TabsContent>
-                    </Tabs>
+                            />
+                        ) : (
+                            <FormField
+                            control={addStoryForm.control}
+                            name="parentStoryId" 
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Parent Item</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Link to a story or feature change" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">None</SelectItem>
+                                    {parentStories.map(story => (
+                                        <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        )}
+                        <FormField
+                            control={addStoryForm.control}
+                            name="assigneeId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Assignee</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Assign to a resource" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {users.map(emp => (
+                                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                            control={addStoryForm.control}
+                            name="releaseId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Release</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Assign to a release" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {releases.map(release => (
+                                        <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                            <FormField
+                            control={addStoryForm.control}
+                            name="estimatedHours"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Effort (hours)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        </div>
+                        {watchedItemType === 'Bug' && (
+                            <>
+                            <FormField
+                            control={addStoryForm.control}
+                            name="criticality"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Criticality</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Set criticality" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {bugCriticalities.map((c) => (
+                                        <SelectItem key={c} value={c}>
+                                        {c}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                            <FormField
+                            control={addStoryForm.control}
+                            name="environmentId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Environment</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select an environment" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">None</SelectItem>
+                                    {sortedEnvironments.map(env => (
+                                        <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                            </>
+                        )}
+                    </div>
                     <DialogFooter>
                         <Button type="submit" disabled={isAddStorySubmitting}>
                         {isAddStorySubmitting ? 'Creating...' : `Create ${watchedItemType}`}
