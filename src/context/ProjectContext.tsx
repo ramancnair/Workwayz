@@ -215,7 +215,7 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
     '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems'],
-    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems'],
+    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
@@ -226,10 +226,10 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/project-details/architecture': ['environments', 'impactedSystems'],
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
-    '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays'],
+    '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays'],
     '/resources/resource-gantt': ['stories', 'employees'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
-    '/resources/leave-tracker': ['employees', 'holidays'],
+    '/resources/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
     '/raid-dashboard': ['risks', 'assumptions', 'issues', 'dependencies'],
     '/risks': ['risks'],
     '/assumptions': ['assumptions', 'employees'],
@@ -542,7 +542,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     
     try {
       const batch = writeBatch(db);
-      let currentIdCounter = stories.length;
+      
+      const storiesSnapshot = await getDocs(collection(db, 'projects', projectId, 'stories'));
+      let currentIdCounter = storiesSnapshot.size > 0
+        ? Math.max(0, ...storiesSnapshot.docs
+            .map(doc => doc.data().storyId)
+            .filter((id: string | undefined) => id && typeof id === 'string')
+            .map((id: string) => parseInt(id.replace(/^[A-Z]+-/, ''), 10) || 0)
+        ) + 1
+        : 1;
 
       const prefixMap: Record<WorkItemType, string> = {
           'Requirement/Story': 'ST',
@@ -557,7 +565,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       for (const itemType of itemTypes) {
         const count = counts[itemType];
         for (let i = 0; i < count; i++) {
-          currentIdCounter++;
           const newStoryRef = doc(collection(db, 'projects', projectId, 'stories'));
 
           const newStory: Omit<Story, 'id'> = {
@@ -570,12 +577,14 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             sprintId: null,
             estimatedHours: Math.floor(Math.random() * 20) + 1,
             impactedSystemIds: [getRandomItem(impactedSystems)?.id].filter(Boolean) as string[],
+            isDeleted: false,
+            deletedAt: null
           };
-          batch.set(newStoryRef, newStory);
+          batch.set(newStoryRef, sanitizeForFirestore(newStory));
+          currentIdCounter++;
 
           const numSubTasks = Math.floor(Math.random() * 3) + 2; // 2 to 4 subtasks
           for (let j = 0; j < numSubTasks; j++) {
-            currentIdCounter++;
             const newSubTaskRef = doc(collection(db, 'projects', projectId, 'stories'));
             const subTask: Omit<Story, 'id'> = {
               storyId: `SUB-${currentIdCounter}`,
@@ -586,8 +595,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
               epicId: newStory.epicId,
               estimatedHours: Math.floor(Math.random() * 8) + 1,
               impactedSystemId: getRandomItem(impactedSystems)?.id,
+              isDeleted: false,
+              deletedAt: null
             };
-            batch.set(newSubTaskRef, subTask);
+            batch.set(newSubTaskRef, sanitizeForFirestore(subTask));
+            currentIdCounter++;
           }
         }
       }
@@ -1368,7 +1380,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
-  const updateInitialHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>): Promise<boolean> => {
+  const updateInitialHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
       await updateDoc(doc(db, 'projects', projectId, 'initialHorizontals', horizontalId), sanitizeForFirestore(data));
