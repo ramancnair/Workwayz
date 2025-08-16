@@ -82,7 +82,7 @@ interface ProjectContextType {
   // Epic actions
   addEpic: (epic: Omit<Epic, 'id'>) => Promise<boolean>;
   updateEpic: (epicId: string, data: Partial<Omit<Epic, 'id'>>) => Promise<boolean>;
-  deleteEpic: (epicId: string) => Promise<boolean>;
+  deleteEpic: (epicId: string, deleteItems?: boolean) => Promise<boolean>;
 
   // Sprint actions
   addSprint: (sprint: { title: string, startDate?: Date, endDate?: Date }) => Promise<boolean>;
@@ -704,7 +704,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const deleteEpic = async (epicId: string): Promise<boolean> => {
+  const deleteEpic = async (epicId: string, deleteItems = false): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
@@ -712,8 +712,13 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       
       const q = query(collection(db, 'projects', projectId, 'stories'), where('epicId', '==', epicId));
       const storiesSnapshot = await getDocs(q);
+      
       storiesSnapshot.forEach(storyDoc => {
-        batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { epicId: null });
+        if (deleteItems) {
+            batch.delete(doc(db, 'projects', projectId, 'stories', storyDoc.id));
+        } else {
+            batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { epicId: null });
+        }
       });
 
       await batch.commit();

@@ -306,6 +306,7 @@ export default function BacklogPage() {
   const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
 
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
+  const [deleteEpicItems, setDeleteEpicItems] = useState(false);
   const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
   const [showAddSubTask, setShowAddSubTask] = useState(false);
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
@@ -430,6 +431,12 @@ export default function BacklogPage() {
       setAddStorySubmitting(false);
     }
   }, [addRequirementOpen, addStoryForm]);
+
+  useEffect(() => {
+    if (!epicToDelete) {
+        setDeleteEpicItems(false);
+    }
+  }, [epicToDelete]);
 
   const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
     setIsAutoGenSubmitting(true);
@@ -600,10 +607,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   };
     
   const handleDeleteEpic = (epicId: string) => {
-    setEpicToDelete(null);
-    deleteEpic(epicId).then(success => {
-        if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete epic." });
+    deleteEpic(epicId, deleteEpicItems).then(success => {
+        if (!success) {
+            toast({ variant: "destructive", title: "Error", description: "Could not delete epic." });
+        } else {
+            toast({ title: "Success", description: "Epic and related items handled." });
+        }
     });
+    setEpicToDelete(null);
   };
 
   const allWorkItems = stories.filter(
@@ -712,7 +723,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     <FormItem>
                                         <FormLabel>{itemType}</FormLabel>
                                         <FormControl>
-                                        <Input type="number" placeholder="0" {...field} />
+                                        <Input type="number" placeholder="0" {...field} value={field.value || ''} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -1173,6 +1184,21 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                 ? `This epic contains ${epicToDeleteStoryCount} ${epicToDeleteStoryCount === 1 ? 'story' : 'stories'}. Deleting the epic will mark them as unassigned. This action cannot be undone.`
                 : `This will permanently delete the epic "${epicToDelete?.title}". This action cannot be undone.`}
             </AlertDialogDescription>
+            {epicToDelete && epicToDeleteStoryCount > 0 && (
+                <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox
+                        id="delete-epic-items"
+                        checked={deleteEpicItems}
+                        onCheckedChange={(checked) => setDeleteEpicItems(!!checked)}
+                    />
+                    <label
+                        htmlFor="delete-epic-items"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                       Also delete all items within this epic.
+                    </label>
+                </div>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
