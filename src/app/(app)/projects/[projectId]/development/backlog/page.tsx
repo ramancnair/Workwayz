@@ -703,7 +703,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
             <DialogTrigger asChild>
                 <Button variant="outline">
                     <Bot className="mr-2 h-4 w-4" />
-                    Auto-Generate
+                    Req Autogen
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -1250,7 +1250,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
-                    <div className='space-y-4 py-4'>
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 py-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -1300,11 +1300,11 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                         )}/>
                         <DialogFooter>
-                            <Button type="button" onClick={subTaskForm.handleSubmit(onEditSubTaskSubmit)} disabled={isEditStorySubmitting}>
+                            <Button type="submit" disabled={isEditStorySubmitting}>
                                 {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                             </Button>
                         </DialogFooter>
-                    </div>
+                    </form>
                   </Form>
                 </>
               ) : (
@@ -1644,7 +1644,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 {showAddSubTask ? (
                                     <div className='border p-4 mt-2 rounded-md'>
                                         <Form {...subTaskForm}>
-                                            <div className='space-y-4'>
+                                            <form onSubmit={subTaskForm.handleSubmit(handleAddSubTask)} className='space-y-4'>
                                                 <FormField control={subTaskForm.control} name="title" render={({field}) => (
                                                     <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
@@ -1695,9 +1695,9 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
-                                                  <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
+                                                  <Button type="button">Save Sub Task</Button>
                                                 </div>
-                                            </div>
+                                            </form>
                                         </Form>
                                     </div>
                                 ) : (
