@@ -83,6 +83,9 @@ export default function TestCasesPage() {
   const [deletingTestCase, setDeletingTestCase] = useState<TestCase | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
+  const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
 
   const [filters, setFilters] = useState({
     sprintId: 'all',
@@ -275,6 +278,24 @@ export default function TestCasesPage() {
     }
     setDeletingTestCase(null);
   };
+  
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedTestCases.length === 0) return;
+    
+    const promises = selectedTestCases.map(id => deleteTestCase(id));
+    const results = await Promise.all(promises);
+
+    const successCount = results.filter(Boolean).length;
+    if (successCount > 0) {
+        toast({ title: "Success", description: `${successCount} test case(s) moved to trash.` });
+    }
+    if (successCount < selectedTestCases.length) {
+        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedTestCases.length - successCount} test case(s).` });
+    }
+    
+    setSelectedTestCases([]);
+    setShowBulkDeleteConfirm(false);
+  };
 
   const onSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     setIsSubmitting(true);
@@ -362,6 +383,13 @@ export default function TestCasesPage() {
                 </Form>
             </DialogContent>
           </Dialog>
+          
+          {selectedTestCases.length > 0 && (
+             <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Selected ({selectedTestCases.length})
+            </Button>
+          )}
 
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -402,6 +430,15 @@ export default function TestCasesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                 <TableHead className="w-10">
+                    <Checkbox
+                        checked={filteredAndSortedTestCases.length > 0 && selectedTestCases.length === filteredAndSortedTestCases.length}
+                        onCheckedChange={(value) =>
+                            setSelectedTestCases(value ? filteredAndSortedTestCases.map(tc => tc.id) : [])
+                        }
+                        aria-label="Select all"
+                    />
+                 </TableHead>
                 <SortableHeader columnId="testCaseId">ID</SortableHeader>
                 <SortableHeader columnId="title">Title</SortableHeader>
                 <SortableHeader columnId="status">Status</SortableHeader>
@@ -415,7 +452,20 @@ export default function TestCasesPage() {
                 const assignee = employees.find(e => e.id === tc.assigneeId);
                 const tcEnvironments = tc.environmentIds?.map(envId => environments.find(e => e.id === envId)?.name).filter(Boolean).join(', ');
                 return (
-                    <TableRow key={tc.id}>
+                    <TableRow key={tc.id} data-state={selectedTestCases.includes(tc.id) && "selected"}>
+                        <TableCell>
+                            <Checkbox
+                                checked={selectedTestCases.includes(tc.id)}
+                                onCheckedChange={(value) =>
+                                    setSelectedTestCases(
+                                        value
+                                        ? [...selectedTestCases, tc.id]
+                                        : selectedTestCases.filter((id) => id !== tc.id)
+                                    )
+                                }
+                                aria-label="Select row"
+                            />
+                        </TableCell>
                         <TableCell className="font-medium">{tc.testCaseId}</TableCell>
                         <TableCell>{tc.title}</TableCell>
                         <TableCell>
@@ -681,6 +731,26 @@ export default function TestCasesPage() {
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+       <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move {selectedTestCases.length} test case(s) to the trash.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Delete Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
