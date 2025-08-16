@@ -25,11 +25,21 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,7 +52,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
-import { Bot } from 'lucide-react';
+import { Bot, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const statusStyles: Record<StoryStatus, string> = {
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
@@ -73,11 +84,13 @@ const bugFormSchema = z.object({
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, updateStory, environments, autoGenerateBugs } = useProject();
+  const { stories, employees, sprints, updateStory, deleteStory, environments, autoGenerateBugs } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const bugs = stories.filter(story => story.itemType === 'Bug');
+  const [selectedBugs, setSelectedBugs] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
@@ -157,6 +170,24 @@ export default function BugListPage() {
     }
     setIsSubmitting(false);
   };
+  
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedBugs.length === 0) return;
+    
+    const promises = selectedBugs.map(id => deleteStory(id));
+    const results = await Promise.all(promises);
+
+    const successCount = results.filter(Boolean).length;
+    if (successCount > 0) {
+        toast({ title: "Success", description: `${successCount} bug(s) moved to trash.` });
+    }
+    if (successCount < selectedBugs.length) {
+        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedBugs.length - successCount} bug(s).` });
+    }
+    
+    setSelectedBugs([]);
+    setShowBulkDeleteConfirm(false);
+  };
 
   return (
     <>
@@ -203,11 +234,26 @@ export default function BugListPage() {
               </Form>
           </DialogContent>
         </Dialog>
+        {selectedBugs.length > 0 && (
+            <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Selected ({selectedBugs.length})
+            </Button>
+        )}
       </PageHeader>
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                    checked={bugs.length > 0 && selectedBugs.length === bugs.length}
+                    onCheckedChange={(value) =>
+                        setSelectedBugs(value ? bugs.map(bug => bug.id) : [])
+                    }
+                    aria-label="Select all"
+                />
+              </TableHead>
               <TableHead>ID</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Status</TableHead>
@@ -223,7 +269,20 @@ export default function BugListPage() {
               const relatedStory = stories.find(s => s.id === bug.epicId); // epicId holds related story for bugs
               const environment = environments.find(e => e.id === bug.environmentId);
               return (
-                <TableRow key={bug.id}>
+                <TableRow key={bug.id} data-state={selectedBugs.includes(bug.id) && "selected"}>
+                  <TableCell>
+                    <Checkbox
+                        checked={selectedBugs.includes(bug.id)}
+                        onCheckedChange={(value) =>
+                            setSelectedBugs(
+                                value
+                                ? [...selectedBugs, bug.id]
+                                : selectedBugs.filter((id) => id !== bug.id)
+                            )
+                        }
+                        aria-label="Select row"
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{bug.storyId}</TableCell>
                   <TableCell>
                       <button
@@ -475,6 +534,26 @@ export default function BugListPage() {
           )}
         </DialogContent>
       </Dialog>
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move {selectedBugs.length} bug(s) to the trash.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Delete Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
+
