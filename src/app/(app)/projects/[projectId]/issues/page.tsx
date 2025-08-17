@@ -141,9 +141,9 @@ export default function IssuesPage() {
     if (!deletingIssue) return;
     const success = await deleteIssue(deletingIssue.id);
     if (success) {
-      toast({ title: "Success", description: "Issue deleted." });
+      toast({ title: "Success", description: "Issue moved to trash." });
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not delete issue." });
+      toast({ variant: "destructive", title: "Error", description: "Could not move issue to trash." });
     }
     setDeletingIssue(null);
   };
@@ -156,10 +156,10 @@ export default function IssuesPage() {
 
     const successCount = results.filter(Boolean).length;
     if (successCount > 0) {
-        toast({ title: "Success", description: `${successCount} issue(s) deleted.` });
+        toast({ title: "Success", description: `${successCount} issue(s) moved to trash.` });
     }
     if (successCount < selectedIssues.length) {
-        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedIssues.length - successCount} issue(s).` });
+        toast({ variant: "destructive", title: "Error", description: `Could not move ${selectedIssues.length - successCount} issue(s) to trash.` });
     }
     
     setSelectedIssues([]);
@@ -394,7 +394,7 @@ export default function IssuesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the issue.
+              This will move the issue to the trash. It will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -403,7 +403,7 @@ export default function IssuesPage() {
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -414,7 +414,7 @@ export default function IssuesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the selected {selectedIssues.length} issue(s). This action cannot be undone.
+              This will move the selected {selectedIssues.length} issue(s) to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -24,32 +24,48 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { type Story, type TestCase } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
 import { differenceInDays, formatDistanceToNow, parseISO } from 'date-fns';
-import { BookOpen, Bug, CheckSquare, GitCommit, ClipboardCheck } from 'lucide-react';
+import { BookOpen, Bug, CheckSquare, GitCommit, ClipboardCheck, ShieldAlert, NotebookText, AlertCircle, Link2 } from 'lucide-react';
+
+type TrashedItemType = 'Story' | 'Task' | 'Bug' | 'Feature Change' | 'Test Case' | 'Risk' | 'Assumption' | 'Issue' | 'Dependency' | 'Sub Task';
+type CollectionName = 'stories' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies';
 
 type TrashedItem = {
   id: string;
   name: string;
-  type: 'Story' | 'Task' | 'Bug' | 'Feature Change' | 'Test Case';
+  type: TrashedItemType;
   deletedAt: string;
-  collection: 'stories' | 'testCases';
+  collection: CollectionName;
 };
 
-const itemTypeIcons = {
+const itemTypeIcons: Partial<Record<TrashedItemType, React.ElementType>> = {
   'Story': BookOpen,
   'Bug': Bug,
   'Task': CheckSquare,
+  'Sub Task': CheckSquare,
   'Feature Change': GitCommit,
   'Test Case': ClipboardCheck,
+  'Risk': ShieldAlert,
+  'Assumption': NotebookText,
+  'Issue': AlertCircle,
+  'Dependency': Link2,
 };
 
 export default function ProjectTrashPage() {
-  const { stories, testCases, restoreItem, permanentlyDeleteItem } = useProject();
+  const { 
+    stories, 
+    testCases, 
+    risks,
+    assumptions,
+    issues,
+    dependencies,
+    restoreItem, 
+    permanentlyDeleteItem 
+  } = useProject();
   const { toast } = useToast();
   const [selectedItems, setSelectedItems] = useState<TrashedItem[]>([]);
   const [actionType, setActionType] = useState<'restore' | 'delete' | null>(null);
@@ -75,9 +91,49 @@ export default function ProjectTrashPage() {
         collection: 'testCases' as 'testCases',
       }));
 
-    return [...deletedStories, ...deletedTestCases]
+    const deletedRisks = risks
+      .filter(r => r.isDeleted && r.deletedAt)
+      .map(r => ({
+        id: r.id,
+        name: r.description,
+        type: 'Risk' as 'Risk',
+        deletedAt: r.deletedAt!,
+        collection: 'risks' as 'risks',
+      }));
+      
+    const deletedAssumptions = assumptions
+      .filter(a => a.isDeleted && a.deletedAt)
+      .map(a => ({
+        id: a.id,
+        name: a.description,
+        type: 'Assumption' as 'Assumption',
+        deletedAt: a.deletedAt!,
+        collection: 'assumptions' as 'assumptions',
+      }));
+    
+    const deletedIssues = issues
+      .filter(i => i.isDeleted && i.deletedAt)
+      .map(i => ({
+        id: i.id,
+        name: i.description,
+        type: 'Issue' as 'Issue',
+        deletedAt: i.deletedAt!,
+        collection: 'issues' as 'issues',
+      }));
+
+    const deletedDependencies = dependencies
+      .filter(d => d.isDeleted && d.deletedAt)
+      .map(d => ({
+        id: d.id,
+        name: d.description,
+        type: 'Dependency' as 'Dependency',
+        deletedAt: d.deletedAt!,
+        collection: 'dependencies' as 'dependencies',
+      }));
+
+    return [...deletedStories, ...deletedTestCases, ...deletedRisks, ...deletedAssumptions, ...deletedIssues, ...deletedDependencies]
       .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
-  }, [stories, testCases]);
+  }, [stories, testCases, risks, assumptions, issues, dependencies]);
 
   const handleSelectAll = (checked: boolean) => {
     setSelectedItems(checked ? trashedItems : []);
@@ -170,7 +226,7 @@ export default function ProjectTrashPage() {
                               aria-label={`Select ${item.name}`}
                           />
                       </TableCell>
-                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="font-medium truncate max-w-xs">{item.name}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
@@ -199,8 +255,8 @@ export default function ProjectTrashPage() {
                 <AlertDialogDescription>
                   {dialogDescription}
                 </AlertDialogDescription>
-                <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground">
-                  {selectedItems.map(i => <li key={i.id}>{i.name} ({i.type})</li>)}
+                <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground max-h-40 overflow-y-auto">
+                  {selectedItems.map(i => <li key={i.id} className="truncate">{i.name} ({i.type})</li>)}
                 </ul>
               </AlertDialogHeader>
               <AlertDialogFooter>

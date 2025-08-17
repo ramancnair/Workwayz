@@ -179,8 +179,8 @@ interface ProjectContextType {
   submitWorklogForWeek: (employeeId: string, weekStartDate: string) => Promise<boolean>;
   
   // Trash actions
-  restoreItem: (id: string, collection: 'stories' | 'testCases') => Promise<boolean>;
-  permanentlyDeleteItem: (id: string, collection: 'stories' | 'testCases') => Promise<boolean>;
+  restoreItem: (id: string, collection: string) => Promise<boolean>;
+  permanentlyDeleteItem: (id: string, collection: string) => Promise<boolean>;
 
   isLoading: boolean;
   error: string | null;
@@ -246,7 +246,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/holidays': ['holidays', 'projectSettings'],
     '/settings/board': ['kanbanColumns'],
     '/settings/sprint': ['projectSettings'],
-    '/trash': ['stories', 'testCases'],
+    '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
 };
 
 
@@ -354,7 +354,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             });
         }
 
-        const isSoftDeletable = ['stories', 'testCases'].includes(name);
+        const isSoftDeletable = ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'].includes(name);
 
         const q = isSoftDeletable
           ? query(collection(rootProjectDocRef, name)) // Fetch all items for trash page
@@ -400,11 +400,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     const dateFields: Record<string, string[]> = {
                         stories: ['startDate', 'endDate', 'deletedAt'],
                         testCases: ['deletedAt'],
+                        risks: ['deletedAt'],
+                        assumptions: ['validationDate', 'deletedAt'],
+                        issues: ['reportedDate', 'resolvedDate', 'deletedAt'],
+                        dependencies: ['expectedByDate', 'deletedAt'],
                         sprints: ['startDate', 'endDate'],
                         employees: ['onboardingDate', 'offloadingDate', 'employmentStartDate', 'employmentEndDate'],
-                        assumptions: ['validationDate'],
-                        issues: ['reportedDate', 'resolvedDate'],
-                        dependencies: ['expectedByDate'],
                         releases: ['startDate', 'endDate', 'milestoneDate'],
                         worklogs: ['date'],
                         worklogSubmissions: ['weekStartDate', 'submittedAt'],
@@ -1061,7 +1062,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         ) + 1
         : 1;
 
-      const payload = { ...risk, riskId: `R-${newIdNumber}` };
+      const payload = { ...risk, riskId: `R-${newIdNumber}`, isDeleted: false, deletedAt: null };
       await addDoc(collection(db, 'projects', projectId, 'risks'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
@@ -1084,7 +1085,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const deleteRisk = async (riskId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'risks', riskId));
+      const riskRef = doc(db, 'projects', projectId, 'risks', riskId);
+      await updateDoc(riskRef, { isDeleted: true, deletedAt: Timestamp.now() });
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete risk.", { id: riskId, code: e.code, message: e.message, fullError: e });
@@ -1117,6 +1119,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           mitigationPlan: sample.mitigation,
           residualRisk: 'Some level of risk may remain, requires monitoring.',
           contingencyPlan: sample.contingency,
+          isDeleted: false, 
+          deletedAt: null
         };
         batch.set(riskRef, newRisk);
       }
@@ -1134,7 +1138,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     try {
       const snapshot = await getDocs(collection(db, 'projects', projectId, 'assumptions'));
       const newId = `A-${snapshot.size + 1}`;
-      const payload: any = { ...assumption, assumptionId: newId };
+      const payload: any = { ...assumption, assumptionId: newId, isDeleted: false, deletedAt: null };
       if (assumption.validationDate) payload.validationDate = Timestamp.fromDate(assumption.validationDate);
       await addDoc(collection(db, 'projects', projectId, 'assumptions'), sanitizeForFirestore(payload));
       return true;
@@ -1161,7 +1165,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const deleteAssumption = async (id: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'assumptions', id));
+      const assumptionRef = doc(db, 'projects', projectId, 'assumptions', id);
+      await updateDoc(assumptionRef, { isDeleted: true, deletedAt: Timestamp.now() });
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete assumption.", { id, code: e.code, message: e.message, fullError: e });
@@ -1193,6 +1198,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           category: categories[Math.floor(Math.random() * categories.length)],
           status: statuses[Math.floor(Math.random() * statuses.length)],
           ownerId: employees[Math.floor(Math.random() * employees.length)]?.id,
+          isDeleted: false,
+          deletedAt: null
         };
         batch.set(assumptionRef, newAssumption);
       }
@@ -1210,7 +1217,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     try {
       const snapshot = await getDocs(collection(db, 'projects', projectId, 'issues'));
       const newId = `I-${snapshot.size + 1}`;
-      const payload: any = { ...issue, issueId: newId };
+      const payload: any = { ...issue, issueId: newId, isDeleted: false, deletedAt: null };
       payload.reportedDate = Timestamp.fromDate(issue.reportedDate);
       if (issue.resolvedDate) payload.resolvedDate = Timestamp.fromDate(issue.resolvedDate);
       await addDoc(collection(db, 'projects', projectId, 'issues'), sanitizeForFirestore(payload));
@@ -1238,7 +1245,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const deleteIssue = async (id: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'issues', id));
+      const issueRef = doc(db, 'projects', projectId, 'issues', id);
+      await updateDoc(issueRef, { isDeleted: true, deletedAt: Timestamp.now() });
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete issue.", { id, code: e.code, message: e.message, fullError: e });
@@ -1270,6 +1278,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           priority: priorities[Math.floor(Math.random() * priorities.length)],
           status: statuses[Math.floor(Math.random() * statuses.length)],
           assigneeId: employees[Math.floor(Math.random() * employees.length)]?.id,
+          isDeleted: false,
+          deletedAt: null,
         };
         const payload = { ...newIssue, reportedDate: Timestamp.now() };
         batch.set(issueRef, payload);
@@ -1288,7 +1298,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     try {
       const snapshot = await getDocs(collection(db, 'projects', projectId, 'dependencies'));
       const newId = `D-${snapshot.size + 1}`;
-      const payload: any = { ...dependency, dependencyId: newId };
+      const payload: any = { ...dependency, dependencyId: newId, isDeleted: false, deletedAt: null };
       payload.expectedByDate = Timestamp.fromDate(dependency.expectedByDate);
       await addDoc(collection(db, 'projects', projectId, 'dependencies'), sanitizeForFirestore(payload));
       return true;
@@ -1315,7 +1325,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const deleteDependency = async (id: string): Promise<boolean> => {
      if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'dependencies', id));
+      const depRef = doc(db, 'projects', projectId, 'dependencies', id);
+      await updateDoc(depRef, { isDeleted: true, deletedAt: Timestamp.now() });
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete dependency.", { id, code: e.code, message: e.message, fullError: e });
@@ -1349,6 +1360,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           status: statuses[Math.floor(Math.random() * statuses.length)],
           type: types[Math.floor(Math.random() * types.length)],
           ownerId: employees[Math.floor(Math.random() * employees.length)]?.id,
+          isDeleted: false,
+          deletedAt: null
         };
         const expectedDate = new Date();
         expectedDate.setDate(expectedDate.getDate() + Math.floor(Math.random() * 30) + 7);
@@ -1766,7 +1779,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
   
   // Trash actions
-  const restoreItem = async (id: string, collectionName: 'stories' | 'testCases'): Promise<boolean> => {
+  const restoreItem = async (id: string, collectionName: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const itemRef = doc(db, 'projects', projectId, collectionName, id);
@@ -1778,7 +1791,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const permanentlyDeleteItem = async (id: string, collectionName: 'stories' | 'testCases'): Promise<boolean> => {
+  const permanentlyDeleteItem = async (id: string, collectionName: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const itemRef = doc(db, 'projects', projectId, collectionName, id);
@@ -1799,10 +1812,10 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     employees,
     allUsers,
     testCases: pathname.endsWith('/trash') ? testCases : testCases.filter(tc => !tc.isDeleted),
-    risks,
-    assumptions,
-    issues,
-    dependencies,
+    risks: pathname.endsWith('/trash') ? risks : risks.filter(r => !r.isDeleted),
+    assumptions: pathname.endsWith('/trash') ? assumptions : assumptions.filter(a => !a.isDeleted),
+    issues: pathname.endsWith('/trash') ? issues : issues.filter(i => !i.isDeleted),
+    dependencies: pathname.endsWith('/trash') ? dependencies : dependencies.filter(d => !d.isDeleted),
     kanbanColumns,
     holidays,
     releasesAndMilestones,

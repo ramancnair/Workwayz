@@ -7,6 +7,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -134,6 +135,8 @@ export type Risk = {
   mitigationPlan: string;
   residualRisk: string;
   contingencyPlan: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 };
 
 export type AssumptionStatus = 'Active' | 'Validated' | 'Invalidated';
@@ -147,6 +150,8 @@ export type Assumption = {
   status: AssumptionStatus;
   validationDate?: string; // ISO String
   ownerId?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 };
 
 export type IssueStatus = 'Open' | 'In Progress' | 'Resolved' | 'Closed';
@@ -161,6 +166,8 @@ export type Issue = {
   reportedDate: string; // ISO String
   resolvedDate?: string; // ISO String
   assigneeId?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 };
 
 export type DependencyStatus = 'On Track' | 'At Risk' | 'Blocked';
@@ -175,6 +182,8 @@ export type Dependency = {
   expectedByDate: string; // ISO String
   status: DependencyStatus;
   ownerId?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 };
 
 export type KanbanColumn = {

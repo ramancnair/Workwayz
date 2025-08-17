@@ -135,9 +135,9 @@ export default function DependenciesPage() {
     if (!deletingDependency) return;
     const success = await deleteDependency(deletingDependency.id);
     if (success) {
-      toast({ title: "Success", description: "Dependency deleted." });
+      toast({ title: "Success", description: "Dependency moved to trash." });
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not delete dependency." });
+      toast({ variant: "destructive", title: "Error", description: "Could not move dependency to trash." });
     }
     setDeletingDependency(null);
   };
@@ -150,10 +150,10 @@ export default function DependenciesPage() {
 
     const successCount = results.filter(Boolean).length;
     if (successCount > 0) {
-        toast({ title: "Success", description: `${successCount} dependency(s) deleted.` });
+        toast({ title: "Success", description: `${successCount} dependency(s) moved to trash.` });
     }
     if (successCount < selectedDependencies.length) {
-        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedDependencies.length - successCount} dependency(s).` });
+        toast({ variant: "destructive", title: "Error", description: `Could not move ${selectedDependencies.length - successCount} dependency(s) to trash.` });
     }
     
     setSelectedDependencies([]);
@@ -388,7 +388,7 @@ export default function DependenciesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the dependency.
+              This will move the dependency to the trash. It will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -397,7 +397,7 @@ export default function DependenciesPage() {
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -408,7 +408,7 @@ export default function DependenciesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the selected {selectedDependencies.length} dependency(s). This action cannot be undone.
+              This will move the selected {selectedDependencies.length} dependency(s) to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -417,7 +417,7 @@ export default function DependenciesPage() {
               onClick={handleBulkDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Delete Selected
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

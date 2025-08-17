@@ -133,9 +133,9 @@ export default function AssumptionsPage() {
     if (!deletingAssumption) return;
     const success = await deleteAssumption(deletingAssumption.id);
     if (success) {
-      toast({ title: "Success", description: "Assumption deleted." });
+      toast({ title: "Success", description: "Assumption moved to trash." });
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not delete assumption." });
+      toast({ variant: "destructive", title: "Error", description: "Could not move assumption to trash." });
     }
     setDeletingAssumption(null);
   };
@@ -148,10 +148,10 @@ export default function AssumptionsPage() {
 
     const successCount = results.filter(Boolean).length;
     if (successCount > 0) {
-        toast({ title: "Success", description: `${successCount} assumption(s) deleted.` });
+        toast({ title: "Success", description: `${successCount} assumption(s) moved to trash.` });
     }
     if (successCount < selectedAssumptions.length) {
-        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedAssumptions.length - successCount} assumption(s).` });
+        toast({ variant: "destructive", title: "Error", description: `Could not move ${selectedAssumptions.length - successCount} assumption(s) to trash.` });
     }
     
     setSelectedAssumptions([]);
@@ -379,7 +379,7 @@ export default function AssumptionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the assumption.
+              This will move the assumption to the trash. It will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -388,7 +388,7 @@ export default function AssumptionsPage() {
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -399,7 +399,7 @@ export default function AssumptionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the selected {selectedAssumptions.length} assumption(s). This action cannot be undone.
+              This will move the selected {selectedAssumptions.length} assumption(s) to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -408,7 +408,7 @@ export default function AssumptionsPage() {
               onClick={handleBulkDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Delete Selected
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

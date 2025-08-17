@@ -152,9 +152,9 @@ export default function RisksPage() {
     if (!deletingRisk) return;
     const success = await deleteRisk(deletingRisk.id);
     if (success) {
-      toast({ title: "Success", description: "Risk deleted." });
+      toast({ title: "Success", description: "Risk moved to trash." });
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not delete risk." });
+      toast({ variant: "destructive", title: "Error", description: "Could not move risk to trash." });
     }
     setDeletingRisk(null);
   };
@@ -167,10 +167,10 @@ export default function RisksPage() {
 
     const successCount = results.filter(Boolean).length;
     if (successCount > 0) {
-        toast({ title: "Success", description: `${successCount} risk(s) deleted.` });
+        toast({ title: "Success", description: `${successCount} risk(s) moved to trash.` });
     }
     if (successCount < selectedRisks.length) {
-        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedRisks.length - successCount} risk(s).` });
+        toast({ variant: "destructive", title: "Error", description: `Could not move ${selectedRisks.length - successCount} risk(s) to trash.` });
     }
     
     setSelectedRisks([]);
@@ -398,7 +398,7 @@ export default function RisksPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the risk "{deletingRisk?.description.substring(0, 50)}...".
+              This will move the risk to the trash. It will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -407,7 +407,7 @@ export default function RisksPage() {
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -418,7 +418,7 @@ export default function RisksPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the selected {selectedRisks.length} risk(s). This action cannot be undone.
+              This will move the selected {selectedRisks.length} risk(s) to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -427,7 +427,7 @@ export default function RisksPage() {
               onClick={handleBulkDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Delete Selected
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
