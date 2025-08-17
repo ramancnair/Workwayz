@@ -357,7 +357,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         const isSoftDeletable = ['stories', 'testCases'].includes(name);
 
         const q = isSoftDeletable
-          ? query(collection(rootProjectDocRef, name), where('isDeleted', '!=', true))
+          ? query(collection(rootProjectDocRef, name)) // Fetch all items for trash page
           : query(collection(rootProjectDocRef, name));
         
         return onSnapshot(q, 
@@ -429,7 +429,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     }
                     return { id: doc.id, ...docData };
                 });
-                setState(data);
+                
+                if (isSoftDeletable && name === 'stories') {
+                    // Filter out deleted items for the main state
+                    setState(data.filter(item => !item.isDeleted));
+                } else if (isSoftDeletable && name === 'testCases') {
+                    setState(data.filter(item => !item.isDeleted));
+                } else {
+                    setState(data);
+                }
             },
             (err) => {
                 console.error(`Error fetching ${name}:`, err);
@@ -723,7 +731,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       
       storiesSnapshot.forEach(storyDoc => {
         if (deleteItems) {
-            batch.delete(doc(db, 'projects', projectId, 'stories', storyDoc.id));
+            batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { isDeleted: true, deletedAt: Timestamp.now() });
         } else {
             batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { epicId: null });
         }
@@ -1792,11 +1800,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const value: ProjectContextType = {
     project,
     epics,
-    stories,
+    stories: stories.filter(s => !s.isDeleted),
     sprints,
     employees,
     allUsers,
-    testCases,
+    testCases: testCases.filter(tc => !tc.isDeleted),
     risks,
     assumptions,
     issues,
@@ -1915,7 +1923,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   }
 
   return (
-    <ProjectContext.Provider value={value}>
+    <ProjectContext.Provider value={{...value, stories, testCases}}>
       {children}
     </ProjectContext.Provider>
   );

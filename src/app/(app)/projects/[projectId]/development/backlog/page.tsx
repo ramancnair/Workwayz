@@ -494,6 +494,8 @@ export default function BacklogPage() {
       releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
       environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
       impactedSystemIds: values.impactedSystemIds,
+      isDeleted: false,
+      deletedAt: null,
     };
 
     const success = await addStory(newStory);
@@ -601,7 +603,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!success) {
         toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
     } else {
-        toast({ title: "Success", description: "Story deleted." });
+        toast({ title: "Success", description: "Story moved to trash." });
     }
     setStoryToDelete(null);
   };
@@ -1137,7 +1139,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                   onDelete={() => setStoryToDelete(story)}
                                   subItems={subItems}
                                   sprint={sprint}
-                                  onSubItemClick={(item) => handleSetSelectedStory(item)}
+                                  onSubItemClick={(item) => handleDrillDown(item)}
                               />
                             </div>
                           )
@@ -1187,7 +1189,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         htmlFor="delete-epic-items"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                       Also delete all items within this epic.
+                       Also move all items within this epic to the trash.
                     </label>
                 </div>
             )}
@@ -1209,7 +1211,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the item "{storyToDelete?.title}".
+              This action will move the item "{storyToDelete?.title}" to the trash. It will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1218,7 +1220,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               onClick={handleDeleteStory}
                className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1820,4 +1822,5 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
