@@ -430,14 +430,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     return { id: doc.id, ...docData };
                 });
                 
-                if (isSoftDeletable && name === 'stories') {
-                    // Filter out deleted items for the main state
-                    setState(data.filter(item => !item.isDeleted));
-                } else if (isSoftDeletable && name === 'testCases') {
-                    setState(data.filter(item => !item.isDeleted));
-                } else {
-                    setState(data);
-                }
+                // Keep the full list in the state
+                setState(data);
             },
             (err) => {
                 console.error(`Error fetching ${name}:`, err);
@@ -1800,11 +1794,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const value: ProjectContextType = {
     project,
     epics,
-    stories: stories.filter(s => !s.isDeleted),
+    stories: pathname.endsWith('/trash') ? stories : stories.filter(s => !s.isDeleted),
     sprints,
     employees,
     allUsers,
-    testCases: testCases.filter(tc => !tc.isDeleted),
+    testCases: pathname.endsWith('/trash') ? testCases : testCases.filter(tc => !tc.isDeleted),
     risks,
     assumptions,
     issues,
@@ -1923,7 +1917,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   }
 
   return (
-    <ProjectContext.Provider value={{...value, stories, testCases}}>
+    <ProjectContext.Provider value={value}>
       {children}
     </ProjectContext.Provider>
   );
