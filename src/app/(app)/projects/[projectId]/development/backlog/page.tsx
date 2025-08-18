@@ -807,7 +807,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                 Add Requirement
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Requirement</DialogTitle>
               </DialogHeader>
@@ -1397,7 +1397,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
-                            {!['Task'].includes(selectedStory.itemType) && (
+                            {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
                                 <>
                                     <TabsTrigger value="subTasks">
                                         Sub-Tasks
@@ -1906,6 +1906,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

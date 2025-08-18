@@ -78,6 +78,7 @@ const storyFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
+  attachments: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -347,6 +348,7 @@ export default function KanbanPage() {
         criticality: selectedStory.criticality || 'Medium',
         environmentId: selectedStory.environmentId || 'unassigned',
         impactedSystemIds: selectedStory.impactedSystemIds || [],
+        attachments: selectedStory.attachments || '',
       });
     }
   }, [selectedStory, editStoryForm, subTaskForm]);
@@ -368,6 +370,7 @@ export default function KanbanPage() {
         criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
         impactedSystemIds: values.impactedSystemIds,
+        attachments: values.attachments,
     });
     if (success) {
       handleSetSelectedStory(null);
@@ -823,6 +826,19 @@ export default function KanbanPage() {
                                                   </FormItem>
                                               )}
                                           />
+                                           <FormField
+                                              control={editStoryForm.control}
+                                              name="attachments"
+                                              render={({ field }) => (
+                                              <FormItem>
+                                                  <FormLabel>Attachments</FormLabel>
+                                                  <FormControl>
+                                                  <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
+                                                  </FormControl>
+                                                  <FormMessage />
+                                              </FormItem>
+                                              )}
+                                          />
                                       </>
                                   )}
                                   <FormField
@@ -979,6 +995,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
