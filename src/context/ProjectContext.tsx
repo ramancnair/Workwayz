@@ -411,7 +411,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     return;
                 }
                 
-                if ((name === 'horizontals' || name === 'initialHorizontals') && querySnapshot.empty) {
+                if (name === 'initialHorizontals' && querySnapshot.empty) {
                     const batch = writeBatch(db);
                     defaultHorizontals.forEach(h => {
                         const docRef = doc(collection(rootProjectDocRef, name));
