@@ -20,7 +20,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -54,6 +54,7 @@ interface ProjectContextType {
   issues: Issue[];
   dependencies: Dependency[];
   documents: ProjectDocument[];
+  paymentMilestones: PaymentMilestone[];
   kanbanColumns: KanbanColumn[];
   holidays: Holiday[];
   releasesAndMilestones: Release[];
@@ -183,6 +184,11 @@ interface ProjectContextType {
   updateDocument: (docId: string, data: Partial<Omit<ProjectDocument, 'id' | 'createdAt'>>) => Promise<boolean>;
   deleteDocument: (docId: string) => Promise<boolean>;
   
+  // Payment Milestone actions
+  addPaymentMilestone: (milestone: Omit<PaymentMilestone, 'id'>) => Promise<boolean>;
+  updatePaymentMilestone: (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id'>>) => Promise<boolean>;
+  deletePaymentMilestone: (milestoneId: string) => Promise<boolean>;
+
   // Trash actions
   restoreItem: (id: string, collection: string) => Promise<boolean>;
   permanentlyDeleteItem: (id: string, collection: string) => Promise<boolean>;
@@ -235,7 +241,7 @@ const standardDocs = [
   'Closure',
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
@@ -265,7 +271,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/settings/sprint': ['projectSettings'],
     '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
     '/pmo/documents': ['documents'],
-    '/pmo/billing': [],
+    '/pmo/billing': ['paymentMilestones'],
 };
 
 
@@ -282,6 +288,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [issues, setIssues] = useState<Issue[]>([]);
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
+  const [paymentMilestones, setPaymentMilestones] = useState<PaymentMilestone[]>([]);
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
   const [projectHolidays, setProjectHolidays] = useState<Holiday[]>([]);
   const [globalHolidays, setGlobalHolidays] = useState<Holiday[]>([]);
@@ -338,6 +345,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'issues', setState: setIssues },
         { name: 'dependencies', setState: setDependencies },
         { name: 'documents', setState: setDocuments },
+        { name: 'paymentMilestones', setState: setPaymentMilestones },
         { name: 'kanbanColumns', setState: setKanbanColumns },
         { name: 'holidays', setState: setProjectHolidays },
         { name: 'releases', setState: setReleasesAndMilestones },
@@ -1844,6 +1852,38 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
+  // Payment Milestone actions
+    const addPaymentMilestone = async (milestone: Omit<PaymentMilestone, 'id'>): Promise<boolean> => {
+        if (!db || !projectId) return false;
+        try {
+            await addDoc(collection(db, 'projects', projectId, 'paymentMilestones'), sanitizeForFirestore(milestone));
+            return true;
+        } catch (e) {
+            console.error("Firebase error adding payment milestone", e);
+            return false;
+        }
+    };
+    const updatePaymentMilestone = async (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id'>>): Promise<boolean> => {
+        if (!db || !projectId) return false;
+        try {
+            await updateDoc(doc(db, 'projects', projectId, 'paymentMilestones', milestoneId), sanitizeForFirestore(data));
+            return true;
+        } catch (e) {
+            console.error("Firebase error updating payment milestone", e);
+            return false;
+        }
+    };
+    const deletePaymentMilestone = async (milestoneId: string): Promise<boolean> => {
+        if (!db || !projectId) return false;
+        try {
+            await deleteDoc(doc(db, 'projects', projectId, 'paymentMilestones', milestoneId));
+            return true;
+        } catch (e) {
+            console.error("Firebase error deleting payment milestone", e);
+            return false;
+        }
+    };
+
   // Trash actions
   const restoreItem = async (id: string, collectionName: string): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1883,6 +1923,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     issues: pathname.endsWith('/trash') ? issues : issues.filter(i => !i.isDeleted),
     dependencies: pathname.endsWith('/trash') ? dependencies : dependencies.filter(d => !d.isDeleted),
     documents,
+    paymentMilestones,
     kanbanColumns,
     holidays,
     releasesAndMilestones,
@@ -1973,6 +2014,9 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addDocument,
     updateDocument,
     deleteDocument,
+    addPaymentMilestone,
+    updatePaymentMilestone,
+    deletePaymentMilestone,
     restoreItem,
     permanentlyDeleteItem,
   };

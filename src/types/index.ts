@@ -1,5 +1,6 @@
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -49,6 +50,7 @@ export type Story = {
   deletedAt?: string;
   parentStoryId?: string;
   attachments?: string;
+  environmentId?: string;
 };
 
 export type Sprint = {
@@ -310,4 +312,15 @@ export type ProjectDocument = {
   name: string;
   location: string;
   createdAt: string; // ISO String
+};
+
+export type PaymentMilestoneStatus = 'TBD' | 'In Progress' | 'Milestone completed' | 'Invoice raised' | 'Payment Completed';
+
+export type PaymentMilestone = {
+  id: string;
+  name: string;
+  billingPercentage: number;
+  amount: number;
+  status: PaymentMilestoneStatus;
+  attachments?: string;
 };
