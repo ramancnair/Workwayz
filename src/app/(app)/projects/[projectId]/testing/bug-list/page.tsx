@@ -75,11 +75,13 @@ const bugFormSchema = z.object({
   description: z.string().optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(), // Represents the related story
+  reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
   sprintId: z.string().optional(),
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
+  attachments: z.string().optional(),
 });
 
 
@@ -135,11 +137,13 @@ export default function BugListPage() {
         description: editingBug.description || '',
         acceptanceCriteria: editingBug.acceptanceCriteria || '',
         epicId: editingBug.epicId || 'unassigned',
+        reporterId: editingBug.reporterId || 'unassigned',
         assigneeId: editingBug.assigneeId || 'unassigned',
         status: editingBug.status,
         sprintId: editingBug.sprintId || 'backlog',
         criticality: editingBug.criticality || 'Medium',
         environmentId: editingBug.environmentId || 'unassigned',
+        attachments: editingBug.attachments || '',
       });
     } else {
       form.reset();
@@ -154,12 +158,14 @@ export default function BugListPage() {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
+        reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         epicId: values.epicId === 'unassigned' ? undefined : values.epicId, // Related story
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         criticality: values.criticality,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+        attachments: values.attachments,
     });
     
     if (success) {
@@ -393,13 +399,13 @@ export default function BugListPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="assigneeId"
+                    name="reporterId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Assignee</FormLabel>
+                        <FormLabel>Reporter</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                           <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Select a reporter" /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
@@ -414,15 +420,18 @@ export default function BugListPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="status"
+                    name="assigneeId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                        <FormLabel>Assignee</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger>
+                          </FormControl>
                           <SelectContent>
-                            {(['To Do', 'In Progress', 'Done'] as StoryStatus[]).map(s => (
-                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {employees.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -524,6 +533,19 @@ export default function BugListPage() {
                       )}
                     />
                 </div>
+                 <FormField
+                  control={form.control}
+                  name="attachments"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Attachments</FormLabel>
+                      <FormControl>
+                      <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+                />
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Saving...' : 'Save Changes'}
@@ -556,4 +578,5 @@ export default function BugListPage() {
     </>
   );
 }
+
 

@@ -94,12 +94,14 @@ const storyFormSchema = z.object({
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
   parentStoryId: z.string().optional(),
+  reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   criticality: z.enum(bugCriticalities).optional(),
   releaseId: z.string().optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
+  attachments: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -326,7 +328,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [] },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -415,12 +417,14 @@ export default function BacklogPage() {
             acceptanceCriteria: selectedStory.acceptanceCriteria || '',
             epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
             parentStoryId: isSubItem ? selectedStory.parentStoryId || 'unassigned' : undefined,
+            reporterId: selectedStory.reporterId || 'unassigned',
             assigneeId: selectedStory.assigneeId || 'unassigned',
             estimatedHours: selectedStory.estimatedHours,
             criticality: selectedStory.criticality || 'Medium',
             releaseId: selectedStory.releaseId || 'unassigned',
             environmentId: selectedStory.environmentId || 'unassigned',
             impactedSystemIds: selectedStory.impactedSystemIds || [],
+            attachments: selectedStory.attachments || '',
         });
     }
   }, [selectedStory, editStoryForm, subTaskForm]);
@@ -485,6 +489,7 @@ export default function BacklogPage() {
       description: values.description || '',
       itemType: values.itemType,
       acceptanceCriteria: values.acceptanceCriteria,
+      reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
       parentStoryId: ['Bug'].includes(values.itemType) ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
@@ -494,6 +499,7 @@ export default function BacklogPage() {
       releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
       environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
       impactedSystemIds: values.impactedSystemIds,
+      attachments: values.attachments,
       isDeleted: false,
       deletedAt: null,
     };
@@ -515,11 +521,13 @@ export default function BacklogPage() {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
+        reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         estimatedHours: values.estimatedHours,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
         impactedSystemIds: values.impactedSystemIds,
+        attachments: values.attachments,
     };
     
     if (['Task', 'Requirement/Story', 'Feature Change'].includes(selectedStory.itemType)) {
@@ -966,6 +974,31 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                             />
                         )}
+                        {watchedItemType === 'Bug' && (
+                            <FormField
+                            control={addStoryForm.control}
+                            name="reporterId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Reporter</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a reporter" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {users.map(emp => (
+                                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        )}
                         <FormField
                             control={addStoryForm.control}
                             name="assigneeId"
@@ -1076,6 +1109,19 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormMessage />
                                 </FormItem>
                             )}
+                            />
+                             <FormField
+                                control={addStoryForm.control}
+                                name="attachments"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Attachments</FormLabel>
+                                    <FormControl>
+                                    <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
                             />
                             </>
                         )}
@@ -1348,26 +1394,26 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                       </FormItem>
                     )}
                   />
-                  <Tabs defaultValue="details" className="w-full">
-                    <TabsList>
-                        <TabsTrigger value="details">Details</TabsTrigger>
-                        {!['Task', 'Bug'].includes(selectedStory.itemType) && (
-                            <>
-                                <TabsTrigger value="subTasks">
-                                    Sub-Tasks
-                                    <Badge variant="secondary" className="ml-2">
-                                        {selectedStorySubItems.subTasks.length}
-                                    </Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="bugs">
-                                    Bugs
-                                    <Badge variant="secondary" className="ml-2">
-                                        {selectedStorySubItems.bugs.length}
-                                    </Badge>
-                                </TabsTrigger>
-                            </>
-                        )}
-                    </TabsList>
+                    <Tabs defaultValue="details" className="w-full">
+                        <TabsList>
+                            <TabsTrigger value="details">Details</TabsTrigger>
+                            {!['Task'].includes(selectedStory.itemType) && (
+                                <>
+                                    <TabsTrigger value="subTasks">
+                                        Sub-Tasks
+                                        <Badge variant="secondary" className="ml-2">
+                                            {selectedStorySubItems.subTasks.length}
+                                        </Badge>
+                                    </TabsTrigger>
+                                    <TabsTrigger value="bugs">
+                                        Bugs
+                                        <Badge variant="secondary" className="ml-2">
+                                            {selectedStorySubItems.bugs.length}
+                                        </Badge>
+                                    </TabsTrigger>
+                                </>
+                            )}
+                        </TabsList>
                     <TabsContent value="details" className="pt-4">
                       <div className="space-y-4">
                         <FormField
@@ -1495,6 +1541,31 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                             />
                         )}
+                         {selectedStory.itemType === 'Bug' && (
+                            <FormField
+                                control={editStoryForm.control}
+                                name="reporterId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Reporter</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a reporter" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {users.map(emp => (
+                                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
                         <FormField
                             control={editStoryForm.control}
                             name="assigneeId"
@@ -1608,6 +1679,19 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormMessage />
                                 </FormItem>
                             )}
+                            />
+                            <FormField
+                                control={editStoryForm.control}
+                                name="attachments"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Attachments</FormLabel>
+                                    <FormControl>
+                                    <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
                             />
                             </>
                         )}
@@ -1822,5 +1906,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 

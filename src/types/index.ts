@@ -1,13 +1,4 @@
 
-
-
-
-
-
-
-
-
-
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -40,6 +31,7 @@ export type Story = {
   description: string;
   itemType: WorkItemType;
   acceptanceCriteria?: string;
+  reporterId?: string;
   assigneeId?: string;
   epicId?: string;
   sprintId?: string | null;
@@ -55,6 +47,7 @@ export type Story = {
   isDeleted?: boolean;
   deletedAt?: string;
   parentStoryId?: string;
+  attachments?: string;
 };
 
 export type Sprint = {
