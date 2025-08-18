@@ -105,7 +105,6 @@ function ResourceDialog({
   const { addUserToProject, updateProjectUser } = useProject();
   const { toast } = useToast();
   const [userInputText, setUserInputText] = useState('');
-  const [isCapabilitiesOpen, setCapabilitiesOpen] = useState(false);
 
   const form = useForm<z.infer<typeof resourceSchema>>({
     resolver: zodResolver(resourceSchema),
@@ -202,11 +201,6 @@ function ResourceDialog({
       label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
   }));
   
-  const capabilityOptions = useMemo(() => ([
-    ...impactedSystems.map(s => ({ id: s.id, name: s.name, group: 'Impacted Systems' })),
-    ...horizontals.map(h => ({ id: h.id, name: h.name, group: 'Horizontals' }))
-  ]), [impactedSystems, horizontals]);
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if(!open) setEditingUser(null); }}>
       <DialogContent>
@@ -280,91 +274,67 @@ function ResourceDialog({
             <FormField
               control={form.control}
               name="capabilities"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
+              render={() => (
+                <FormItem>
                   <FormLabel>Capabilities</FormLabel>
-                   <Popover open={isCapabilitiesOpen} onOpenChange={setCapabilitiesOpen}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          className={cn(
-                            "w-full justify-between",
-                            !field.value?.length && "text-muted-foreground"
-                          )}
-                        >
-                          <span className="truncate">
-                            {field.value && field.value.length > 0
-                              ? `${field.value.length} selected`
-                              : "Select capabilities"}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search..." />
-                        <CommandList>
-                            <CommandEmpty>No results found.</CommandEmpty>
-                            <CommandGroup heading="Impacted Systems">
+                  <Card>
+                    <CardContent className="p-4 space-y-4 max-h-60 overflow-y-auto">
+                        <div>
+                            <h4 className="text-sm font-medium text-muted-foreground mb-2">Impacted Systems</h4>
+                            <div className="space-y-2">
                             {impactedSystems.map((system) => (
-                                <CommandItem
+                                <FormField
                                 key={system.id}
-                                onSelect={() => {
-                                    const selected = field.value || [];
-                                    const isSelected = selected.includes(system.id);
-                                    field.onChange(
-                                    isSelected
-                                        ? selected.filter((id) => id !== system.id)
-                                        : [...selected, system.id]
-                                    );
-                                }}
-                                >
-                                <Check
-                                    className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value?.includes(system.id)
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
+                                control={form.control}
+                                name="capabilities"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                        <Checkbox
+                                        checked={field.value?.includes(system.id)}
+                                        onCheckedChange={(checked) => {
+                                            return checked
+                                            ? field.onChange([...(field.value || []), system.id])
+                                            : field.onChange(field.value?.filter((id) => id !== system.id));
+                                        }}
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">{system.name}</FormLabel>
+                                    </FormItem>
+                                )}
                                 />
-                                {system.name}
-                                </CommandItem>
                             ))}
-                            </CommandGroup>
-                            <CommandSeparator />
-                            <CommandGroup heading="Horizontals">
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-medium text-muted-foreground mb-2">Horizontals</h4>
+                             <div className="space-y-2">
                             {horizontals.map((horizontal) => (
-                                <CommandItem
+                                <FormField
                                 key={horizontal.id}
-                                onSelect={() => {
-                                    const selected = field.value || [];
-                                    const isSelected = selected.includes(horizontal.id);
-                                    field.onChange(
-                                    isSelected
-                                        ? selected.filter((id) => id !== horizontal.id)
-                                        : [...selected, horizontal.id]
-                                    );
-                                }}
-                                >
-                                <Check
-                                    className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value?.includes(horizontal.id)
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
+                                control={form.control}
+                                name="capabilities"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                        <Checkbox
+                                        checked={field.value?.includes(horizontal.id)}
+                                        onCheckedChange={(checked) => {
+                                            return checked
+                                            ? field.onChange([...(field.value || []), horizontal.id])
+                                            : field.onChange(field.value?.filter((id) => id !== horizontal.id));
+                                        }}
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">{horizontal.name}</FormLabel>
+                                    </FormItem>
+                                )}
                                 />
-                                {horizontal.name}
-                                </CommandItem>
                             ))}
-                            </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                            </div>
+                        </div>
+                    </CardContent>
+                  </Card>
                   <FormMessage />
                 </FormItem>
               )}
@@ -767,6 +737,7 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
 
