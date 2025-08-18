@@ -171,7 +171,7 @@ export default function BusinessContinuityPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>URL</TableHead>
-                  <TableHead>Renewal Date</TableHead>
+                  <TableHead>Expiry Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -291,7 +291,7 @@ export default function BusinessContinuityPage() {
                 name="renewalDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Certificate Renewal Date</FormLabel>
+                    <FormLabel>Certificate Expiry Date</FormLabel>
                     <FormControl>
                        <DatePicker date={field.value} setDate={field.onChange} />
                     </FormControl>
