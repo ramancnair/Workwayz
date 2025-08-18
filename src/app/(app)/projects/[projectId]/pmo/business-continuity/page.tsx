@@ -50,7 +50,8 @@ export default function BusinessContinuityPage() {
     codeRepositories, 
     addCodeRepository,
     updateCodeRepository,
-    deleteCodeRepository
+    deleteCodeRepository,
+    employees,
   } = useProject();
   const { toast } = useToast();
   
@@ -67,6 +68,9 @@ export default function BusinessContinuityPage() {
   const repoForm = useForm<z.infer<typeof repositoryFormSchema>>({
     resolver: zodResolver(repositoryFormSchema),
   });
+  
+  const bcpSupportResources = employees.filter(emp => emp.isBcpSupport);
+
 
   useEffect(() => {
     if (isEnvDialogOpen) {
@@ -250,6 +254,38 @@ export default function BusinessContinuityPage() {
             </Table>
           </CardContent>
         </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>BCP Support Resources</CardTitle>
+                <CardDescription>
+                    A list of resources designated for Business Continuity Planning support.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>Email</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {bcpSupportResources.map(user => (
+                            <TableRow key={user.id}>
+                                <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
+                                <TableCell>{user.role || 'N/A'}</TableCell>
+                                <TableCell>{user.phone}</TableCell>
+                                <TableCell>{user.email}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+
       </div>
 
       <Dialog open={isEnvDialogOpen} onOpenChange={setIsEnvDialogOpen}>
@@ -344,7 +380,7 @@ export default function BusinessContinuityPage() {
                 name="expiryDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Access Token Expiry Date</FormLabel>
+                    <FormLabel>Expiry Date</FormLabel>
                     <FormControl>
                        <Input type="date" {...field} />
                     </FormControl>
