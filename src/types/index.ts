@@ -1,4 +1,5 @@
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -302,4 +303,11 @@ export type Environment = {
   id: string;
   name: string;
   order: number;
+};
+
+export type ProjectDocument = {
+  id: string;
+  name: string;
+  location: string;
+  createdAt: string; // ISO String
 };

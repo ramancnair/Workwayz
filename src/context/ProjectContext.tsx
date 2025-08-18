@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -54,6 +54,7 @@ interface ProjectContextType {
   assumptions: Assumption[];
   issues: Issue[];
   dependencies: Dependency[];
+  documents: ProjectDocument[];
   kanbanColumns: KanbanColumn[];
   holidays: Holiday[];
   releasesAndMilestones: Release[];
@@ -178,6 +179,11 @@ interface ProjectContextType {
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
   submitWorklogForWeek: (employeeId: string, weekStartDate: string) => Promise<boolean>;
   
+  // Document actions
+  addDocument: (doc: Omit<ProjectDocument, 'id' | 'createdAt'>) => Promise<boolean>;
+  updateDocument: (docId: string, data: Partial<Omit<ProjectDocument, 'id' | 'createdAt'>>) => Promise<boolean>;
+  deleteDocument: (docId: string) => Promise<boolean>;
+  
   // Trash actions
   restoreItem: (id: string, collection: string) => Promise<boolean>;
   permanentlyDeleteItem: (id: string, collection: string) => Promise<boolean>;
@@ -218,7 +224,7 @@ const defaultEnvironments: Omit<Environment, 'id'>[] = [
     { name: 'Performance', order: 5 },
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
@@ -247,7 +253,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/settings/board': ['kanbanColumns'],
     '/settings/sprint': ['projectSettings'],
     '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
-    '/pmo/documents': [],
+    '/pmo/documents': ['documents'],
     '/pmo/billing': [],
 };
 
@@ -264,6 +270,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [assumptions, setAssumptions] = useState<Assumption[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
+  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
   const [projectHolidays, setProjectHolidays] = useState<Holiday[]>([]);
   const [globalHolidays, setGlobalHolidays] = useState<Holiday[]>([]);
@@ -319,6 +326,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'assumptions', setState: setAssumptions },
         { name: 'issues', setState: setIssues },
         { name: 'dependencies', setState: setDependencies },
+        { name: 'documents', setState: setDocuments },
         { name: 'kanbanColumns', setState: setKanbanColumns },
         { name: 'holidays', setState: setProjectHolidays },
         { name: 'releases', setState: setReleasesAndMilestones },
@@ -412,6 +420,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         worklogs: ['date'],
                         worklogSubmissions: ['weekStartDate', 'submittedAt'],
                         holidays: ['date'],
+                        documents: ['createdAt'],
                     };
 
                     if (dateFields[name]) {
@@ -1780,6 +1789,41 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
+  // Document Actions
+  const addDocument = async (docData: Omit<ProjectDocument, 'id' | 'createdAt'>) => {
+    if (!db || !projectId) return false;
+    try {
+        await addDoc(collection(db, 'projects', projectId, 'documents'), {
+            ...docData,
+            createdAt: Timestamp.now(),
+        });
+        return true;
+    } catch(e) {
+        console.error("Failed to add document", e);
+        return false;
+    }
+  };
+  const updateDocument = async (docId: string, data: Partial<Omit<ProjectDocument, 'id' | 'createdAt'>>) => {
+    if (!db || !projectId) return false;
+    try {
+      await updateDoc(doc(db, 'projects', projectId, 'documents', docId), data);
+      return true;
+    } catch (e) {
+      console.error("Failed to update document", e);
+      return false;
+    }
+  };
+  const deleteDocument = async (docId: string) => {
+    if (!db || !projectId) return false;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId, 'documents', docId));
+      return true;
+    } catch (e) {
+      console.error("Failed to delete document", e);
+      return false;
+    }
+  };
+
   // Trash actions
   const restoreItem = async (id: string, collectionName: string): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1818,6 +1862,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     assumptions: pathname.endsWith('/trash') ? assumptions : assumptions.filter(a => !a.isDeleted),
     issues: pathname.endsWith('/trash') ? issues : issues.filter(i => !i.isDeleted),
     dependencies: pathname.endsWith('/trash') ? dependencies : dependencies.filter(d => !d.isDeleted),
+    documents,
     kanbanColumns,
     holidays,
     releasesAndMilestones,
@@ -1905,6 +1950,9 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     updateEnvironmentOrder,
     saveWorklog,
     submitWorklogForWeek,
+    addDocument,
+    updateDocument,
+    deleteDocument,
     restoreItem,
     permanentlyDeleteItem,
   };
