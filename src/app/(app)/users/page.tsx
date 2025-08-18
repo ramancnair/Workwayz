@@ -40,12 +40,13 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle } from 'lucide-react';
 import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
+import { Switch } from '@/components/ui/switch';
 
 const accessLevels: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
@@ -58,6 +59,7 @@ const userFormSchema = z.object({
   experience: z.coerce.number().optional(),
   domainExpertise: z.string().optional(),
   accessLevel: z.enum(accessLevels).optional(),
+  isBcpSupport: z.boolean().optional(),
 });
 
 // Helper to remove undefined values from an object before sending to Firestore
@@ -89,6 +91,7 @@ export default function UsersPage() {
 
   const form = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
+    defaultValues: { isBcpSupport: false },
   });
   
   const handleAutoGen = () => {
@@ -107,6 +110,7 @@ export default function UsersPage() {
     form.setValue('phone', `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}`);
     form.setValue('experience', Math.floor(1 + Math.random() * 15));
     form.setValue('domainExpertise', domains[Math.floor(Math.random() * domains.length)]);
+    form.setValue('isBcpSupport', Math.random() > 0.8);
   };
 
   useEffect(() => {
@@ -132,6 +136,7 @@ export default function UsersPage() {
         if (editingUser) {
         form.reset({
             ...editingUser,
+            isBcpSupport: editingUser.isBcpSupport || false,
         });
         } else {
         form.reset({
@@ -143,6 +148,7 @@ export default function UsersPage() {
             experience: 0,
             domainExpertise: '',
             accessLevel: undefined,
+            isBcpSupport: false,
         });
         }
     }
@@ -263,6 +269,10 @@ export default function UsersPage() {
         let comparison = 0;
         if (typeof valA === 'string' && typeof valB === 'string') {
           comparison = valA.localeCompare(valB, undefined, { numeric: true });
+        } else if (typeof valA === 'boolean' && typeof valB === 'boolean') {
+          if (valA === valB) comparison = 0;
+          else if (valA) comparison = -1;
+          else comparison = 1;
         } else if (valA > valB) {
           comparison = 1;
         } else if (valA < valB) {
@@ -321,10 +331,8 @@ export default function UsersPage() {
                   <SortableHeader columnId="empId">Emp ID</SortableHeader>
                   <SortableHeader columnId="name">Name</SortableHeader>
                   <SortableHeader columnId="email">Email</SortableHeader>
-                  <TableHead>Phone</TableHead>
-                  <SortableHeader columnId="experience">Experience</SortableHeader>
-                  <SortableHeader columnId="domainExpertise">Domain</SortableHeader>
                    <SortableHeader columnId="accessLevel">Access Level</SortableHeader>
+                   <SortableHeader columnId="isBcpSupport">BCP Support</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -334,10 +342,10 @@ export default function UsersPage() {
                     <TableCell className="font-medium">{user.empId}</TableCell>
                     <TableCell>{user.firstName} {user.lastName}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone}</TableCell>
-                    <TableCell>{user.experience ? `${user.experience} yrs` : 'N/A'}</TableCell>
-                    <TableCell>{user.domainExpertise || 'N/A'}</TableCell>
                     <TableCell>{user.accessLevel || 'N/A'}</TableCell>
+                    <TableCell>
+                      {user.isBcpSupport && <CheckCircle className="h-5 w-5 text-green-500" />}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(user)}>
                         <Edit className="h-4 w-4" />
@@ -430,7 +438,27 @@ export default function UsersPage() {
                   </FormItem>
                 )} />
               </div>
-              <DialogFooter className="flex justify-between">
+                <FormField
+                  control={form.control}
+                  name="isBcpSupport"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm mt-4">
+                      <div className="space-y-0.5">
+                        <FormLabel>BCP Support</FormLabel>
+                        <DialogDescription>
+                          Mark this user as a Business Continuity Planning support resource.
+                        </DialogDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              <DialogFooter className="flex justify-between pt-4">
                 {!editingUser && (
                   <Button type="button" variant="outline" onClick={handleAutoGen}>
                     Auto Gen
@@ -468,4 +496,5 @@ export default function UsersPage() {
     </>
   );
 }
+
 

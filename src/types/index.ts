@@ -114,6 +114,7 @@ export type User = {
   isDeleted?: boolean;
   deletedAt?: string; // ISO String
   capabilities?: string[];
+  isBcpSupport?: boolean;
 };
 
 export type Employee = User;

@@ -74,6 +74,7 @@ const resourceSchema = z.object({
   clientEmpId: z.string().optional(),
   clientEmail: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
   capabilities: z.array(z.string()).optional(),
+  isBcpSupport: z.boolean().optional(),
 });
 
 const roles: UserRole[] = ['Developer', 'Tester', 'Architect', 'BA', 'PM', 'Program Director'];
@@ -118,6 +119,7 @@ function ResourceDialog({
           clientEmpId: editingUser.clientEmpId || '',
           clientEmail: editingUser.clientEmail || '',
           capabilities: editingUser.capabilities || [],
+          isBcpSupport: editingUser.isBcpSupport || false,
         });
         const user = allUsers.find(u => u.id === editingUser.id);
         if (user) {
@@ -133,6 +135,7 @@ function ResourceDialog({
           clientEmpId: '',
           clientEmail: '',
           capabilities: [],
+          isBcpSupport: false,
         });
         setUserInputText('');
       }
@@ -149,6 +152,7 @@ function ResourceDialog({
         clientEmpId: values.clientEmpId,
         clientEmail: values.clientEmail,
         capabilities: values.capabilities,
+        isBcpSupport: values.isBcpSupport,
       });
 
       if (success) {
@@ -172,6 +176,7 @@ function ResourceDialog({
         clientEmpId: values.clientEmpId,
         clientEmail: values.clientEmail,
         capabilities: values.capabilities,
+        isBcpSupport: values.isBcpSupport,
       };
       
       const success = await addUserToProject(projectUserData);
@@ -362,6 +367,29 @@ function ResourceDialog({
                 </FormItem>
               )} />
             </div>
+
+            <FormField
+              control={form.control}
+              name="isBcpSupport"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      BCP Support Resource
+                    </FormLabel>
+                    <DialogDescription>
+                      Mark this user as a support resource for Business Continuity Planning.
+                    </DialogDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
 
 
             <DialogFooter>
