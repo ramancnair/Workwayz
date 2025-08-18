@@ -28,7 +28,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2, GripVertical, Save } from 'lucide-react';
-import { type Environment, type ImpactedSystem, type ImpactedSystemCategory } from '@/types';
+import { type Environment, type ImpactedSystem, type ImpactedSystemCategory, Horizontal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -63,6 +63,12 @@ const systemSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
   category: z.enum(['Technology', 'Function']),
 });
+
+const horizontalSchema = z.object({
+  name: z.string().min(1, 'Name is required.'),
+  weightage: z.coerce.number().min(0, 'Weightage must be positive.'),
+});
+
 
 const systemCategories: ImpactedSystemCategory[] = ['Technology', 'Function'];
 
@@ -134,6 +140,10 @@ export default function EnvironmentsPage() {
     addImpactedSystem,
     updateImpactedSystem,
     deleteImpactedSystem,
+    horizontals,
+    addHorizontal,
+    updateHorizontal,
+    deleteHorizontal,
   } = useProject();
   const { toast } = useToast();
   
@@ -154,6 +164,12 @@ export default function EnvironmentsPage() {
   const [deletingSystem, setDeletingSystem] = useState<ImpactedSystem | null>(null);
   const [isSystemSubmitting, setIsSystemSubmitting] = useState(false);
   
+  // Horizontal State
+  const [isHorizontalDialogOpen, setIsHorizontalDialogOpen] = useState(false);
+  const [editingHorizontal, setEditingHorizontal] = useState<Horizontal | null>(null);
+  const [deletingHorizontal, setDeletingHorizontal] = useState<Horizontal | null>(null);
+  const [isHorizontalSubmitting, setIsHorizontalSubmitting] = useState(false);
+  
   const summaryForm = useForm<z.infer<typeof summarySchema>>({
     resolver: zodResolver(summarySchema),
     defaultValues: { summary: project?.summary || '' },
@@ -167,6 +183,11 @@ export default function EnvironmentsPage() {
   const systemForm = useForm<z.infer<typeof systemSchema>>({
     resolver: zodResolver(systemSchema),
     defaultValues: { name: '', description: '', category: 'Technology' },
+  });
+  
+  const horizontalForm = useForm<z.infer<typeof horizontalSchema>>({
+    resolver: zodResolver(horizontalSchema),
+    defaultValues: { name: '', weightage: 0 },
   });
   
   const sensors = useSensors(
@@ -202,6 +223,16 @@ export default function EnvironmentsPage() {
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
   
+  useEffect(() => {
+    if (isHorizontalDialogOpen) {
+      if (editingHorizontal) {
+        horizontalForm.reset(editingHorizontal);
+      } else {
+        horizontalForm.reset({ name: '', weightage: 0 });
+      }
+    }
+  }, [isHorizontalDialogOpen, editingHorizontal, horizontalForm]);
+  
   const onSummarySubmit = async (values: z.infer<typeof summarySchema>) => {
     setIsSummarySubmitting(true);
     const success = await updateProject({ summary: values.summary });
@@ -222,6 +253,11 @@ export default function EnvironmentsPage() {
   const handleSystemDialogOpen = (system: ImpactedSystem | null) => {
     setEditingSystem(system);
     setIsSystemDialogOpen(true);
+  };
+  
+  const handleHorizontalDialogOpen = (horizontal: Horizontal | null) => {
+    setEditingHorizontal(horizontal);
+    setIsHorizontalDialogOpen(true);
   };
 
   const handleEnvDeleteConfirm = async () => {
@@ -244,6 +280,17 @@ export default function EnvironmentsPage() {
       toast({ variant: "destructive", title: "Error", description: "Could not delete impacted system." });
     }
     setDeletingSystem(null);
+  };
+  
+  const handleHorizontalDeleteConfirm = async () => {
+    if (!deletingHorizontal) return;
+    const success = await deleteHorizontal(deletingHorizontal.id);
+    if (success) {
+      toast({ title: "Success", description: "Horizontal deleted." });
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete horizontal." });
+    }
+    setDeletingHorizontal(null);
   };
 
   const onEnvSubmit = async (values: z.infer<typeof environmentSchema>) => {
@@ -276,6 +323,22 @@ export default function EnvironmentsPage() {
       toast({ variant: "destructive", title: "Error", description: `Could not ${editingSystem ? 'update' : 'add'} system.` });
     }
     setIsSystemSubmitting(false);
+  };
+  
+  const onHorizontalSubmit = async (values: z.infer<typeof horizontalSchema>) => {
+    setIsHorizontalSubmitting(true);
+    const success = editingHorizontal
+      ? await updateHorizontal(editingHorizontal.id, values)
+      : await addHorizontal({ ...values, isEnabled: true });
+
+    if (success) {
+      toast({ title: "Success", description: `Horizontal ${editingHorizontal ? 'updated' : 'added'} successfully.` });
+      setIsHorizontalDialogOpen(false);
+      setEditingHorizontal(null);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingHorizontal ? 'update' : 'add'} horizontal.` });
+    }
+    setIsHorizontalSubmitting(false);
   };
   
   function handleDragEnd(event: DragEndEvent) {
@@ -374,6 +437,46 @@ export default function EnvironmentsPage() {
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeletingSystem(system)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Horizontals</CardTitle>
+              <CardDescription>Manage horizontal capabilities for the project.</CardDescription>
+            </div>
+             <Button onClick={() => handleHorizontalDialogOpen(null)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Horizontal
+            </Button>
+          </CardHeader>
+          <CardContent>
+             <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[30%]">Name</TableHead>
+                  <TableHead>Weightage (%)</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {horizontals.map((horizontal) => (
+                  <TableRow key={horizontal.id}>
+                    <TableCell className="font-medium">{horizontal.name}</TableCell>
+                    <TableCell>{horizontal.weightage}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleHorizontalDialogOpen(horizontal)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeletingHorizontal(horizontal)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -498,6 +601,45 @@ export default function EnvironmentsPage() {
         </DialogContent>
       </Dialog>
       
+      <Dialog open={isHorizontalDialogOpen} onOpenChange={(open) => { setIsHorizontalDialogOpen(open); if (!open) setEditingHorizontal(null); }}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{editingHorizontal ? 'Edit Horizontal' : 'Add New Horizontal'}</DialogTitle>
+          </DialogHeader>
+          <Form {...horizontalForm}>
+            <form onSubmit={horizontalForm.handleSubmit(onHorizontalSubmit)} className="space-y-4">
+              <FormField
+                control={horizontalForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl><Input placeholder="E.g., Security" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={horizontalForm.control}
+                name="weightage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Weightage (%)</FormLabel>
+                    <FormControl><Input type="number" placeholder="10" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={isHorizontalSubmitting}>
+                  {isHorizontalSubmitting ? (editingHorizontal ? 'Saving...' : 'Creating...') : (editingHorizontal ? 'Save Changes' : 'Create Horizontal')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
       <AlertDialog open={!!deletingEnv} onOpenChange={(isOpen) => !isOpen && setDeletingEnv(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -530,6 +672,26 @@ export default function EnvironmentsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleSystemDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deletingHorizontal} onOpenChange={(isOpen) => !isOpen && setDeletingHorizontal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the horizontal "{deletingHorizontal?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleHorizontalDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Continue
