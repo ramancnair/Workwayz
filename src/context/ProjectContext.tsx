@@ -272,6 +272,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
     '/pmo/documents': ['documents'],
     '/pmo/billing': ['paymentMilestones'],
+    '/pmo/business-continuity': ['environments'],
 };
 
 
