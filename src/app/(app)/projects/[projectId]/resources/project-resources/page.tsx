@@ -40,7 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check, ChevronsUpDown } from 'lucide-react';
-import { type User, type UserRole, type Story, type ImpactedSystem, type Project } from '@/types';
+import { type User, type UserRole, type Story, type ImpactedSystem, type Project, type Horizontal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +62,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command"
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -89,6 +90,7 @@ function ResourceDialog({
   projectUsers,
   project,
   impactedSystems,
+  horizontals,
 }: {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -98,6 +100,7 @@ function ResourceDialog({
   projectUsers: User[];
   project: Project | null;
   impactedSystems: ImpactedSystem[];
+  horizontals: Horizontal[];
 }) {
   const { addUserToProject, updateProjectUser } = useProject();
   const { toast } = useToast();
@@ -198,6 +201,11 @@ function ResourceDialog({
       value: emp.id,
       label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
   }));
+  
+  const capabilityOptions = useMemo(() => ([
+    ...impactedSystems.map(s => ({ id: s.id, name: s.name, group: 'Impacted Systems' })),
+    ...horizontals.map(h => ({ id: h.id, name: h.name, group: 'Horizontals' }))
+  ]), [impactedSystems, horizontals]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if(!open) setEditingUser(null); }}>
@@ -297,10 +305,10 @@ function ResourceDialog({
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0">
                       <Command>
-                        <CommandInput placeholder="Search system..." />
+                        <CommandInput placeholder="Search..." />
                         <CommandList>
-                            <CommandEmpty>No system found.</CommandEmpty>
-                            <CommandGroup>
+                            <CommandEmpty>No results found.</CommandEmpty>
+                            <CommandGroup heading="Impacted Systems">
                             {impactedSystems.map((system) => (
                                 <CommandItem
                                 key={system.id}
@@ -323,6 +331,33 @@ function ResourceDialog({
                                     )}
                                 />
                                 {system.name}
+                                </CommandItem>
+                            ))}
+                            </CommandGroup>
+                            <CommandSeparator />
+                            <CommandGroup heading="Horizontals">
+                            {horizontals.map((horizontal) => (
+                                <CommandItem
+                                key={horizontal.id}
+                                onSelect={() => {
+                                    const selected = field.value || [];
+                                    const isSelected = selected.includes(horizontal.id);
+                                    field.onChange(
+                                    isSelected
+                                        ? selected.filter((id) => id !== horizontal.id)
+                                        : [...selected, horizontal.id]
+                                    );
+                                }}
+                                >
+                                <Check
+                                    className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value?.includes(horizontal.id)
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                />
+                                {horizontal.name}
                                 </CommandItem>
                             ))}
                             </CommandGroup>
@@ -612,6 +647,7 @@ export default function ResourcesPage() {
     employees: projectUsers, 
     allUsers,
     impactedSystems,
+    horizontals,
     deleteEmployee: removeUserFromProject 
   } = useProject();
   const { toast } = useToast();
@@ -648,7 +684,9 @@ export default function ResourcesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projectUsers.map((user) => (
+              {projectUsers.map((user) => {
+                const allCapabilities = [...impactedSystems, ...horizontals];
+                return (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.empId}</TableCell>
                   <TableCell>{user.firstName} {user.lastName}</TableCell>
@@ -657,8 +695,8 @@ export default function ResourcesPage() {
                     <div className="flex flex-wrap gap-1">
                       {user.capabilities && user.capabilities.length > 0
                         ? user.capabilities.map(capId => {
-                            const system = impactedSystems.find(s => s.id === capId);
-                            return system ? <Badge key={capId} variant="secondary">{system.name}</Badge> : null;
+                            const capability = allCapabilities.find(s => s.id === capId);
+                            return capability ? <Badge key={capId} variant="secondary">{capability.name}</Badge> : null;
                           })
                         : 'N/A'
                       }
@@ -676,7 +714,7 @@ export default function ResourcesPage() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
         </Card>
@@ -693,6 +731,7 @@ export default function ResourcesPage() {
         projectUsers={projectUsers}
         project={project}
         impactedSystems={impactedSystems}
+        horizontals={horizontals}
       />
       
       <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
@@ -728,6 +767,7 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
 
