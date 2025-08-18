@@ -44,6 +44,9 @@ import {
   Trash2,
   DollarSign,
   Component,
+  Briefcase as PmoIcon,
+  File as DocumentsIcon,
+  CreditCard as BillingIcon,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -192,6 +195,19 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       },
   ];
 
+  const pmoMenuItems = [
+    {
+      href: `${basePath}/pmo/documents`,
+      label: "Documents",
+      icon: DocumentsIcon,
+    },
+    {
+      href: `${basePath}/pmo/billing`,
+      label: "Billing",
+      icon: BillingIcon,
+    },
+  ];
+
   const settingsMenuItems = [
     {
       href: `${basePath}/settings/board`,
@@ -213,6 +229,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
+  const isPmoPath = pathname.startsWith(`${basePath}/pmo`);
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
 
@@ -223,7 +240,8 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     : isReleasesPath ? releasesMenuItems
     : isResourcesPath ? resourcesMenuItems 
     : isGovernancePath ? governanceMenuItems 
-    : isHolidaysPath ? holidaysMenuItems 
+    : isHolidaysPath ? holidaysMenuItems
+    : isPmoPath ? pmoMenuItems
     : isDevelopmentPath ? devMenuItems
     : devMenuItems;
 

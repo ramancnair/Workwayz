@@ -247,6 +247,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/settings/board': ['kanbanColumns'],
     '/settings/sprint': ['projectSettings'],
     '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
+    '/pmo/documents': [],
+    '/pmo/billing': [],
 };
 
 

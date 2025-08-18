@@ -24,6 +24,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
+  const isPmoPath = pathname.startsWith(`${basePath}/pmo`);
   
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
@@ -36,6 +37,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (isResourcesPath) return 'resources';
     if (isGovernancePath) return 'governance';
     if (isHolidaysPath) return 'holidays';
+    if (isPmoPath) return 'pmo';
     return ''; // No active tab for settings
   };
 
@@ -56,6 +58,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
       router.push(`${basePath}/raid-dashboard`);
     } else if (value === 'holidays') {
       router.push(`${basePath}/holidays`);
+    } else if (value === 'pmo') {
+      router.push(`${basePath}/pmo/documents`);
     }
   };
 
@@ -81,6 +85,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                       <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                       <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
                        <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                       <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
                   </TabsList>
               </Tabs>
             </div>
