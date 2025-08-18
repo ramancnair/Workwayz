@@ -29,12 +29,13 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { type Environment } from '@/types';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { DatePicker } from '@/components/ui/datepicker';
 
 const environmentFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   url: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  renewalDate: z.string().optional(),
+  renewalDate: z.date().optional(),
 });
 
 export default function BusinessContinuityPage() {
@@ -54,10 +55,10 @@ export default function BusinessContinuityPage() {
         form.reset({
           name: editingEnvironment.name,
           url: editingEnvironment.url || '',
-          renewalDate: editingEnvironment.renewalDate ? format(new Date(editingEnvironment.renewalDate), 'yyyy-MM-dd') : '',
+          renewalDate: editingEnvironment.renewalDate ? parseISO(editingEnvironment.renewalDate) : undefined,
         });
       } else {
-        form.reset({ name: '', url: '', renewalDate: '' });
+        form.reset({ name: '', url: '', renewalDate: undefined });
       }
     }
   }, [isDialogOpen, editingEnvironment, form]);
@@ -70,7 +71,7 @@ export default function BusinessContinuityPage() {
   const onSubmit = async (values: z.infer<typeof environmentFormSchema>) => {
     const environmentData = {
       ...values,
-      renewalDate: values.renewalDate ? new Date(values.renewalDate).toISOString() : undefined,
+      renewalDate: values.renewalDate?.toISOString(),
     };
 
     const success = editingEnvironment
@@ -86,8 +87,12 @@ export default function BusinessContinuityPage() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteEnvironment(id);
-    toast({ title: 'Success', description: 'Environment deleted.' });
+    const success = await deleteEnvironment(id);
+    if(success) {
+      toast({ title: 'Success', description: 'Environment deleted.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete environment.' });
+    }
   };
 
   const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
@@ -131,7 +136,7 @@ export default function BusinessContinuityPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {env.renewalDate ? format(new Date(env.renewalDate), 'PPP') : <span className="text-muted-foreground">Not set</span>}
+                      {env.renewalDate ? format(parseISO(env.renewalDate), 'PPP') : <span className="text-muted-foreground">Not set</span>}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => openDialog(env)}>
@@ -189,7 +194,7 @@ export default function BusinessContinuityPage() {
                   <FormItem>
                     <FormLabel>Certificate Renewal Date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                       <DatePicker date={field.value} setDate={field.onChange} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
