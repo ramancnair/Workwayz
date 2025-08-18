@@ -30,18 +30,17 @@ import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { type Environment, type CodeRepository } from '@/types';
 import { format, parseISO } from 'date-fns';
-import { DatePicker } from '@/components/ui/datepicker';
 
 const environmentFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   url: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  renewalDate: z.date().optional(),
+  renewalDate: z.string().optional(),
 });
 
 const repositoryFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   url: z.string().url({ message: 'Please enter a valid URL.' }),
-  expiryDate: z.date().optional(),
+  expiryDate: z.string().optional(),
 });
 
 export default function BusinessContinuityPage() {
@@ -75,10 +74,10 @@ export default function BusinessContinuityPage() {
         envForm.reset({
           name: editingEnvironment.name,
           url: editingEnvironment.url || '',
-          renewalDate: editingEnvironment.renewalDate ? parseISO(editingEnvironment.renewalDate) : undefined,
+          renewalDate: editingEnvironment.renewalDate ? format(parseISO(editingEnvironment.renewalDate), 'yyyy-MM-dd') : '',
         });
       } else {
-        envForm.reset({ name: '', url: '', renewalDate: undefined });
+        envForm.reset({ name: '', url: '', renewalDate: '' });
       }
     }
   }, [isEnvDialogOpen, editingEnvironment, envForm]);
@@ -89,10 +88,10 @@ export default function BusinessContinuityPage() {
         repoForm.reset({
           name: editingRepository.name,
           url: editingRepository.url,
-          expiryDate: editingRepository.expiryDate ? parseISO(editingRepository.expiryDate) : undefined,
+          expiryDate: editingRepository.expiryDate ? format(parseISO(editingRepository.expiryDate), 'yyyy-MM-dd') : '',
         });
       } else {
-        repoForm.reset({ name: '', url: '', expiryDate: undefined });
+        repoForm.reset({ name: '', url: '', expiryDate: '' });
       }
     }
   }, [isRepoDialogOpen, editingRepository, repoForm]);
@@ -106,7 +105,7 @@ export default function BusinessContinuityPage() {
     if (!editingEnvironment) return;
     const environmentData = {
       ...values,
-      renewalDate: values.renewalDate?.toISOString(),
+      renewalDate: values.renewalDate ? new Date(values.renewalDate).toISOString() : undefined,
     };
 
     const success = await updateEnvironment(editingEnvironment.id, environmentData);
@@ -127,7 +126,7 @@ export default function BusinessContinuityPage() {
   const onRepoSubmit = async (values: z.infer<typeof repositoryFormSchema>) => {
     const repoData = {
       ...values,
-      expiryDate: values.expiryDate?.toISOString(),
+      expiryDate: values.expiryDate ? new Date(values.expiryDate).toISOString() : undefined,
     };
 
     const success = editingRepository
@@ -293,7 +292,7 @@ export default function BusinessContinuityPage() {
                   <FormItem>
                     <FormLabel>Certificate Expiry Date</FormLabel>
                     <FormControl>
-                       <DatePicker date={field.value} setDate={field.onChange} />
+                       <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -347,7 +346,7 @@ export default function BusinessContinuityPage() {
                   <FormItem>
                     <FormLabel>Access Token Expiry Date</FormLabel>
                     <FormControl>
-                       <DatePicker date={field.value} setDate={field.onChange} />
+                       <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
