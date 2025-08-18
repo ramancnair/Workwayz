@@ -28,7 +28,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { type Environment } from '@/types';
+import { type Environment, type CodeRepository } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { DatePicker } from '@/components/ui/datepicker';
 
@@ -38,68 +38,125 @@ const environmentFormSchema = z.object({
   renewalDate: z.date().optional(),
 });
 
+const repositoryFormSchema = z.object({
+  name: z.string().min(1, 'Name is required.'),
+  url: z.string().url({ message: 'Please enter a valid URL.' }),
+  expiryDate: z.date().optional(),
+});
+
 export default function BusinessContinuityPage() {
-  const { environments, addEnvironment, updateEnvironment, deleteEnvironment } = useProject();
+  const { 
+    environments, 
+    updateEnvironment, 
+    codeRepositories, 
+    addCodeRepository,
+    updateCodeRepository,
+    deleteCodeRepository
+  } = useProject();
   const { toast } = useToast();
   
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEnvDialogOpen, setIsEnvDialogOpen] = useState(false);
   const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
 
-  const form = useForm<z.infer<typeof environmentFormSchema>>({
+  const [isRepoDialogOpen, setIsRepoDialogOpen] = useState(false);
+  const [editingRepository, setEditingRepository] = useState<CodeRepository | null>(null);
+
+  const envForm = useForm<z.infer<typeof environmentFormSchema>>({
     resolver: zodResolver(environmentFormSchema),
   });
 
+  const repoForm = useForm<z.infer<typeof repositoryFormSchema>>({
+    resolver: zodResolver(repositoryFormSchema),
+  });
+
   useEffect(() => {
-    if (isDialogOpen) {
+    if (isEnvDialogOpen) {
       if (editingEnvironment) {
-        form.reset({
+        envForm.reset({
           name: editingEnvironment.name,
           url: editingEnvironment.url || '',
           renewalDate: editingEnvironment.renewalDate ? parseISO(editingEnvironment.renewalDate) : undefined,
         });
       } else {
-        form.reset({ name: '', url: '', renewalDate: undefined });
+        envForm.reset({ name: '', url: '', renewalDate: undefined });
       }
     }
-  }, [isDialogOpen, editingEnvironment, form]);
+  }, [isEnvDialogOpen, editingEnvironment, envForm]);
+
+  useEffect(() => {
+    if (isRepoDialogOpen) {
+      if (editingRepository) {
+        repoForm.reset({
+          name: editingRepository.name,
+          url: editingRepository.url,
+          expiryDate: editingRepository.expiryDate ? parseISO(editingRepository.expiryDate) : undefined,
+        });
+      } else {
+        repoForm.reset({ name: '', url: '', expiryDate: undefined });
+      }
+    }
+  }, [isRepoDialogOpen, editingRepository, repoForm]);
   
-  const openDialog = (environment: Environment | null) => {
+  const openEnvDialog = (environment: Environment | null) => {
     setEditingEnvironment(environment);
-    setIsDialogOpen(true);
+    setIsEnvDialogOpen(true);
   };
   
-  const onSubmit = async (values: z.infer<typeof environmentFormSchema>) => {
+  const onEnvSubmit = async (values: z.infer<typeof environmentFormSchema>) => {
+    if (!editingEnvironment) return;
     const environmentData = {
       ...values,
       renewalDate: values.renewalDate?.toISOString(),
     };
 
-    const success = editingEnvironment
-      ? await updateEnvironment(editingEnvironment.id, environmentData)
-      : await addEnvironment(environmentData);
+    const success = await updateEnvironment(editingEnvironment.id, environmentData);
 
     if (success) {
-      toast({ title: 'Success', description: `Environment ${editingEnvironment ? 'updated' : 'added'}.` });
-      setIsDialogOpen(false);
+      toast({ title: 'Success', description: 'Environment updated.' });
+      setIsEnvDialogOpen(false);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not save environment.' });
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const success = await deleteEnvironment(id);
-    if(success) {
-      toast({ title: 'Success', description: 'Environment deleted.' });
+  const openRepoDialog = (repo: CodeRepository | null) => {
+    setEditingRepository(repo);
+    setIsRepoDialogOpen(true);
+  };
+
+  const onRepoSubmit = async (values: z.infer<typeof repositoryFormSchema>) => {
+    const repoData = {
+      ...values,
+      expiryDate: values.expiryDate?.toISOString(),
+    };
+
+    const success = editingRepository
+      ? await updateCodeRepository(editingRepository.id, repoData)
+      : await addCodeRepository(repoData);
+
+    if (success) {
+      toast({ title: 'Success', description: `Repository ${editingRepository ? 'updated' : 'added'}.` });
+      setIsRepoDialogOpen(false);
     } else {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete environment.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not save repository.' });
     }
   };
+
+  const handleDeleteRepo = async (id: string) => {
+    const success = await deleteCodeRepository(id);
+    if(success) {
+      toast({ title: 'Success', description: 'Repository deleted.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete repository.' });
+    }
+  };
+
 
   const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
   return (
     <>
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
         <PageHeader title="Business Continuity" description="Manage environment details, URLs, and renewal dates." />
         <Card>
           <CardHeader>
@@ -135,10 +192,56 @@ export default function BusinessContinuityPage() {
                       {env.renewalDate ? format(parseISO(env.renewalDate), 'PPP') : <span className="text-muted-foreground">Not set</span>}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openDialog(env)}>
+                      <Button variant="ghost" size="icon" onClick={() => openEnvDialog(env)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(env.id)}>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <div>
+                <CardTitle>Code Repositories</CardTitle>
+                <CardDescription>
+                    Manage source code repository URLs and expiry dates.
+                </CardDescription>
+            </div>
+            <Button onClick={() => openRepoDialog(null)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Repository
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>URL</TableHead>
+                  <TableHead>Expiry Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {codeRepositories.map(repo => (
+                  <TableRow key={repo.id}>
+                    <TableCell className="font-medium">{repo.name}</TableCell>
+                    <TableCell>
+                      <a href={repo.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                        {repo.url}
+                      </a>
+                    </TableCell>
+                    <TableCell>
+                      {repo.expiryDate ? format(parseISO(repo.expiryDate), 'PPP') : <span className="text-muted-foreground">Not set</span>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openRepoDialog(repo)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteRepo(repo.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -150,28 +253,28 @@ export default function BusinessContinuityPage() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isEnvDialogOpen} onOpenChange={setIsEnvDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingEnvironment ? 'Edit Environment' : 'Add New Environment'}</DialogTitle>
+            <DialogTitle>Edit Environment</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Form {...envForm}>
+            <form onSubmit={envForm.handleSubmit(onEnvSubmit)} className="space-y-4">
                <FormField
-                control={form.control}
+                control={envForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="E.g., Staging" {...field} />
+                      <Input placeholder="E.g., Staging" {...field} disabled />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
-                control={form.control}
+                control={envForm.control}
                 name="url"
                 render={({ field }) => (
                   <FormItem>
@@ -184,7 +287,7 @@ export default function BusinessContinuityPage() {
                 )}
               />
               <FormField
-                control={form.control}
+                control={envForm.control}
                 name="renewalDate"
                 render={({ field }) => (
                   <FormItem>
@@ -197,7 +300,61 @@ export default function BusinessContinuityPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">{editingEnvironment ? 'Save Changes' : 'Add Environment'}</Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isRepoDialogOpen} onOpenChange={setIsRepoDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingRepository ? 'Edit Repository' : 'Add New Repository'}</DialogTitle>
+          </DialogHeader>
+          <Form {...repoForm}>
+            <form onSubmit={repoForm.handleSubmit(onRepoSubmit)} className="space-y-4">
+               <FormField
+                control={repoForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="E.g., Frontend App" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={repoForm.control}
+                name="url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL</FormLabel>
+                    <FormControl>
+                      <Input type="url" placeholder="https://github.com/user/repo" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={repoForm.control}
+                name="expiryDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Access Token Expiry Date</FormLabel>
+                    <FormControl>
+                       <DatePicker date={field.value} setDate={field.onChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit">{editingRepository ? 'Save Changes' : 'Add Repository'}</Button>
               </DialogFooter>
             </form>
           </Form>

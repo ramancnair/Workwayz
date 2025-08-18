@@ -325,3 +325,10 @@ export type PaymentMilestone = {
   status: PaymentMilestoneStatus;
   attachments?: string;
 };
+
+export type CodeRepository = {
+  id: string;
+  name: string;
+  url: string;
+  expiryDate?: string; // ISO String
+};

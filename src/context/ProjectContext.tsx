@@ -20,7 +20,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -67,6 +67,7 @@ interface ProjectContextType {
   initialImpactedSystems: ImpactedSystem[];
   initialHorizontals: Horizontal[];
   environments: Environment[];
+  codeRepositories: CodeRepository[];
   
   // Project actions
   updateProject: (data: Partial<Omit<Project, 'id'>>) => Promise<boolean>;
@@ -189,6 +190,11 @@ interface ProjectContextType {
   updatePaymentMilestone: (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id'>>) => Promise<boolean>;
   deletePaymentMilestone: (milestoneId: string) => Promise<boolean>;
 
+  // Code Repository actions
+  addCodeRepository: (repo: Omit<CodeRepository, 'id'>) => Promise<boolean>;
+  updateCodeRepository: (repoId: string, data: Partial<Omit<CodeRepository, 'id'>>) => Promise<boolean>;
+  deleteCodeRepository: (repoId: string) => Promise<boolean>;
+
   // Trash actions
   restoreItem: (id: string, collection: string) => Promise<boolean>;
   permanentlyDeleteItem: (id: string, collection: string) => Promise<boolean>;
@@ -241,7 +247,7 @@ const standardDocs = [
   'Closure',
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
@@ -272,7 +278,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
     '/pmo/documents': ['documents'],
     '/pmo/billing': ['paymentMilestones'],
-    '/pmo/business-continuity': ['environments'],
+    '/pmo/business-continuity': ['environments', 'codeRepositories'],
 };
 
 
@@ -299,6 +305,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [initialImpactedSystems, setInitialImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [initialHorizontals, setInitialHorizontals] = useState<Horizontal[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [worklogSubmissions, setWorklogSubmissions] = useState<WorklogSubmission[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
@@ -355,6 +362,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'initialImpactedSystems', setState: setInitialImpactedSystems },
         { name: 'initialHorizontals', setState: setInitialHorizontals },
         { name: 'environments', setState: setEnvironments },
+        { name: 'codeRepositories', setState: setCodeRepositories },
         { name: 'worklogs', setState: setWorklogs },
         { name: 'worklogSubmissions', setState: setWorklogSubmissions },
         { name: 'settings', setState: setProjectSettings },
@@ -450,6 +458,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         worklogSubmissions: ['weekStartDate', 'submittedAt'],
                         holidays: ['date'],
                         documents: ['createdAt'],
+                        codeRepositories: ['expiryDate'],
                     };
 
                     if (dateFields[name]) {
@@ -1885,6 +1894,46 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         }
     };
 
+  // Code Repository actions
+  const addCodeRepository = async (repo: Omit<CodeRepository, 'id'>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const { expiryDate, ...rest } = repo;
+      const payload: any = { ...rest };
+      if (expiryDate) payload.expiryDate = Timestamp.fromDate(new Date(expiryDate));
+      await addDoc(collection(db, 'projects', projectId, 'codeRepositories'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e) {
+      console.error("Firebase error adding code repository", e);
+      return false;
+    }
+  };
+  const updateCodeRepository = async (repoId: string, data: Partial<Omit<CodeRepository, 'id'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const { expiryDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('expiryDate') && expiryDate) payload.expiryDate = Timestamp.fromDate(new Date(expiryDate));
+      else if (data.hasOwnProperty('expiryDate')) payload.expiryDate = null;
+      
+      await updateDoc(doc(db, 'projects', projectId, 'codeRepositories', repoId), sanitizeForFirestore(payload));
+      return true;
+    } catch (e) {
+      console.error("Firebase error updating code repository", e);
+      return false;
+    }
+  };
+  const deleteCodeRepository = async (repoId: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId, 'codeRepositories', repoId));
+      return true;
+    } catch (e) {
+      console.error("Firebase error deleting code repository", e);
+      return false;
+    }
+  };
+
   // Trash actions
   const restoreItem = async (id: string, collectionName: string): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1937,6 +1986,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     initialImpactedSystems,
     initialHorizontals,
     environments,
+    codeRepositories,
     isLoading,
     error,
     updateProject,
@@ -2018,6 +2068,9 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addPaymentMilestone,
     updatePaymentMilestone,
     deletePaymentMilestone,
+    addCodeRepository,
+    updateCodeRepository,
+    deleteCodeRepository,
     restoreItem,
     permanentlyDeleteItem,
   };
