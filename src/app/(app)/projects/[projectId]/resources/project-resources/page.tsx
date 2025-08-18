@@ -303,7 +303,7 @@ function ResourceDialog({
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                       <Command>
                         <CommandInput placeholder="Search..." />
                         <CommandList>
@@ -767,6 +767,7 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
 
