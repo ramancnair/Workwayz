@@ -52,7 +52,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Trash2 } from 'lucide-react';
+import { Bot, PlusCircle, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const statusStyles: Record<StoryStatus, string> = {
@@ -86,9 +86,10 @@ const bugFormSchema = z.object({
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, updateStory, deleteStory, environments, autoGenerateBugs } = useProject();
+  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const bugs = stories.filter(story => story.itemType === 'Bug');
   const [selectedBugs, setSelectedBugs] = useState<string[]>([]);
@@ -131,48 +132,85 @@ export default function BugListPage() {
   });
 
   useEffect(() => {
-    if (editingBug) {
-      form.reset({
-        title: editingBug.title,
-        description: editingBug.description || '',
-        acceptanceCriteria: editingBug.acceptanceCriteria || '',
-        epicId: editingBug.epicId || 'unassigned',
-        reporterId: editingBug.reporterId || 'unassigned',
-        assigneeId: editingBug.assigneeId || 'unassigned',
-        status: editingBug.status,
-        sprintId: editingBug.sprintId || 'backlog',
-        criticality: editingBug.criticality || 'Medium',
-        environmentId: editingBug.environmentId || 'unassigned',
-        attachments: editingBug.attachments || '',
-      });
-    } else {
-      form.reset();
+    if (isDialogOpen) {
+      if (editingBug) {
+        form.reset({
+          title: editingBug.title,
+          description: editingBug.description || '',
+          acceptanceCriteria: editingBug.acceptanceCriteria || '',
+          epicId: editingBug.epicId || 'unassigned',
+          reporterId: editingBug.reporterId || 'unassigned',
+          assigneeId: editingBug.assigneeId || 'unassigned',
+          status: editingBug.status,
+          sprintId: editingBug.sprintId || 'backlog',
+          criticality: editingBug.criticality || 'Medium',
+          environmentId: editingBug.environmentId || 'unassigned',
+          attachments: editingBug.attachments || '',
+        });
+      } else {
+         form.reset({
+            title: '',
+            description: '',
+            acceptanceCriteria: '',
+            epicId: 'unassigned',
+            reporterId: 'unassigned',
+            assigneeId: 'unassigned',
+            status: 'To Do',
+            sprintId: 'backlog',
+            criticality: 'Medium',
+            environmentId: 'unassigned',
+            attachments: '',
+        });
+      }
     }
-  }, [editingBug, form]);
+  }, [isDialogOpen, editingBug, form]);
   
-  const handleEditSubmit = async (values: z.infer<typeof bugFormSchema>) => {
-    if (!editingBug) return;
+  const handleDialogOpen = (bug: Story | null) => {
+    setEditingBug(bug);
+    setIsDialogOpen(true);
+  }
+  
+  const handleFormSubmit = async (values: z.infer<typeof bugFormSchema>) => {
     setIsSubmitting(true);
+    let success = false;
     
-    const success = await updateStory(editingBug.id, {
-        title: values.title,
-        description: values.description,
-        acceptanceCriteria: values.acceptanceCriteria,
-        reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: values.epicId === 'unassigned' ? undefined : values.epicId, // Related story
-        status: values.status,
-        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        criticality: values.criticality,
-        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-        attachments: values.attachments,
-    });
+    if (editingBug) {
+        success = await updateStory(editingBug.id, {
+            title: values.title,
+            description: values.description,
+            acceptanceCriteria: values.acceptanceCriteria,
+            reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+            epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+            status: values.status,
+            sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+            criticality: values.criticality,
+            environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+            attachments: values.attachments,
+        });
+    } else {
+        success = await addStory({
+            itemType: 'Bug',
+            title: values.title,
+            description: values.description,
+            acceptanceCriteria: values.acceptanceCriteria,
+            reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+            epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+            status: values.status,
+            sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+            criticality: values.criticality,
+            environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+            attachments: values.attachments,
+        });
+    }
     
     if (success) {
-      toast({ title: "Success", description: "Bug updated successfully." });
+      toast({ title: "Success", description: `Bug ${editingBug ? 'updated' : 'added'} successfully.` });
+      setIsDialogOpen(false);
       setEditingBug(null);
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not update bug." });
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingBug ? 'update' : 'add'} bug.` });
     }
     setIsSubmitting(false);
   };
@@ -246,6 +284,9 @@ export default function BugListPage() {
                 Delete Selected ({selectedBugs.length})
             </Button>
         )}
+        <Button onClick={() => handleDialogOpen(null)}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Bug
+        </Button>
       </PageHeader>
       <Card>
         <Table>
@@ -292,7 +333,7 @@ export default function BugListPage() {
                   <TableCell className="font-medium">{bug.storyId}</TableCell>
                   <TableCell>
                       <button
-                        onClick={() => setEditingBug(bug)}
+                        onClick={() => handleDialogOpen(bug)}
                         className="text-left font-medium text-primary hover:underline"
                       >
                           {bug.title}
@@ -348,15 +389,16 @@ export default function BugListPage() {
       </Card>
     </div>
 
-    <Dialog open={!!editingBug} onOpenChange={(isOpen) => !isOpen && setEditingBug(null)}>
+    <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingBug(null); setIsDialogOpen(open); }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Bug</DialogTitle>
-            <DialogDescription>Make changes to the bug details here.</DialogDescription>
+            <DialogTitle>{editingBug ? 'Edit Bug' : 'Add New Bug'}</DialogTitle>
+            <DialogDescription>
+              {editingBug ? 'Make changes to the bug details here.' : 'Log a new bug found during testing.'}
+            </DialogDescription>
           </DialogHeader>
-          {editingBug && (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleEditSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="title"
@@ -553,7 +595,6 @@ export default function BugListPage() {
                 </DialogFooter>
               </form>
             </Form>
-          )}
         </DialogContent>
       </Dialog>
       <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
@@ -578,6 +619,7 @@ export default function BugListPage() {
     </>
   );
 }
+
 
 
 
