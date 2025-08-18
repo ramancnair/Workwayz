@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -224,6 +223,18 @@ const defaultEnvironments: Omit<Environment, 'id'>[] = [
     { name: 'Performance', order: 5 },
 ];
 
+const standardDocs = [
+  'SOW',
+  'Requirements',
+  'HLD/DD',
+  'UI/UX Designs',
+  'Lessons learned',
+  'Status Reports',
+  'BCP',
+  'GIT',
+  'Closure',
+];
+
 type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
@@ -402,6 +413,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     return;
                 }
                 
+                 if (name === 'documents' && querySnapshot.empty) {
+                    const batch = writeBatch(db);
+                    standardDocs.forEach(docName => {
+                        const docRef = doc(collection(rootProjectDocRef, 'documents'));
+                        batch.set(docRef, { name: docName, location: '', createdAt: Timestamp.now() });
+                    });
+                    batch.commit().catch(e => console.error("Failed to set default documents", e));
+                    return;
+                }
 
                 const data = querySnapshot.docs.map(doc => {
                     const docData = doc.data();

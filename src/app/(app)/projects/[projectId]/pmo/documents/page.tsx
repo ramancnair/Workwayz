@@ -37,27 +37,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2, Link as LinkIcon } from 'lucide-react';
 import { type ProjectDocument } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 
 const documentSchema = z.object({
   name: z.string().min(1, 'Document name is required.'),
-  location: z.string().url('Please enter a valid URL.'),
+  location: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
-const standardDocs = [
-  'SOW',
-  'Requirements',
-  'HLD/DD',
-  'UI/UX Designs',
-  'Lessons learned',
-  'Status Reports',
-  'BCP',
-  'GIT',
-  'Closure',
-];
 
 export default function DocumentsPage() {
   const { documents, addDocument, updateDocument, deleteDocument } = useProject();
@@ -66,7 +55,6 @@ export default function DocumentsPage() {
   const [editingDocument, setEditingDocument] = useState<ProjectDocument | null>(null);
   const [deletingDocument, setDeletingDocument] = useState<ProjectDocument | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [docNameInput, setDocNameInput] = useState('');
 
   const form = useForm<z.infer<typeof documentSchema>>({
     resolver: zodResolver(documentSchema),
@@ -77,10 +65,8 @@ export default function DocumentsPage() {
     if (isDialogOpen) {
       if (editingDocument) {
         form.reset(editingDocument);
-        setDocNameInput(editingDocument.name);
       } else {
         form.reset({ name: '', location: '' });
-        setDocNameInput('');
       }
     }
   }, [isDialogOpen, editingDocument, form]);
@@ -123,7 +109,7 @@ export default function DocumentsPage() {
         <PageHeader title="Project Documents" description="Manage all important project documents and links.">
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Document
+            Add Custom Document
           </Button>
         </PageHeader>
         <Card>
@@ -137,14 +123,20 @@ export default function DocumentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((doc) => (
+              {documents.sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((doc) => (
                 <TableRow key={doc.id}>
                   <TableCell className="font-medium">{doc.name}</TableCell>
                   <TableCell>
-                    <a href={doc.location} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
-                      <LinkIcon className="h-4 w-4" />
-                      View Document
-                    </a>
+                    {doc.location ? (
+                       <a href={doc.location} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
+                          <LinkIcon className="h-4 w-4" />
+                          View Document
+                        </a>
+                    ) : (
+                        <Button variant="link" className="p-0 h-auto" onClick={() => handleDialogOpen(doc)}>
+                          Add URL here
+                        </Button>
+                    )}
                   </TableCell>
                   <TableCell>{format(new Date(doc.createdAt), 'PPP')}</TableCell>
                   <TableCell className="text-right">
@@ -165,7 +157,7 @@ export default function DocumentsPage() {
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingDocument(null); setIsDialogOpen(open); }}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{editingDocument ? 'Edit Document' : 'Add New Document'}</DialogTitle>
+            <DialogTitle>{editingDocument ? `Edit "${editingDocument.name}"` : 'Add New Document'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -177,20 +169,10 @@ export default function DocumentsPage() {
                     <FormLabel>Document Name</FormLabel>
                     <FormControl>
                        <Input 
-                        list="doc-names" 
-                        placeholder="Select or type a document name" 
-                        value={docNameInput}
-                        onChange={(e) => {
-                            setDocNameInput(e.target.value);
-                            field.onChange(e.target.value);
-                        }}
+                        placeholder="e.g., Project Charter" 
+                        {...field}
                       />
                     </FormControl>
-                    <datalist id="doc-names">
-                      {standardDocs.map(docName => (
-                        <option key={docName} value={docName} />
-                      ))}
-                    </datalist>
                     <FormMessage />
                   </FormItem>
                 )}
