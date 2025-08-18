@@ -1,6 +1,5 @@
 
 
-
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -305,6 +304,8 @@ export type Environment = {
   id: string;
   name: string;
   order: number;
+  url?: string;
+  renewalDate?: string; // ISO String
 };
 
 export type ProjectDocument = {

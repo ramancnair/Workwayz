@@ -47,6 +47,7 @@ import {
   Briefcase as PmoIcon,
   File as DocumentsIcon,
   CreditCard as BillingIcon,
+  HeartPulse,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -205,6 +206,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/pmo/billing`,
       label: "Billing",
       icon: BillingIcon,
+    },
+    {
+      href: `${basePath}/pmo/business-continuity`,
+      label: "Business Continuity",
+      icon: HeartPulse,
     },
   ];
 
