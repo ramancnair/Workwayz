@@ -9,22 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type ProjectStatus } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, parseISO, eachDayOfInterval, isBefore, startOfDay, isSameDay, isAfter } from 'date-fns';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  ComposedChart,
-} from 'recharts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { format, parseISO } from 'date-fns';
 
 const statusStyles: Record<ProjectStatus, string> = {
     'Initial Estimation': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
@@ -44,132 +29,8 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
     );
 }
 
-function BurndownChart() {
-    const { sprints, stories, holidays, weeklyOffDays } = useProject();
-
-    const currentSprint = useMemo(() => sprints.find(s => s.isCurrent), [sprints]);
-    
-    const burndownData = useMemo(() => {
-        if (!currentSprint || !currentSprint.startDate || !currentSprint.endDate) return [];
-
-        const sprintStart = startOfDay(parseISO(currentSprint.startDate));
-        const sprintEnd = startOfDay(parseISO(currentSprint.endDate));
-        const today = startOfDay(new Date());
-
-        const sprintItems = stories.filter(s => 
-            s.sprintId === currentSprint.id && 
-            ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType)
-        );
-        
-        const totalHours = sprintItems.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-        
-        const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
-        
-        const workingDays = eachDayOfInterval({ start: sprintStart, end: sprintEnd }).filter(day => {
-            const dayOfWeek = day.getDay();
-            const isWeekend = weeklyOffDays.includes(dayOfWeek);
-            const isHoliday = holidayDates.some(h => isSameDay(day, h));
-            return !isWeekend && !isHoliday;
-        });
-
-        if (workingDays.length === 0) return [];
-        
-        const idealHoursPerDay = totalHours / workingDays.length;
-
-        let runningIdealHours = totalHours;
-        let lastKnownRemainingHours = totalHours;
-
-        return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map((date, index) => {
-            // For completed tasks, we assume the end date is when the status became 'Done'
-            // In a real scenario, you would have a history of status changes.
-            // As a proxy, we'll consider a task completed on its 'endDate' if it exists, otherwise we can't track daily completions accurately without more data.
-            const completedTasksBeforeOrOnThisDay = sprintItems.filter(s => {
-                const isDone = s.status === 'Done';
-                // A 'Done' task is considered completed. For charting, we need a date.
-                // We'll assume the 'endDate' is set upon completion. If not, this logic is flawed.
-                // A better data model would have a `completedAt` timestamp.
-                // For this implementation, we'll assume endDate is set when a task is moved to Done.
-                const completionDate = s.endDate ? startOfDay(parseISO(s.endDate)) : null;
-                return isDone && completionDate && !isAfter(completionDate, date);
-            });
-            
-            const completedTasksExactlyOnThisDay = completedTasksBeforeOrOnThisDay.filter(s => 
-              s.endDate && isSameDay(startOfDay(parseISO(s.endDate)), date)
-            );
-
-            const completedHours = completedTasksBeforeOrOnThisDay.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-            
-            if (isAfter(date, today)) {
-                // For future dates, don't calculate remaining/completed
-                 return {
-                    name: `Day ${index}`,
-                    date: format(date, 'MMM d'),
-                    "Completed tasks": 0,
-                    "Remaining effort": null,
-                    "Ideal burndown": null,
-                };
-            }
-            
-            const remainingHours = totalHours - completedHours;
-            lastKnownRemainingHours = remainingHours;
-
-            if (isSameDay(date, sprintStart)) {
-                runningIdealHours = totalHours;
-            } else if (workingDays.some(wd => isSameDay(wd, date))) {
-                runningIdealHours -= idealHoursPerDay;
-            }
-            
-            return {
-                name: `Day ${index}`,
-                date: format(date, 'MMM d'),
-                "Completed tasks": completedTasksExactlyOnThisDay.length,
-                "Remaining effort": remainingHours < 0 ? 0 : remainingHours,
-                "Ideal burndown": runningIdealHours < 0 ? 0 : runningIdealHours,
-            };
-        });
-    }, [currentSprint, stories, holidays, weeklyOffDays]);
-
-
-    if (!currentSprint) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Sprint Burndown</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[400px] flex items-center justify-center">
-                    <p className="text-muted-foreground">No active sprint found.</p>
-                </CardContent>
-            </Card>
-        )
-    }
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Sprint Burndown</CardTitle>
-                <CardDescription>{currentSprint.title}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                    <ComposedChart data={burndownData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis yAxisId="left" label={{ value: 'Remaining effort (hours)', angle: -90, position: 'insideLeft' }} />
-                        <YAxis yAxisId="right" orientation="right" label={{ value: 'Completed tasks', angle: 90, position: 'insideRight' }} allowDecimals={false} />
-                        <Tooltip />
-                        <Legend />
-                        <Bar yAxisId="right" dataKey="Completed tasks" barSize={20} fill="#f59e0b" name="Completed Tasks (Daily)" />
-                        <Line yAxisId="left" type="monotone" dataKey="Remaining effort" name="Remaining Effort" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} connectNulls />
-                        <Line yAxisId="left" type="monotone" dataKey="Ideal burndown" name="Ideal Burndown" stroke="#16a34a" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                    </ComposedChart>
-                </ResponsiveContainer>
-            </CardContent>
-        </Card>
-    )
-}
-
 export default function ProjectDashboardPage() {
-    const { project, isLoading, allUsers, sprints, releasesAndMilestones, stories } = useProject();
+    const { project, isLoading, allUsers } = useProject();
 
     const projectManager = project?.projectManagerId
         ? allUsers.find(e => e.id === project.projectManagerId)
@@ -192,10 +53,6 @@ export default function ProjectDashboardPage() {
                             <Skeleton className="h-16 w-full" />
                             <Skeleton className="h-16 w-full" />
                         </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
-                        <CardContent><Skeleton className="h-72 w-full" /></CardContent>
                     </Card>
                 </div>
             </div>
@@ -253,8 +110,6 @@ export default function ProjectDashboardPage() {
                         />
                     </CardContent>
                 </Card>
-
-                <BurndownChart />
             </div>
         </div>
     );
