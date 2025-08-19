@@ -303,7 +303,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [horizontals, setHorizontals] = useState<Horizontal[]>([]);
-  const [initialImpactedSystems, setInitialImpactedSystems] = useState<ImpactedSystem[]>([]);
+  const [initialImpactedSystems, setInitialImpactedSystems] = useState<InitialImpactedSystem[]>([]);
   const [initialHorizontals, setInitialHorizontals] = useState<Horizontal[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
@@ -2124,3 +2124,4 @@ export function useProject() {
   }
   return context;
 }
+
