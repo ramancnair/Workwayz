@@ -69,6 +69,8 @@ const criticalityStyles: Record<BugCriticality, string> = {
 };
 
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
+const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+
 
 const bugFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -575,6 +577,32 @@ export default function BugListPage() {
                       )}
                     />
                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {statusOptions.map((p) => (
+                                <SelectItem key={p} value={p}>
+                                {p}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
                  <FormField
                   control={form.control}
                   name="attachments"
@@ -619,4 +647,5 @@ export default function BugListPage() {
     </>
   );
 }
+
 
