@@ -81,6 +81,8 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 
 const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
+const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+
 
 const epicFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -110,6 +112,7 @@ const subTaskFormSchema = z.object({
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
+    status: z.enum(statusOptions),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
 }).refine(data => {
@@ -339,6 +342,7 @@ export default function BacklogPage() {
       impactedSystemId: 'unassigned',
       estimatedHours: 0,
       assigneeId: 'unassigned',
+      status: 'To Do',
       startDate: '',
       endDate: '',
     }
@@ -405,6 +409,7 @@ export default function BacklogPage() {
             impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
             estimatedHours: selectedStory.estimatedHours,
             assigneeId: selectedStory.assigneeId || 'unassigned',
+            status: selectedStory.status,
             startDate: selectedStory.startDate ? format(new Date(selectedStory.startDate), 'yyyy-MM-dd') : '',
             endDate: selectedStory.endDate ? format(new Date(selectedStory.endDate), 'yyyy-MM-dd') : '',
         });
@@ -563,6 +568,7 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
         impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
         estimatedHours: values.estimatedHours,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+        status: values.status,
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
     });
@@ -1321,6 +1327,35 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}/>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <FormField
+                                control={subTaskForm.control}
+                                name="status"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                        {statusOptions.map((p) => (
+                                            <SelectItem key={p} value={p}>
+                                            {p}
+                                            </SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                                <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                            )}/>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Start Date</FormLabel>
@@ -1336,9 +1371,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 </FormItem>
                             )} />
                         </div>
-                        <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
-                        )}/>
                         <DialogFooter>
                             <Button type="submit" disabled={isEditStorySubmitting}>
                                 {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
@@ -1722,7 +1754,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 {showAddSubTask ? (
                                     <div className='border p-4 mt-2 rounded-md'>
                                         <Form {...subTaskForm}>
-                                            <form onSubmit={subTaskForm.handleSubmit(handleAddSubTask)} className='space-y-4'>
+                                            <div className='space-y-4'>
                                                 <FormField control={subTaskForm.control} name="title" render={({field}) => (
                                                     <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
@@ -1773,9 +1805,9 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
-                                                  <Button type="button">Save Sub Task</Button>
+                                                  <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
                                                 </div>
-                                            </form>
+                                            </div>
                                         </Form>
                                     </div>
                                 ) : (
@@ -1906,6 +1938,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

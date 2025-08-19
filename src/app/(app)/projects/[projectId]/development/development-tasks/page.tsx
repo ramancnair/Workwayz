@@ -50,12 +50,14 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { format, parseISO } from 'date-fns';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
+const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+
 const subTaskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
   parentStoryId: z.string().min(1, 'A parent story is required.'),
   assigneeId: z.string().optional(),
-  status: z.enum(['To Do', 'In Progress', 'Done']),
+  status: z.enum(statusOptions),
   estimatedHours: z.coerce.number().optional(),
   impactedSystemId: z.string().optional(),
   startDate: z.string().optional(),
@@ -70,7 +72,6 @@ const subTaskSchema = z.object({
     path: ['endDate'],
 });
 
-const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 const statusStyles: Record<StoryStatus, string> = {
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
@@ -222,7 +223,7 @@ export default function DevelopmentTasksPage() {
     
     const parentStory = parentStories.find(p => p.id === values.parentStoryId);
 
-    const subTaskData: Omit<Story, 'id' | 'storyId'> = {
+    const subTaskData: Partial<Omit<Story, 'id' | 'storyId'>> = {
         title: values.title,
         itemType: 'Sub Task',
         description: values.description,
@@ -243,7 +244,7 @@ export default function DevelopmentTasksPage() {
     if (editingSubTask) {
       success = await updateStory(editingSubTask.id, subTaskData);
     } else {
-      success = await addStory(subTaskData, 'SUB');
+      success = await addStory(subTaskData as Omit<Story, 'id' | 'storyId'>, 'SUB');
     }
 
     if (success) {
@@ -463,7 +464,7 @@ export default function DevelopmentTasksPage() {
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                           <SelectContent>
-                            {(['To Do', 'In Progress', 'Done'] as StoryStatus[]).map(s => (
+                            {statusOptions.map(s => (
                               <SelectItem key={s} value={s}>{s}</SelectItem>
                             ))}
                           </SelectContent>

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -65,6 +66,8 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 };
 
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
+const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+
 
 const storyFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -86,6 +89,7 @@ const subTaskFormSchema = z.object({
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
+    status: z.enum(statusOptions),
 });
 
 function StoryCard({ 
@@ -289,6 +293,7 @@ export default function KanbanPage() {
           impactedSystemId: 'unassigned',
           estimatedHours: 0,
           assigneeId: 'unassigned',
+          status: 'To Do',
       }
   });
 
@@ -334,6 +339,7 @@ export default function KanbanPage() {
             impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
             estimatedHours: selectedStory.estimatedHours,
             assigneeId: selectedStory.assigneeId || 'unassigned',
+            status: selectedStory.status,
         });
     } else {
       const isSubItem = ['Bug'].includes(selectedStory.itemType); // Sub Task handled separately
@@ -390,6 +396,7 @@ export default function KanbanPage() {
         impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
         estimatedHours: values.estimatedHours,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+        status: values.status,
     });
     if (success) {
       handleSetSelectedStory(null);
@@ -562,30 +569,58 @@ export default function KanbanPage() {
                         <FormField control={subTaskForm.control} name="description" render={({field}) => (
                             <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
-                        <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
-                            <FormItem><FormLabel>Impacted System</FormLabel>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                                <FormItem><FormLabel>Impacted System</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
+                                        <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                <FormMessage/></FormItem>
+                            )}/>
+                            <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
+                            <FormItem>
+                                <FormLabel>Assigned To</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                </SelectContent>
                                 </Select>
-                            <FormMessage/></FormItem>
-                        )}/>
-                        <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
-                           <FormItem>
-                            <FormLabel>Assigned To</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
-                              <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage/>
-                           </FormItem>
-                        )}/>
-                        <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
-                        )}/>
+                                <FormMessage/>
+                            </FormItem>
+                            )}/>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <FormField
+                            control={subTaskForm.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {statusOptions.map((p) => (
+                                        <SelectItem key={p} value={p}>
+                                        {p}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                            <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                                <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                            )}/>
+                        </div>
                         <DialogFooter>
                             <Button type="submit" disabled={isEditStorySubmitting}>
                                 {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
@@ -1008,6 +1043,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
