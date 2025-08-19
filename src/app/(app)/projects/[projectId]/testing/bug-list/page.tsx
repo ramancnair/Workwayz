@@ -93,7 +93,7 @@ export default function BugListPage() {
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const bugs = stories.filter(story => story.itemType === 'Bug');
+  const bugs = useMemo(() => stories.filter(story => story.itemType === 'Bug'), [stories]);
   const [selectedBugs, setSelectedBugs] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
@@ -647,5 +647,6 @@ export default function BugListPage() {
     </>
   );
 }
+
 
 
