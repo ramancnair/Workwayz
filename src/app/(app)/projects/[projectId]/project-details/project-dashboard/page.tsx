@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -55,6 +54,7 @@ function BurndownChart() {
 
         const sprintStart = startOfDay(parseISO(currentSprint.startDate));
         const sprintEnd = startOfDay(parseISO(currentSprint.endDate));
+        const today = startOfDay(new Date());
 
         const sprintItems = stories.filter(s => 
             s.sprintId === currentSprint.id && 
@@ -77,18 +77,41 @@ function BurndownChart() {
         const idealHoursPerDay = totalHours / workingDays.length;
 
         let runningIdealHours = totalHours;
+        let lastKnownRemainingHours = totalHours;
 
         return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map((date, index) => {
-            const completedTasksOnThisDay = sprintItems
-                .filter(s => s.status === 'Done' && s.endDate && isSameDay(startOfDay(parseISO(s.endDate)), date));
+            // For completed tasks, we assume the end date is when the status became 'Done'
+            // In a real scenario, you would have a history of status changes.
+            // As a proxy, we'll consider a task completed on its 'endDate' if it exists, otherwise we can't track daily completions accurately without more data.
+            const completedTasksBeforeOrOnThisDay = sprintItems.filter(s => {
+                const isDone = s.status === 'Done';
+                // A 'Done' task is considered completed. For charting, we need a date.
+                // We'll assume the 'endDate' is set upon completion. If not, this logic is flawed.
+                // A better data model would have a `completedAt` timestamp.
+                // For this implementation, we'll assume endDate is set when a task is moved to Done.
+                const completionDate = s.endDate ? startOfDay(parseISO(s.endDate)) : null;
+                return isDone && completionDate && !isAfter(completionDate, date);
+            });
             
-            const completedTasksBeforeOrOnThisDay = sprintItems.filter(s => 
-              s.status === 'Done' && s.endDate && !isAfter(startOfDay(parseISO(s.endDate)), date)
+            const completedTasksExactlyOnThisDay = completedTasksBeforeOrOnThisDay.filter(s => 
+              s.endDate && isSameDay(startOfDay(parseISO(s.endDate)), date)
             );
 
             const completedHours = completedTasksBeforeOrOnThisDay.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
             
+            if (isAfter(date, today)) {
+                // For future dates, don't calculate remaining/completed
+                 return {
+                    name: `Day ${index}`,
+                    date: format(date, 'MMM d'),
+                    "Completed tasks": 0,
+                    "Remaining effort": null,
+                    "Ideal burndown": null,
+                };
+            }
+            
             const remainingHours = totalHours - completedHours;
+            lastKnownRemainingHours = remainingHours;
 
             if (isSameDay(date, sprintStart)) {
                 runningIdealHours = totalHours;
@@ -99,7 +122,7 @@ function BurndownChart() {
             return {
                 name: `Day ${index}`,
                 date: format(date, 'MMM d'),
-                "Completed tasks": completedTasksOnThisDay.length,
+                "Completed tasks": completedTasksExactlyOnThisDay.length,
                 "Remaining effort": remainingHours < 0 ? 0 : remainingHours,
                 "Ideal burndown": runningIdealHours < 0 ? 0 : runningIdealHours,
             };
@@ -136,7 +159,7 @@ function BurndownChart() {
                         <Tooltip />
                         <Legend />
                         <Bar yAxisId="right" dataKey="Completed tasks" barSize={20} fill="#f59e0b" name="Completed Tasks (Daily)" />
-                        <Line yAxisId="left" type="monotone" dataKey="Remaining effort" name="Remaining Effort" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" type="monotone" dataKey="Remaining effort" name="Remaining Effort" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} connectNulls />
                         <Line yAxisId="left" type="monotone" dataKey="Ideal burndown" name="Ideal Burndown" stroke="#16a34a" strokeWidth={2} dot={false} strokeDasharray="5 5" />
                     </ComposedChart>
                 </ResponsiveContainer>
