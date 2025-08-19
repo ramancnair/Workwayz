@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -65,11 +64,14 @@ function BurndownChart() {
         const sprintStart = startOfDay(parseISO(sprint.startDate));
         const sprintEnd = startOfDay(parseISO(sprint.endDate));
 
-        const sprintStories = stories.filter(s => s.sprintId === sprint.id && ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType));
+        const sprintStories = stories.filter(s => 
+            s.sprintId === sprint.id && 
+            ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType)
+        );
         
         const totalHours = sprintStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
         
-        const holidayDates = holidays.map(h => parseISO(h.date));
+        const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
         
         const workingDays = eachDayOfInterval({ start: sprintStart, end: sprintEnd }).filter(day => {
             const dayOfWeek = day.getDay();
@@ -81,21 +83,24 @@ function BurndownChart() {
         if (workingDays.length === 0) return [];
         
         const idealHoursPerDay = totalHours / workingDays.length;
-        
         let idealHours = totalHours;
 
         return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map(date => {
-            const storiesNotDone = sprintStories.filter(s => {
-              if (s.status !== 'Done') return true;
-              if (!s.endDate) return true; // If it's done but has no end date, assume it's still open for this chart
-              // If it's done, it should only be considered "not remaining" on or after its completion date
-              return isBefore(date, startOfDay(parseISO(s.endDate)));
-            });
-
-            const remainingHours = storiesNotDone.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-            
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
-            if(isWorkingDay && !isAfter(date, new Date())) {
+            
+            const hoursCompletedOnThisDay = sprintStories
+                .filter(s => s.status === 'Done' && s.endDate && isSameDay(startOfDay(parseISO(s.endDate)), date))
+                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+
+            const remainingHours = sprintStories
+                .filter(s => {
+                    if (s.status !== 'Done') return true;
+                    // If it's done, it should only be considered "not remaining" on or after its completion date
+                    return s.endDate ? isAfter(startOfDay(parseISO(s.endDate)), date) : true;
+                })
+                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+            
+            if (isWorkingDay && !isAfter(date, new Date())) {
                 idealHours -= idealHoursPerDay;
             }
 
@@ -106,6 +111,7 @@ function BurndownChart() {
             };
         });
     }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays]);
+
 
     return (
         <Card>
@@ -131,8 +137,8 @@ function BurndownChart() {
                         <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
                         <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="Ideal Burndown" stroke="#8884d8" strokeDasharray="5 5" />
-                        <Line type="monotone" dataKey="Actual Remaining" stroke="#82ca9d" strokeWidth={2} />
+                        <Line type="monotone" dataKey="Ideal Burndown" stroke="#8884d8" strokeDasharray="5 5" dot={false}/>
+                        <Line type="monotone" dataKey="Actual Remaining" stroke="#82ca9d" strokeWidth={2} dot={false}/>
                     </LineChart>
                 </ResponsiveContainer>
             </CardContent>
@@ -155,7 +161,10 @@ function BurnupChart() {
         const release = releases.find(r => r.id === selectedReleaseId);
         if (!release || !release.startDate || !release.endDate) return [];
         
-        const releaseStories = stories.filter(s => s.releaseId === selectedReleaseId);
+        const releaseStories = stories.filter(s => 
+            s.releaseId === selectedReleaseId &&
+            ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType)
+        );
         const totalScope = releaseStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
         
         const releaseStart = startOfDay(parseISO(release.startDate));
