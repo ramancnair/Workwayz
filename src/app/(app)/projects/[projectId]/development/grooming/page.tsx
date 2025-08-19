@@ -456,13 +456,13 @@ export default function GroomingPage() {
     }, [sprints, stories]);
     
     useEffect(() => {
-        const currentSprintIdx = sprintsWithStories.findIndex(s => s.isCurrent);
+        const currentSprintIdx = sprints.findIndex(s => s.isCurrent);
         if (currentSprintIdx !== -1) {
             setVisibleSprintIndex(currentSprintIdx);
-        } else if (sprintsWithStories.length > 0) {
+        } else if (sprints.length > 0) {
             setVisibleSprintIndex(0);
         }
-    }, [sprintsWithStories]);
+    }, [sprints]);
 
     const sprintForm = useForm<z.infer<typeof sprintSchema>>({
         resolver: zodResolver(sprintSchema),
@@ -688,11 +688,11 @@ export default function GroomingPage() {
     };
 
     const nextSprint = () => {
-        setVisibleSprintIndex((prevIndex) => (prevIndex + 1) % sprintsWithStories.length);
+        setVisibleSprintIndex((prevIndex) => (prevIndex + 1) % sprints.length);
     };
 
     const prevSprint = () => {
-        setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprintsWithStories.length) % sprintsWithStories.length);
+        setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprints.length) % sprints.length);
     };
     
     const selectedStorySubItems = useMemo(() => {
