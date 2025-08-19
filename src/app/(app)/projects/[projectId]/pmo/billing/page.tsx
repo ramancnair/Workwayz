@@ -128,13 +128,14 @@ export default function BillingPage() {
         <PageHeader title="Payment Milestones" description="Manage and track project billing milestones.">
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Milestone
+            Add Payment Milestone
           </Button>
         </PageHeader>
         <Card>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Billing %</TableHead>
                 <TableHead>Amount</TableHead>
@@ -146,6 +147,7 @@ export default function BillingPage() {
             <TableBody>
               {paymentMilestones.map((milestone) => (
                 <TableRow key={milestone.id}>
+                  <TableCell>{milestone.milestoneId}</TableCell>
                   <TableCell className="font-medium">{milestone.name}</TableCell>
                   <TableCell>{milestone.billingPercentage}%</TableCell>
                   <TableCell>${milestone.amount.toLocaleString()}</TableCell>

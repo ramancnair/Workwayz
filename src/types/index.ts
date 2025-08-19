@@ -319,6 +319,7 @@ export type PaymentMilestoneStatus = 'TBD' | 'In Progress' | 'Milestone complete
 
 export type PaymentMilestone = {
   id: string;
+  milestoneId: string;
   name: string;
   billingPercentage: number;
   amount: number;

@@ -187,8 +187,8 @@ interface ProjectContextType {
   deleteDocument: (docId: string) => Promise<boolean>;
   
   // Payment Milestone actions
-  addPaymentMilestone: (milestone: Omit<PaymentMilestone, 'id'>) => Promise<boolean>;
-  updatePaymentMilestone: (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id'>>) => Promise<boolean>;
+  addPaymentMilestone: (milestone: Omit<PaymentMilestone, 'id' | 'milestoneId'>) => Promise<boolean>;
+  updatePaymentMilestone: (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id' | 'milestoneId'>>) => Promise<boolean>;
   deletePaymentMilestone: (milestoneId: string) => Promise<boolean>;
 
   // Code Repository actions
@@ -411,14 +411,17 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     return;
                 }
                 
-                if (name === 'initialHorizontals' && querySnapshot.empty) {
-                    const batch = writeBatch(db);
-                    defaultHorizontals.forEach(h => {
-                        const docRef = doc(collection(rootProjectDocRef, name));
-                        batch.set(docRef, h);
-                    });
-                    batch.commit().catch(e => console.error("Failed to set default horizontals", e));
-                    return;
+                if (name === 'horizontals' && querySnapshot.empty) {
+                  getDocs(collection(rootProjectDocRef, 'initialHorizontals')).then(initialHorizontalsSnapshot => {
+                    if (initialHorizontalsSnapshot.empty) {
+                      const batch = writeBatch(db);
+                      defaultHorizontals.forEach(h => {
+                          const docRef = doc(collection(rootProjectDocRef, 'horizontals'));
+                          batch.set(docRef, h);
+                      });
+                      batch.commit().catch(e => console.error("Failed to set default horizontals", e));
+                    }
+                  })
                 }
 
                 if (name === 'environments' && querySnapshot.empty) {
@@ -1864,17 +1867,27 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Payment Milestone actions
-    const addPaymentMilestone = async (milestone: Omit<PaymentMilestone, 'id'>): Promise<boolean> => {
+    const addPaymentMilestone = async (milestone: Omit<PaymentMilestone, 'id' | 'milestoneId'>): Promise<boolean> => {
         if (!db || !projectId) return false;
         try {
-            await addDoc(collection(db, 'projects', projectId, 'paymentMilestones'), sanitizeForFirestore(milestone));
+            const snapshot = await getDocs(collection(db, 'projects', projectId, 'paymentMilestones'));
+            const newIdNumber = snapshot.size > 0
+                ? Math.max(0, ...snapshot.docs
+                    .map(doc => doc.data().milestoneId)
+                    .filter((id: string | undefined) => id && typeof id === 'string')
+                    .map((id: string) => parseInt(id.replace('PM-', ''), 10) || 0)
+                ) + 1
+                : 1;
+
+            const payload = { ...milestone, milestoneId: `PM-${newIdNumber}` };
+            await addDoc(collection(db, 'projects', projectId, 'paymentMilestones'), sanitizeForFirestore(payload));
             return true;
         } catch (e) {
             console.error("Firebase error adding payment milestone", e);
             return false;
         }
     };
-    const updatePaymentMilestone = async (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id'>>): Promise<boolean> => {
+    const updatePaymentMilestone = async (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id' | 'milestoneId'>>): Promise<boolean> => {
         if (!db || !projectId) return false;
         try {
             await updateDoc(doc(db, 'projects', projectId, 'paymentMilestones', milestoneId), sanitizeForFirestore(data));
