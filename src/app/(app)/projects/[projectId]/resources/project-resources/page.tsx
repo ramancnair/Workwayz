@@ -470,40 +470,59 @@ function CapacityPlanning() {
 
   const capacityData = useMemo(() => {
     if (!periodStart || !periodEnd) return [];
-
+  
     return impactedSystems.map(system => {
-        const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
-        
-        let totalCapacityHours = 0;
-        resourcesForSystem.forEach(emp => {
-            const availabilityFactor = (emp.availability || 100) / 100;
-            totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
-        });
+      const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
       
-        const utilizedHours = stories
-            .filter(story => {
-                const isSubTaskForSystem = story.itemType === 'Sub Task' && story.impactedSystemId === system.id;
-                if (!isSubTaskForSystem || !story.startDate || !story.endDate) return false;
-                
-                const taskStart = parseISO(story.startDate);
-                const taskEnd = parseISO(story.endDate);
-                // Check for overlap
-                return taskStart <= periodEnd && taskEnd >= periodStart;
-            })
-            .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-        
-        const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+      let totalCapacityHours = 0;
+      resourcesForSystem.forEach(emp => {
+        const availabilityFactor = (emp.availability || 100) / 100;
+        totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
+      });
+  
+      const utilizedHours = stories
+        .filter(story => {
+          const isSubTaskForSystem = story.itemType === 'Sub Task' && story.impactedSystemId === system.id;
+          if (!isSubTaskForSystem) return false;
+          
+          if (story.startDate && story.endDate) {
+            const taskStart = parseISO(story.startDate);
+            const taskEnd = parseISO(story.endDate);
+            return taskStart <= periodEnd && taskEnd >= periodStart;
+          }
+          
+          // If no dates, check if the parent story's sprint is the selected one (or any if month/week)
+          const parentStory = stories.find(s => s.id === story.parentStoryId);
+          if (!parentStory) return false;
+          
+          if (viewType === 'sprint') {
+            return parentStory.sprintId === selectedSprintId;
+          }
+          
+          // For month/week view, we need a sprint reference to get dates
+          const sprint = sprints.find(s => s.id === parentStory.sprintId);
+          if (sprint && sprint.startDate && sprint.endDate) {
+            const sprintStart = parseISO(sprint.startDate);
+            const sprintEnd = parseISO(sprint.endDate);
+            return sprintStart <= periodEnd && sprintEnd >= periodStart;
+          }
+          
+          return false;
+        })
+        .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
       
-        return {
-            systemId: system.id,
-            systemName: system.name,
-            totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
-            utilizedHours: parseFloat(utilizedHours.toFixed(2)),
-            remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
-            utilization: parseFloat(utilization.toFixed(2)),
-        };
+      const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+    
+      return {
+          systemId: system.id,
+          systemName: system.name,
+          totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
+          utilizedHours: parseFloat(utilizedHours.toFixed(2)),
+          remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
+          utilization: parseFloat(utilization.toFixed(2)),
+      };
     });
-  }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod]);
+  }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod, sprints, viewType, selectedSprintId]);
 
   const handleDateChange = (changeFn: (date: Date, amount: number) => Date) => {
     setCurrentDate(prev => changeFn(prev, 1));
@@ -737,6 +756,7 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
 
