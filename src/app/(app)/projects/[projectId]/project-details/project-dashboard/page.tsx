@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type ProjectStatus } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, parseISO, eachDayOfInterval, isBefore, startOfDay, isSameDay } from 'date-fns';
+import { format, parseISO, eachDayOfInterval, isBefore, startOfDay, isSameDay, isAfter } from 'date-fns';
 import {
   LineChart,
   Line,
@@ -60,7 +60,6 @@ function BurndownChart() {
         );
         
         const totalHours = sprintItems.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-        const totalTasks = sprintItems.length;
         
         const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
         
@@ -74,39 +73,33 @@ function BurndownChart() {
         if (workingDays.length === 0) return [];
         
         const idealHoursPerDay = totalHours / workingDays.length;
-        const idealTasksPerDay = totalTasks / workingDays.length;
 
         let runningIdealHours = totalHours;
-        let runningIdealTasks = totalTasks;
 
         return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map((date, index) => {
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
 
-            const completedOnThisDay = sprintItems
+            const completedTasksOnThisDay = sprintItems
                 .filter(s => s.status === 'Done' && s.endDate && isSameDay(startOfDay(parseISO(s.endDate)), date));
+            
+            const completedTasksBeforeOrOnThisDay = sprintItems.filter(s => 
+              s.status === 'Done' && s.endDate && !isAfter(startOfDay(parseISO(s.endDate)), date)
+            );
 
-            const completedTasksOnDay = completedOnThisDay.length;
+            const completedHours = completedTasksBeforeOrOnThisDay.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
             
-            const remainingItems = sprintItems.filter(s => {
-                if (s.status !== 'Done') return true;
-                return s.endDate ? isBefore(date, startOfDay(parseISO(s.endDate))) : true;
-            });
-            
-            const remainingHours = remainingItems.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-            const remainingTasksCount = remainingItems.length;
+            const remainingHours = totalHours - completedHours;
 
             if (isWorkingDay) {
                 runningIdealHours -= idealHoursPerDay;
-                runningIdealTasks -= idealTasksPerDay;
             }
-
+            
             return {
                 name: `Day ${index}`,
                 date: format(date, 'MMM d'),
-                "Completed tasks": completedTasksOnDay,
-                "Remaining effort": remainingHours,
-                "Remaining tasks": remainingTasksCount,
-                "Ideal burndown": Math.max(0, runningIdealHours),
+                "Completed tasks": completedTasksOnThisDay.length,
+                "Remaining effort": remainingHours < 0 ? 0 : remainingHours,
+                "Ideal burndown": runningIdealHours < 0 ? 0 : runningIdealHours,
             };
         });
     }, [currentSprint, stories, holidays, weeklyOffDays]);
@@ -135,15 +128,14 @@ function BurndownChart() {
                 <ResponsiveContainer width="100%" height={400}>
                     <ComposedChart data={burndownData}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
+                        <XAxis dataKey="date" />
                         <YAxis yAxisId="left" label={{ value: 'Remaining effort (hours)', angle: -90, position: 'insideLeft' }} />
-                        <YAxis yAxisId="right" orientation="right" label={{ value: 'Remaining and completed tasks', angle: 90, position: 'insideRight' }}/>
+                        <YAxis yAxisId="right" orientation="right" label={{ value: 'Completed tasks', angle: 90, position: 'insideRight' }}/>
                         <Tooltip />
                         <Legend />
-                        <Bar yAxisId="right" dataKey="Completed tasks" barSize={20} fill="#f59e0b" />
-                        <Line yAxisId="left" type="monotone" dataKey="Remaining effort" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                        <Line yAxisId="left" type="monotone" dataKey="Ideal burndown" stroke="#16a34a" strokeWidth={2} dot={false} />
-                        <Line yAxisId="right" type="monotone" dataKey="Remaining tasks" stroke="#a3e635" strokeWidth={2} dot={false} />
+                        <Bar yAxisId="right" dataKey="Completed tasks" barSize={20} fill="#f59e0b" name="Completed Tasks (Daily)" />
+                        <Line yAxisId="left" type="monotone" dataKey="Remaining effort" name="Remaining Effort" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" type="monotone" dataKey="Ideal burndown" name="Ideal Burndown" stroke="#16a34a" strokeWidth={2} dot={false} strokeDasharray="5 5" />
                     </ComposedChart>
                 </ResponsiveContainer>
             </CardContent>
