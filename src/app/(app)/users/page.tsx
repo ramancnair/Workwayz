@@ -58,7 +58,6 @@ const userFormSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   experience: z.coerce.number().optional(),
   accessLevel: z.enum(accessLevels).optional(),
-  isBcpSupport: z.boolean().optional(),
 });
 
 // Helper to remove undefined values from an object before sending to Firestore
@@ -90,7 +89,6 @@ export default function UsersPage() {
 
   const form = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
-    defaultValues: { isBcpSupport: false },
   });
   
   const handleAutoGen = () => {
@@ -107,7 +105,6 @@ export default function UsersPage() {
     form.setValue('email', `${randomFirstName.toLowerCase()}.${randomLastName.toLowerCase()}${Math.floor(Math.random()*100)}@nair.com`);
     form.setValue('phone', `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}`);
     form.setValue('experience', Math.floor(1 + Math.random() * 15));
-    form.setValue('isBcpSupport', Math.random() > 0.8);
   };
 
   useEffect(() => {
@@ -133,7 +130,6 @@ export default function UsersPage() {
         if (editingUser) {
         form.reset({
             ...editingUser,
-            isBcpSupport: editingUser.isBcpSupport || false,
         });
         } else {
         form.reset({
@@ -144,7 +140,6 @@ export default function UsersPage() {
             phone: '',
             experience: 0,
             accessLevel: undefined,
-            isBcpSupport: false,
         });
         }
     }
@@ -328,7 +323,6 @@ export default function UsersPage() {
                   <SortableHeader columnId="name">Name</SortableHeader>
                   <SortableHeader columnId="email">Email</SortableHeader>
                    <SortableHeader columnId="accessLevel">Access Level</SortableHeader>
-                   <SortableHeader columnId="isBcpSupport">BCP Support</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -339,9 +333,6 @@ export default function UsersPage() {
                     <TableCell>{user.firstName} {user.lastName}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.accessLevel || 'N/A'}</TableCell>
-                    <TableCell>
-                      {user.isBcpSupport && <CheckCircle className="h-5 w-5 text-green-500" />}
-                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(user)}>
                         <Edit className="h-4 w-4" />
@@ -427,26 +418,6 @@ export default function UsersPage() {
                   </FormItem>
                 )} />
               </div>
-                <FormField
-                  control={form.control}
-                  name="isBcpSupport"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm mt-4">
-                      <div className="space-y-0.5">
-                        <FormLabel>BCP Support</FormLabel>
-                        <DialogDescription>
-                          Mark this user as a Business Continuity Planning support resource.
-                        </DialogDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
               <DialogFooter className="flex justify-between pt-4">
                 {!editingUser && (
                   <Button type="button" variant="outline" onClick={handleAutoGen}>
@@ -485,6 +456,7 @@ export default function UsersPage() {
     </>
   );
 }
+
 
 
 
