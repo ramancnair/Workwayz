@@ -9,8 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type ProjectStatus } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, parseISO, eachDayOfInterval, isBefore, startOfDay, isSameDay, addDays, isAfter } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format, parseISO, eachDayOfInterval, isBefore, startOfDay, isSameDay } from 'date-fns';
 import {
   LineChart,
   Line,
@@ -20,8 +19,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
+  ComposedChart,
 } from 'recharts';
 
 
@@ -45,31 +45,22 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
 
 function BurndownChart() {
     const { sprints, stories, holidays, weeklyOffDays } = useProject();
-    const [selectedSprintId, setSelectedSprintId] = useState('');
 
     const currentSprint = useMemo(() => sprints.find(s => s.isCurrent), [sprints]);
     
-    useEffect(() => {
-        if (currentSprint) {
-            setSelectedSprintId(currentSprint.id);
-        } else if (sprints.length > 0) {
-            setSelectedSprintId(sprints[0].id);
-        }
-    }, [currentSprint, sprints]);
-
     const burndownData = useMemo(() => {
-        const sprint = sprints.find(s => s.id === selectedSprintId);
-        if (!sprint || !sprint.startDate || !sprint.endDate) return [];
-        
-        const sprintStart = startOfDay(parseISO(sprint.startDate));
-        const sprintEnd = startOfDay(parseISO(sprint.endDate));
+        if (!currentSprint || !currentSprint.startDate || !currentSprint.endDate) return [];
 
-        const sprintStories = stories.filter(s => 
-            s.sprintId === sprint.id && 
+        const sprintStart = startOfDay(parseISO(currentSprint.startDate));
+        const sprintEnd = startOfDay(parseISO(currentSprint.endDate));
+
+        const sprintItems = stories.filter(s => 
+            s.sprintId === currentSprint.id && 
             ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType)
         );
         
-        const totalHours = sprintStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+        const totalHours = sprintItems.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+        const totalTasks = sprintItems.length;
         
         const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
         
@@ -83,140 +74,81 @@ function BurndownChart() {
         if (workingDays.length === 0) return [];
         
         const idealHoursPerDay = totalHours / workingDays.length;
-        let idealHours = totalHours;
+        const idealTasksPerDay = totalTasks / workingDays.length;
 
-        return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map(date => {
+        let runningIdealHours = totalHours;
+        let runningIdealTasks = totalTasks;
+
+        return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map((date, index) => {
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
-            
-            const hoursCompletedOnThisDay = sprintStories
-                .filter(s => s.status === 'Done' && s.endDate && isSameDay(startOfDay(parseISO(s.endDate)), date))
-                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
 
-            const remainingHours = sprintStories
-                .filter(s => {
-                    if (s.status !== 'Done') return true;
-                    // If it's done, it should only be considered "not remaining" on or after its completion date
-                    return s.endDate ? isAfter(startOfDay(parseISO(s.endDate)), date) : true;
-                })
-                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+            const completedOnThisDay = sprintItems
+                .filter(s => s.status === 'Done' && s.endDate && isSameDay(startOfDay(parseISO(s.endDate)), date));
+
+            const completedTasksOnDay = completedOnThisDay.length;
             
-            if (isWorkingDay && !isAfter(date, new Date())) {
-                idealHours -= idealHoursPerDay;
+            const remainingItems = sprintItems.filter(s => {
+                if (s.status !== 'Done') return true;
+                return s.endDate ? isBefore(date, startOfDay(parseISO(s.endDate))) : true;
+            });
+            
+            const remainingHours = remainingItems.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+            const remainingTasksCount = remainingItems.length;
+
+            if (isWorkingDay) {
+                runningIdealHours -= idealHoursPerDay;
+                runningIdealTasks -= idealTasksPerDay;
             }
 
             return {
+                name: `Day ${index}`,
                 date: format(date, 'MMM d'),
-                'Actual Remaining': remainingHours,
-                'Ideal Burndown': Math.max(0, idealHours),
+                "Completed tasks": completedTasksOnDay,
+                "Remaining effort": remainingHours,
+                "Remaining tasks": remainingTasksCount,
+                "Ideal burndown": Math.max(0, runningIdealHours),
             };
         });
-    }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays]);
+    }, [currentSprint, stories, holidays, weeklyOffDays]);
 
+
+    if (!currentSprint) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Sprint Burndown</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[400px] flex items-center justify-center">
+                    <p className="text-muted-foreground">No active sprint found.</p>
+                </CardContent>
+            </Card>
+        )
+    }
 
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>Sprint Burndown</CardTitle>
-                    <CardDescription>Track the progress of work in a sprint.</CardDescription>
-                </div>
-                <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select Sprint" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+            <CardHeader>
+                <CardTitle>Sprint Burndown</CardTitle>
+                <CardDescription>{currentSprint.title}</CardDescription>
             </CardHeader>
             <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={burndownData}>
+                <ResponsiveContainer width="100%" height={400}>
+                    <ComposedChart data={burndownData}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                        <XAxis dataKey="name" />
+                        <YAxis yAxisId="left" label={{ value: 'Remaining effort (hours)', angle: -90, position: 'insideLeft' }} />
+                        <YAxis yAxisId="right" orientation="right" label={{ value: 'Remaining and completed tasks', angle: 90, position: 'insideRight' }}/>
                         <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="Ideal Burndown" stroke="#8884d8" strokeDasharray="5 5" dot={false}/>
-                        <Line type="monotone" dataKey="Actual Remaining" stroke="#82ca9d" strokeWidth={2} dot={false}/>
-                    </LineChart>
+                        <Bar yAxisId="right" dataKey="Completed tasks" barSize={20} fill="#f59e0b" />
+                        <Line yAxisId="left" type="monotone" dataKey="Remaining effort" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" type="monotone" dataKey="Ideal burndown" stroke="#16a34a" strokeWidth={2} dot={false} />
+                        <Line yAxisId="right" type="monotone" dataKey="Remaining tasks" stroke="#a3e635" strokeWidth={2} dot={false} />
+                    </ComposedChart>
                 </ResponsiveContainer>
             </CardContent>
         </Card>
     )
-}
-
-function BurnupChart() {
-    const { stories, releasesAndMilestones } = useProject();
-    const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
-    const [selectedReleaseId, setSelectedReleaseId] = useState('');
-
-    useEffect(() => {
-        if (releases.length > 0) {
-            setSelectedReleaseId(releases[0].id);
-        }
-    }, [releases]);
-
-    const burnupData = useMemo(() => {
-        const release = releases.find(r => r.id === selectedReleaseId);
-        if (!release || !release.startDate || !release.endDate) return [];
-        
-        const releaseStories = stories.filter(s => 
-            s.releaseId === selectedReleaseId &&
-            ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType)
-        );
-        const totalScope = releaseStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-        
-        const releaseStart = startOfDay(parseISO(release.startDate));
-        const releaseEnd = startOfDay(parseISO(release.endDate));
-
-        return eachDayOfInterval({ start: releaseStart, end: releaseEnd }).map(date => {
-            const storiesCompletedByThisDay = releaseStories.filter(s =>
-                s.status === 'Done' && s.endDate && !isAfter(startOfDay(parseISO(s.endDate)), date)
-            );
-            
-            const completedHours = storiesCompletedByThisDay.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-
-            return {
-                date: format(date, 'MMM d'),
-                'Scope': totalScope,
-                'Completed Work': completedHours,
-            };
-        });
-
-    }, [selectedReleaseId, releases, stories]);
-    
-    return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>Release Burnup</CardTitle>
-                    <CardDescription>Track progress towards the release goal.</CardDescription>
-                </div>
-                <Select value={selectedReleaseId} onValueChange={setSelectedReleaseId}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select Release" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </CardHeader>
-            <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={burnupData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }}/>
-                        <Tooltip />
-                        <Legend />
-                        <Area type="monotone" dataKey="Completed Work" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
-                        <Line type="monotone" dataKey="Scope" stroke="#ffc658" strokeWidth={2} dot={false} />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </CardContent>
-        </Card>
-    );
 }
 
 export default function ProjectDashboardPage() {
@@ -243,10 +175,6 @@ export default function ProjectDashboardPage() {
                             <Skeleton className="h-16 w-full" />
                             <Skeleton className="h-16 w-full" />
                         </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
-                        <CardContent><Skeleton className="h-72 w-full" /></CardContent>
                     </Card>
                      <Card>
                         <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
@@ -309,10 +237,7 @@ export default function ProjectDashboardPage() {
                     </CardContent>
                 </Card>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <BurndownChart />
-                    <BurnupChart />
-                </div>
+                <BurndownChart />
             </div>
         </div>
     );
