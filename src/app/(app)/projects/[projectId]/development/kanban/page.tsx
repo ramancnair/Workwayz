@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -272,6 +271,7 @@ export default function KanbanPage() {
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
+  const [viewBy, setViewBy] = useState<'story' | 'sub-task'>('story');
   const [selectionStack, setSelectionStack] = useState<Story[]>([]);
   const selectedStory = selectionStack[selectionStack.length - 1] || null;
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
@@ -413,18 +413,17 @@ export default function KanbanPage() {
       : [], [stories, currentSprint]);
 
   const sprintStories = useMemo(() => {
-    const filteredByAssignee = selectedAssigneeId === 'all'
-      ? baseSprintStories
-      : baseSprintStories.filter(story => story.assigneeId === selectedAssigneeId);
-
-    return filteredByAssignee.filter(item => {
-      const isSubItem = ['Bug', 'Sub Task', 'Task'].includes(item.itemType);
-      if (!isSubItem) {
-        return true; 
+    const filteredByView = baseSprintStories.filter(story => {
+      if (viewBy === 'story') {
+        return ['Requirement/Story', 'Feature Change', 'Bug', 'Task'].includes(story.itemType) && !story.parentStoryId;
       }
-      return !baseSprintStories.some(parent => parent.id === item.parentStoryId);
+      return story.itemType === 'Sub Task';
     });
-  }, [baseSprintStories, selectedAssigneeId]);
+
+    return selectedAssigneeId === 'all'
+      ? filteredByView
+      : filteredByView.filter(story => story.assigneeId === selectedAssigneeId);
+  }, [baseSprintStories, selectedAssigneeId, viewBy]);
 
 
  const selectedStorySubItems = useMemo(() => {
@@ -463,20 +462,34 @@ export default function KanbanPage() {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
         <PageHeader title={`Kanban Board: ${currentSprint.title}`} description={`Move work items to change their status.`}>
           <div className="flex items-center gap-2">
-            <Label htmlFor="assignee-filter" className="text-sm font-medium">View by</Label>
-            <Select value={selectedAssigneeId} onValueChange={setSelectedAssigneeId}>
-              <SelectTrigger id="assignee-filter" className="w-[200px]">
-                <SelectValue placeholder="Filter by assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Assignees</SelectItem>
-                {sprintAssignees.map(user => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid gap-2">
+                <Label htmlFor="view-by-filter">View</Label>
+                <Select value={viewBy} onValueChange={(v) => setViewBy(v as any)}>
+                    <SelectTrigger id="view-by-filter" className="w-[180px]">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="story">Stories</SelectItem>
+                        <SelectItem value="sub-task">Sub-tasks</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="assignee-filter">Assignee</Label>
+                <Select value={selectedAssigneeId} onValueChange={setSelectedAssigneeId}>
+                  <SelectTrigger id="assignee-filter" className="w-[200px]">
+                    <SelectValue placeholder="Filter by assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Assignees</SelectItem>
+                    {sprintAssignees.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.firstName} {user.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+            </div>
           </div>
         </PageHeader>
         <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
@@ -995,6 +1008,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
