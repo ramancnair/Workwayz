@@ -81,6 +81,7 @@ const storyFormSchema = z.object({
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
+  status: z.enum(statusOptions).optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -355,6 +356,7 @@ export default function KanbanPage() {
         environmentId: selectedStory.environmentId || 'unassigned',
         impactedSystemIds: selectedStory.impactedSystemIds || [],
         attachments: selectedStory.attachments || '',
+        status: selectedStory.status,
       });
     }
   }, [selectedStory, editStoryForm, subTaskForm]);
@@ -377,6 +379,7 @@ export default function KanbanPage() {
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
         impactedSystemIds: values.impactedSystemIds,
         attachments: values.attachments,
+        status: values.status,
     });
     if (success) {
       handleSetSelectedStory(null);
@@ -825,6 +828,30 @@ export default function KanbanPage() {
                                       )}
                                   />
                                   </div>
+                                  <FormField
+                                    control={editStoryForm.control}
+                                    name="status"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Status</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            {statusOptions.map((p) => (
+                                              <SelectItem key={p} value={p}>
+                                                {p}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
                                   {selectedStory.itemType === 'Bug' && (
                                       <>
                                           <FormField
@@ -1043,14 +1070,3 @@ export default function KanbanPage() {
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
