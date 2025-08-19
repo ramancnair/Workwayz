@@ -1,5 +1,3 @@
-
-
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
