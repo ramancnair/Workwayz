@@ -278,7 +278,7 @@ function ResourceDialog({
                 <FormItem>
                   <FormLabel>Capabilities</FormLabel>
                   <Card>
-                    <CardContent className="p-4 space-y-4 max-h-60 overflow-y-auto">
+                    <CardContent className="p-4 space-y-4 max-h-48 overflow-y-auto">
                         <div>
                             <h4 className="text-sm font-medium text-muted-foreground mb-2">Impacted Systems</h4>
                             <div className="space-y-2">
@@ -737,6 +737,7 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
 
