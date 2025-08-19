@@ -49,7 +49,6 @@ import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eac
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import {
   Popover,
   PopoverContent,
@@ -737,6 +736,7 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
 
