@@ -61,7 +61,7 @@ function BurndownChart() {
         const sprint = sprints.find(s => s.id === selectedSprintId);
         if (!sprint || !sprint.startDate || !sprint.endDate) return [];
         
-        const sprintStories = stories.filter(s => s.sprintId === sprint.id);
+        const sprintStories = stories.filter(s => s.sprintId === selectedSprintId && ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType));
         const totalHours = sprintStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
         
         const sprintStart = startOfDay(parseISO(sprint.startDate));
@@ -81,14 +81,13 @@ function BurndownChart() {
         const idealHoursPerDay = totalHours / workingDays.length;
         
         let idealHours = totalHours;
+        let cumulativeHoursCompleted = 0;
 
         return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map(date => {
-            const storiesCompletedByThisDay = sprintStories.filter(s =>
-                s.status === 'Done' && s.endDate && isBefore(parseISO(s.endDate), addDays(date, 1))
+            const storiesCompletedOnThisDay = sprintStories.filter(s =>
+                s.status === 'Done' && s.endDate && isSameDay(parseISO(s.endDate), date)
             );
-            
-            const hoursCompleted = storiesCompletedByThisDay.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-            const remainingHours = totalHours - hoursCompleted;
+            cumulativeHoursCompleted += storiesCompletedOnThisDay.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
 
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
             if(isWorkingDay && isBefore(date, new Date())) {
@@ -97,7 +96,7 @@ function BurndownChart() {
 
             return {
                 date: format(date, 'MMM d'),
-                'Actual Remaining': remainingHours,
+                'Actual Remaining': totalHours - cumulativeHoursCompleted,
                 'Ideal Burndown': Math.max(0, idealHours),
             };
         });
