@@ -32,7 +32,6 @@ import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown,
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem, Holiday } from '@/types';
-import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -60,8 +59,8 @@ import { Progress } from '@/components/ui/progress';
 
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -513,8 +512,8 @@ export default function GroomingPage() {
             if (editingSprint) {
                 sprintForm.reset({
                     title: editingSprint.title,
-                    startDate: editingSprint.startDate ? new Date(editingSprint.startDate) : undefined,
-                    endDate: editingSprint.endDate ? new Date(editingSprint.endDate) : undefined,
+                    startDate: editingSprint.startDate ? format(parseISO(editingSprint.startDate), 'yyyy-MM-dd') : undefined,
+                    endDate: editingSprint.endDate ? format(parseISO(editingSprint.endDate), 'yyyy-MM-dd') : undefined,
                 });
             } else {
                 sprintForm.reset({
@@ -559,16 +558,25 @@ export default function GroomingPage() {
 
     React.useEffect(() => {
         if (watchedStartDate && projectSettings?.sprintDurationInWeeks) {
-            const newEndDate = new Date(watchedStartDate);
+            const startDate = new Date(watchedStartDate);
+            // Adjust for timezone offset to prevent off-by-one day errors
+            const adjustedStartDate = new Date(startDate.valueOf() + startDate.getTimezoneOffset() * 60 * 1000);
+            
+            const newEndDate = new Date(adjustedStartDate);
             newEndDate.setDate(newEndDate.getDate() + projectSettings.sprintDurationInWeeks * 7 - 1);
-            sprintForm.setValue("endDate", newEndDate);
+            sprintForm.setValue("endDate", format(newEndDate, 'yyyy-MM-dd'));
         }
     }, [watchedStartDate, projectSettings?.sprintDurationInWeeks, sprintForm]);
     
     const handleSprintSubmit = async (values: z.infer<typeof sprintSchema>) => {
+        const payload = {
+            title: values.title,
+            startDate: values.startDate ? new Date(values.startDate) : undefined,
+            endDate: values.endDate ? new Date(values.endDate) : undefined
+        };
         const success = editingSprint
-            ? await updateSprint(editingSprint.id, values)
-            : await addSprint(values);
+            ? await updateSprint(editingSprint.id, payload)
+            : await addSprint(payload);
 
         if (success) {
             toast({ title: 'Success', description: `Sprint ${editingSprint ? 'updated' : 'created'}.` });
@@ -792,7 +800,7 @@ export default function GroomingPage() {
                                 <FormItem>
                                     <FormLabel>Start Date</FormLabel>
                                     <FormControl>
-                                        <DatePicker date={field.value} setDate={field.onChange} />
+                                        <Input type="date" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -805,7 +813,7 @@ export default function GroomingPage() {
                                 <FormItem>
                                     <FormLabel>End Date</FormLabel>
                                     <FormControl>
-                                        <DatePicker date={field.value} setDate={field.onChange} />
+                                        <Input type="date" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -1295,6 +1303,3 @@ export default function GroomingPage() {
         </>
     );
 }
-
-
-
