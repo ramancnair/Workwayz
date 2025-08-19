@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type ProjectStatus } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, parseISO, eachDayOfInterval, isBefore, startOfDay, isSameDay, addDays } from 'date-fns';
+import { format, parseISO, eachDayOfInterval, isBefore, startOfDay, isSameDay, addDays, isAfter } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   LineChart,
@@ -61,12 +62,24 @@ function BurndownChart() {
         const sprint = sprints.find(s => s.id === selectedSprintId);
         if (!sprint || !sprint.startDate || !sprint.endDate) return [];
         
-        const sprintStories = stories.filter(s => s.sprintId === selectedSprintId && ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType));
-        const totalHours = sprintStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-        
         const sprintStart = startOfDay(parseISO(sprint.startDate));
         const sprintEnd = startOfDay(parseISO(sprint.endDate));
 
+        const sprintStories = stories.filter(s => {
+          if (s.sprintId !== sprint.id || !['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType)) {
+            return false;
+          }
+          // Include stories that are part of the sprint's scope
+          // This can be stories that were 'To Do' or 'In Progress' at the start, or were completed during the sprint.
+          if (s.status === 'Done' && s.endDate) {
+            const completionDate = startOfDay(parseISO(s.endDate));
+            return isAfter(completionDate, sprintStart) || isSameDay(completionDate, sprintStart);
+          }
+          return s.status === 'To Do' || s.status === 'In Progress';
+        });
+
+        const totalHours = sprintStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+        
         const holidayDates = holidays.map(h => parseISO(h.date));
         
         const workingDays = eachDayOfInterval({ start: sprintStart, end: sprintEnd }).filter(day => {
@@ -81,16 +94,14 @@ function BurndownChart() {
         const idealHoursPerDay = totalHours / workingDays.length;
         
         let idealHours = totalHours;
-        let cumulativeHoursCompleted = 0;
 
         return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map(date => {
-            const storiesCompletedOnThisDay = sprintStories.filter(s =>
-                s.status === 'Done' && s.endDate && isSameDay(parseISO(s.endDate), date)
-            );
-            cumulativeHoursCompleted += storiesCompletedOnThisDay.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
-
+            let cumulativeHoursCompleted = sprintStories
+                .filter(s => s.status === 'Done' && s.endDate && !isAfter(startOfDay(parseISO(s.endDate)), date))
+                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+            
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
-            if(isWorkingDay && isBefore(date, new Date())) {
+            if(isWorkingDay && !isAfter(date, new Date())) {
                 idealHours -= idealHoursPerDay;
             }
 
@@ -150,7 +161,7 @@ function BurnupChart() {
         const release = releases.find(r => r.id === selectedReleaseId);
         if (!release || !release.startDate || !release.endDate) return [];
         
-        const releaseStories = stories.filter(s => s.releaseId === release.id);
+        const releaseStories = stories.filter(s => s.releaseId === selectedReleaseId);
         const totalScope = releaseStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
         
         const releaseStart = startOfDay(parseISO(release.startDate));
@@ -158,7 +169,7 @@ function BurnupChart() {
 
         return eachDayOfInterval({ start: releaseStart, end: releaseEnd }).map(date => {
             const storiesCompletedByThisDay = releaseStories.filter(s =>
-                s.status === 'Done' && s.endDate && isBefore(parseISO(s.endDate), addDays(date, 1))
+                s.status === 'Done' && s.endDate && !isAfter(startOfDay(parseISO(s.endDate)), date)
             );
             
             const completedHours = storiesCompletedByThisDay.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
