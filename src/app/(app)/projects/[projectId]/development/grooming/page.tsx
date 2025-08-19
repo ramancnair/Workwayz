@@ -512,14 +512,14 @@ export default function GroomingPage() {
             if (editingSprint) {
                 sprintForm.reset({
                     title: editingSprint.title,
-                    startDate: editingSprint.startDate ? format(parseISO(editingSprint.startDate), 'yyyy-MM-dd') : undefined,
-                    endDate: editingSprint.endDate ? format(parseISO(editingSprint.endDate), 'yyyy-MM-dd') : undefined,
+                    startDate: editingSprint.startDate ? format(parseISO(editingSprint.startDate), 'yyyy-MM-dd') : '',
+                    endDate: editingSprint.endDate ? format(parseISO(editingSprint.endDate), 'yyyy-MM-dd') : '',
                 });
             } else {
                 sprintForm.reset({
                     title: '',
-                    startDate: undefined,
-                    endDate: undefined,
+                    startDate: '',
+                    endDate: '',
                 });
             }
         }
@@ -800,7 +800,7 @@ export default function GroomingPage() {
                                 <FormItem>
                                     <FormLabel>Start Date</FormLabel>
                                     <FormControl>
-                                        <Input type="date" {...field} />
+                                        <Input type="date" {...field} value={field.value ?? ''} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -813,7 +813,7 @@ export default function GroomingPage() {
                                 <FormItem>
                                     <FormLabel>End Date</FormLabel>
                                     <FormControl>
-                                        <Input type="date" {...field} />
+                                        <Input type="date" {...field} value={field.value ?? ''} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
