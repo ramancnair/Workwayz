@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -92,6 +91,7 @@ const subTaskFormSchema = z.object({
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
+    status: z.enum(['To Do', 'In Progress', 'Done']),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
 }).refine(data => {
@@ -430,7 +430,7 @@ export default function GroomingPage() {
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
     const [selectionStack, setSelectionStack] = useState<Story[]>([]);
     const selectedStory = selectionStack[selectionStack.length - 1] || null;
-    const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
+    const [visibleSprintIndex, setVisibleSprintIndex] = useState<number | null>(null);
     const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
     const [showAddSubTask, setShowAddSubTask] = useState(false);
 
@@ -456,18 +456,22 @@ export default function GroomingPage() {
     }, [sprints, stories]);
     
     useEffect(() => {
+      if (visibleSprintIndex === null) {
         const currentSprintIdx = sprints.findIndex(s => s.isCurrent);
         if (currentSprintIdx !== -1) {
             setVisibleSprintIndex(currentSprintIdx);
         } else if (sprints.length > 0) {
             setVisibleSprintIndex(0);
         }
-    }, [sprints]);
+      }
+    }, [sprints, visibleSprintIndex]);
 
     const sprintForm = useForm<z.infer<typeof sprintSchema>>({
         resolver: zodResolver(sprintSchema),
         defaultValues: {
             title: '',
+            startDate: '',
+            endDate: '',
         },
     });
     
@@ -483,6 +487,7 @@ export default function GroomingPage() {
           impactedSystemId: 'unassigned',
           estimatedHours: 0,
           assigneeId: 'unassigned',
+          status: 'To Do',
           startDate: '',
           endDate: '',
         }
@@ -536,6 +541,7 @@ export default function GroomingPage() {
                 impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
                 estimatedHours: selectedStory.estimatedHours,
                 assigneeId: selectedStory.assigneeId || 'unassigned',
+                status: selectedStory.status || 'To Do',
                 startDate: selectedStory.startDate ? format(new Date(selectedStory.startDate), 'yyyy-MM-dd') : '',
                 endDate: selectedStory.endDate ? format(new Date(selectedStory.endDate), 'yyyy-MM-dd') : '',
             });
@@ -625,6 +631,7 @@ export default function GroomingPage() {
             impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
             estimatedHours: values.estimatedHours,
             assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+            status: values.status,
             startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
             endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         });
@@ -688,11 +695,13 @@ export default function GroomingPage() {
     };
 
     const nextSprint = () => {
-        setVisibleSprintIndex((prevIndex) => (prevIndex + 1) % sprints.length);
+        if (visibleSprintIndex === null) return;
+        setVisibleSprintIndex((prevIndex) => (prevIndex! + 1) % sprints.length);
     };
 
     const prevSprint = () => {
-        setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprints.length) % sprints.length);
+        if (visibleSprintIndex === null) return;
+        setVisibleSprintIndex((prevIndex) => (prevIndex! - 1 + sprints.length) % sprints.length);
     };
     
     const selectedStorySubItems = useMemo(() => {
@@ -720,7 +729,7 @@ export default function GroomingPage() {
                         Create Sprint
                     </Button>
                 </PageHeader>
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
                     {/* Backlog Column */}
                     <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
                         <h3 className="text-lg font-semibold mb-4">Backlog</h3>
@@ -748,7 +757,7 @@ export default function GroomingPage() {
 
                     {/* Sprint Column */}
                     <div className="h-full flex flex-col">
-                    {sprintsWithStories.length > 0 ? (
+                    {sprintsWithStories.length > 0 && visibleSprintIndex !== null ? (
                         <SprintColumn 
                             key={sprintsWithStories[visibleSprintIndex].id} 
                             sprint={sprintsWithStories[visibleSprintIndex]} 
@@ -895,7 +904,31 @@ export default function GroomingPage() {
                             </FormItem>
                             )}/>
                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <FormField
+                            control={subTaskForm.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {['To Do', 'In Progress', 'Done'].map((p) => (
+                                        <SelectItem key={p} value={p}>
+                                        {p}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
                             <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Start Date</FormLabel>
@@ -903,17 +936,19 @@ export default function GroomingPage() {
                                     <FormMessage />
                                 </FormItem>
                             )} />
-                            <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
+                         </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>End Date</FormLabel>
                                     <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
+                            <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                                <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                            )}/>
                         </div>
-                        <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
-                        )}/>
                         <DialogFooter>
                             <Button type="submit" disabled={isEditStorySubmitting}>
                                 {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
