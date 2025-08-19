@@ -106,7 +106,6 @@ export type User = {
   offloadingDate?: string; // ISO String - Project Specific
   employmentStartDate?: string; // ISO String - Global
   employmentEndDate?: string; // ISO String - Global
-  domainExpertise?: string;
   accessLevel?: AccessLevel;
   billedRate?: number;
   availability?: number;

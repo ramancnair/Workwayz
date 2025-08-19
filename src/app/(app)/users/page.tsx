@@ -57,7 +57,6 @@ const userFormSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().min(1, 'Phone number is required'),
   experience: z.coerce.number().optional(),
-  domainExpertise: z.string().optional(),
   accessLevel: z.enum(accessLevels).optional(),
   isBcpSupport: z.boolean().optional(),
 });
@@ -97,7 +96,6 @@ export default function UsersPage() {
   const handleAutoGen = () => {
     const firstNames = ['John', 'Jane', 'Peter', 'Mary', 'David', 'Susan', 'Michael', 'Linda', 'James', 'Patricia'];
     const lastNames = ['Smith', 'Jones', 'Williams', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor', 'Anderson'];
-    const domains = ['Frontend', 'Backend', 'DevOps', 'QA', 'Mobile', 'Data Science', 'Security', 'Cloud'];
 
     const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
     const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
@@ -109,7 +107,6 @@ export default function UsersPage() {
     form.setValue('email', `${randomFirstName.toLowerCase()}.${randomLastName.toLowerCase()}${Math.floor(Math.random()*100)}@nair.com`);
     form.setValue('phone', `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}`);
     form.setValue('experience', Math.floor(1 + Math.random() * 15));
-    form.setValue('domainExpertise', domains[Math.floor(Math.random() * domains.length)]);
     form.setValue('isBcpSupport', Math.random() > 0.8);
   };
 
@@ -146,7 +143,6 @@ export default function UsersPage() {
             email: '',
             phone: '',
             experience: 0,
-            domainExpertise: '',
             accessLevel: undefined,
             isBcpSupport: false,
         });
@@ -412,13 +408,6 @@ export default function UsersPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                 <FormField control={form.control} name="domainExpertise" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Domain Expertise</FormLabel>
-                    <FormControl><Input placeholder="e.g. Frontend, Payments" {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
                  <FormField control={form.control} name="accessLevel" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Access Level</FormLabel>
@@ -496,5 +485,6 @@ export default function UsersPage() {
     </>
   );
 }
+
 
 
