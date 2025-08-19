@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -23,7 +24,8 @@ import {
   Bar,
   ComposedChart,
 } from 'recharts';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 const statusStyles: Record<ProjectStatus, string> = {
     'Initial Estimation': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
@@ -77,8 +79,6 @@ function BurndownChart() {
         let runningIdealHours = totalHours;
 
         return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map((date, index) => {
-            const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
-
             const completedTasksOnThisDay = sprintItems
                 .filter(s => s.status === 'Done' && s.endDate && isSameDay(startOfDay(parseISO(s.endDate)), date));
             
@@ -90,7 +90,9 @@ function BurndownChart() {
             
             const remainingHours = totalHours - completedHours;
 
-            if (isWorkingDay) {
+            if (isSameDay(date, sprintStart)) {
+                runningIdealHours = totalHours;
+            } else if (workingDays.some(wd => isSameDay(wd, date))) {
                 runningIdealHours -= idealHoursPerDay;
             }
             
@@ -130,7 +132,7 @@ function BurndownChart() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" />
                         <YAxis yAxisId="left" label={{ value: 'Remaining effort (hours)', angle: -90, position: 'insideLeft' }} />
-                        <YAxis yAxisId="right" orientation="right" label={{ value: 'Completed tasks', angle: 90, position: 'insideRight' }}/>
+                        <YAxis yAxisId="right" orientation="right" label={{ value: 'Completed tasks', angle: 90, position: 'insideRight' }} allowDecimals={false} />
                         <Tooltip />
                         <Legend />
                         <Bar yAxisId="right" dataKey="Completed tasks" barSize={20} fill="#f59e0b" name="Completed Tasks (Daily)" />
@@ -144,7 +146,7 @@ function BurndownChart() {
 }
 
 export default function ProjectDashboardPage() {
-    const { project, isLoading, allUsers } = useProject();
+    const { project, isLoading, allUsers, sprints, releasesAndMilestones, stories } = useProject();
 
     const projectManager = project?.projectManagerId
         ? allUsers.find(e => e.id === project.projectManagerId)
