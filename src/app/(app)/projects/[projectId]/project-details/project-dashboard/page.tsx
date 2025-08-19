@@ -65,19 +65,8 @@ function BurndownChart() {
         const sprintStart = startOfDay(parseISO(sprint.startDate));
         const sprintEnd = startOfDay(parseISO(sprint.endDate));
 
-        const sprintStories = stories.filter(s => {
-          if (s.sprintId !== sprint.id || !['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType)) {
-            return false;
-          }
-          // Include stories that are part of the sprint's scope
-          // This can be stories that were 'To Do' or 'In Progress' at the start, or were completed during the sprint.
-          if (s.status === 'Done' && s.endDate) {
-            const completionDate = startOfDay(parseISO(s.endDate));
-            return isAfter(completionDate, sprintStart) || isSameDay(completionDate, sprintStart);
-          }
-          return s.status === 'To Do' || s.status === 'In Progress';
-        });
-
+        const sprintStories = stories.filter(s => s.sprintId === sprint.id && ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType));
+        
         const totalHours = sprintStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
         
         const holidayDates = holidays.map(h => parseISO(h.date));
@@ -96,9 +85,14 @@ function BurndownChart() {
         let idealHours = totalHours;
 
         return eachDayOfInterval({ start: sprintStart, end: sprintEnd }).map(date => {
-            let cumulativeHoursCompleted = sprintStories
-                .filter(s => s.status === 'Done' && s.endDate && !isAfter(startOfDay(parseISO(s.endDate)), date))
-                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+            const storiesNotDone = sprintStories.filter(s => {
+              if (s.status !== 'Done') return true;
+              if (!s.endDate) return true; // If it's done but has no end date, assume it's still open for this chart
+              // If it's done, it should only be considered "not remaining" on or after its completion date
+              return isBefore(date, startOfDay(parseISO(s.endDate)));
+            });
+
+            const remainingHours = storiesNotDone.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
             
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
             if(isWorkingDay && !isAfter(date, new Date())) {
@@ -107,7 +101,7 @@ function BurndownChart() {
 
             return {
                 date: format(date, 'MMM d'),
-                'Actual Remaining': totalHours - cumulativeHoursCompleted,
+                'Actual Remaining': remainingHours,
                 'Ideal Burndown': Math.max(0, idealHours),
             };
         });
