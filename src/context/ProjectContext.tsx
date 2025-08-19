@@ -580,8 +580,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
 
         // If it's a sub-item (Bug) linked to a story, inherit the sprint
-        if (['Bug'].includes(story.itemType) && story.epicId) {
-            const parentStory = stories.find(s => s.id === story.epicId);
+        if (['Bug'].includes(story.itemType) && story.parentStoryId) {
+            const parentStory = stories.find(s => s.id === story.parentStoryId);
             if (parentStory && parentStory.sprintId) {
                 payload.sprintId = parentStory.sprintId;
             }
@@ -720,8 +720,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       batch.update(storyRef, { sprintId });
   
       // 2. Find and move all related sub-items (Bugs and Tasks)
-      // Note: `epicId` on a Bug/Task is used to link to the parent Story ID
-      const q = query(collection(db, 'projects', projectId, 'stories'), where('epicId', '==', storyId));
+      const q = query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyId));
       const subItemsSnapshot = await getDocs(q);
   
       subItemsSnapshot.forEach(subItemDoc => {
@@ -1079,7 +1078,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             description: `Auto-generated bug for ${environmentName}. Steps to reproduce: 1. Login. 2. Navigate to ${relatedStory?.title || 'a page'}. 3. Observe error.`,
             itemType: 'Bug',
             status: 'To Do',
-            epicId: relatedStory?.id,
+            parentStoryId: relatedStory?.id,
             sprintId: relatedStory?.sprintId,
             assigneeId: getRandomItem(employees.filter(e => e.role === 'Developer'))?.id,
             criticality: getRandomItem(criticalities),

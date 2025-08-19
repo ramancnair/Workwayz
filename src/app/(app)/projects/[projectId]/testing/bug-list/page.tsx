@@ -74,7 +74,7 @@ const bugFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
   acceptanceCriteria: z.string().optional(),
-  epicId: z.string().optional(), // Represents the related story
+  parentStoryId: z.string().optional(),
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
@@ -138,7 +138,7 @@ export default function BugListPage() {
           title: editingBug.title,
           description: editingBug.description || '',
           acceptanceCriteria: editingBug.acceptanceCriteria || '',
-          epicId: editingBug.epicId || 'unassigned',
+          parentStoryId: editingBug.parentStoryId || 'unassigned',
           reporterId: editingBug.reporterId || 'unassigned',
           assigneeId: editingBug.assigneeId || 'unassigned',
           status: editingBug.status,
@@ -152,7 +152,7 @@ export default function BugListPage() {
             title: '',
             description: '',
             acceptanceCriteria: '',
-            epicId: 'unassigned',
+            parentStoryId: 'unassigned',
             reporterId: 'unassigned',
             assigneeId: 'unassigned',
             status: 'To Do',
@@ -181,7 +181,7 @@ export default function BugListPage() {
             acceptanceCriteria: values.acceptanceCriteria,
             reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
             assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-            epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+            parentStoryId: values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId,
             status: values.status,
             sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
             criticality: values.criticality,
@@ -196,7 +196,7 @@ export default function BugListPage() {
             acceptanceCriteria: values.acceptanceCriteria,
             reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
             assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-            epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+            parentStoryId: values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId,
             status: values.status,
             sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
             criticality: values.criticality,
@@ -313,7 +313,7 @@ export default function BugListPage() {
           <TableBody>
             {bugs.map((bug) => {
               const assignee = employees.find(e => e.id === bug.assigneeId);
-              const relatedStory = stories.find(s => s.id === bug.epicId); // epicId holds related story for bugs
+              const relatedStory = stories.find(s => s.id === bug.parentStoryId);
               const environment = environments.find(e => e.id === bug.environmentId);
               return (
                 <TableRow key={bug.id} data-state={selectedBugs.includes(bug.id) && "selected"}>
@@ -485,7 +485,7 @@ export default function BugListPage() {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                     control={form.control}
-                    name="epicId"
+                    name="parentStoryId"
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Related Story</FormLabel>
@@ -619,7 +619,4 @@ export default function BugListPage() {
     </>
   );
 }
-
-
-
 
