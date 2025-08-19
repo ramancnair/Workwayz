@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/command"
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 const resourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
@@ -736,6 +737,7 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
 
