@@ -45,7 +45,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { buttonVariants } from '@/components/ui/button';
-import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, addYears } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, addYears, isWithinInterval, differenceInDays } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -482,34 +482,45 @@ function CapacityPlanning() {
   
       const utilizedHours = stories
         .filter(story => {
-          const isSubTaskForSystem = story.itemType === 'Sub Task' && story.impactedSystemId === system.id;
-          if (!isSubTaskForSystem) return false;
+          if (story.itemType !== 'Sub Task' || story.impactedSystemId !== system.id) return false;
           
           if (story.startDate && story.endDate) {
             const taskStart = parseISO(story.startDate);
             const taskEnd = parseISO(story.endDate);
-            return taskStart <= periodEnd && taskEnd >= periodStart;
+            return isWithinInterval(periodStart, { start: taskStart, end: taskEnd }) || 
+                   isWithinInterval(periodEnd, { start: taskStart, end: taskEnd }) ||
+                   isWithinInterval(taskStart, { start: periodStart, end: periodEnd });
           }
           
-          // If no dates, check if the parent story's sprint is the selected one (or any if month/week)
+          // Fallback for tasks without dates - check parent story's sprint
           const parentStory = stories.find(s => s.id === story.parentStoryId);
-          if (!parentStory) return false;
+          if (!parentStory?.sprintId) return false;
           
-          if (viewType === 'sprint') {
-            return parentStory.sprintId === selectedSprintId;
-          }
-          
-          // For month/week view, we need a sprint reference to get dates
           const sprint = sprints.find(s => s.id === parentStory.sprintId);
-          if (sprint && sprint.startDate && sprint.endDate) {
+          if (sprint?.startDate && sprint?.endDate) {
             const sprintStart = parseISO(sprint.startDate);
             const sprintEnd = parseISO(sprint.endDate);
-            return sprintStart <= periodEnd && sprintEnd >= periodStart;
+            return isWithinInterval(periodStart, { start: sprintStart, end: sprintEnd }) || 
+                   isWithinInterval(periodEnd, { start: sprintStart, end: sprintEnd }) ||
+                   isWithinInterval(sprintStart, { start: periodStart, end: periodEnd });
           }
           
           return false;
         })
-        .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+        .reduce((sum, task) => {
+            const taskStart = task.startDate ? parseISO(task.startDate) : periodStart;
+            const taskEnd = task.endDate ? parseISO(task.endDate) : periodEnd;
+            const overlapStart = new Date(Math.max(periodStart.getTime(), taskStart.getTime()));
+            const overlapEnd = new Date(Math.min(periodEnd.getTime(), taskEnd.getTime()));
+            
+            if (overlapStart > overlapEnd) return sum;
+
+            const overlapWorkingDays = getWorkingDays(overlapStart, overlapEnd);
+            const taskTotalWorkingDays = getWorkingDays(taskStart, taskEnd) || 1;
+            const dailyEffort = (task.estimatedHours || 0) / taskTotalWorkingDays;
+            
+            return sum + (dailyEffort * overlapWorkingDays);
+        }, 0);
       
       const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
     
@@ -522,7 +533,7 @@ function CapacityPlanning() {
           utilization: parseFloat(utilization.toFixed(2)),
       };
     });
-  }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod, sprints, viewType, selectedSprintId]);
+  }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod, sprints, getWorkingDays]);
 
   const handleDateChange = (changeFn: (date: Date, amount: number) => Date) => {
     setCurrentDate(prev => changeFn(prev, 1));
@@ -756,6 +767,7 @@ export default function ResourcesPage() {
     </>
   );
 }
+
 
 
 
