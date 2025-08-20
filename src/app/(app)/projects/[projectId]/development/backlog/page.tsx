@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft, Bot } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft, Bot, Package } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -51,7 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality, StoryStatus, ImpactedSystem } from '@/types';
+import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality, StoryStatus, ImpactedSystem, Release } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -133,7 +133,7 @@ const autoGenFormSchema = z.object({
 });
 
 
-function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint, onSubItemClick }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, onSubItemClick: (item: Story) => void; }) {
+function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint, release, onSubItemClick }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, release?: Release | null, onSubItemClick: (item: Story) => void; }) {
   const Icon = workItemIcons[story.itemType];
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
@@ -208,6 +208,12 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
                           <Library className="h-3 w-3 mr-1" />
                           Backlog
                       </Badge>
+                  )}
+                  {release && (
+                     <Badge variant="outline" className="border-purple-500 text-purple-500">
+                        <Package className="h-3 w-3 mr-1" />
+                        {release.releaseId}
+                     </Badge>
                   )}
                   {story.status && (
                        <Badge variant="outline">
@@ -1179,6 +1185,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                           const storyEpic = epics.find((e) => e.id === story.epicId);
                           const assignee = users.find((d) => d.id === story.assigneeId);
                           const sprint = sprints.find(s => s.id === story.sprintId);
+                          const release = releases.find(r => r.id === story.releaseId);
                           const subItems = subItemsByParentId[story.id] || [];
                           
                           return (
@@ -1191,6 +1198,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                   onDelete={() => setStoryToDelete(story)}
                                   subItems={subItems}
                                   sprint={sprint}
+                                  release={release}
                                   onSubItemClick={(item) => handleDrillDown(item)}
                               />
                             </div>
@@ -1938,6 +1946,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
