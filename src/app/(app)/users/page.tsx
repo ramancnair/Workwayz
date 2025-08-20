@@ -91,22 +91,6 @@ export default function UsersPage() {
     resolver: zodResolver(userFormSchema),
   });
   
-  const handleAutoGen = () => {
-    const firstNames = ['John', 'Jane', 'Peter', 'Mary', 'David', 'Susan', 'Michael', 'Linda', 'James', 'Patricia'];
-    const lastNames = ['Smith', 'Jones', 'Williams', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor', 'Anderson'];
-
-    const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    const randomEmpId = `E${Math.floor(1000 + Math.random() * 9000)}`;
-    
-    form.setValue('firstName', randomFirstName);
-    form.setValue('lastName', randomLastName);
-    form.setValue('empId', randomEmpId);
-    form.setValue('email', `${randomFirstName.toLowerCase()}.${randomLastName.toLowerCase()}${Math.floor(Math.random()*100)}@nair.com`);
-    form.setValue('phone', `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}`);
-    form.setValue('experience', Math.floor(1 + Math.random() * 15));
-  };
-
   useEffect(() => {
     if (!db) return;
     const q = query(collection(db, 'employees'), where('isDeleted', '!=', true));
@@ -418,13 +402,7 @@ export default function UsersPage() {
                   </FormItem>
                 )} />
               </div>
-              <DialogFooter className="flex justify-between pt-4">
-                {!editingUser && (
-                  <Button type="button" variant="outline" onClick={handleAutoGen}>
-                    Auto Gen
-                  </Button>
-                )}
-                <div className="flex-grow"></div>
+              <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingUser ? 'Saving...' : 'Creating...') : (editingUser ? 'Save Changes' : 'Create User')}
                 </Button>
@@ -456,7 +434,3 @@ export default function UsersPage() {
     </>
   );
 }
-
-
-
-
