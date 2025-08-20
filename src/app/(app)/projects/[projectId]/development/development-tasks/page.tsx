@@ -81,7 +81,7 @@ const statusStyles: Record<StoryStatus, string> = {
   'Done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
 };
 
-type ColumnId = 'storyId' | 'title' | 'parentStoryId' | 'status' | 'assigneeId' | 'impactedSystemId' | 'estimatedHours' | 'startDate' | 'endDate';
+type ColumnId = 'storyId' | 'title' | 'parentStoryId' | 'status' | 'assigneeId' | 'impactedSystemId' | 'estimatedHours' | 'startDate' | 'endDate' | 'sprintId' | 'releaseId';
 
 const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
     storyId: { label: 'ID', defaultVisible: true },
@@ -93,6 +93,8 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     estimatedHours: { label: 'Effort', defaultVisible: false },
     startDate: { label: 'Start Date', defaultVisible: false },
     endDate: { label: 'End Date', defaultVisible: false },
+    sprintId: { label: 'Sprint', defaultVisible: false },
+    releaseId: { label: 'Release', defaultVisible: false },
 };
 
 export default function DevelopmentTasksPage() {
@@ -107,7 +109,7 @@ export default function DevelopmentTasksPage() {
   const parentStories = stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType));
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
-  const [filterText, setFilterText] = useState('');
+  const [filters, setFilters] = useState({ search: '', sprintId: 'all', releaseId: 'all' });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() =>
     Object.entries(columnConfig).reduce((acc, [key, { defaultVisible }]) => {
@@ -128,12 +130,35 @@ export default function DevelopmentTasksPage() {
     }
   };
   
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ search: '', sprintId: 'all', releaseId: 'all' });
+  };
+  
   const filteredAndSortedSubTasks = useMemo(() => {
     let filtered = subTasks.filter(t => 
-        t.title.toLowerCase().includes(filterText.toLowerCase()) ||
-        t.storyId.toLowerCase().includes(filterText.toLowerCase()) ||
-        (t.description && t.description.toLowerCase().includes(filterText.toLowerCase()))
+        t.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        t.storyId.toLowerCase().includes(filters.search.toLowerCase()) ||
+        (t.description && t.description.toLowerCase().includes(filters.search.toLowerCase()))
     );
+
+    if (filters.sprintId !== 'all') {
+      if (filters.sprintId === 'backlog') {
+        filtered = filtered.filter(t => !t.sprintId);
+      } else {
+        filtered = filtered.filter(t => t.sprintId === filters.sprintId);
+      }
+    }
+    if (filters.releaseId !== 'all') {
+        if(filters.releaseId === 'unassigned') {
+            filtered = filtered.filter(t => !t.releaseId);
+        } else {
+            filtered = filtered.filter(t => t.releaseId === filters.releaseId);
+        }
+    }
 
     if (sorting) {
       filtered.sort((a, b) => {
@@ -150,6 +175,12 @@ export default function DevelopmentTasksPage() {
         } else if (sorting.id === 'impactedSystemId') {
             valA = impactedSystems.find(s => s.id === a.impactedSystemId)?.name || '';
             valB = impactedSystems.find(s => s.id === b.impactedSystemId)?.name || '';
+        } else if (sorting.id === 'sprintId') {
+            valA = sprints.find(s => s.id === a.sprintId)?.title || 'Backlog';
+            valB = sprints.find(s => s.id === b.sprintId)?.title || 'Backlog';
+        } else if (sorting.id === 'releaseId') {
+            valA = releases.find(r => r.id === a.releaseId)?.releaseId || '';
+            valB = releases.find(r => r.id === b.releaseId)?.releaseId || '';
         } else {
             valA = (a as any)[sorting.id];
             valB = (b as any)[sorting.id];
@@ -172,7 +203,7 @@ export default function DevelopmentTasksPage() {
     }
 
     return filtered;
-  }, [subTasks, filterText, sorting, stories, employees, impactedSystems]);
+  }, [subTasks, filters, sorting, stories, employees, impactedSystems, sprints, releases]);
 
 
   useEffect(() => {
@@ -286,13 +317,29 @@ export default function DevelopmentTasksPage() {
       </PageHeader>
       <Card>
         <CardContent className="p-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
                 <Input 
                     placeholder="Filter by ID, title, or description..."
-                    value={filterText}
-                    onChange={(e) => setFilterText(e.target.value)}
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
                     className="max-w-sm"
                 />
+                 <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sprints</SelectItem>
+                      <SelectItem value="backlog">Backlog</SelectItem>
+                      {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                   <Select value={filters.releaseId} onValueChange={(v) => handleFilterChange('releaseId', v)}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by release..."/></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Releases</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline">
@@ -320,6 +367,9 @@ export default function DevelopmentTasksPage() {
                         ))}
                     </DropdownMenuContent>
                 </DropdownMenu>
+                <Button variant="ghost" onClick={clearFilters}>
+                    <X className="mr-2 h-4 w-4" /> Clear Filters
+                </Button>
             </div>
           </CardContent>
         <Table>
@@ -334,6 +384,8 @@ export default function DevelopmentTasksPage() {
               {columnVisibility.estimatedHours && <SortableHeader columnId="estimatedHours">Effort</SortableHeader>}
               {columnVisibility.startDate && <SortableHeader columnId="startDate">Start Date</SortableHeader>}
               {columnVisibility.endDate && <SortableHeader columnId="endDate">End Date</SortableHeader>}
+              {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
+              {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -342,6 +394,8 @@ export default function DevelopmentTasksPage() {
               const assignee = employees.find(e => e.id === task.assigneeId);
               const impactedSystem = impactedSystems.find(s => s.id === task.impactedSystemId);
               const parentStory = stories.find(s => s.id === task.parentStoryId);
+              const sprint = sprints.find(s => s.id === task.sprintId);
+              const release = releases.find(r => r.id === task.releaseId);
               return (
                 <TableRow key={task.id}>
                   {columnVisibility.storyId && <TableCell className="font-medium">{task.storyId}</TableCell>}
@@ -378,6 +432,8 @@ export default function DevelopmentTasksPage() {
                   {columnVisibility.estimatedHours && <TableCell>{task.estimatedHours ? `${task.estimatedHours}h` : 'N/A'}</TableCell>}
                   {columnVisibility.startDate && <TableCell>{task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A'}</TableCell>}
                   {columnVisibility.endDate && <TableCell>{task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A'}</TableCell>}
+                  {columnVisibility.sprintId && <TableCell>{sprint?.title || (task.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>}
+                  {columnVisibility.releaseId && <TableCell>{release?.releaseId || 'N/A'}</TableCell>}
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(task)}>
                         <Edit className="h-4 w-4" />
@@ -604,3 +660,4 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
