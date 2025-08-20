@@ -40,7 +40,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot } from 'lucide-react';
 import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -59,6 +59,15 @@ const userFormSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   experience: z.coerce.number().optional(),
   accessLevel: z.enum(accessLevels).optional(),
+});
+
+const autoGenFormSchema = z.object({
+  Administrator: z.coerce.number().min(0).default(0),
+  'Senior Management': z.coerce.number().min(0).default(0),
+  'Project Manager': z.coerce.number().min(0).default(0),
+  Lead: z.coerce.number().min(0).default(0),
+  'Team Member': z.coerce.number().min(0).default(0),
+  PMO: z.coerce.number().min(0).default(0),
 });
 
 // Helper to remove undefined values from an object before sending to Firestore
@@ -89,9 +98,24 @@ export default function UsersPage() {
 
   const [filters, setFilters] = useState({ search: '', accessLevel: 'all' });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'firstName', desc: false });
+  
+  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
+  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
+  });
+  
+  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
+    resolver: zodResolver(autoGenFormSchema),
+    defaultValues: {
+        Administrator: 0,
+        'Senior Management': 0,
+        'Project Manager': 0,
+        Lead: 0,
+        'Team Member': 0,
+        PMO: 0,
+    }
   });
   
   useEffect(() => {
@@ -135,6 +159,64 @@ export default function UsersPage() {
   const handleDialogOpen = (user: User | null) => {
     setEditingUser(user);
     setIsDialogOpen(true);
+  };
+  
+  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
+    if(!db) return;
+    setIsAutoGenSubmitting(true);
+    
+    try {
+        const batch = writeBatch(db);
+        const usersSnapshot = await getDocs(collection(db, 'employees'));
+        
+        let highestId = 0;
+        usersSnapshot.forEach(doc => {
+            const empId = doc.id;
+            if (empId.startsWith('E')) {
+                const numPart = parseInt(empId.substring(1));
+                if (!isNaN(numPart) && numPart > highestId) {
+                    highestId = numPart;
+                }
+            }
+        });
+        
+        let currentIdCounter = highestId + 1;
+        
+        for (const level of accessLevels) {
+            const count = values[level];
+            for (let i = 0; i < count; i++) {
+                const empId = `E${currentIdCounter.toString().padStart(3, '0')}`;
+                const firstName = `${level.replace(' ', '')}${i+1}`;
+                const lastName = 'User';
+                const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@nair.com`;
+                
+                const newUser: Omit<User, 'id'> = {
+                    empId,
+                    firstName,
+                    lastName,
+                    email,
+                    phone: '555-555-5555',
+                    experience: Math.floor(Math.random() * 10) + 1,
+                    accessLevel: level,
+                    avatar: 'https://placehold.co/40x40.png',
+                    isDeleted: false,
+                };
+                
+                const userRef = doc(db, 'employees', empId);
+                batch.set(userRef, sanitizeForFirestore(newUser));
+                currentIdCounter++;
+            }
+        }
+        
+        await batch.commit();
+        toast({ title: 'Success', description: 'Users generated successfully.' });
+        setIsAutoGenOpen(false);
+    } catch (e) {
+        console.error("Error auto-generating users", e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not generate users.' });
+    }
+    
+    setIsAutoGenSubmitting(false);
   };
 
   const handleDeleteConfirm = async () => {
@@ -302,6 +384,47 @@ export default function UsersPage() {
                 Delete Selected ({selectedUsers.length})
             </Button>
           )}
+          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">
+                    <Bot className="mr-2 h-4 w-4" />
+                    User Autogen
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Auto-Generate Users</DialogTitle>
+                    <DialogDescription>Enter the number of users to create for each access level.</DialogDescription>
+                </DialogHeader>
+                <Form {...autoGenForm}>
+                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            {accessLevels.map(level => (
+                                <FormField
+                                    key={level}
+                                    control={autoGenForm.control}
+                                    name={level}
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{level}</FormLabel>
+                                        <FormControl>
+                                        <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            ))}
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit" disabled={isAutoGenSubmitting}>
+                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Users'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+          </Dialog>
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add User
@@ -505,4 +628,5 @@ export default function UsersPage() {
     </>
   );
 }
+
 
