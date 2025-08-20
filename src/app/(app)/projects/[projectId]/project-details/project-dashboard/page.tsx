@@ -98,7 +98,11 @@ export default function ProjectDashboardPage() {
                     return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
                 }
             }
-            return sum + (story.estimatedHours || 0);
+            // For standalone tasks/bugs, or stories without sub-tasks, use their own effort
+            if (!story.parentStoryId) {
+                 return sum + (story.estimatedHours || 0);
+            }
+            return sum;
         }, 0);
         
         const sprintStart = startOfDay(parseISO(sprint.startDate));
@@ -123,22 +127,22 @@ export default function ProjectDashboardPage() {
             
             const completedEffortOnDate = sprintStories.reduce((sum, story) => {
                 let storyCompletedEffort = 0;
+                
+                const checkCompletion = (item: Story) => {
+                    if (item.status !== 'Done') return 0;
+                    const doneDate = item.updatedAt ? startOfDay(parseISO(item.updatedAt)) : sprintStart;
+                    return doneDate <= date ? (item.estimatedHours || 0) : 0;
+                }
+
                 if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
                     const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-                     subTasks.forEach(subTask => {
-                        if (subTask.status !== 'Done') return;
-                        const doneDate = subTask.updatedAt ? startOfDay(parseISO(subTask.updatedAt)) : sprintStart;
-                        if (doneDate <= date) {
-                           storyCompletedEffort += (subTask.estimatedHours || 0);
-                        }
-                    });
-                } else { // For standalone tasks/bugs etc.
-                    if(story.status === 'Done') {
-                        const doneDate = story.updatedAt ? startOfDay(parseISO(story.updatedAt)) : sprintStart;
-                        if (doneDate <= date) {
-                            storyCompletedEffort += (story.estimatedHours || 0);
-                        }
-                    }
+                     if (subTasks.length > 0) {
+                        storyCompletedEffort = subTasks.reduce((subSum, subTask) => subSum + checkCompletion(subTask), 0);
+                     } else {
+                        storyCompletedEffort = checkCompletion(story);
+                     }
+                } else if (!story.parentStoryId) { // For standalone tasks/bugs etc.
+                    storyCompletedEffort = checkCompletion(story);
                 }
                 return sum + storyCompletedEffort;
             }, 0);
@@ -162,14 +166,19 @@ export default function ProjectDashboardPage() {
         const release = releases.find(r => r.id === selectedReleaseId);
         if(!release || !release.startDate || !release.endDate) return [];
 
-        const releaseStories = stories.filter(s => s.releaseId === release.id && ['Requirement/Story', 'Feature Change'].includes(s.itemType));
+        const releaseStories = stories.filter(s => s.releaseId === release.id);
         
         const totalScope = releaseStories.reduce((sum, story) => {
-            const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-            if (subTasks.length > 0) {
-                return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+            if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+                const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+                if (subTasks.length > 0) {
+                    return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+                }
             }
-            return sum + (story.estimatedHours || 0);
+             if (!story.parentStoryId) {
+                return sum + (story.estimatedHours || 0);
+            }
+            return sum;
         }, 0);
         
         const releaseStart = startOfDay(parseISO(release.startDate));
@@ -194,22 +203,22 @@ export default function ProjectDashboardPage() {
             
             const completedEffortOnDate = releaseStories.reduce((sum, story) => {
                 let storyCompletedEffort = 0;
-                const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-                if (subTasks.length > 0) {
-                    subTasks.forEach(subTask => {
-                        if (subTask.status !== 'Done') return;
-                        const doneDate = subTask.updatedAt ? startOfDay(parseISO(subTask.updatedAt)) : releaseStart;
-                        if (doneDate <= date) {
-                           storyCompletedEffort += (subTask.estimatedHours || 0);
-                        }
-                    });
-                } else {
-                     if(story.status === 'Done') {
-                        const doneDate = story.updatedAt ? startOfDay(parseISO(story.updatedAt)) : releaseStart;
-                        if (doneDate <= date) {
-                            storyCompletedEffort += (story.estimatedHours || 0);
-                        }
-                    }
+                
+                const checkCompletion = (item: Story) => {
+                    if (item.status !== 'Done') return 0;
+                    const doneDate = item.updatedAt ? startOfDay(parseISO(item.updatedAt)) : releaseStart;
+                    return doneDate <= date ? (item.estimatedHours || 0) : 0;
+                }
+
+                if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+                    const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+                     if (subTasks.length > 0) {
+                        storyCompletedEffort = subTasks.reduce((subSum, subTask) => subSum + checkCompletion(subTask), 0);
+                     } else {
+                        storyCompletedEffort = checkCompletion(story);
+                     }
+                } else if (!story.parentStoryId) {
+                    storyCompletedEffort = checkCompletion(story);
                 }
                 return sum + storyCompletedEffort;
             }, 0);
@@ -221,7 +230,6 @@ export default function ProjectDashboardPage() {
             
             return {
                 name: dateStr,
-                scope: totalScope,
                 completed: completedEffortOnDate,
                 ideal: idealBurnup > totalScope ? totalScope : idealBurnup,
             }
@@ -360,7 +368,7 @@ export default function ProjectDashboardPage() {
                                 <AreaChart data={burnupData}>
                                     <CartesianGrid vertical={false} />
                                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
-                                    <YAxis domain={[0, (dataMax: number) => Math.max(dataMax, burnupData[0]?.scope || 0)]} />
+                                    <YAxis />
                                     <ChartTooltip content={<ChartTooltipContent />} />
                                     <Area type="monotone" dataKey="completed" stackId="a" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
                                     <Line type="monotone" dataKey="ideal" stroke="var(--color-ideal)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
