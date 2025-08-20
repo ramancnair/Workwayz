@@ -89,13 +89,15 @@ export default function ProjectDashboardPage() {
         const sprint = sprints.find(s => s.id === selectedSprintId);
         if (!sprint || !sprint.startDate || !sprint.endDate) return [];
         
-        const sprintStories = stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change', 'Bug'].includes(story.itemType));
+        const sprintStories = stories.filter(story => story.sprintId === sprint.id);
         
         const totalEffort = sprintStories.reduce((sum, story) => {
-            const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-            if (subTasks.length > 0) {
-                const subTaskEffort = subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
-                return sum + subTaskEffort;
+            if (story.itemType === 'Requirement/Story' || story.itemType === 'Feature Change') {
+                const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+                if (subTasks.length > 0) {
+                    const subTaskEffort = subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+                    return sum + subTaskEffort;
+                }
             }
             return sum + (story.estimatedHours || 0);
         }, 0);
@@ -120,21 +122,21 @@ export default function ProjectDashboardPage() {
         return sprintDates.map(date => {
             const dateStr = format(date, 'MMM d');
             
-            const completedEffort = sprintStories
-                .filter(s => {
-                    if (s.status !== 'Done') return false;
-                    const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : sprintStart;
-                    return storyDate <= date;
-                })
-                .reduce((sum, story) => {
+            const completedEffortOnDate = sprintStories.reduce((sum, story) => {
+                if (story.status !== 'Done') return sum;
+                const storyDate = story.updatedAt ? startOfDay(parseISO(story.updatedAt)) : sprintStart;
+                if(storyDate > date) return sum;
+
+                 if (story.itemType === 'Requirement/Story' || story.itemType === 'Feature Change') {
                     const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-                     if (subTasks.length > 0) {
+                    if (subTasks.length > 0) {
                         return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
                     }
-                    return sum + (story.estimatedHours || 0);
-                }, 0);
+                }
+                return sum + (story.estimatedHours || 0);
+            }, 0);
                 
-            const remaining = totalEffort - completedEffort;
+            const remaining = totalEffort - completedEffortOnDate;
             
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
             if (isWorkingDay && date > sprintStart) {
@@ -187,10 +189,10 @@ export default function ProjectDashboardPage() {
             const dateStr = format(date, 'MMM d');
             
             const completedEffortOnDate = releaseStories.reduce((sum, story) => {
-                const subTasks = subItemsByStoryId[story.id] || [];
-                const allItems = subTasks.length > 0 ? subTasks : [story];
+                const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+                const allItemsForEffort = subTasks.length > 0 ? subTasks : [story];
 
-                const completedEffort = allItems
+                const completedEffort = allItemsForEffort
                     .filter(s => {
                         if (s.status !== 'Done') return false;
                          const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : releaseStart;
