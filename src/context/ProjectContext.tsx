@@ -81,6 +81,7 @@ interface ProjectContextType {
   moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<boolean>;
   moveStoryStatus: (storyId: string, newStatus: StoryStatus) => Promise<boolean>;
   moveStoryToEpic: (storyId: string, epicId: string | null) => Promise<boolean>;
+  bulkUpdateSubTaskReleases: (releaseId: string) => Promise<boolean>;
 
   // Epic actions
   addEpic: (epic: Omit<Epic, 'id'>) => Promise<boolean>;
@@ -252,14 +253,14 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories'],
-    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems'],
-    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays'],
+    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases'],
+    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems'],
-    '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems'],
+    '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
-    '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments'],
+    '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments', 'releases'],
     '/project-details/project-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays'],
     '/project-details/architecture': ['environments', 'impactedSystems', 'horizontals'],
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
@@ -737,6 +738,31 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   
   const moveStoryStatus = (storyId: string, newStatus: StoryStatus) => updateStory(storyId, { status: newStatus });
   const moveStoryToEpic = (storyId: string, epicId: string | null) => updateStory(storyId, { epicId });
+
+  const bulkUpdateSubTaskReleases = async (releaseIdCode: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      // Find the actual release ID from the release code (e.g., 'REL-1')
+      const targetRelease = releasesAndMilestones.find(r => r.releaseId === releaseIdCode);
+      if (!targetRelease) {
+        console.error(`Release with code ${releaseIdCode} not found.`);
+        return false;
+      }
+      const actualReleaseId = targetRelease.id;
+
+      const batch = writeBatch(db);
+      const subTasks = stories.filter(s => s.itemType === 'Sub Task');
+      subTasks.forEach(task => {
+        const taskRef = doc(db, 'projects', projectId, 'stories', task.id);
+        batch.update(taskRef, { releaseId: actualReleaseId });
+      });
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to bulk update sub-task releases.", e);
+      return false;
+    }
+  };
   
   // Epic Actions
   const addEpic = async (epic: Omit<Epic, 'id'>): Promise<boolean> => {
@@ -2012,6 +2038,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     moveStoryToSprint,
     moveStoryStatus,
     moveStoryToEpic,
+    bulkUpdateSubTaskReleases,
     addEpic,
     updateEpic,
     deleteEpic,
