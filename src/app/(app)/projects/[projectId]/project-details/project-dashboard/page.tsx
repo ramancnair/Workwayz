@@ -71,7 +71,8 @@ export default function ProjectDashboardPage() {
     
     useEffect(() => {
         if(releases.length > 0) {
-            setSelectedReleaseId(releases[0].id);
+            const sortedReleases = [...releases].sort((a, b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+            setSelectedReleaseId(sortedReleases[0].id);
         }
     }, [releases]);
     
@@ -92,7 +93,7 @@ export default function ProjectDashboardPage() {
         const sprintStories = stories.filter(story => story.sprintId === sprint.id);
         
         const totalEffort = sprintStories.reduce((sum, story) => {
-            if (story.itemType === 'Requirement/Story' || story.itemType === 'Feature Change') {
+            if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
                 const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
                 if (subTasks.length > 0) {
                     const subTaskEffort = subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
@@ -123,14 +124,19 @@ export default function ProjectDashboardPage() {
             const dateStr = format(date, 'MMM d');
             
             const completedEffortOnDate = sprintStories.reduce((sum, story) => {
-                if (story.status !== 'Done') return sum;
+                 if (story.status !== 'Done') return sum;
                 const storyDate = story.updatedAt ? startOfDay(parseISO(story.updatedAt)) : sprintStart;
                 if(storyDate > date) return sum;
 
-                 if (story.itemType === 'Requirement/Story' || story.itemType === 'Feature Change') {
+                 if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
                     const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
                     if (subTasks.length > 0) {
-                        return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+                        return sum + subTasks.reduce((subSum, subTask) => {
+                            if (subTask.status !== 'Done') return subSum;
+                             const subTaskDate = subTask.updatedAt ? startOfDay(parseISO(subTask.updatedAt)) : sprintStart;
+                             if (subTaskDate > date) return subSum;
+                            return subSum + (subTask.estimatedHours || 0);
+                        }, 0);
                     }
                 }
                 return sum + (story.estimatedHours || 0);
@@ -166,8 +172,6 @@ export default function ProjectDashboardPage() {
             return sum + (story.estimatedHours || 0);
         }, 0);
         
-        const allReleaseWorkItems = stories.filter(s => s.releaseId === release.id);
-
         const releaseStart = startOfDay(parseISO(release.startDate));
         const releaseEnd = startOfDay(parseISO(release.endDate));
         const releaseDates = eachDayOfInterval({ start: releaseStart, end: releaseEnd });
@@ -190,12 +194,13 @@ export default function ProjectDashboardPage() {
             
             const completedEffortOnDate = releaseStories.reduce((sum, story) => {
                 const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-                const allItemsForEffort = subTasks.length > 0 ? subTasks : [story];
+                 const allItemsForEffort = subTasks.length > 0 ? subTasks : (story.estimatedHours ? [story] : []);
+
 
                 const completedEffort = allItemsForEffort
                     .filter(s => {
                         if (s.status !== 'Done') return false;
-                         const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : releaseStart;
+                        const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : releaseStart;
                         return storyDate <= date;
                     })
                     .reduce((itemSum, s) => itemSum + (s.estimatedHours || 0), 0);
@@ -363,4 +368,3 @@ export default function ProjectDashboardPage() {
         </div>
     );
 }
-
