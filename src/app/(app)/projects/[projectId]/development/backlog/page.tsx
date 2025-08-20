@@ -1919,38 +1919,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                   </Tabs>
                   <DialogFooter className="flex justify-end items-center pt-4">
                     <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" disabled={!selectedStory.estimatedHours || selectedStory.estimatedHours === 0}>
-                                  Move to Sprint <ChevronDown className="ml-2 h-4 w-4" />
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                              {selectedStory.sprintId !== null && (
-                              <DropdownMenuItem onClick={() => {
-                                  if (!selectedStory) return;
-                                  moveStoryToSprint(selectedStory.id, null);
-                                  handleSetSelectedStory(null);
-                              }}>
-                                  Backlog
-                              </DropdownMenuItem>
-                              )}
-                              {sprints
-                              .filter((sprint) => sprint.id !== selectedStory.sprintId)
-                              .map((sprint) => (
-                                  <DropdownMenuItem
-                                  key={sprint.id}
-                                  onClick={() => {
-                                      if (!selectedStory) return;
-                                      moveStoryToSprint(selectedStory.id, sprint.id);
-                                      handleSetSelectedStory(null);
-                                  }}
-                                  >
-                                  {sprint.title}
-                                  </DropdownMenuItem>
-                              ))}
-                          </DropdownMenuContent>
-                      </DropdownMenu>
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                       </Button>
@@ -2013,6 +1981,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
+
 
 
 

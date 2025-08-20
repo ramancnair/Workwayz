@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -28,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem, Holiday, Release } from '@/types';
@@ -86,6 +85,8 @@ const storyFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
+  releaseId: z.string().optional(),
+  attachments: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -569,6 +570,8 @@ export default function GroomingPage() {
                 criticality: selectedStory.criticality || 'Medium',
                 environmentId: selectedStory.environmentId || 'unassigned',
                 impactedSystemIds: selectedStory.impactedSystemIds || [],
+                releaseId: selectedStory.releaseId || 'unassigned',
+                attachments: selectedStory.attachments || '',
             });
         }
     }, [selectedStory, editStoryForm, subTaskForm]);
@@ -622,6 +625,8 @@ export default function GroomingPage() {
             criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
             environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
             impactedSystemIds: values.impactedSystemIds,
+            releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+            attachments: values.attachments,
         });
 
         if (success) {
@@ -1246,19 +1251,44 @@ export default function GroomingPage() {
                                     />
                                 </>
                             )}
-                            <FormField
-                                control={editStoryForm.control}
-                                name="estimatedHours"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Estimated Hours</FormLabel>
-                                    <FormControl>
-                                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={editStoryForm.control}
+                                    name="releaseId"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Release</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                            <SelectValue placeholder="Assign to a release" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                                            {releases.map(release => (
+                                            <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={editStoryForm.control}
+                                    name="estimatedHours"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Estimated Hours</FormLabel>
+                                        <FormControl>
+                                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
                         </TabsContent>
                          <TabsContent value="subTasks">
