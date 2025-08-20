@@ -339,7 +339,7 @@ export default function KanbanPage() {
 
   useEffect(() => {
     if (!selectedStory) {
-      setEditStorySubmitting(false);
+      setIsEditStorySubmitting(false);
     } else if (selectedStory.itemType === 'Sub Task') {
        subTaskForm.reset({
             title: selectedStory.title,
@@ -374,7 +374,7 @@ export default function KanbanPage() {
 
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
-    setEditStorySubmitting(true);
+    setIsEditStorySubmitting(true);
     
     const isSubItem = ['Bug'].includes(selectedStory.itemType);
 
@@ -399,12 +399,12 @@ export default function KanbanPage() {
     } else {
       toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
-    setEditStorySubmitting(false);
+    setIsEditStorySubmitting(false);
   };
   
   const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
-    setEditStorySubmitting(true);
+    setIsEditStorySubmitting(true);
     
     const success = await updateStory(selectedStory.id, {
         title: values.title,
@@ -421,7 +421,7 @@ export default function KanbanPage() {
     } else {
       toast({ variant: "destructive", title: `Error Editing Sub Task`, description: "Could not save your changes." });
     }
-    setEditStorySubmitting(false);
+    setIsEditStorySubmitting(false);
   };
 
   const handleDeleteStory = (storyId: string) => {
