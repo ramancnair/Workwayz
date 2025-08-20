@@ -378,22 +378,35 @@ export default function KanbanPage() {
     
     const isSubItem = ['Bug'].includes(selectedStory.itemType);
 
-    const success = await updateStory(selectedStory.id, {
+    const payload: Partial<Story> = {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
-        parentStoryId: isSubItem ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
         estimatedHours: values.estimatedHours,
-        criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
-        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-        impactedSystemIds: values.impactedSystemIds,
-        attachments: values.attachments,
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
-    });
+        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+        impactedSystemIds: values.impactedSystemIds,
+        attachments: values.attachments,
+    };
+    
+    if (['Task', 'Requirement/Story', 'Feature Change'].includes(selectedStory.itemType)) {
+        payload.epicId = values.epicId === 'unassigned' ? undefined : values.epicId;
+    }
+    
+    if (selectedStory.itemType === 'Bug' || selectedStory.itemType === 'Sub Task') {
+        payload.parentStoryId = values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId;
+        payload.epicId = undefined; // Sub-items don't have direct epic link in this model
+    }
+    
+    if (selectedStory.itemType === 'Bug') {
+        payload.criticality = values.criticality;
+    }
+
+    const success = await updateStory(selectedStory.id, payload);
+
     if (success) {
       handleSetSelectedStory(null);
     } else {
@@ -1120,26 +1133,60 @@ export default function KanbanPage() {
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={!!deletingStory} onOpenChange={(isOpen) => !isOpen && setDeletingStory(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the story "{deletingStory?.title}".
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deletingStory && handleDeleteStory(deletingStory.id)}
-               className={cn(buttonVariants({ variant: 'destructive' }))}
-            >
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Epic</DialogTitle>
+          </DialogHeader>
+          <Form {...editEpicForm}>
+            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
+              <FormField
+                control={editEpicForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Epic title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editEpicForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the epic..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={isEditEpicSubmitting}>
+                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+    
+
+    
+
+
+
+
+
+
+
+
 
