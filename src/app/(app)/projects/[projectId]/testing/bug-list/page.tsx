@@ -603,9 +603,7 @@ export default function BugListPage() {
                         <FormItem>
                         <FormLabel>Release</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger>
-                            </FormControl>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
                             <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
                             {releases.map(release => (
@@ -662,7 +660,3 @@ export default function BugListPage() {
     </>
   );
 }
-
-
-
-

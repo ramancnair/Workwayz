@@ -284,7 +284,7 @@ export default function KanbanPage() {
   const [selectionStack, setSelectionStack] = useState<Story[]>([]);
   const selectedStory = selectionStack[selectionStack.length - 1] || null;
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
-  const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
+  const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
@@ -639,7 +639,7 @@ export default function KanbanPage() {
                                 <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                             )}/>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={subTaskForm.control} name="sprintId" render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Sprint</FormLabel>

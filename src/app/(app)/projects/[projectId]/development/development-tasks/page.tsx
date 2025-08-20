@@ -40,7 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns } from 'lucide-react';
-import { type Story, type StoryStatus, type Epic } from '@/types';
+import { type Story, type StoryStatus, type Epic, Release } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -62,6 +62,8 @@ const subTaskSchema = z.object({
   impactedSystemId: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  sprintId: z.string().optional(),
+  releaseId: z.string().optional(),
 }).refine(data => {
     if (data.startDate && data.endDate) {
         return new Date(data.endDate) >= new Date(data.startDate);
@@ -94,7 +96,7 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
 };
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems } = useProject();
+  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubTask, setEditingSubTask] = useState<Story | null>(null);
@@ -103,6 +105,7 @@ export default function DevelopmentTasksPage() {
   
   const subTasks = stories.filter(story => story.itemType === 'Sub Task');
   const parentStories = stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType));
+  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const [filterText, setFilterText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
@@ -185,6 +188,8 @@ export default function DevelopmentTasksPage() {
           impactedSystemId: editingSubTask.impactedSystemId || 'unassigned',
           startDate: editingSubTask.startDate ? format(parseISO(editingSubTask.startDate), 'yyyy-MM-dd') : '',
           endDate: editingSubTask.endDate ? format(parseISO(editingSubTask.endDate), 'yyyy-MM-dd') : '',
+          sprintId: editingSubTask.sprintId || 'backlog',
+          releaseId: editingSubTask.releaseId || 'unassigned',
         });
       } else {
         form.reset({
@@ -197,6 +202,8 @@ export default function DevelopmentTasksPage() {
           impactedSystemId: 'unassigned',
           startDate: '',
           endDate: '',
+          sprintId: 'backlog',
+          releaseId: 'unassigned',
         });
       }
     }
@@ -234,16 +241,18 @@ export default function DevelopmentTasksPage() {
         impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
-        // Inherit from parent
         epicId: parentStory?.epicId,
-        sprintId: parentStory?.sprintId,
-        releaseId: parentStory?.releaseId,
+        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     };
 
     let success = false;
     if (editingSubTask) {
       success = await updateStory(editingSubTask.id, subTaskData);
     } else {
+      // Inherit sprint/release from parent if not specified
+      if (!subTaskData.sprintId && parentStory?.sprintId) subTaskData.sprintId = parentStory.sprintId;
+      if (!subTaskData.releaseId && parentStory?.releaseId) subTaskData.releaseId = parentStory.releaseId;
       success = await addStory(subTaskData as Omit<Story, 'id' | 'storyId'>, 'SUB');
     }
 
@@ -269,7 +278,12 @@ export default function DevelopmentTasksPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Sub-Tasks" description="A comprehensive list of all sub-tasks for the project." />
+      <PageHeader title="Sub-Tasks" description="A comprehensive list of all sub-tasks for the project.">
+           <Button onClick={() => handleDialogOpen(null)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Sub-Task
+            </Button>
+      </PageHeader>
       <Card>
         <CardContent className="p-4">
             <div className="flex items-center gap-4">
@@ -523,6 +537,38 @@ export default function DevelopmentTasksPage() {
                             <FormLabel>End Date</FormLabel>
                             <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                             <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <FormField control={form.control} name="sprintId" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Sprint</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                            <SelectItem value="backlog">Backlog</SelectItem>
+                            {sprints.map(sprint => (
+                                <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="releaseId" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Release</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {releases.map(release => (
+                                <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
                         </FormItem>
                     )} />
                 </div>

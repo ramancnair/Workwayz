@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -30,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem, Holiday } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem, Holiday, Release } from '@/types';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +72,8 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 };
 
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
+const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+
 
 const storyFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -91,9 +94,11 @@ const subTaskFormSchema = z.object({
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
-    status: z.enum(['To Do', 'In Progress', 'Done']),
+    status: z.enum(statusOptions),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
+    sprintId: z.string().optional(),
+    releaseId: z.string().optional(),
 }).refine(data => {
     if (data.startDate && data.endDate) {
         return new Date(data.endDate) >= new Date(data.startDate);
@@ -422,6 +427,7 @@ export default function GroomingPage() {
         environments,
         holidays,
         weeklyOffDays,
+        releasesAndMilestones,
     } = useProject();
     const { toast } = useToast();
     
@@ -433,6 +439,8 @@ export default function GroomingPage() {
     const [visibleSprintIndex, setVisibleSprintIndex] = useState<number | null>(null);
     const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
     const [showAddSubTask, setShowAddSubTask] = useState(false);
+    
+    const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
     const backlogItems = useMemo(() => {
         return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
@@ -490,6 +498,8 @@ export default function GroomingPage() {
           status: 'To Do',
           startDate: '',
           endDate: '',
+          sprintId: 'backlog',
+          releaseId: 'unassigned',
         }
     });
     
@@ -544,6 +554,8 @@ export default function GroomingPage() {
                 status: selectedStory.status || 'To Do',
                 startDate: selectedStory.startDate ? format(new Date(selectedStory.startDate), 'yyyy-MM-dd') : '',
                 endDate: selectedStory.endDate ? format(new Date(selectedStory.endDate), 'yyyy-MM-dd') : '',
+                sprintId: selectedStory.sprintId || 'backlog',
+                releaseId: selectedStory.releaseId || 'unassigned',
             });
         } else {
              editStoryForm.reset({
@@ -634,6 +646,8 @@ export default function GroomingPage() {
             status: values.status,
             startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
             endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
+            sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+            releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         });
 
         if (success) {
@@ -918,7 +932,7 @@ export default function GroomingPage() {
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                    {['To Do', 'In Progress', 'Done'].map((p) => (
+                                    {statusOptions.map((p) => (
                                         <SelectItem key={p} value={p}>
                                         {p}
                                         </SelectItem>
@@ -948,6 +962,38 @@ export default function GroomingPage() {
                             <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                 <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                             )}/>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <FormField control={subTaskForm.control} name="sprintId" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Sprint</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="backlog">Backlog</SelectItem>
+                                    {sprints.map(sprint => (
+                                        <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={subTaskForm.control} name="releaseId" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Release</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {releases.map(release => (
+                                        <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )} />
                         </div>
                         <DialogFooter>
                             <Button type="submit" disabled={isEditStorySubmitting}>
