@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -123,14 +124,34 @@ export default function ProjectDashboardPage() {
             }
         });
     }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays]);
+    
+    const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
+        if (story.parentStoryId) {
+            if (!acc[story.parentStoryId]) {
+                acc[story.parentStoryId] = [];
+            }
+            acc[story.parentStoryId].push(story);
+        }
+        return acc;
+    }, {} as Record<string, Story[]>), [stories]);
 
     const burnupData = useMemo(() => {
         const release = releases.find(r => r.id === selectedReleaseId);
         if(!release || !release.startDate || !release.endDate) return [];
 
-        const releaseStories = stories.filter(s => s.releaseId === release.id && ['Requirement/Story', 'Task', 'Feature Change', 'Bug'].includes(s.itemType));
-        const totalScope = releaseStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+        const releaseStories = stories.filter(s => s.releaseId === release.id && ['Requirement/Story', 'Feature Change'].includes(s.itemType));
         
+        const totalScope = releaseStories.reduce((sum, story) => {
+            const subTasks = subItemsByStoryId[story.id] || [];
+            if (subTasks.length > 0) {
+                const subTaskEffort = subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+                return sum + subTaskEffort;
+            }
+            return sum + (story.estimatedHours || 0);
+        }, 0);
+        
+        const allReleaseWorkItems = stories.filter(s => s.releaseId === release.id);
+
         const releaseStart = startOfDay(parseISO(release.startDate));
         const releaseEnd = startOfDay(parseISO(release.endDate));
         const releaseDates = eachDayOfInterval({ start: releaseStart, end: releaseEnd });
@@ -150,14 +171,22 @@ export default function ProjectDashboardPage() {
 
         return releaseDates.map(date => {
             const dateStr = format(date, 'MMM d');
-            const completedEffort = releaseStories
-                .filter(s => {
-                    if (s.status !== 'Done') return false;
-                     const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : releaseStart;
-                    return storyDate <= date;
-                })
-                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
             
+            const completedEffortOnDate = releaseStories.reduce((sum, story) => {
+                const subTasks = subItemsByStoryId[story.id] || [];
+                const allItems = subTasks.length > 0 ? subTasks : [story];
+
+                const completedEffort = allItems
+                    .filter(s => {
+                        if (s.status !== 'Done') return false;
+                         const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : releaseStart;
+                        return storyDate <= date;
+                    })
+                    .reduce((itemSum, s) => itemSum + (s.estimatedHours || 0), 0);
+                
+                return sum + completedEffort;
+            }, 0);
+
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
             if (isWorkingDay && date >= releaseStart) {
                 idealBurnup += idealDailyBurn;
@@ -166,11 +195,11 @@ export default function ProjectDashboardPage() {
             return {
                 name: dateStr,
                 scope: totalScope,
-                completed: completedEffort,
+                completed: completedEffortOnDate,
                 ideal: idealBurnup > totalScope ? totalScope : idealBurnup,
             }
         });
-    }, [selectedReleaseId, releases, stories, holidays, weeklyOffDays]);
+    }, [selectedReleaseId, releases, stories, holidays, weeklyOffDays, subItemsByStoryId]);
 
 
     const projectManager = project?.projectManagerId
@@ -306,9 +335,9 @@ export default function ProjectDashboardPage() {
                                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
                                     <YAxis />
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Area type="monotone" dataKey="completed" stackId="a" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
+                                    <Area type="monotone" dataKey="scope" stackId="a" fill="var(--color-scope)" fillOpacity={0.1} stroke="var(--color-scope)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
+                                    <Area type="monotone" dataKey="completed" stackId="b" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
                                     <Line type="monotone" dataKey="ideal" stroke="var(--color-ideal)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
-                                    <Line type="step" dataKey="scope" stroke="var(--color-scope)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
                                 </AreaChart>
                             </ChartContainer>
                         </CardContent>
