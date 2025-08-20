@@ -40,7 +40,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns } from 'lucide-react';
 import { type TestCase, type TestCaseStatus, type TestCaseType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +49,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+
 
 const testCaseFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -74,6 +76,20 @@ const statusStyles: Record<TestCaseStatus, string> = {
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
 const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
+type ColumnId = 'testCaseId' | 'title' | 'status' | 'type' | 'assigneeId' | 'storyId' | 'sprintId' | 'releaseId' | 'environments';
+
+const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
+    testCaseId: { label: 'ID', defaultVisible: true },
+    title: { label: 'Title', defaultVisible: true },
+    status: { label: 'Status', defaultVisible: true },
+    type: { label: 'Type', defaultVisible: false },
+    assigneeId: { label: 'Assignee', defaultVisible: true },
+    environments: { label: 'Environments', defaultVisible: true },
+    storyId: { label: 'Related Story', defaultVisible: false },
+    sprintId: { label: 'Sprint', defaultVisible: false },
+    releaseId: { label: 'Release', defaultVisible: false },
+};
+
 
 export default function TestCasesPage() {
   const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases } = useProject();
@@ -93,6 +109,12 @@ export default function TestCasesPage() {
     environmentId: 'all',
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
+  const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() =>
+    Object.entries(columnConfig).reduce((acc, [key, { defaultVisible }]) => {
+      acc[key as ColumnId] = defaultVisible;
+      return acc;
+    }, {} as Record<ColumnId, boolean>)
+  );
 
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
@@ -422,6 +444,33 @@ export default function TestCasesPage() {
                   {sortedEnvironments.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+               <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline">
+                            <Columns className="mr-2 h-4 w-4" />
+                            Columns
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {Object.entries(columnConfig).map(([key, { label }]) => (
+                            <DropdownMenuCheckboxItem
+                                key={key}
+                                className="capitalize"
+                                checked={columnVisibility[key as ColumnId]}
+                                onCheckedChange={(value) =>
+                                setColumnVisibility((prev) => ({
+                                    ...prev,
+                                    [key]: !!value,
+                                }))
+                                }
+                            >
+                                {label}
+                            </DropdownMenuCheckboxItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
               <Button variant="ghost" onClick={clearFilters}>
                 <X className="mr-2 h-4 w-4" /> Clear Filters
               </Button>
@@ -439,17 +488,24 @@ export default function TestCasesPage() {
                         aria-label="Select all"
                     />
                  </TableHead>
-                <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                <SortableHeader columnId="title">Title</SortableHeader>
-                <SortableHeader columnId="status">Status</SortableHeader>
-                <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
-                <TableHead>Environments</TableHead>
+                {columnVisibility.testCaseId && <SortableHeader columnId="testCaseId">ID</SortableHeader>}
+                {columnVisibility.title && <SortableHeader columnId="title">Title</SortableHeader>}
+                {columnVisibility.status && <SortableHeader columnId="status">Status</SortableHeader>}
+                {columnVisibility.type && <SortableHeader columnId="type">Type</SortableHeader>}
+                {columnVisibility.assigneeId && <SortableHeader columnId="assigneeId">Assignee</SortableHeader>}
+                {columnVisibility.environments && <TableHead>Environments</TableHead>}
+                {columnVisibility.storyId && <SortableHeader columnId="storyId">Story</SortableHeader>}
+                {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
+                {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAndSortedTestCases.map((tc) => {
                 const assignee = employees.find(e => e.id === tc.assigneeId);
+                const relatedStory = stories.find(s => s.id === tc.storyId);
+                const sprint = sprints.find(s => s.id === tc.sprintId);
+                const release = releases.find(r => r.id === tc.releaseId);
                 const tcEnvironments = tc.environmentIds?.map(envId => environments.find(e => e.id === envId)?.name).filter(Boolean).join(', ');
                 return (
                     <TableRow key={tc.id} data-state={selectedTestCases.includes(tc.id) && "selected"}>
@@ -466,14 +522,15 @@ export default function TestCasesPage() {
                                 aria-label="Select row"
                             />
                         </TableCell>
-                        <TableCell className="font-medium">{tc.testCaseId}</TableCell>
-                        <TableCell>{tc.title}</TableCell>
-                        <TableCell>
+                        {columnVisibility.testCaseId && <TableCell className="font-medium">{tc.testCaseId}</TableCell>}
+                        {columnVisibility.title && <TableCell>{tc.title}</TableCell>}
+                        {columnVisibility.status && <TableCell>
                             <Badge className={cn('font-semibold', statusStyles[tc.status])}>
                                 {tc.status}
                             </Badge>
-                        </TableCell>
-                        <TableCell>
+                        </TableCell>}
+                         {columnVisibility.type && <TableCell>{tc.type}</TableCell>}
+                        {columnVisibility.assigneeId && <TableCell>
                             {assignee ? (
                                 <div className="flex items-center gap-2">
                                 <Avatar className="h-6 w-6">
@@ -483,8 +540,13 @@ export default function TestCasesPage() {
                                 {assignee.firstName}
                                 </div>
                             ) : "Unassigned"}
-                        </TableCell>
-                        <TableCell>{tcEnvironments || 'N/A'}</TableCell>
+                        </TableCell>}
+                        {columnVisibility.environments && <TableCell>{tcEnvironments || 'N/A'}</TableCell>}
+                        {columnVisibility.storyId && <TableCell>
+                            {relatedStory ? <Badge variant="secondary">{relatedStory.storyId}</Badge> : 'N/A'}
+                        </TableCell>}
+                        {columnVisibility.sprintId && <TableCell>{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>}
+                        {columnVisibility.releaseId && <TableCell>{release?.releaseId || 'N/A'}</TableCell>}
                         <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
                             <Edit className="h-4 w-4" />
@@ -758,3 +820,4 @@ export default function TestCasesPage() {
     </>
   );
 }
+
