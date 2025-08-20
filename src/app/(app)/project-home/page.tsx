@@ -384,10 +384,13 @@ export default function ProjectsDashboard() {
       const { projectManagerId, ...restValues } = values;
       const dataToSave: Partial<Project> = {
           ...restValues,
-          projectManagerId: projectManagerId || undefined,
           startDate: new Date(values.startDate).toISOString(),
           endDate: new Date(values.endDate).toISOString(),
       };
+
+      if (projectManagerId) {
+        dataToSave.projectManagerId = projectManagerId;
+      }
 
       if (editingProject) {
         const projectRef = doc(db, 'projects', editingProject.id);
