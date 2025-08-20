@@ -93,8 +93,8 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     estimatedHours: { label: 'Effort', defaultVisible: false },
     startDate: { label: 'Start Date', defaultVisible: false },
     endDate: { label: 'End Date', defaultVisible: false },
-    sprintId: { label: 'Sprint', defaultVisible: false },
-    releaseId: { label: 'Release', defaultVisible: false },
+    sprintId: { label: 'Sprint', defaultVisible: true },
+    releaseId: { label: 'Release', defaultVisible: true },
 };
 
 export default function DevelopmentTasksPage() {
@@ -660,4 +660,5 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
 
