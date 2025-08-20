@@ -316,68 +316,6 @@ export default function ProjectDashboardPage() {
                         />
                     </CardContent>
                 </Card>
-                
-                <div className="grid gap-4 md:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <CardTitle>Sprint Burndown</CardTitle>
-                                <div className="w-48">
-                                    <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Sprint" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="h-[300px]">
-                            <ChartContainer config={burndownChartConfig}>
-                                <LineChart data={burndownData}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
-                                    <YAxis />
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Line type="monotone" dataKey="remaining" stroke="var(--color-remaining)" strokeWidth={2} dot={false} />
-                                    <Line type="monotone" dataKey="ideal" stroke="var(--color-ideal)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
-                                </LineChart>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                         <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <CardTitle>Release Burnup</CardTitle>
-                                <div className="w-48">
-                                    <Select value={selectedReleaseId} onValueChange={setSelectedReleaseId}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Release" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </CardHeader>
-                         <CardContent className="h-[300px]">
-                            <ChartContainer config={burnupChartConfig}>
-                                <AreaChart data={burnupData}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
-                                    <YAxis domain={[0, 'dataMax + 10']} />
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Area type="monotone" dataKey="completed" stackId="a" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
-                                    <Line type="monotone" dataKey="ideal" stroke="var(--color-ideal)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
-                                </AreaChart>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
-                </div>
             </div>
         </div>
     );
