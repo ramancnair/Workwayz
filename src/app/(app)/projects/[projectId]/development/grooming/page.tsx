@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -87,6 +88,7 @@ const storyFormSchema = z.object({
   impactedSystemIds: z.array(z.string()).optional(),
   releaseId: z.string().optional(),
   attachments: z.string().optional(),
+  sprintId: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -572,6 +574,7 @@ export default function GroomingPage() {
                 impactedSystemIds: selectedStory.impactedSystemIds || [],
                 releaseId: selectedStory.releaseId || 'unassigned',
                 attachments: selectedStory.attachments || '',
+                sprintId: selectedStory.sprintId || 'backlog',
             });
         }
     }, [selectedStory, editStoryForm, subTaskForm]);
@@ -627,6 +630,7 @@ export default function GroomingPage() {
             impactedSystemIds: values.impactedSystemIds,
             releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
             attachments: values.attachments,
+            sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         });
 
         if (success) {
@@ -1252,6 +1256,25 @@ export default function GroomingPage() {
                                 </>
                             )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={editStoryForm.control}
+                                    name="sprintId"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Sprint</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                            <SelectItem value="backlog">Backlog</SelectItem>
+                                            {sprints.map(sprint => (
+                                                <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                            ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
                                 <FormField
                                     control={editStoryForm.control}
                                     name="releaseId"
