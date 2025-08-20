@@ -47,6 +47,7 @@ const burndownChartConfig = {
 const burnupChartConfig = {
   scope: { label: "Total Scope", color: "hsl(var(--muted-foreground))" },
   completed: { label: "Completed Work", color: "#22c55e" },
+  ideal: { label: "Ideal Burnup", color: "#a1a1aa" },
 } satisfies ChartConfig;
 
 
@@ -103,8 +104,6 @@ export default function ProjectDashboardPage() {
             const completedEffort = sprintStories
                 .filter(s => {
                     if (s.status !== 'Done') return false;
-                    // If no updatedAt, assume it was done before the sprint started (e.g. moved in already done)
-                    // This is a simplification. A real implementation would need status history.
                     const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : sprintStart;
                     return storyDate <= date;
                 })
@@ -135,6 +134,19 @@ export default function ProjectDashboardPage() {
         const releaseStart = startOfDay(parseISO(release.startDate));
         const releaseEnd = startOfDay(parseISO(release.endDate));
         const releaseDates = eachDayOfInterval({ start: releaseStart, end: releaseEnd });
+        
+        const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
+        const workingDays = releaseDates.filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(h => isSameDay(day, h));
+            return !isWeekend && !isHoliday;
+        });
+
+        if (workingDays.length === 0) return [];
+        const idealDailyBurn = totalScope / workingDays.length;
+        
+        let idealBurnup = 0;
 
         return releaseDates.map(date => {
             const dateStr = format(date, 'MMM d');
@@ -146,13 +158,19 @@ export default function ProjectDashboardPage() {
                 })
                 .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
             
+            const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
+            if (isWorkingDay && date >= releaseStart) {
+                idealBurnup += idealDailyBurn;
+            }
+            
             return {
                 name: dateStr,
                 scope: totalScope,
                 completed: completedEffort,
+                ideal: idealBurnup > totalScope ? totalScope : idealBurnup,
             }
         });
-    }, [selectedReleaseId, releases, stories]);
+    }, [selectedReleaseId, releases, stories, holidays, weeklyOffDays]);
 
 
     const projectManager = project?.projectManagerId
@@ -288,8 +306,9 @@ export default function ProjectDashboardPage() {
                                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
                                     <YAxis />
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Area type="step" dataKey="scope" fill="var(--color-scope)" fillOpacity={0.1} stroke="var(--color-scope)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
-                                    <Area type="monotone" dataKey="completed" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
+                                    <Area type="monotone" dataKey="completed" stackId="a" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
+                                    <Line type="monotone" dataKey="ideal" stroke="var(--color-ideal)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
+                                    <Line type="step" dataKey="scope" stroke="var(--color-scope)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
                                 </AreaChart>
                             </ChartContainer>
                         </CardContent>
