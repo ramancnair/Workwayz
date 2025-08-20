@@ -104,6 +104,7 @@ const storyFormSchema = z.object({
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
+  sprintId: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -115,6 +116,8 @@ const subTaskFormSchema = z.object({
     status: z.enum(statusOptions),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
+    sprintId: z.string().optional(),
+    releaseId: z.string().optional(),
 }).refine(data => {
     if (data.startDate && data.endDate) {
         return new Date(data.endDate) >= new Date(data.startDate);
@@ -337,7 +340,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -351,6 +354,8 @@ export default function BacklogPage() {
       status: 'To Do',
       startDate: '',
       endDate: '',
+      sprintId: 'backlog',
+      releaseId: 'unassigned',
     }
   });
 
@@ -418,6 +423,8 @@ export default function BacklogPage() {
             status: selectedStory.status,
             startDate: selectedStory.startDate ? format(new Date(selectedStory.startDate), 'yyyy-MM-dd') : '',
             endDate: selectedStory.endDate ? format(new Date(selectedStory.endDate), 'yyyy-MM-dd') : '',
+            sprintId: selectedStory.sprintId || 'backlog',
+            releaseId: selectedStory.releaseId || 'unassigned',
         });
     } else {
         const isSubItem = ['Bug'].includes(selectedStory.itemType);
@@ -433,6 +440,7 @@ export default function BacklogPage() {
             estimatedHours: selectedStory.estimatedHours,
             criticality: selectedStory.criticality || 'Medium',
             releaseId: selectedStory.releaseId || 'unassigned',
+            sprintId: selectedStory.sprintId || 'backlog',
             environmentId: selectedStory.environmentId || 'unassigned',
             impactedSystemIds: selectedStory.impactedSystemIds || [],
             attachments: selectedStory.attachments || '',
@@ -494,20 +502,25 @@ export default function BacklogPage() {
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setAddStorySubmitting(true);
     
+    let parentStory: Story | undefined;
+    if (['Bug'].includes(values.itemType) && values.parentStoryId && values.parentStoryId !== 'unassigned') {
+      parentStory = stories.find(s => s.id === values.parentStoryId);
+    }
+
     const newStory: Omit<Story, 'id' | 'storyId'> = {
-      sprintId: null,
       title: values.title,
       description: values.description || '',
       itemType: values.itemType,
       acceptanceCriteria: values.acceptanceCriteria,
       reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
+      epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
       parentStoryId: ['Bug'].includes(values.itemType) ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       criticality: values.itemType === 'Bug' ? values.criticality : undefined,
-      releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+      sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
+      releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
       environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
       impactedSystemIds: values.impactedSystemIds,
       attachments: values.attachments,
@@ -535,6 +548,7 @@ export default function BacklogPage() {
         reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         estimatedHours: values.estimatedHours,
+        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
         impactedSystemIds: values.impactedSystemIds,
@@ -577,6 +591,8 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
         status: values.status,
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
+        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     });
 
     if (success) {
@@ -1379,6 +1395,38 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 </FormItem>
                             )} />
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <FormField control={subTaskForm.control} name="sprintId" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Sprint</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="backlog">Backlog</SelectItem>
+                                    {sprints.map(sprint => (
+                                        <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={subTaskForm.control} name="releaseId" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Release</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {releases.map(release => (
+                                        <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )} />
+                        </div>
                         <DialogFooter>
                             <Button type="submit" disabled={isEditStorySubmitting}>
                                 {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
@@ -1633,6 +1681,25 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <FormField
+                                control={editStoryForm.control}
+                                name="sprintId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Sprint</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                        <SelectItem value="backlog">Backlog</SelectItem>
+                                        {sprints.map(sprint => (
+                                            <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
                             <FormField
                             control={editStoryForm.control}
                             name="releaseId"
@@ -1946,6 +2013,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

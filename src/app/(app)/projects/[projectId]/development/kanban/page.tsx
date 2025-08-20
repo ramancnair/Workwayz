@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment, ImpactedSystem } from '@/types';
+import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment, ImpactedSystem, Release, Sprint } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -82,6 +82,8 @@ const storyFormSchema = z.object({
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
   status: z.enum(statusOptions).optional(),
+  sprintId: z.string().optional(),
+  releaseId: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -91,6 +93,8 @@ const subTaskFormSchema = z.object({
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
     status: z.enum(statusOptions),
+    sprintId: z.string().optional(),
+    releaseId: z.string().optional(),
 });
 
 function StoryCard({ 
@@ -272,7 +276,7 @@ function StoryCard({
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -281,6 +285,7 @@ export default function KanbanPage() {
   const selectedStory = selectionStack[selectionStack.length - 1] || null;
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
   const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
+  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -295,6 +300,8 @@ export default function KanbanPage() {
           estimatedHours: 0,
           assigneeId: 'unassigned',
           status: 'To Do',
+          sprintId: 'backlog',
+          releaseId: 'unassigned',
       }
   });
 
@@ -341,6 +348,8 @@ export default function KanbanPage() {
             estimatedHours: selectedStory.estimatedHours,
             assigneeId: selectedStory.assigneeId || 'unassigned',
             status: selectedStory.status,
+            sprintId: selectedStory.sprintId || 'backlog',
+            releaseId: selectedStory.releaseId || 'unassigned',
         });
     } else {
       const isSubItem = ['Bug'].includes(selectedStory.itemType); // Sub Task handled separately
@@ -357,6 +366,8 @@ export default function KanbanPage() {
         impactedSystemIds: selectedStory.impactedSystemIds || [],
         attachments: selectedStory.attachments || '',
         status: selectedStory.status,
+        sprintId: selectedStory.sprintId || 'backlog',
+        releaseId: selectedStory.releaseId || 'unassigned',
       });
     }
   }, [selectedStory, editStoryForm, subTaskForm]);
@@ -380,6 +391,8 @@ export default function KanbanPage() {
         impactedSystemIds: values.impactedSystemIds,
         attachments: values.attachments,
         status: values.status,
+        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     });
     if (success) {
       handleSetSelectedStory(null);
@@ -400,6 +413,8 @@ export default function KanbanPage() {
         estimatedHours: values.estimatedHours,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         status: values.status,
+        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     });
     if (success) {
       handleSetSelectedStory(null);
@@ -623,6 +638,38 @@ export default function KanbanPage() {
                             <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                 <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                             )}/>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={subTaskForm.control} name="sprintId" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Sprint</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="backlog">Backlog</SelectItem>
+                                    {sprints.map(sprint => (
+                                        <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={subTaskForm.control} name="releaseId" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Release</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {releases.map(release => (
+                                        <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )} />
                         </div>
                         <DialogFooter>
                             <Button type="submit" disabled={isEditStorySubmitting}>

@@ -43,7 +43,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { Story, StoryStatus, BugCriticality } from '@/types';
+import type { Story, StoryStatus, BugCriticality, Release } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -84,11 +84,12 @@ const bugFormSchema = z.object({
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
   attachments: z.string().optional(),
+  releaseId: z.string().optional(),
 });
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs } = useProject();
+  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs, releasesAndMilestones } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -100,6 +101,7 @@ export default function BugListPage() {
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
   const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
+  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const autoGenFormSchema = useMemo(() => {
     const shape: Record<string, z.ZodNumber> = {};
@@ -148,6 +150,7 @@ export default function BugListPage() {
           criticality: editingBug.criticality || 'Medium',
           environmentId: editingBug.environmentId || 'unassigned',
           attachments: editingBug.attachments || '',
+          releaseId: editingBug.releaseId || 'unassigned',
         });
       } else {
          form.reset({
@@ -162,6 +165,7 @@ export default function BugListPage() {
             criticality: 'Medium',
             environmentId: 'unassigned',
             attachments: '',
+            releaseId: 'unassigned',
         });
       }
     }
@@ -176,35 +180,25 @@ export default function BugListPage() {
     setIsSubmitting(true);
     let success = false;
     
+    const payload = {
+        title: values.title,
+        description: values.description,
+        acceptanceCriteria: values.acceptanceCriteria,
+        reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+        parentStoryId: values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId,
+        status: values.status,
+        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+        criticality: values.criticality,
+        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+        attachments: values.attachments,
+        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+    };
+
     if (editingBug) {
-        success = await updateStory(editingBug.id, {
-            title: values.title,
-            description: values.description,
-            acceptanceCriteria: values.acceptanceCriteria,
-            reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
-            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-            parentStoryId: values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId,
-            status: values.status,
-            sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-            criticality: values.criticality,
-            environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-            attachments: values.attachments,
-        });
+        success = await updateStory(editingBug.id, payload);
     } else {
-        success = await addStory({
-            itemType: 'Bug',
-            title: values.title,
-            description: values.description,
-            acceptanceCriteria: values.acceptanceCriteria,
-            reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
-            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-            parentStoryId: values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId,
-            status: values.status,
-            sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-            criticality: values.criticality,
-            environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-            attachments: values.attachments,
-        });
+        success = await addStory({ ...payload, itemType: 'Bug' });
     }
     
     if (success) {
@@ -602,6 +596,27 @@ export default function BugListPage() {
                         </FormItem>
                     )}
                     />
+                    <FormField
+                    control={form.control}
+                    name="releaseId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Release</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {releases.map(release => (
+                                <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
                 </div>
                  <FormField
                   control={form.control}
@@ -647,6 +662,7 @@ export default function BugListPage() {
     </>
   );
 }
+
 
 
 
