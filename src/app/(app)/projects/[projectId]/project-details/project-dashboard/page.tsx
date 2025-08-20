@@ -74,13 +74,31 @@ export default function ProjectDashboardPage() {
             setSelectedReleaseId(releases[0].id);
         }
     }, [releases]);
+    
+    const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
+        if (story.parentStoryId) {
+            if (!acc[story.parentStoryId]) {
+                acc[story.parentStoryId] = [];
+            }
+            acc[story.parentStoryId].push(story);
+        }
+        return acc;
+    }, {} as Record<string, Story[]>), [stories]);
 
     const burndownData = useMemo(() => {
         const sprint = sprints.find(s => s.id === selectedSprintId);
         if (!sprint || !sprint.startDate || !sprint.endDate) return [];
         
         const sprintStories = stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change', 'Bug'].includes(story.itemType));
-        const totalEffort = sprintStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+        
+        const totalEffort = sprintStories.reduce((sum, story) => {
+            const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+            if (subTasks.length > 0) {
+                const subTaskEffort = subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+                return sum + subTaskEffort;
+            }
+            return sum + (story.estimatedHours || 0);
+        }, 0);
         
         const sprintStart = startOfDay(parseISO(sprint.startDate));
         const sprintEnd = startOfDay(parseISO(sprint.endDate));
@@ -108,7 +126,13 @@ export default function ProjectDashboardPage() {
                     const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : sprintStart;
                     return storyDate <= date;
                 })
-                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+                .reduce((sum, story) => {
+                    const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+                     if (subTasks.length > 0) {
+                        return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+                    }
+                    return sum + (story.estimatedHours || 0);
+                }, 0);
                 
             const remaining = totalEffort - completedEffort;
             
@@ -123,17 +147,7 @@ export default function ProjectDashboardPage() {
                 ideal: idealEffort < 0 ? 0 : idealEffort,
             }
         });
-    }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays]);
-    
-    const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
-        if (story.parentStoryId) {
-            if (!acc[story.parentStoryId]) {
-                acc[story.parentStoryId] = [];
-            }
-            acc[story.parentStoryId].push(story);
-        }
-        return acc;
-    }, {} as Record<string, Story[]>), [stories]);
+    }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays, subItemsByStoryId]);
 
     const burnupData = useMemo(() => {
         const release = releases.find(r => r.id === selectedReleaseId);
@@ -142,7 +156,7 @@ export default function ProjectDashboardPage() {
         const releaseStories = stories.filter(s => s.releaseId === release.id && ['Requirement/Story', 'Feature Change'].includes(s.itemType));
         
         const totalScope = releaseStories.reduce((sum, story) => {
-            const subTasks = subItemsByStoryId[story.id] || [];
+            const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
             if (subTasks.length > 0) {
                 const subTaskEffort = subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
                 return sum + subTaskEffort;
@@ -347,3 +361,4 @@ export default function ProjectDashboardPage() {
         </div>
     );
 }
+
