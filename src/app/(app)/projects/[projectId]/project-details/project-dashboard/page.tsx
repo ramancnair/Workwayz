@@ -46,8 +46,7 @@ const burndownChartConfig = {
 } satisfies ChartConfig;
 
 const burnupChartConfig = {
-  scope: { label: "Total Scope", color: "hsl(var(--muted-foreground))" },
-  completed: { label: "Completed Work", color: "#22c55e" },
+  completed: { label: "Completed Work", color: "hsl(var(--chart-2))" },
   ideal: { label: "Ideal Burnup", color: "#a1a1aa" },
 } satisfies ChartConfig;
 
@@ -96,8 +95,7 @@ export default function ProjectDashboardPage() {
             if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
                 const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
                 if (subTasks.length > 0) {
-                    const subTaskEffort = subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
-                    return sum + subTaskEffort;
+                    return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
                 }
             }
             return sum + (story.estimatedHours || 0);
@@ -124,28 +122,31 @@ export default function ProjectDashboardPage() {
             const dateStr = format(date, 'MMM d');
             
             const completedEffortOnDate = sprintStories.reduce((sum, story) => {
-                 if (story.status !== 'Done') return sum;
-                const storyDate = story.updatedAt ? startOfDay(parseISO(story.updatedAt)) : sprintStart;
-                if(storyDate > date) return sum;
-
-                 if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+                let storyCompletedEffort = 0;
+                if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
                     const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-                    if (subTasks.length > 0) {
-                        return sum + subTasks.reduce((subSum, subTask) => {
-                            if (subTask.status !== 'Done') return subSum;
-                             const subTaskDate = subTask.updatedAt ? startOfDay(parseISO(subTask.updatedAt)) : sprintStart;
-                             if (subTaskDate > date) return subSum;
-                            return subSum + (subTask.estimatedHours || 0);
-                        }, 0);
+                     subTasks.forEach(subTask => {
+                        if (subTask.status !== 'Done') return;
+                        const doneDate = subTask.updatedAt ? startOfDay(parseISO(subTask.updatedAt)) : sprintStart;
+                        if (doneDate <= date) {
+                           storyCompletedEffort += (subTask.estimatedHours || 0);
+                        }
+                    });
+                } else { // For standalone tasks/bugs etc.
+                    if(story.status === 'Done') {
+                        const doneDate = story.updatedAt ? startOfDay(parseISO(story.updatedAt)) : sprintStart;
+                        if (doneDate <= date) {
+                            storyCompletedEffort += (story.estimatedHours || 0);
+                        }
                     }
                 }
-                return sum + (story.estimatedHours || 0);
+                return sum + storyCompletedEffort;
             }, 0);
                 
             const remaining = totalEffort - completedEffortOnDate;
             
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
-            if (isWorkingDay && date > sprintStart) {
+            if (isWorkingDay && date >= sprintStart) {
                 idealEffort -= idealDailyBurn;
             }
             
@@ -166,8 +167,7 @@ export default function ProjectDashboardPage() {
         const totalScope = releaseStories.reduce((sum, story) => {
             const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
             if (subTasks.length > 0) {
-                const subTaskEffort = subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
-                return sum + subTaskEffort;
+                return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
             }
             return sum + (story.estimatedHours || 0);
         }, 0);
@@ -193,19 +193,25 @@ export default function ProjectDashboardPage() {
             const dateStr = format(date, 'MMM d');
             
             const completedEffortOnDate = releaseStories.reduce((sum, story) => {
+                let storyCompletedEffort = 0;
                 const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-                 const allItemsForEffort = subTasks.length > 0 ? subTasks : (story.estimatedHours ? [story] : []);
-
-
-                const completedEffort = allItemsForEffort
-                    .filter(s => {
-                        if (s.status !== 'Done') return false;
-                        const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : releaseStart;
-                        return storyDate <= date;
-                    })
-                    .reduce((itemSum, s) => itemSum + (s.estimatedHours || 0), 0);
-                
-                return sum + completedEffort;
+                if (subTasks.length > 0) {
+                    subTasks.forEach(subTask => {
+                        if (subTask.status !== 'Done') return;
+                        const doneDate = subTask.updatedAt ? startOfDay(parseISO(subTask.updatedAt)) : releaseStart;
+                        if (doneDate <= date) {
+                           storyCompletedEffort += (subTask.estimatedHours || 0);
+                        }
+                    });
+                } else {
+                     if(story.status === 'Done') {
+                        const doneDate = story.updatedAt ? startOfDay(parseISO(story.updatedAt)) : releaseStart;
+                        if (doneDate <= date) {
+                            storyCompletedEffort += (story.estimatedHours || 0);
+                        }
+                    }
+                }
+                return sum + storyCompletedEffort;
             }, 0);
 
             const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
@@ -354,10 +360,9 @@ export default function ProjectDashboardPage() {
                                 <AreaChart data={burnupData}>
                                     <CartesianGrid vertical={false} />
                                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
-                                    <YAxis />
+                                    <YAxis domain={[0, (dataMax: number) => Math.max(dataMax, burnupData[0]?.scope || 0)]} />
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Area type="monotone" dataKey="scope" stackId="a" fill="var(--color-scope)" fillOpacity={0.1} stroke="var(--color-scope)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
-                                    <Area type="monotone" dataKey="completed" stackId="b" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
+                                    <Area type="monotone" dataKey="completed" stackId="a" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
                                     <Line type="monotone" dataKey="ideal" stroke="var(--color-ideal)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
                                 </AreaChart>
                             </ChartContainer>
