@@ -7,9 +7,19 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { type ProjectStatus } from '@/types';
+import { type ProjectStatus, type Story } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, eachDayOfInterval, isSameDay, startOfDay } from 'date-fns';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+
 
 const statusStyles: Record<ProjectStatus, string> = {
     'Initial Estimation': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
@@ -29,8 +39,111 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
     );
 }
 
+const burndownChartConfig = {
+  remaining: { label: "Remaining Effort", color: "#3b82f6" },
+  ideal: { label: "Ideal Burndown", color: "#a1a1aa" },
+} satisfies ChartConfig;
+
+const burnupChartConfig = {
+  scope: { label: "Total Scope", color: "#a1a1aa" },
+  completed: { label: "Completed Work", color: "#22c55e" },
+} satisfies ChartConfig;
+
+
 export default function ProjectDashboardPage() {
-    const { project, isLoading, allUsers } = useProject();
+    const { project, isLoading, allUsers, sprints, releasesAndMilestones, stories, holidays, weeklyOffDays } = useProject();
+    
+    const [selectedSprintId, setSelectedSprintId] = useState<string | undefined>();
+    const [selectedReleaseId, setSelectedReleaseId] = useState<string | undefined>();
+    
+    const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
+    
+    useEffect(() => {
+        const currentSprint = sprints.find(s => s.isCurrent);
+        if (currentSprint) {
+            setSelectedSprintId(currentSprint.id);
+        } else if (sprints.length > 0) {
+            setSelectedSprintId(sprints[0].id);
+        }
+    }, [sprints]);
+    
+    useEffect(() => {
+        if(releases.length > 0) {
+            setSelectedReleaseId(releases[0].id);
+        }
+    }, [releases]);
+
+    const burndownData = useMemo(() => {
+        const sprint = sprints.find(s => s.id === selectedSprintId);
+        if (!sprint || !sprint.startDate || !sprint.endDate) return [];
+        
+        const sprintStories = stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change', 'Bug'].includes(story.itemType));
+        const totalEffort = sprintStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+        
+        const sprintStart = startOfDay(parseISO(sprint.startDate));
+        const sprintEnd = startOfDay(parseISO(sprint.endDate));
+        const sprintDates = eachDayOfInterval({ start: sprintStart, end: sprintEnd });
+
+        const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
+        const workingDays = sprintDates.filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(h => isSameDay(day, h));
+            return !isWeekend && !isHoliday;
+        });
+
+        if (workingDays.length === 0) return [];
+        const idealDailyBurn = totalEffort / workingDays.length;
+        
+        let idealEffort = totalEffort;
+        
+        return sprintDates.map(date => {
+            const dateStr = format(date, 'MMM d');
+            
+            const completedEffort = sprintStories
+                .filter(s => s.status === 'Done' && s.updatedAt && startOfDay(parseISO(s.updatedAt)) <= date)
+                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+                
+            const remaining = totalEffort - completedEffort;
+            
+            const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
+            if (isWorkingDay && date > sprintStart) {
+                idealEffort -= idealDailyBurn;
+            }
+            
+            return {
+                name: dateStr,
+                remaining: remaining < 0 ? 0 : remaining,
+                ideal: idealEffort < 0 ? 0 : idealEffort,
+            }
+        });
+    }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays]);
+
+    const burnupData = useMemo(() => {
+        const release = releases.find(r => r.id === selectedReleaseId);
+        if(!release || !release.startDate || !release.endDate) return [];
+
+        const releaseStories = stories.filter(s => s.releaseId === release.id && ['Requirement/Story', 'Task', 'Feature Change', 'Bug'].includes(s.itemType));
+        const totalScope = releaseStories.reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+        
+        const releaseStart = startOfDay(parseISO(release.startDate));
+        const releaseEnd = startOfDay(parseISO(release.endDate));
+        const releaseDates = eachDayOfInterval({ start: releaseStart, end: releaseEnd });
+
+        return releaseDates.map(date => {
+            const dateStr = format(date, 'MMM d');
+            const completedEffort = releaseStories
+                .filter(s => s.status === 'Done' && s.updatedAt && startOfDay(parseISO(s.updatedAt)) <= date)
+                .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
+            
+            return {
+                name: dateStr,
+                scope: totalScope,
+                completed: completedEffort,
+            }
+        });
+    }, [selectedReleaseId, releases, stories]);
+
 
     const projectManager = project?.projectManagerId
         ? allUsers.find(e => e.id === project.projectManagerId)
@@ -110,6 +223,68 @@ export default function ProjectDashboardPage() {
                         />
                     </CardContent>
                 </Card>
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <CardTitle>Sprint Burndown</CardTitle>
+                                <div className="w-48">
+                                    <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Sprint" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="h-[300px]">
+                            <ChartContainer config={burndownChartConfig}>
+                                <LineChart data={burndownData}>
+                                    <CartesianGrid vertical={false} />
+                                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+                                    <YAxis />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
+                                    <Line type="monotone" dataKey="remaining" stroke="var(--color-remaining)" strokeWidth={2} dot={false} />
+                                    <Line type="monotone" dataKey="ideal" stroke="var(--color-ideal)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
+                                </LineChart>
+                            </ChartContainer>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                         <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <CardTitle>Release Burnup</CardTitle>
+                                <div className="w-48">
+                                    <Select value={selectedReleaseId} onValueChange={setSelectedReleaseId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Release" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </CardHeader>
+                         <CardContent className="h-[300px]">
+                            <ChartContainer config={burnupChartConfig}>
+                                <AreaChart data={burnupData}>
+                                    <CartesianGrid vertical={false} />
+                                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+                                    <YAxis />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
+                                    <Line type="step" dataKey="scope" stroke="var(--color-scope)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
+                                    <Area type="monotone" dataKey="completed" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
+                                </AreaChart>
+                            </ChartContainer>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );

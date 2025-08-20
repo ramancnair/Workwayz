@@ -303,7 +303,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [horizontals, setHorizontals] = useState<Horizontal[]>([]);
-  const [initialImpactedSystems, setInitialImpactedSystems] = useState<InitialImpactedSystem[]>([]);
+  const [initialImpactedSystems, setInitialImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [initialHorizontals, setInitialHorizontals] = useState<Horizontal[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
@@ -449,7 +449,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
                     
                     const dateFields: Record<string, string[]> = {
-                        stories: ['startDate', 'endDate', 'deletedAt'],
+                        stories: ['startDate', 'endDate', 'deletedAt', 'updatedAt'],
                         testCases: ['deletedAt'],
                         risks: ['deletedAt'],
                         assumptions: ['validationDate', 'deletedAt'],
@@ -681,7 +681,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     try {
       const storyToUpdate = stories.find(s => s.id === storyId);
       const { startDate, endDate, ...rest } = data;
-      const payload: any = { ...rest };
+      const payload: any = { ...rest, updatedAt: Timestamp.now().toDate().toISOString() };
       if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
       if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
 
@@ -2124,4 +2124,3 @@ export function useProject() {
   }
   return context;
 }
-

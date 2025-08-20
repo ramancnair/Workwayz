@@ -1,3 +1,4 @@
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -39,6 +40,7 @@ export type Story = {
   criticality?: BugCriticality;
   startDate?: string; // ISO String
   endDate?: string; // ISO String
+  updatedAt?: string; // ISO String for tracking completion date
   effortDays?: number;
   impactedSystemId?: string; // For Sub-Task
   impactedSystemIds?: string[]; // For Story/Feature Change
