@@ -45,7 +45,7 @@ const burndownChartConfig = {
 } satisfies ChartConfig;
 
 const burnupChartConfig = {
-  scope: { label: "Total Scope", color: "#a1a1aa" },
+  scope: { label: "Total Scope", color: "hsl(var(--muted-foreground))" },
   completed: { label: "Completed Work", color: "#22c55e" },
 } satisfies ChartConfig;
 
@@ -105,8 +105,8 @@ export default function ProjectDashboardPage() {
                     if (s.status !== 'Done') return false;
                     // If no updatedAt, assume it was done before the sprint started (e.g. moved in already done)
                     // This is a simplification. A real implementation would need status history.
-                    if (!s.updatedAt) return true; 
-                    return startOfDay(parseISO(s.updatedAt)) <= date;
+                    const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : sprintStart;
+                    return storyDate <= date;
                 })
                 .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
                 
@@ -141,8 +141,8 @@ export default function ProjectDashboardPage() {
             const completedEffort = releaseStories
                 .filter(s => {
                     if (s.status !== 'Done') return false;
-                     if (!s.updatedAt) return true; 
-                    return startOfDay(parseISO(s.updatedAt)) <= date;
+                     const storyDate = s.updatedAt ? startOfDay(parseISO(s.updatedAt)) : releaseStart;
+                    return storyDate <= date;
                 })
                 .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
             
@@ -288,7 +288,7 @@ export default function ProjectDashboardPage() {
                                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
                                     <YAxis />
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Line type="step" dataKey="scope" stroke="var(--color-scope)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
+                                    <Area type="step" dataKey="scope" fill="var(--color-scope)" fillOpacity={0.1} stroke="var(--color-scope)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
                                     <Area type="monotone" dataKey="completed" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
                                 </AreaChart>
                             </ChartContainer>
