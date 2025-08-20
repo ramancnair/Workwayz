@@ -92,6 +92,7 @@ export default function ProjectDashboardPage() {
         const sprintStories = stories.filter(story => story.sprintId === sprint.id);
         
         const totalEffort = sprintStories.reduce((sum, story) => {
+             // For stories/features, sum up their sub-tasks' effort
             if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
                 const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
                 if (subTasks.length > 0) {
@@ -368,7 +369,7 @@ export default function ProjectDashboardPage() {
                                 <AreaChart data={burnupData}>
                                     <CartesianGrid vertical={false} />
                                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
-                                    <YAxis />
+                                    <YAxis domain={[0, 'dataMax + 10']} />
                                     <ChartTooltip content={<ChartTooltipContent />} />
                                     <Area type="monotone" dataKey="completed" stackId="a" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" />
                                     <Line type="monotone" dataKey="ideal" stroke="var(--color-ideal)" strokeWidth={2} strokeDasharray="3 3" dot={false} />
