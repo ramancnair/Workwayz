@@ -39,7 +39,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns, Sparkles } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns } from 'lucide-react';
 import { type Story, type StoryStatus, type Epic, Release } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -98,13 +98,12 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
 };
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones, bulkUpdateSubTaskReleases } = useProject();
+  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubTask, setEditingSubTask] = useState<Story | null>(null);
   const [deletingSubTask, setDeletingSubTask] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   
   const subTasks = stories.filter(story => story.itemType === 'Sub Task');
   const parentStories = stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType));
@@ -137,17 +136,6 @@ export default function DevelopmentTasksPage() {
 
   const clearFilters = () => {
     setFilters({ search: '', sprintId: 'all', releaseId: 'all' });
-  };
-
-  const handleBulkUpdate = async () => {
-    setIsBulkUpdating(true);
-    const success = await bulkUpdateSubTaskReleases('REL-1');
-    if (success) {
-      toast({ title: 'Success', description: 'All sub-tasks have been updated to REL-1.' });
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not update sub-tasks.' });
-    }
-    setIsBulkUpdating(false);
   };
   
   const filteredAndSortedSubTasks = useMemo(() => {
@@ -322,10 +310,6 @@ export default function DevelopmentTasksPage() {
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Sub-Tasks" description="A comprehensive list of all sub-tasks for the project.">
-           <Button onClick={handleBulkUpdate} variant="outline" disabled={isBulkUpdating}>
-                <Sparkles className="mr-2 h-4 w-4" />
-                {isBulkUpdating ? 'Updating...' : 'Update Sub-Task Releases'}
-           </Button>
            <Button onClick={() => handleDialogOpen(null)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Sub-Task
