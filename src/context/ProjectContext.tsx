@@ -974,6 +974,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     if (!db || !projectId) return false;
 
     const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
+    const projectReleases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
     try {
       const batch = writeBatch(db);
@@ -1005,6 +1006,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             status: 'Not Run',
             storyId: relatedStory?.id,
             sprintId: relatedStory?.sprintId,
+            releaseId: getRandomItem(projectReleases)?.id,
             assigneeId: getRandomItem(employees)?.id,
             environmentIds: [environmentId],
             isDeleted: false,
