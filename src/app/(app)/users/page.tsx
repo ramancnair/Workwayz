@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const accessLevels: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
@@ -83,6 +84,8 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const [filters, setFilters] = useState({ search: '', accessLevel: 'all' });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'firstName', desc: false });
@@ -145,6 +148,26 @@ export default function UsersPage() {
       toast({ variant: "destructive", title: "Error", description: "Could not delete user." });
     }
     setDeletingUser(null);
+  };
+  
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedUsers.length === 0 || !db) return;
+    const batch = writeBatch(db);
+    const deletionTime = Timestamp.now();
+    selectedUsers.forEach(userId => {
+        const userRef = doc(db, 'employees', userId);
+        batch.update(userRef, { isDeleted: true, deletedAt: deletionTime });
+    });
+
+    try {
+        await batch.commit();
+        toast({ title: "Success", description: `${selectedUsers.length} user(s) moved to trash.` });
+    } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Could not move users to trash." });
+    } finally {
+        setSelectedUsers([]);
+        setShowBulkDeleteConfirm(false);
+    }
   };
 
   const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
@@ -273,6 +296,12 @@ export default function UsersPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="User List" description="Manage user access">
+          {selectedUsers.length > 0 && (
+            <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Selected ({selectedUsers.length})
+            </Button>
+          )}
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add User
@@ -303,6 +332,15 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                     <Checkbox
+                        checked={filteredAndSortedUsers.length > 0 && selectedUsers.length === filteredAndSortedUsers.length}
+                        onCheckedChange={(value) =>
+                            setSelectedUsers(value ? filteredAndSortedUsers.map(item => item.id) : [])
+                        }
+                        aria-label="Select all"
+                    />
+                  </TableHead>
                   <SortableHeader columnId="empId">Emp ID</SortableHeader>
                   <SortableHeader columnId="name">Name</SortableHeader>
                   <SortableHeader columnId="email">Email</SortableHeader>
@@ -312,7 +350,20 @@ export default function UsersPage() {
               </TableHeader>
               <TableBody>
                 {filteredAndSortedUsers.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} data-state={selectedUsers.includes(user.id) && "selected"}>
+                    <TableCell>
+                        <Checkbox
+                            checked={selectedUsers.includes(user.id)}
+                            onCheckedChange={(value) =>
+                                setSelectedUsers(
+                                    value
+                                    ? [...selectedUsers, user.id]
+                                    : selectedUsers.filter((id) => id !== user.id)
+                                )
+                            }
+                            aria-label="Select row"
+                        />
+                    </TableCell>
                     <TableCell className="font-medium">{user.empId}</TableCell>
                     <TableCell>{user.firstName} {user.lastName}</TableCell>
                     <TableCell>{user.email}</TableCell>
@@ -431,6 +482,27 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move the selected {selectedUsers.length} user(s) to the trash.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Delete Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
+
