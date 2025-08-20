@@ -875,6 +875,7 @@ export default function KanbanPage() {
                                       )}
                                   />
                                   </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <FormField
                                     control={editStoryForm.control}
                                     name="status"
@@ -899,6 +900,30 @@ export default function KanbanPage() {
                                       </FormItem>
                                     )}
                                   />
+                                  <FormField
+                                  control={editStoryForm.control}
+                                  name="releaseId"
+                                  render={({ field }) => (
+                                      <FormItem>
+                                      <FormLabel>Release</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                          <FormControl>
+                                          <SelectTrigger>
+                                              <SelectValue placeholder="Assign to a release" />
+                                          </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                                          {releases.map(release => (
+                                              <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                          ))}
+                                          </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                      </FormItem>
+                                  )}
+                                  />
+                                  </div>
                                   {selectedStory.itemType === 'Bug' && (
                                       <>
                                           <FormField
@@ -1117,3 +1142,4 @@ export default function KanbanPage() {
     </>
   );
 }
+

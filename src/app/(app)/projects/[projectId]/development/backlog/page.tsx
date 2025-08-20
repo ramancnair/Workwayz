@@ -317,7 +317,7 @@ export default function BacklogPage() {
   const [isAddEpicSubmitting, setAddEpicSubmitting] = useState(false);
   const [isEditEpicSubmitting, setEditEpicSubmitting] = useState(false);
   const [isAddStorySubmitting, setAddStorySubmitting] = useState(false);
-  const [isEditStorySubmitting, setEditStorySubmitting] = useState(false);
+  const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
 
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [deleteEpicItems, setDeleteEpicItems] = useState(false);
@@ -410,7 +410,7 @@ export default function BacklogPage() {
   
     useEffect(() => {
     if (!selectedStory) {
-        setEditStorySubmitting(false);
+        setIsEditStorySubmitting(false);
         setShowAddSubTask(false);
         subTaskForm.reset();
     } else if (selectedStory.itemType === 'Sub Task') {
@@ -539,7 +539,7 @@ export default function BacklogPage() {
   
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
-    setEditStorySubmitting(true);
+    setIsEditStorySubmitting(true);
     
     const payload: Partial<Story> = {
         title: values.title,
@@ -575,12 +575,12 @@ export default function BacklogPage() {
     } else {
         toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
-    setEditStorySubmitting(false);
+    setIsEditStorySubmitting(false);
 };
 
 const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
-    setEditStorySubmitting(true);
+    setIsEditStorySubmitting(true);
     
     const success = await updateStory(selectedStory.id, {
         title: values.title,
@@ -600,7 +600,7 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     } else {
         toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
     }
-    setEditStorySubmitting(false);
+    setIsEditStorySubmitting(false);
 };
 
 
@@ -2013,6 +2013,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
