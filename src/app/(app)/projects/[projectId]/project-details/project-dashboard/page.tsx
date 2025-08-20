@@ -16,7 +16,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
@@ -101,7 +101,13 @@ export default function ProjectDashboardPage() {
             const dateStr = format(date, 'MMM d');
             
             const completedEffort = sprintStories
-                .filter(s => s.status === 'Done' && s.updatedAt && startOfDay(parseISO(s.updatedAt)) <= date)
+                .filter(s => {
+                    if (s.status !== 'Done') return false;
+                    // If no updatedAt, assume it was done before the sprint started (e.g. moved in already done)
+                    // This is a simplification. A real implementation would need status history.
+                    if (!s.updatedAt) return true; 
+                    return startOfDay(parseISO(s.updatedAt)) <= date;
+                })
                 .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
                 
             const remaining = totalEffort - completedEffort;
@@ -133,7 +139,11 @@ export default function ProjectDashboardPage() {
         return releaseDates.map(date => {
             const dateStr = format(date, 'MMM d');
             const completedEffort = releaseStories
-                .filter(s => s.status === 'Done' && s.updatedAt && startOfDay(parseISO(s.updatedAt)) <= date)
+                .filter(s => {
+                    if (s.status !== 'Done') return false;
+                     if (!s.updatedAt) return true; 
+                    return startOfDay(parseISO(s.updatedAt)) <= date;
+                })
                 .reduce((sum, s) => sum + (s.estimatedHours || 0), 0);
             
             return {
