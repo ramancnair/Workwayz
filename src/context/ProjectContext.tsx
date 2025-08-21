@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -103,7 +104,6 @@ interface ProjectContextType {
   // TestCase actions
   addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => Promise<boolean>;
   autoGenerateTestCases: (counts: Record<string, number>) => Promise<boolean>;
-  updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
   
   // Bug actions
@@ -618,11 +618,14 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       
       const storiesSnapshot = await getDocs(collection(db, 'projects', projectId, 'stories'));
       let currentIdCounter = storiesSnapshot.size > 0
-        ? Math.max(0, ...storiesSnapshot.docs
-            .map(doc => doc.data().storyId)
-            .filter((id: string | undefined) => id && typeof id === 'string')
-            .map((id: string) => parseInt(id.replace(/^[A-Z]+-/, ''), 10) || 0)
-        ) + 1
+        ? Math.max(0, ...storiesSnapshot.docs.map(doc => {
+            const storyId = doc.data().storyId;
+            if (typeof storyId === 'string') {
+              const numericPart = storyId.split('-').pop();
+              return numericPart ? parseInt(numericPart, 10) : 0;
+            }
+            return 0;
+          }).filter(num => !isNaN(num))) + 1
         : 1;
 
       const prefixMap: Record<WorkItemType, string> = {
@@ -1093,9 +1096,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     try {
       const batch = writeBatch(db);
       const storiesSnapshot = await getDocs(collection(db, 'projects', projectId, 'stories'));
-      let currentIdCounter = storiesSnapshot.size > 0
-        ? Math.max(0, ...storiesSnapshot.docs.map(doc => parseInt(doc.data().storyId.replace(/^[A-Z]+-/, ''), 10) || 0)) + 1
-        : 1;
+      let currentIdCounter = storiesSnapshot.size > 0 ? Math.max(0, ...storiesSnapshot.docs.map(doc => parseInt(doc.data().storyId.replace(/^[A-Z]+-/, ''), 10) || 0)) + 1 : 1;
 
       const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story');
 
