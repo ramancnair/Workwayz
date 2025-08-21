@@ -59,14 +59,9 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const devMenuItems = [
     {
-      href: `${basePath}/development/dashboard`,
-      label: "Dev Dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      href: `${basePath}/development/kanban`,
-      label: "Kanban Board",
-      icon: KanbanSquare,
+      href: `${basePath}/development/backlog`,
+      label: "Product Backlog",
+      icon: Layers,
     },
     {
         href: `${basePath}/development/grooming`,
@@ -74,11 +69,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         icon: ChevronsUpDown,
     },
     {
-      href: `${basePath}/development/backlog`,
-      label: "Product Backlog",
-      icon: Layers,
+      href: `${basePath}/development/kanban`,
+      label: "Kanban Board",
+      icon: KanbanSquare,
     },
-     {
+    {
       href: `${basePath}/development/development-tasks`,
       label: "Sub-Tasks",
       icon: Component,
