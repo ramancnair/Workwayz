@@ -151,7 +151,7 @@ interface ProjectContextType {
   updateProjectSettings: (settings: Partial<Omit<ProjectSettings, 'id'>>) => Promise<boolean>;
   setWeeklyOffDays: (days: number[]) => Promise<boolean>;
   updateSprintSettings: (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>) => Promise<boolean>;
-  updateEffortSettings: (settings: Pick<ProjectSettings, 'manMonthToDays' | 'manDayToHours'>) => Promise<boolean>;
+  updateEffortSettings: (settings: Pick<ProjectSettings, 'manMonthToDays' | 'manDayToHours' | 'storyPointToHours'>) => Promise<boolean>;
   addHoliday: (holiday: Omit<Holiday, 'id'>) => Promise<boolean>;
   updateHoliday: (id: string, data: Partial<Omit<Holiday, 'id'>>) => Promise<boolean>;
   deleteHoliday: (id: string) => Promise<boolean>;
@@ -222,6 +222,7 @@ const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
   overrideGlobalHolidays: false,
   manMonthToDays: 22,
   manDayToHours: 8,
+  storyPointToHours: 8,
 };
 
 const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
@@ -1647,7 +1648,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
      return updateProjectSettings(settings);
   };
 
-  const updateEffortSettings = async (settings: Pick<ProjectSettings, 'manMonthToDays' | 'manDayToHours'>) => {
+  const updateEffortSettings = async (settings: Pick<ProjectSettings, 'manMonthToDays' | 'manDayToHours' | 'storyPointToHours'>) => {
     if (!db || !projectId) return false;
     return updateProjectSettings(settings);
   };

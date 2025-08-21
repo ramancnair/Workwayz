@@ -204,6 +204,7 @@ export type ProjectSettings = {
     overrideGlobalHolidays?: boolean;
     manMonthToDays?: number;
     manDayToHours?: number;
+    storyPointToHours?: number;
 };
 
 export type ImpactedSystemCategory = 'Technology' | 'Function';
