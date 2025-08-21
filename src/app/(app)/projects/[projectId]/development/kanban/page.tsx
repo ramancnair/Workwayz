@@ -108,7 +108,8 @@ function StoryCard({
   className, 
   isMoveToDoneDisabled, 
   subItems, 
-  onSubItemClick 
+  onSubItemClick,
+  onSubItemStatusChange,
 }: { 
   story: Story; 
   epic?: Epic; 
@@ -121,6 +122,7 @@ function StoryCard({
   isMoveToDoneDisabled?: boolean; 
   subItems?: Story[], 
   onSubItemClick: (story: Story) => void; 
+  onSubItemStatusChange: (storyId: string, newStatus: StoryStatus) => void;
 }) {
 
   const Icon = workItemIcons[story.itemType];
@@ -263,7 +265,18 @@ function StoryCard({
                                 [{item.storyId}] {item.title}
                             </span>
                         </div>
-                        <Badge variant="outline">{item.status}</Badge>
+                         <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Badge variant="outline" className="cursor-pointer">{item.status}</Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                            {statusOptions.filter(s => s !== item.status).map(status => (
+                              <DropdownMenuItem key={status} onSelect={() => onSubItemStatusChange(item.id, status)}>
+                                {status}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 )
             })}
@@ -565,6 +578,7 @@ export default function KanbanPage() {
                             isMoveToDoneDisabled={isMoveToDoneDisabled}
                             subItems={subItems}
                             onSubItemClick={handleDrillDown}
+                            onSubItemStatusChange={(storyId, newStatus) => updateStory(storyId, { status: newStatus })}
                           />
                         </div>
                       );
@@ -1139,6 +1153,7 @@ export default function KanbanPage() {
     
 
     
+
 
 
 
