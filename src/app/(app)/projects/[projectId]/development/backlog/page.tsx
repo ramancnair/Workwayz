@@ -1182,17 +1182,29 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               return (
                   <AccordionItem value={epic.id} key={epic.id}>
                   <AccordionTrigger>
-                      <div className="flex-1 text-left pr-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold">{epic.title}</span>
-                            <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
-                          </div>
-                          {!isUnassignedEpic && totalEpicItemsCount > 0 && (
-                            <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
-                                <Progress value={donePercentage} className="h-2" />
-                                <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                      <div className="flex flex-1 items-center justify-between pr-2">
+                        <div className='flex-1 text-left'>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold">{epic.title}</span>
+                                <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
                             </div>
-                          )}
+                            {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                                <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
+                                    <Progress value={donePercentage} className="h-2" />
+                                    <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                                </div>
+                            )}
+                        </div>
+                        {!isUnassignedEpic && (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingEpic(epic)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEpicToDelete(epic)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
                       </div>
                   </AccordionTrigger>
                   <AccordionContent className="space-y-2 p-2">
@@ -1224,18 +1236,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         <p className="text-sm text-muted-foreground italic px-2">
                             No items for this epic in the backlog.
                         </p>
-                      )}
-                      {!isUnassignedEpic && (
-                        <div className="pt-4 px-4 flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setEditingEpic(epic)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Epic
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => setEpicToDelete(epic)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Epic
-                          </Button>
-                        </div>
                       )}
                   </AccordionContent>
                   </AccordionItem>
@@ -1981,6 +1981,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
