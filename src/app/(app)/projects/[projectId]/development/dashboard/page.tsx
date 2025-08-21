@@ -1,139 +1,300 @@
 
-
 'use client';
 
+import { useState, useMemo, useEffect } from 'react';
+import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
-import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig
+  type ChartConfig,
 } from "@/components/ui/chart";
-import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
-import { useProject } from '@/context/ProjectContext';
+import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { format, parseISO, eachDayOfInterval, isSameDay, startOfDay } from 'date-fns';
+import type { Story, Release } from '@/types';
 import { BookOpen, CheckCircle, GitFork, Boxes, CheckSquare } from 'lucide-react';
+import { StatsCard } from '@/components/dashboard/StatsCard';
 
-const barChartConfig = {
-  completed: {
-    label: "Completed",
-    color: "#22c55e",
-  },
-  remaining: {
-    label: "Remaining",
-    color: "#e4e4e7",
-  },
+const burndownChartConfig = {
+  remaining: { label: "Remaining Effort", color: "hsl(var(--chart-2))" },
+  ideal: { label: "Ideal Burndown", color: "hsl(var(--chart-1))" },
+} satisfies ChartConfig;
+
+const burnupChartConfig = {
+  completed: { label: "Completed Work", color: "hsl(var(--chart-2))" },
+  ideal: { label: "Ideal Burnup", color: "hsl(var(--chart-1))" },
 } satisfies ChartConfig;
 
 export default function DevelopmentDashboard() {
-  const { stories } = useProject();
-
-  const allWorkItems = stories; // Includes stories, tasks, bugs, etc.
-  const allStories = stories.filter(s => s.itemType === 'Requirement/Story');
-  const allTasks = stories.filter(s => s.itemType === 'Task');
+  const { stories, sprints, releasesAndMilestones, holidays, weeklyOffDays } = useProject();
   
+  const [selectedSprintId, setSelectedSprintId] = useState<string | undefined>();
+  const [selectedReleaseId, setSelectedReleaseId] = useState<string | undefined>();
+  
+  const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
+
+  useEffect(() => {
+      const currentSprint = sprints.find(s => s.isCurrent);
+      if (currentSprint) {
+          setSelectedSprintId(currentSprint.id);
+      } else if (sprints.length > 0) {
+          setSelectedSprintId(sprints[0].id);
+      }
+  }, [sprints]);
+
+  useEffect(() => {
+      if(releases.length > 0) {
+          const sortedReleases = [...releases].sort((a, b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+          setSelectedReleaseId(sortedReleases[0].id);
+      }
+  }, [releases]);
+
+  const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
+    if (story.parentStoryId) {
+        if (!acc[story.parentStoryId]) {
+            acc[story.parentStoryId] = [];
+        }
+        acc[story.parentStoryId].push(story);
+    }
+    return acc;
+  }, {} as Record<string, Story[]>), [stories]);
+
+  const burndownData = useMemo(() => {
+      const sprint = sprints.find(s => s.id === selectedSprintId);
+      if (!sprint || !sprint.startDate || !sprint.endDate) return [];
+      
+      const sprintStories = stories.filter(story => story.sprintId === sprint.id);
+      
+      const totalEffort = sprintStories.reduce((sum, story) => {
+           // For stories/features, sum up their sub-tasks' effort
+          if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+              const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+              if (subTasks.length > 0) {
+                  return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+              }
+          }
+          // For standalone tasks/bugs, or stories without sub-tasks, use their own effort
+          if (!story.parentStoryId) {
+               return sum + (story.estimatedHours || 0);
+          }
+          return sum;
+      }, 0);
+      
+      const sprintStart = startOfDay(parseISO(sprint.startDate));
+      const sprintEnd = startOfDay(parseISO(sprint.endDate));
+      const sprintDates = eachDayOfInterval({ start: sprintStart, end: sprintEnd });
+
+      const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
+      const workingDays = sprintDates.filter(day => {
+          const dayOfWeek = day.getDay();
+          const isWeekend = weeklyOffDays.includes(dayOfWeek);
+          const isHoliday = holidayDates.some(h => isSameDay(day, h));
+          return !isWeekend && !isHoliday;
+      });
+
+      if (workingDays.length === 0) return [];
+      const idealDailyBurn = totalEffort / workingDays.length;
+      
+      let idealEffort = totalEffort;
+      
+      return sprintDates.map(date => {
+          const dateStr = format(date, 'MMM d');
+          
+          const completedEffortOnDate = sprintStories.reduce((sum, story) => {
+              let storyCompletedEffort = 0;
+              
+              const checkCompletion = (item: Story) => {
+                  if (item.status !== 'Done') return 0;
+                  const doneDate = item.updatedAt ? startOfDay(parseISO(item.updatedAt)) : sprintStart;
+                  return doneDate <= date ? (item.estimatedHours || 0) : 0;
+              }
+
+              if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+                  const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+                   if (subTasks.length > 0) {
+                      storyCompletedEffort = subTasks.reduce((subSum, subTask) => subSum + checkCompletion(subTask), 0);
+                   } else {
+                      storyCompletedEffort = checkCompletion(story);
+                   }
+              } else if (!story.parentStoryId) { // For standalone tasks/bugs etc.
+                  storyCompletedEffort = checkCompletion(story);
+              }
+              return sum + storyCompletedEffort;
+          }, 0);
+              
+          const remaining = totalEffort - completedEffortOnDate;
+          
+          const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
+          if (isWorkingDay && date >= sprintStart) {
+              idealEffort -= idealDailyBurn;
+          }
+          
+          return {
+              name: dateStr,
+              remaining: remaining < 0 ? 0 : remaining,
+              ideal: idealEffort < 0 ? 0 : idealEffort,
+          }
+      });
+  }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays, subItemsByStoryId]);
+
+  const burnupData = useMemo(() => {
+      const release = releases.find(r => r.id === selectedReleaseId);
+      if(!release || !release.startDate || !release.endDate) return [];
+
+      const releaseStories = stories.filter(s => s.releaseId === release.id);
+      
+      const totalScope = releaseStories.reduce((sum, story) => {
+          if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+              const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+              if (subTasks.length > 0) {
+                  return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
+              }
+          }
+           if (!story.parentStoryId) {
+              return sum + (story.estimatedHours || 0);
+          }
+          return sum;
+      }, 0);
+      
+      const releaseStart = startOfDay(parseISO(release.startDate));
+      const releaseEnd = startOfDay(parseISO(release.endDate));
+      const releaseDates = eachDayOfInterval({ start: releaseStart, end: releaseEnd });
+      
+      const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
+      const workingDays = releaseDates.filter(day => {
+          const dayOfWeek = day.getDay();
+          const isWeekend = weeklyOffDays.includes(dayOfWeek);
+          const isHoliday = holidayDates.some(h => isSameDay(day, h));
+          return !isWeekend && !isHoliday;
+      });
+
+      if (workingDays.length === 0) return [];
+      const idealDailyBurn = totalScope / workingDays.length;
+      
+      let idealBurnup = 0;
+
+      return releaseDates.map(date => {
+          const dateStr = format(date, 'MMM d');
+          
+          const completedEffortOnDate = releaseStories.reduce((sum, story) => {
+              let storyCompletedEffort = 0;
+              
+              const checkCompletion = (item: Story) => {
+                  if (item.status !== 'Done') return 0;
+                  const doneDate = item.updatedAt ? startOfDay(parseISO(item.updatedAt)) : releaseStart;
+                  return doneDate <= date ? (item.estimatedHours || 0) : 0;
+              }
+
+              if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+                  const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
+                   if (subTasks.length > 0) {
+                      storyCompletedEffort = subTasks.reduce((subSum, subTask) => subSum + checkCompletion(subTask), 0);
+                   } else {
+                      storyCompletedEffort = checkCompletion(story);
+                   }
+              } else if (!story.parentStoryId) {
+                  storyCompletedEffort = checkCompletion(story);
+              }
+              return sum + storyCompletedEffort;
+          }, 0);
+
+          const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
+          if (isWorkingDay && date >= releaseStart) {
+              idealBurnup += idealDailyBurn;
+          }
+          
+          return {
+              name: dateStr,
+              completed: completedEffortOnDate,
+              ideal: idealBurnup > totalScope ? totalScope : idealBurnup,
+              scope: totalScope,
+          }
+      });
+  }, [selectedReleaseId, releases, stories, holidays, weeklyOffDays, subItemsByStoryId]);
+
+  const allTasks = stories.filter(s => s.itemType === 'Task');
   const totalTasks = allTasks.length;
   const completedTasks = allTasks.filter((task) => task.status === 'Done').length;
   const inProgressTasks = allTasks.filter((task) => task.status === 'In Progress').length;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-  
-  const doneColumnName = 'Done'; // Assuming 'Done' is the completion status
-
-  const taskStatusData = Object.entries(
-    allWorkItems.reduce((acc, item) => {
-      const status = item.status || 'To Do';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value }));
-
-  const pieChartConfig = {
-    workItems: {
-      label: 'Work Items',
-    },
-    'To Do': {
-      label: 'To Do',
-      color: '#3b82f6',
-    },
-    'In Progress': {
-      label: 'In Progress',
-      color: '#f97316',
-    },
-    'In QA': {
-      label: 'In QA',
-      color: '#eab308',
-    },
-    'Done': {
-      label: 'Done',
-      color: '#22c55e',
-    },
-  } satisfies ChartConfig;
-  
-  const storyProgressData = allStories.map(story => {
-    const storyTasks = allTasks.filter(t => t.epicId === story.id);
-    const completed = storyTasks.filter(t => t.status === doneColumnName).length;
-    const remaining = storyTasks.length - completed;
-    return {
-      name: story.title,
-      completed,
-      remaining,
-    }
-  });
-
+  const allStoriesItems = stories.filter(s => s.itemType === 'Requirement/Story');
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Development Dashboard" description="Overview of the project's development progress." />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard title="Total Tasks" value={totalTasks.toString()} icon={CheckSquare} />
-        <StatsCard title="Completed Tasks" value={completedTasks.toString()} icon={CheckCircle} description={`${completionRate}% completion rate`} />
+        <StatsCard title="Completed Tasks" value={completedTasks.toString()} icon={CheckCircle} description={`${totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}% complete`} />
         <StatsCard title="In Progress" value={inProgressTasks.toString()} icon={GitFork} />
-        <StatsCard title="Total Stories" value={allStories.length.toString()} icon={BookOpen} />
+        <StatsCard title="Total Stories" value={allStoriesItems.length.toString()} icon={BookOpen} />
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-3">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
           <CardHeader>
-            <CardTitle>Work Items by Status</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Sprint Burndown</CardTitle>
+              <div className="grid gap-2 w-[200px]">
+                  <Label htmlFor="sprint-filter" className="sr-only">Select Sprint</Label>
+                  <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+                      <SelectTrigger id="sprint-filter" className="h-8">
+                          <SelectValue placeholder="Select a sprint" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ChartContainer config={pieChartConfig}>
-              <PieChart>
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Pie data={taskStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                  {taskStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={pieChartConfig[entry.name as keyof typeof pieChartConfig]?.color || '#a1a1aa'} />
-                  ))}
-                </Pie>
-                <ChartLegend
-                  content={<ChartLegendContent nameKey="name" />}
-                />
-              </PieChart>
-            </ChartContainer>
+             {burndownData.length > 0 ? (
+                <ChartContainer config={burndownChartConfig} className="h-full w-full">
+                    <AreaChart data={burndownData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
+                        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                        <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
+                        <Area dataKey="remaining" type="monotone" fill="var(--color-remaining)" fillOpacity={0.4} stroke="var(--color-remaining)" stackId="a" />
+                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} />
+                    </AreaChart>
+                </ChartContainer>
+            ) : <p className="text-center text-muted-foreground">Select a sprint with dates to view burndown.</p>}
           </CardContent>
         </Card>
-        <Card className="lg:col-span-4">
+        <Card>
           <CardHeader>
-            <CardTitle>Story Progress</CardTitle>
+             <div className="flex justify-between items-center">
+              <CardTitle>Release Burnup</CardTitle>
+              <div className="grid gap-2 w-[200px]">
+                  <Label htmlFor="release-filter" className="sr-only">Select Release</Label>
+                  <Select value={selectedReleaseId} onValueChange={setSelectedReleaseId}>
+                      <SelectTrigger id="release-filter" className="h-8">
+                          <SelectValue placeholder="Select a release" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ChartContainer config={barChartConfig} className="h-full w-full">
-               <BarChart accessibilityLayer data={storyProgressData} layout="vertical" stackOffset="expand" margin={{left: -20}}>
-                <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} tickLine={false} axisLine={false}/>
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Bar dataKey="completed" stackId="a" fill="var(--color-completed)" radius={[4, 0, 0, 4]} />
-                <Bar dataKey="remaining" stackId="a" fill="var(--color-remaining)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ChartContainer>
+            {burnupData.length > 0 ? (
+                <ChartContainer config={burnupChartConfig} className="h-full w-full">
+                    <AreaChart data={burnupData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
+                        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                        <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
+                        <ReferenceLine y={burnupData[0]?.scope} label="Scope" stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+                        <Area dataKey="completed" type="monotone" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" stackId="a" />
+                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} />
+                    </AreaChart>
+                </ChartContainer>
+            ) : <p className="text-center text-muted-foreground">Select a release with dates to view burnup.</p>}
           </CardContent>
         </Card>
       </div>

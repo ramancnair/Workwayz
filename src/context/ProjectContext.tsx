@@ -258,7 +258,7 @@ const standardDocs = [
 type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
-    '/development/dashboard': ['stories'],
+    '/development/dashboard': ['stories', 'sprints', 'releases'],
     '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases'],
     '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems'],
@@ -1060,13 +1060,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     try {
       const batch = writeBatch(db);
       const testCasesSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCases'));
-      let currentIdCounter = testCasesSnapshot.size > 0
-        ? Math.max(0, ...testCasesSnapshot.docs
-            .map(doc => doc.data().testCaseId)
-            .filter((id: string | undefined) => id && typeof id === 'string')
-            .map((id: string) => parseInt(id.replace('TC-', ''), 10) || 0)
-        ) + 1
-        : 1;
+      let currentIdCounter = testCasesSnapshot.size > 0 ? Math.max(0, ...testCasesSnapshot.docs.map(doc => parseInt(doc.data().testCaseId.replace('TC-', ''), 10) || 0)) + 1 : 1;
 
       const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story');
 
