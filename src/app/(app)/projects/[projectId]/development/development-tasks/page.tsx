@@ -39,8 +39,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns } from 'lucide-react';
-import { type Story, type StoryStatus, type Epic, Release } from '@/types';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns, Filter } from 'lucide-react';
+import { type Story, type StoryStatus, type Epic, Release, User, ImpactedSystem, Sprint } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -49,15 +49,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { format, parseISO } from 'date-fns';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-
-const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const subTaskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
   parentStoryId: z.string().min(1, 'A parent story is required.'),
   assigneeId: z.string().optional(),
-  status: z.enum(statusOptions),
+  status: z.enum(['To Do', 'In Progress', 'Done']),
   estimatedHours: z.coerce.number().optional(),
   impactedSystemId: z.string().optional(),
   startDate: z.string().optional(),
@@ -83,19 +84,21 @@ const statusStyles: Record<StoryStatus, string> = {
 
 type ColumnId = 'storyId' | 'title' | 'parentStoryId' | 'status' | 'assigneeId' | 'impactedSystemId' | 'estimatedHours' | 'startDate' | 'endDate' | 'sprintId' | 'releaseId';
 
-const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
+const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean, filterable?: boolean }> = {
     storyId: { label: 'ID', defaultVisible: true },
     title: { label: 'Title', defaultVisible: true },
-    parentStoryId: { label: 'Parent Story', defaultVisible: true },
-    status: { label: 'Status', defaultVisible: true },
-    assigneeId: { label: 'Assignee', defaultVisible: true },
-    impactedSystemId: { label: 'Impacted System', defaultVisible: true },
+    parentStoryId: { label: 'Parent Story', defaultVisible: true, filterable: true },
+    status: { label: 'Status', defaultVisible: true, filterable: true },
+    assigneeId: { label: 'Assignee', defaultVisible: true, filterable: true },
+    impactedSystemId: { label: 'Impacted System', defaultVisible: true, filterable: true },
     estimatedHours: { label: 'Effort', defaultVisible: false },
     startDate: { label: 'Start Date', defaultVisible: false },
     endDate: { label: 'End Date', defaultVisible: false },
-    sprintId: { label: 'Sprint', defaultVisible: true },
-    releaseId: { label: 'Release', defaultVisible: true },
+    sprintId: { label: 'Sprint', defaultVisible: true, filterable: true },
+    releaseId: { label: 'Release', defaultVisible: true, filterable: true },
 };
+
+const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function DevelopmentTasksPage() {
   const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones } = useProject();
@@ -111,7 +114,7 @@ export default function DevelopmentTasksPage() {
   const parentStories = stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType));
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
-  const [filters, setFilters] = useState({ search: '', sprintId: 'all', releaseId: 'all' });
+  const [filters, setFilters] = useState<Record<string, string[]>>({ search: [] });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() =>
     Object.entries(columnConfig).reduce((acc, [key, { defaultVisible }]) => {
@@ -132,35 +135,54 @@ export default function DevelopmentTasksPage() {
     }
   };
   
-  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
+  const handleFilterChange = (columnId: ColumnId, value: string) => {
+    setFilters(prev => {
+        const newFilters = { ...prev };
+        const currentFilter = newFilters[columnId] || [];
+        if(currentFilter.includes(value)) {
+            newFilters[columnId] = currentFilter.filter(v => v !== value);
+        } else {
+            newFilters[columnId] = [...currentFilter, value];
+        }
+        if (newFilters[columnId].length === 0) {
+            delete newFilters[columnId];
+        }
+        return newFilters;
+    })
   };
 
   const clearFilters = () => {
-    setFilters({ search: '', sprintId: 'all', releaseId: 'all' });
+    setFilters({ search: filters.search || [] });
   };
   
   const filteredAndSortedSubTasks = useMemo(() => {
+    const searchTerm = (filters.search?.[0] || '').toLowerCase();
+    
     let filtered = subTasks.filter(t => 
-        t.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        t.storyId.toLowerCase().includes(filters.search.toLowerCase()) ||
-        (t.description && t.description.toLowerCase().includes(filters.search.toLowerCase()))
+        searchTerm ? 
+        (t.title.toLowerCase().includes(searchTerm) ||
+        t.storyId.toLowerCase().includes(searchTerm) ||
+        (t.description && t.description.toLowerCase().includes(searchTerm)))
+        : true
     );
 
-    if (filters.sprintId !== 'all') {
-      if (filters.sprintId === 'backlog') {
-        filtered = filtered.filter(t => !t.sprintId);
-      } else {
-        filtered = filtered.filter(t => t.sprintId === filters.sprintId);
+    Object.entries(filters).forEach(([key, values]) => {
+      if (key !== 'search' && values.length > 0) {
+        filtered = filtered.filter(t => {
+          const taskValue = (t as any)[key];
+          if (key === 'sprintId' && !taskValue) {
+            return values.includes('backlog');
+          }
+          if (key === 'releaseId' && !taskValue) {
+            return values.includes('unassigned');
+          }
+           if (key === 'assigneeId' && !taskValue) {
+            return values.includes('unassigned');
+          }
+          return values.includes(taskValue);
+        });
       }
-    }
-    if (filters.releaseId !== 'all') {
-        if(filters.releaseId === 'unassigned') {
-            filtered = filtered.filter(t => !t.releaseId);
-        } else {
-            filtered = filtered.filter(t => t.releaseId === filters.releaseId);
-        }
-    }
+    });
 
     if (sorting) {
       filtered.sort((a, b) => {
@@ -317,14 +339,61 @@ export default function DevelopmentTasksPage() {
     setIsSubmitting(false);
   };
 
-  const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
-    <TableHead className={className}>
-      <Button variant="ghost" onClick={() => handleSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  );
+  const FilterableHeader = ({ columnId, children, filterOptions }: { columnId: ColumnId, children: React.ReactNode, filterOptions: {value: string, label: string}[] }) => {
+    const activeFilters = filters[columnId] || [];
+    return (
+      <TableHead>
+        <div className="flex items-center gap-2">
+            <span className="font-bold">{children}</span>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className={cn("h-6 w-6", activeFilters.length > 0 && "text-blue-500")}>
+                        <Filter className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-64">
+                    <div className="p-2 space-y-2">
+                        <Label className="px-2 font-semibold">Filter by {children}</Label>
+                        {filterOptions.map(opt => (
+                            <div key={opt.value} className="flex items-center space-x-2 px-2">
+                                <Checkbox
+                                    id={`${columnId}-${opt.value}`}
+                                    checked={activeFilters.includes(opt.value)}
+                                    onCheckedChange={() => handleFilterChange(columnId, opt.value)}
+                                />
+                                <Label htmlFor={`${columnId}-${opt.value}`} className="font-normal w-full">{opt.label}</Label>
+                            </div>
+                        ))}
+                    </div>
+                </PopoverContent>
+            </Popover>
+             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleSort(columnId)}>
+                <ArrowUpDown className="h-4 w-4" />
+            </Button>
+        </div>
+      </TableHead>
+    )
+  }
+
+  const getFilterOptions = (columnId: ColumnId): {value: string, label: string}[] => {
+    switch (columnId) {
+      case 'status':
+        return statusOptions.map(s => ({ value: s, label: s }));
+      case 'assigneeId':
+        return [{ value: 'unassigned', label: 'Unassigned' }, ...employees.map(e => ({ value: e.id, label: `${e.firstName} ${e.lastName}` }))];
+      case 'parentStoryId':
+        return parentStories.map(p => ({ value: p.id, label: `[${p.storyId}] ${p.title}`}));
+      case 'impactedSystemId':
+        return impactedSystems.map(s => ({ value: s.id, label: s.name }));
+      case 'sprintId':
+        return [{ value: 'backlog', label: 'Backlog' }, ...sprints.map(s => ({ value: s.id, label: s.title }))];
+      case 'releaseId':
+        return [{ value: 'unassigned', label: 'Unassigned' }, ...releases.map(r => ({ value: r.id, label: `[${r.releaseId}] ${r.name}` }))];
+      default:
+        return [];
+    }
+  }
+
 
   return (
     <>
@@ -340,26 +409,10 @@ export default function DevelopmentTasksPage() {
             <div className="flex items-center gap-4 flex-wrap">
                 <Input 
                     placeholder="Filter by ID, title, or description..."
-                    value={filters.search}
-                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    value={filters.search?.[0] || ''}
+                    onChange={(e) => setFilters(prev => ({...prev, search: e.target.value ? [e.target.value] : []}))}
                     className="max-w-sm"
                 />
-                 <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
-                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Sprints</SelectItem>
-                      <SelectItem value="backlog">Backlog</SelectItem>
-                      {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                   <Select value={filters.releaseId} onValueChange={(v) => handleFilterChange('releaseId', v)}>
-                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by release..."/></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Releases</SelectItem>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline">
@@ -395,17 +448,14 @@ export default function DevelopmentTasksPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              {columnVisibility.storyId && <SortableHeader columnId="storyId">ID</SortableHeader>}
-              {columnVisibility.title && <SortableHeader columnId="title" className="w-[30%]">Title</SortableHeader>}
-              {columnVisibility.parentStoryId && <SortableHeader columnId="parentStoryId">Parent Story</SortableHeader>}
-              {columnVisibility.status && <SortableHeader columnId="status">Status</SortableHeader>}
-              {columnVisibility.assigneeId && <SortableHeader columnId="assigneeId">Assignee</SortableHeader>}
-              {columnVisibility.impactedSystemId && <SortableHeader columnId="impactedSystemId">Impacted System</SortableHeader>}
-              {columnVisibility.estimatedHours && <SortableHeader columnId="estimatedHours">Effort</SortableHeader>}
-              {columnVisibility.startDate && <SortableHeader columnId="startDate">Start Date</SortableHeader>}
-              {columnVisibility.endDate && <SortableHeader columnId="endDate">End Date</SortableHeader>}
-              {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
-              {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
+              {Object.entries(columnVisibility).map(([key, isVisible]) => {
+                if (!isVisible) return null;
+                const config = columnConfig[key as ColumnId];
+                if (config.filterable) {
+                    return <FilterableHeader key={key} columnId={key as ColumnId} filterOptions={getFilterOptions(key as ColumnId)}>{config.label}</FilterableHeader>
+                }
+                return <TableHead key={key}><Button variant="ghost" onClick={() => handleSort(key)}>{config.label}<ArrowUpDown className="ml-2 h-4 w-4" /></Button></TableHead>
+              })}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -779,7 +829,3 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
-
-
-
-
