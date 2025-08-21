@@ -1025,7 +1025,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
           const newTestCase: Omit<TestCase, 'id'> = {
             testCaseId: `TC-${currentIdCounter}`,
-            title: `Auto-gen TC for ${environmentName} #${i + 1}`,
+            title: `Autogen TC for ${environmentName} #${i + 1}`,
             type: Math.random() > 0.3 ? 'Functional' : 'Non-functional',
             description: `Auto-generated test steps for ${environmentName}.`,
             expectedResult: 'The system should perform as expected.',
