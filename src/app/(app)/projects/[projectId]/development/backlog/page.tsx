@@ -1228,8 +1228,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               return (
                   <AccordionItem value={epic.id} key={epic.id}>
                     <div className="flex items-center justify-between pr-2 bg-muted/50 rounded-t-md border-b">
-                      <AccordionTrigger className="flex-1 px-6 py-4 hover:no-underline">
-                        <div className="flex items-center gap-4">
+                        <div className="flex-1 px-6 py-4 flex items-center gap-4">
                           <span className="font-semibold">{epic.title}</span>
                           <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
                           {!isUnassignedEpic && totalEpicItemsCount > 0 && (
@@ -1239,10 +1238,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                           )}
                         </div>
-                      </AccordionTrigger>
                       <div className="flex items-center gap-1 pl-2 pr-4">
                         {!isUnassignedEpic && (
                           <>
+                            <AccordionTrigger className="p-2 hover:no-underline">
+                                <span className="sr-only">Toggle Epic</span>
+                            </AccordionTrigger>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic); }}>
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -2092,6 +2093,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
