@@ -86,14 +86,14 @@ type ColumnId = 'storyId' | 'title' | 'parentStoryId' | 'status' | 'assigneeId' 
 
 const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean, filterable?: boolean }> = {
     storyId: { label: 'ID', defaultVisible: true },
-    title: { label: 'Title', defaultVisible: true },
-    parentStoryId: { label: 'Parent Story', defaultVisible: true, filterable: true },
-    status: { label: 'Status', defaultVisible: true, filterable: true },
+    title: { label: 'Title', defaultVisible: false },
+    parentStoryId: { label: 'Parent Story', defaultVisible: false, filterable: true },
+    status: { label: 'Status', defaultVisible: false, filterable: true },
     assigneeId: { label: 'Assignee', defaultVisible: true, filterable: true },
     impactedSystemId: { label: 'Impacted System', defaultVisible: true, filterable: true },
-    estimatedHours: { label: 'Effort', defaultVisible: false },
-    startDate: { label: 'Start Date', defaultVisible: false },
-    endDate: { label: 'End Date', defaultVisible: false },
+    estimatedHours: { label: 'Effort', defaultVisible: true },
+    startDate: { label: 'Start Date', defaultVisible: true },
+    endDate: { label: 'End Date', defaultVisible: true },
     sprintId: { label: 'Sprint', defaultVisible: true, filterable: true },
     releaseId: { label: 'Release', defaultVisible: true, filterable: true },
 };
