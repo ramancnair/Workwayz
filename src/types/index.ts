@@ -1,4 +1,5 @@
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -201,6 +202,8 @@ export type ProjectSettings = {
     sprintDurationInWeeks?: number;
     sprintStartDay?: number; // 0 for Sunday, 1 for Monday etc.
     overrideGlobalHolidays?: boolean;
+    manMonthToDays?: number;
+    manDayToHours?: number;
 };
 
 export type ImpactedSystemCategory = 'Technology' | 'Function';

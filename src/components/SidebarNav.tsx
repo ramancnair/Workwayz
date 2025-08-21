@@ -48,6 +48,7 @@ import {
   File as DocumentsIcon,
   CreditCard as BillingIcon,
   HeartPulse,
+  Hourglass,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -224,6 +225,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/settings/sprint`,
       label: "Sprint Settings",
       icon: Settings,
+    },
+    {
+        href: `${basePath}/settings/effort`,
+        label: "Effort Settings",
+        icon: Hourglass,
     }
   ];
 

@@ -151,6 +151,7 @@ interface ProjectContextType {
   updateProjectSettings: (settings: Partial<Omit<ProjectSettings, 'id'>>) => Promise<boolean>;
   setWeeklyOffDays: (days: number[]) => Promise<boolean>;
   updateSprintSettings: (settings: Pick<ProjectSettings, 'sprintDurationInWeeks' | 'sprintStartDay'>) => Promise<boolean>;
+  updateEffortSettings: (settings: Pick<ProjectSettings, 'manMonthToDays' | 'manDayToHours'>) => Promise<boolean>;
   addHoliday: (holiday: Omit<Holiday, 'id'>) => Promise<boolean>;
   updateHoliday: (id: string, data: Partial<Omit<Holiday, 'id'>>) => Promise<boolean>;
   deleteHoliday: (id: string) => Promise<boolean>;
@@ -219,6 +220,8 @@ const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
   sprintDurationInWeeks: 2,
   sprintStartDay: 1, // Monday
   overrideGlobalHolidays: false,
+  manMonthToDays: 22,
+  manDayToHours: 8,
 };
 
 const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
@@ -279,6 +282,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/holidays': ['holidays', 'projectSettings'],
     '/settings/board': ['kanbanColumns'],
     '/settings/sprint': ['projectSettings'],
+    '/settings/effort': ['projectSettings'],
     '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
     '/pmo/documents': ['documents'],
     '/pmo/billing': ['paymentMilestones'],
@@ -1643,6 +1647,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
      return updateProjectSettings(settings);
   };
 
+  const updateEffortSettings = async (settings: Pick<ProjectSettings, 'manMonthToDays' | 'manDayToHours'>) => {
+    if (!db || !projectId) return false;
+    return updateProjectSettings(settings);
+  };
+
   const addHoliday = async (holiday: Omit<Holiday, 'id'>) => {
     if (!db || !projectId) return false;
     try {
@@ -2139,6 +2148,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     updateProjectSettings,
     setWeeklyOffDays,
     updateSprintSettings,
+    updateEffortSettings,
     addHoliday,
     updateHoliday,
     deleteHoliday,
