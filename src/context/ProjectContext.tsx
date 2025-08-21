@@ -620,16 +620,19 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       const batch = writeBatch(db);
       
       const storiesSnapshot = await getDocs(collection(db, 'projects', projectId, 'stories'));
-      let currentIdCounter = storiesSnapshot.size > 0
-        ? Math.max(0, ...storiesSnapshot.docs.map(doc => {
-            const storyId = doc.data().storyId;
-            if (typeof storyId === 'string') {
-              const numericPart = storyId.match(/\d+$/)?.[0];
-              return numericPart ? parseInt(numericPart, 10) : 0;
-            }
-            return 0;
-          }).filter(num => !isNaN(num))) + 1
-        : 1;
+        
+      const highestId = storiesSnapshot.docs.reduce((maxId, doc) => {
+        const storyId = doc.data().storyId;
+        if (typeof storyId === 'string') {
+          const numericPart = storyId.match(/\d+$/);
+          if (numericPart) {
+            return Math.max(maxId, parseInt(numericPart[0], 10));
+          }
+        }
+        return maxId;
+      }, 0);
+      
+      let currentIdCounter = highestId + 1;
 
       const prefixMap: Record<WorkItemType, string> = {
           'Requirement/Story': 'ST',
