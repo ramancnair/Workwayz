@@ -266,7 +266,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays', 'horizontals'],
-    '/resources/resource-gantt': ['stories', 'employees'],
+    '/resources/resource-gantt': ['stories', 'epics', 'employees', 'sprints'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
     '/resources/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
     '/raid-dashboard': ['risks', 'assumptions', 'issues', 'dependencies'],
