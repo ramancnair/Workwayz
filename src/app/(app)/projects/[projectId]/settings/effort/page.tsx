@@ -43,9 +43,9 @@ export default function EffortSettingsPage() {
       <PageHeader title="Effort Settings" description="Manage effort conversion formulas for this project." />
       <Card>
           <CardHeader>
-              <CardTitle>Effort Conversion Formula</CardTitle>
+              <CardTitle>SDLC</CardTitle>
               <CardDescription>
-                  Configure the default conversion rates for effort calculation.
+                  Industry Standard: 1 MM = 22 MD and 1 MD = 8 MH
               </CardDescription>
           </CardHeader>
           <CardContent>
