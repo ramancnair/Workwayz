@@ -59,6 +59,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const devMenuItems = [
     {
+      href: `${basePath}/development/dashboard`,
+      label: "Development Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
       href: `${basePath}/development/backlog`,
       label: "Product Backlog",
       icon: Layers,
