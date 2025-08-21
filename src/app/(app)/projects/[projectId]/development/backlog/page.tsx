@@ -69,6 +69,7 @@ import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -1255,6 +1256,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     <div className="flex items-center justify-between pl-6 pr-4 py-2 bg-muted/50 border-b">
                         <div className="flex items-center gap-3">
                            <Checkbox
+                                id={`select-all-${epic.id}`}
                                 checked={selectedCount > 0 && selectedCount === backlogItemsForGroup.length}
                                 onCheckedChange={() => handleToggleSelectAll(epic.id, backlogItemsForGroup)}
                             />
@@ -2090,6 +2092,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
