@@ -135,6 +135,7 @@ export default function DevelopmentDashboard() {
           
           return {
               name: dateStr,
+              date: date,
               remaining: remaining < 0 ? 0 : remaining,
               ideal: idealEffort < 0 ? 0 : idealEffort,
           }
@@ -254,7 +255,7 @@ export default function DevelopmentDashboard() {
                 <ChartContainer config={burndownChartConfig} className="h-full w-full">
                     <AreaChart data={burndownData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                         <CartesianGrid vertical={false} />
-                        <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => format(new Date(value), 'dd/MM')} />
                         <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                         <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
                         <Area dataKey="remaining" type="monotone" fill="var(--color-remaining)" fillOpacity={0.4} stroke="var(--color-remaining)" stackId="a" />
