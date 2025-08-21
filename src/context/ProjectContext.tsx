@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -412,6 +411,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     return;
                 }
                 
+                if (name === 'initialHorizontals' && querySnapshot.empty) {
+                  const batch = writeBatch(db);
+                  defaultHorizontals.forEach(h => {
+                      const docRef = doc(collection(rootProjectDocRef, 'initialHorizontals'));
+                      batch.set(docRef, h);
+                  });
+                  batch.commit().catch(e => console.error("Failed to set default initial horizontals", e));
+                }
+
                 if (name === 'horizontals' && querySnapshot.empty) {
                   getDocs(collection(rootProjectDocRef, 'initialHorizontals')).then(initialHorizontalsSnapshot => {
                     if (initialHorizontalsSnapshot.empty) {
