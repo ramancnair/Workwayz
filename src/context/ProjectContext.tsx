@@ -82,6 +82,9 @@ interface ProjectContextType {
   moveStoryStatus: (storyId: string, newStatus: StoryStatus) => Promise<boolean>;
   moveStoryToEpic: (storyId: string, epicId: string | null) => Promise<boolean>;
   bulkUpdateSubTaskReleases: (releaseId: string) => Promise<boolean>;
+  bulkDeleteStories: (storyIds: string[]) => Promise<boolean>;
+  bulkMoveStoriesToEpic: (storyIds: string[], targetEpicId: string | null) => Promise<boolean>;
+
 
   // Epic actions
   addEpic: (epic: Omit<Epic, 'id'>) => Promise<boolean>;
@@ -621,7 +624,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         ? Math.max(0, ...storiesSnapshot.docs.map(doc => {
             const storyId = doc.data().storyId;
             if (typeof storyId === 'string') {
-              const numericPart = storyId.split('-').pop();
+              const numericPart = storyId.match(/\d+$/)?.[0];
               return numericPart ? parseInt(numericPart, 10) : 0;
             }
             return 0;
@@ -774,6 +777,39 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return false;
     }
   };
+  
+  const bulkDeleteStories = async (storyIds: string[]): Promise<boolean> => {
+    if (!db || !projectId || storyIds.length === 0) return false;
+    try {
+      const batch = writeBatch(db);
+      storyIds.forEach(id => {
+        const storyRef = doc(db, 'projects', projectId, 'stories', id);
+        batch.update(storyRef, { isDeleted: true, deletedAt: Timestamp.now() });
+      });
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to bulk delete stories.", e);
+      return false;
+    }
+  };
+
+  const bulkMoveStoriesToEpic = async (storyIds: string[], targetEpicId: string | null): Promise<boolean> => {
+    if (!db || !projectId || storyIds.length === 0) return false;
+    try {
+      const batch = writeBatch(db);
+      storyIds.forEach(id => {
+        const storyRef = doc(db, 'projects', projectId, 'stories', id);
+        batch.update(storyRef, { epicId: targetEpicId });
+      });
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to bulk move stories.", e);
+      return false;
+    }
+  };
+
   
   // Epic Actions
   const addEpic = async (epic: Omit<Epic, 'id'>): Promise<boolean> => {
@@ -1028,6 +1064,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
       for (const environmentId in counts) {
         const count = counts[environmentId];
+        if (count === 0) continue;
         const environmentName = environments.find(e => e.id === environmentId)?.name || 'Unknown Env';
 
         for (let i = 0; i < count; i++) {
@@ -2054,6 +2091,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     moveStoryStatus,
     moveStoryToEpic,
     bulkUpdateSubTaskReleases,
+    bulkDeleteStories,
+    bulkMoveStoriesToEpic,
     addEpic,
     updateEpic,
     deleteEpic,

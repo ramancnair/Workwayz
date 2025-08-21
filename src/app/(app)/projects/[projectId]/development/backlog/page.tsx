@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft, Bot, Package } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -135,8 +135,12 @@ const autoGenFormSchema = z.object({
   'Bug': z.coerce.number().min(0).default(0),
 });
 
+const bulkMoveSchema = z.object({
+  targetEpicId: z.string(),
+});
 
-function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint, release, onSubItemClick }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, release?: Release | null, onSubItemClick: (item: Story) => void; }) {
+
+function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint, release, onSubItemClick, isSelected, onSelectionChange }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, release?: Release | null, onSubItemClick: (item: Story) => void; isSelected: boolean; onSelectionChange: (checked: boolean) => void; }) {
   const Icon = workItemIcons[story.itemType];
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
@@ -154,52 +158,58 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
       <Card
         className={cn("bg-card cursor-pointer transition-all hover:bg-muted/80 hover:shadow-md relative group", className)}
         onClick={onClick}
+        data-state={isSelected ? "selected" : "unselected"}
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
         <CardHeader className="p-4">
-          <div className="flex justify-between items-start gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
-                {isReadyForDev && <Flag className="h-4 w-4 text-green-500" />}
+          <div className="flex justify-between items-start gap-2">
+            <div className="flex items-start gap-3">
+              <Checkbox checked={isSelected} onCheckedChange={onSelectionChange} className="mt-1" onClick={(e) => e.stopPropagation()} />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                  <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+                  {isReadyForDev && <Flag className="h-4 w-4 text-green-500" />}
+                </div>
+                <p className="font-semibold break-words">{story.title}</p>
               </div>
-              <p className="font-semibold break-words">{story.title}</p>
             </div>
-            {assignee && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={assignee.avatar}
-                        alt={`${assignee.firstName} ${assignee.lastName}`}
-                        data-ai-hint="developer avatar"
-                      />
-                      <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            <div className="flex items-center gap-1">
+              {assignee && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={assignee.avatar}
+                          alt={`${assignee.firstName} ${assignee.lastName}`}
+                          data-ai-hint="developer avatar"
+                        />
+                        <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Assigned to {assignee.firstName} {assignee.lastName}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+               <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <div className='flex items-center gap-2'>
+              <div className='flex items-center gap-2 flex-wrap'>
                   {epic && <Badge variant="secondary">{epic.title}</Badge>}
                   {sprint ? (
                       <Badge variant="outline" className="border-blue-500 text-blue-500">
@@ -301,7 +311,9 @@ export default function BacklogPage() {
     addEpic,
     addStory,
     updateStory,
-    autoGenerateStories
+    autoGenerateStories,
+    bulkDeleteStories,
+    bulkMoveStoriesToEpic,
   } = useProject();
   
   const { toast } = useToast();
@@ -321,11 +333,13 @@ export default function BacklogPage() {
 
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [deleteEpicItems, setDeleteEpicItems] = useState(false);
-  const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
   const [showAddSubTask, setShowAddSubTask] = useState(false);
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
-
+  
+  const [selectedStories, setSelectedStories] = useState<string[]>([]);
+  const [storiesToDelete, setStoriesToDelete] = useState<string[]>([]);
+  const [storiesToMove, setStoriesToMove] = useState<string[]>([]);
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   
@@ -367,6 +381,10 @@ export default function BacklogPage() {
       'Task': 0,
       'Bug': 0,
     }
+  });
+  
+  const bulkMoveForm = useForm<z.infer<typeof bulkMoveSchema>>({
+    resolver: zodResolver(bulkMoveSchema),
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -420,7 +438,7 @@ export default function BacklogPage() {
             impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
             estimatedHours: selectedStory.estimatedHours,
             assigneeId: selectedStory.assigneeId || 'unassigned',
-            status: selectedStory.status,
+            status: selectedStory.status || 'To Do',
             startDate: selectedStory.startDate ? format(new Date(selectedStory.startDate), 'yyyy-MM-dd') : '',
             endDate: selectedStory.endDate ? format(new Date(selectedStory.endDate), 'yyyy-MM-dd') : '',
             sprintId: selectedStory.sprintId || 'backlog',
@@ -632,17 +650,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
         toast({ variant: "destructive", title: "Error", description: "Could not add sub-task." });
     }
 };
-  
-  const handleDeleteStory = async () => {
-    if (!storyToDelete) return;
-    const success = await deleteStory(storyToDelete.id);
-    if (!success) {
-        toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
-    } else {
-        toast({ title: "Success", description: "Story moved to trash." });
-    }
-    setStoryToDelete(null);
-  };
     
   const handleDeleteEpic = (epicId: string) => {
     deleteEpic(epicId, deleteEpicItems).then(success => {
@@ -654,6 +661,28 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     });
     setEpicToDelete(null);
   };
+  
+  const handleBulkDelete = async () => {
+    const success = await bulkDeleteStories(storiesToDelete);
+    if(success) {
+      toast({ title: 'Success', description: `${storiesToDelete.length} stories moved to trash.` });
+      setSelectedStories(prev => prev.filter(id => !storiesToDelete.includes(id)));
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete stories." });
+    }
+    setStoriesToDelete([]);
+  };
+
+  const handleBulkMove = async (values: z.infer<typeof bulkMoveSchema>) => {
+    const success = await bulkMoveStoriesToEpic(storiesToMove, values.targetEpicId === 'unassigned' ? null : values.targetEpicId);
+    if(success) {
+      toast({ title: 'Success', description: `${storiesToMove.length} stories moved.` });
+      setSelectedStories(prev => prev.filter(id => !storiesToMove.includes(id)));
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not move stories." });
+    }
+    setStoriesToMove([]);
+  }
 
   const allWorkItems = stories.filter(
     (story) => !story.parentStoryId && !story.isDeleted
@@ -703,6 +732,24 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   
   const epicToDeleteStoryCount = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
+  const selectedStoriesInEpic = (epicId: string) => {
+    const epicStoryIds = (backlogItemsByEpic[epicId] || []).map(s => s.id);
+    return selectedStories.filter(id => epicStoryIds.includes(id));
+  }
+  
+  const handleToggleSelectAll = (epicId: string, storiesInEpic: Story[]) => {
+    const epicStoryIds = storiesInEpic.map(s => s.id);
+    const selectedInEpic = selectedStoriesInEpic(epicId);
+
+    if (selectedInEpic.length === epicStoryIds.length) {
+      // Deselect all in this epic
+      setSelectedStories(prev => prev.filter(id => !epicStoryIds.includes(id)));
+    } else {
+      // Select all in this epic
+      setSelectedStories(prev => [...new Set([...prev, ...epicStoryIds])]);
+    }
+  }
+
   const selectedStorySubItems = useMemo(() => {
     if (!selectedStory) return { devTasks: [], bugs: [], subTasks: [] };
     const allSubItems = subItemsByParentId[selectedStory.id] || [];
@@ -1168,33 +1215,31 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
           <Accordion type="multiple" className="w-full" defaultValue={epicsAndUnassigned.map(e => e.id)}>
             {epicsAndUnassigned.map((epic) => {
               const isUnassignedEpic = epic.id === 'unassigned';
-              
               const allStoriesInEpic = stories.filter(s => s.epicId === epic.id);
               const totalEpicItemsCount = allStoriesInEpic.length;
               const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
-
               const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
-
               const backlogItemsForGroup = backlogItemsByEpic[epic.id] || [];
+              const selectedCount = selectedStoriesInEpic(epic.id).length;
 
               if (backlogItemsForGroup.length === 0 && isUnassignedEpic) return null;
 
               return (
                   <AccordionItem value={epic.id} key={epic.id}>
                     <div className="flex items-center justify-between pr-2 bg-muted/50 rounded-t-md border-b">
-                      <div className="flex-1 px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      <AccordionTrigger className="flex-1 px-6 py-4 hover:no-underline">
+                        <div className="flex items-center gap-4">
                           <span className="font-semibold">{epic.title}</span>
                           <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
+                          {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                            <div className="flex items-center gap-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
+                              <Progress value={donePercentage} className="h-2 w-24" />
+                              <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                            </div>
+                          )}
                         </div>
-                        {!isUnassignedEpic && totalEpicItemsCount > 0 && (
-                          <div className="flex items-center gap-2 mt-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
-                            <Progress value={donePercentage} className="h-2" />
-                            <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 pl-2">
+                      </AccordionTrigger>
+                      <div className="flex items-center gap-1 pl-2 pr-4">
                         {!isUnassignedEpic && (
                           <>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic); }}>
@@ -1205,8 +1250,30 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </Button>
                           </>
                         )}
-                        <AccordionTrigger className="p-2 hover:no-underline" />
                       </div>
+                    </div>
+                    <div className="flex items-center justify-between pl-6 pr-4 py-2 bg-muted/50 border-b">
+                        <div className="flex items-center gap-3">
+                           <Checkbox
+                                checked={selectedCount > 0 && selectedCount === backlogItemsForGroup.length}
+                                onCheckedChange={() => handleToggleSelectAll(epic.id, backlogItemsForGroup)}
+                            />
+                            <Label htmlFor={`select-all-${epic.id}`} className="text-sm font-medium">
+                                {selectedCount > 0 ? `${selectedCount} selected` : 'Select All'}
+                            </Label>
+                        </div>
+                        {selectedCount > 0 && (
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setStoriesToMove(selectedStoriesInEpic(epic.id))}>
+                                    <Move className="mr-2 h-4 w-4" />
+                                    Move
+                                </Button>
+                                <Button variant="destructive" size="sm" onClick={() => setStoriesToDelete(selectedStoriesInEpic(epic.id))}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                </Button>
+                            </div>
+                        )}
                     </div>
                   <AccordionContent className="space-y-2 p-2 bg-muted/50 rounded-b-md">
                       {backlogItemsForGroup.length > 0 ? (
@@ -1224,11 +1291,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                   epic={storyEpic}
                                   assignee={assignee}
                                   onClick={() => handleSetSelectedStory(story)}
-                                  onDelete={() => setStoryToDelete(story)}
                                   subItems={subItems}
                                   sprint={sprint}
                                   release={release}
                                   onSubItemClick={(item) => handleDrillDown(item)}
+                                  isSelected={selectedStories.includes(story.id)}
+                                  onSelectionChange={(checked) => {
+                                      setSelectedStories(prev => checked ? [...prev, story.id] : prev.filter(id => id !== story.id));
+                                  }}
                               />
                             </div>
                           )
@@ -1282,26 +1352,64 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <AlertDialog open={!!storyToDelete} onOpenChange={(isOpen) => !isOpen && setStoryToDelete(null)}>
+      
+      <AlertDialog open={storiesToDelete.length > 0} onOpenChange={(isOpen) => !isOpen && setStoriesToDelete([])}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will move the item "{storyToDelete?.title}" to the trash. It will be permanently deleted after 30 days.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteStory}
-               className={cn(buttonVariants({ variant: 'destructive' }))}
-            >
-              Move to Trash
-            </AlertDialogAction>
-          </AlertDialogFooter>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Delete Selected Stories?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Are you sure you want to move {storiesToDelete.length} item(s) to the trash?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkDelete} className={buttonVariants({ variant: 'destructive' })}>
+                    Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <Dialog open={storiesToMove.length > 0} onOpenChange={(isOpen) => !isOpen && setStoriesToMove([])}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Move {storiesToMove.length} Stories</DialogTitle>
+                <DialogDescription>
+                    Select a new epic to move the selected stories to.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...bulkMoveForm}>
+                <form onSubmit={bulkMoveForm.handleSubmit(handleBulkMove)} className="space-y-4">
+                    <FormField
+                        control={bulkMoveForm.control}
+                        name="targetEpicId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>New Epic</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select an epic" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {epics.map(epic => (
+                                            <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <DialogFooter>
+                        <Button type="submit">Move Stories</Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!selectedStory} onOpenChange={(open) => !open && handleSetSelectedStory(null)}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -1982,6 +2090,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
