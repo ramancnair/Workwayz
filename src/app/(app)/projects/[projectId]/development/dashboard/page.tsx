@@ -30,7 +30,7 @@ const burnupChartConfig = {
 } satisfies ChartConfig;
 
 export default function DevelopmentDashboard() {
-  const { stories, sprints, releasesAndMilestones, holidays, weeklyOffDays } = useProject();
+  const { stories, sprints, releasesAndMilestones, holidays, weeklyOffDays, testDate } = useProject();
   
   const [selectedSprintId, setSelectedSprintId] = useState<string | undefined>();
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | undefined>();
@@ -67,6 +67,7 @@ export default function DevelopmentDashboard() {
       const sprint = sprints.find(s => s.id === selectedSprintId);
       if (!sprint || !sprint.startDate || !sprint.endDate) return [];
       
+      const today = startOfDay(testDate || new Date());
       const sprintStories = stories.filter(story => story.sprintId === sprint.id);
       
       const totalEffort = sprintStories.reduce((sum, story) => {
@@ -102,8 +103,6 @@ export default function DevelopmentDashboard() {
       let idealEffort = totalEffort;
       
       return sprintDates.map(date => {
-          const dateStr = format(date, 'MMM d');
-          
           const completedEffortOnDate = sprintStories.reduce((sum, story) => {
               let storyCompletedEffort = 0;
               
@@ -135,11 +134,11 @@ export default function DevelopmentDashboard() {
           
           return {
               date: date,
-              remaining: remaining < 0 ? 0 : remaining,
+              remaining: date <= today ? (remaining < 0 ? 0 : remaining) : null,
               ideal: idealEffort < 0 ? 0 : idealEffort,
           }
       });
-  }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays, subItemsByStoryId]);
+  }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays, subItemsByStoryId, testDate]);
 
   const burnupData = useMemo(() => {
       const release = releases.find(r => r.id === selectedReleaseId);
@@ -257,7 +256,7 @@ export default function DevelopmentDashboard() {
                         <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => format(new Date(value), 'dd/MM')} />
                         <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                         <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
-                        <Line dataKey="remaining" type="monotone" stroke="var(--color-remaining)" strokeWidth={2} dot={false} name="Remaining Effort" />
+                        <Line dataKey="remaining" type="monotone" stroke="var(--color-remaining)" strokeWidth={2} dot={false} name="Remaining Effort" connectNulls={false} />
                         <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} strokeDasharray="3 3" name="Ideal Burndown" />
                     </LineChart>
                 </ChartContainer>
