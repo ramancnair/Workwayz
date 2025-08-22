@@ -15,7 +15,7 @@ import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { format, parseISO, eachDayOfInterval, isSameDay, startOfDay } from 'date-fns';
-import type { Story, Release } from '@/types';
+import type { Story, Release, StatusHistoryItem } from '@/types';
 import { BookOpen, CheckCircle, GitFork, Boxes, CheckSquare } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 
@@ -28,6 +28,26 @@ const burnupChartConfig = {
   completed: { label: "Completed Work", color: "hsl(var(--chart-2))" },
   ideal: { label: "Ideal Burnup", color: "hsl(var(--chart-1))" },
 } satisfies ChartConfig;
+
+const getStatusOnDate = (statusHistory: StatusHistoryItem[] = [], targetDate: Date): string | null => {
+    if (!statusHistory || statusHistory.length === 0) return null;
+
+    let effectiveStatus = null;
+    
+    // Ensure history is sorted by date ascending
+    const sortedHistory = [...statusHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    for (const historyItem of sortedHistory) {
+        if (startOfDay(new Date(historyItem.date)) <= startOfDay(targetDate)) {
+            effectiveStatus = historyItem.status;
+        } else {
+            break; // Since history is sorted, no need to check further
+        }
+    }
+    
+    return effectiveStatus;
+};
+
 
 export default function DevelopmentDashboard() {
   const { stories, sprints, releasesAndMilestones, holidays, weeklyOffDays, testDate } = useProject();
@@ -107,9 +127,8 @@ export default function DevelopmentDashboard() {
               let storyCompletedEffort = 0;
               
               const checkCompletion = (item: Story) => {
-                  if (item.status !== 'Done') return 0;
-                  const doneDate = item.updatedAt ? startOfDay(parseISO(item.updatedAt)) : sprintStart;
-                  return doneDate <= date ? (item.estimatedHours || 0) : 0;
+                  const statusOnDate = getStatusOnDate(item.statusHistory, date);
+                  return statusOnDate === 'Done' ? (item.estimatedHours || 0) : 0;
               }
 
               if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
@@ -183,9 +202,8 @@ export default function DevelopmentDashboard() {
               let storyCompletedEffort = 0;
               
               const checkCompletion = (item: Story) => {
-                  if (item.status !== 'Done') return 0;
-                  const doneDate = item.updatedAt ? startOfDay(parseISO(item.updatedAt)) : releaseStart;
-                  return doneDate <= date ? (item.estimatedHours || 0) : 0;
+                  const statusOnDate = getStatusOnDate(item.statusHistory, date);
+                  return statusOnDate === 'Done' ? (item.estimatedHours || 0) : 0;
               }
 
               if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {

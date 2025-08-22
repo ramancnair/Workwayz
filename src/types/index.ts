@@ -1,5 +1,6 @@
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -25,6 +26,11 @@ export type StoryStatus = string;
 export type WorkItemType = 'Requirement/Story' | 'Bug' | 'Task' | 'Feature Change' | 'Sub Task';
 export type BugCriticality = 'Low' | 'Medium' | 'High' | 'Critical';
 
+export type StatusHistoryItem = {
+  status: StoryStatus;
+  date: string; // ISO String
+};
+
 export type Story = {
   id: string;
   storyId: string;
@@ -37,6 +43,7 @@ export type Story = {
   epicId?: string;
   sprintId?: string | null;
   status: StoryStatus;
+  statusHistory?: StatusHistoryItem[];
   estimatedHours?: number;
   criticality?: BugCriticality;
   startDate?: string; // ISO String
