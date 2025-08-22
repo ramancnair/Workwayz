@@ -752,12 +752,13 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   }
 
   const selectedStorySubItems = useMemo(() => {
-    if (!selectedStory) return { devTasks: [], bugs: [], subTasks: [] };
+    if (!selectedStory) return { devTasks: [], bugs: [], subTasks: [], logs: [] };
     const allSubItems = subItemsByParentId[selectedStory.id] || [];
     return {
       devTasks: allSubItems.filter(item => item.itemType === 'Task'),
       bugs: allSubItems.filter(item => item.itemType === 'Bug'),
       subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
+      logs: selectedStory.statusHistory?.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
     };
   }, [selectedStory, subItemsByParentId]);
 
@@ -1436,109 +1437,133 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
-                        <FormField control={subTaskForm.control} name="description" render={({field}) => (
-                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
-                        )}/>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
-                                <FormItem><FormLabel>Impacted System</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                        <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                    </Select>
-                                <FormMessage/></FormItem>
-                            )}/>
-                            <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
-                                <FormItem>
-                                <FormLabel>Assigned To</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage/>
-                                </FormItem>
-                            )}/>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <FormField
-                                control={subTaskForm.control}
-                                name="status"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                        {statusOptions.map((p) => (
-                                            <SelectItem key={p} value={p}>
-                                            {p}
-                                            </SelectItem>
-                                        ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                            <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
-                            )}/>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Start Date</FormLabel>
-                                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>End Date</FormLabel>
-                                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <FormField control={subTaskForm.control} name="sprintId" render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Sprint</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="backlog">Backlog</SelectItem>
-                                    {sprints.map(sprint => (
-                                        <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={subTaskForm.control} name="releaseId" render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Release</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {releases.map(release => (
-                                        <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )} />
-                        </div>
+                        <Tabs defaultValue="details" className="w-full">
+                            <TabsList>
+                                <TabsTrigger value="details">Details</TabsTrigger>
+                                <TabsTrigger value="logs">Logs</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="details" className="pt-4">
+                                <div className="space-y-4">
+                                    <FormField control={subTaskForm.control} name="description" render={({field}) => (
+                                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
+                                    )}/>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
+                                            <FormItem><FormLabel>Impacted System</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
+                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                </Select>
+                                            <FormMessage/></FormItem>
+                                        )}/>
+                                        <FormField control={subTaskForm.control} name="assigneeId" render={({field}) => (
+                                            <FormItem>
+                                            <FormLabel>Assigned To</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage/>
+                                            </FormItem>
+                                        )}/>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <FormField
+                                            control={subTaskForm.control}
+                                            name="status"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                <FormLabel>Status</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                    {statusOptions.map((p) => (
+                                                        <SelectItem key={p} value={p}>
+                                                        {p}
+                                                        </SelectItem>
+                                                    ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                                </FormItem>
+                                            )}
+                                            />
+                                        <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                        )}/>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Start Date</FormLabel>
+                                                <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>End Date</FormLabel>
+                                                <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <FormField control={subTaskForm.control} name="sprintId" render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Sprint</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                <SelectItem value="backlog">Backlog</SelectItem>
+                                                {sprints.map(sprint => (
+                                                    <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                                ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={subTaskForm.control} name="releaseId" render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Release</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                {releases.map(release => (
+                                                    <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                                ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                </div>
+                            </TabsContent>
+                             <TabsContent value="logs">
+                                <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
+                                    {selectedStorySubItems.logs.length > 0 ? (
+                                        selectedStorySubItems.logs.map((log, index) => (
+                                            <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
+                                                <span>Status changed to <strong>{log.status}</strong></span>
+                                                <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
+                                    )}
+                                </div>
+                            </TabsContent>
+                        </Tabs>
                         <DialogFooter>
                             <Button type="submit" disabled={isEditStorySubmitting}>
                                 {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
@@ -1613,6 +1638,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     </TabsTrigger>
                                 </>
                             )}
+                             <TabsTrigger value="logs">
+                                Logs
+                                <Badge variant="secondary" className="ml-2">
+                                    {selectedStorySubItems.logs.length}
+                                </Badge>
+                            </TabsTrigger>
                         </TabsList>
                     <TabsContent value="details" className="pt-4">
                       <div className="space-y-4">
@@ -2028,6 +2059,20 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                         </div>
                     </TabsContent>
+                    <TabsContent value="logs">
+                        <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
+                            {selectedStorySubItems.logs.length > 0 ? (
+                                selectedStorySubItems.logs.map((log, index) => (
+                                    <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
+                                        <span>Status changed to <strong>{log.status}</strong></span>
+                                        <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
+                            )}
+                        </div>
+                    </TabsContent>
                   </Tabs>
                   <DialogFooter className="flex justify-end items-center pt-4">
                     <div className="flex items-center gap-2">
@@ -2093,6 +2138,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
