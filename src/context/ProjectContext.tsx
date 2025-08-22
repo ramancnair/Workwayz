@@ -69,6 +69,8 @@ interface ProjectContextType {
   initialHorizontals: Horizontal[];
   environments: Environment[];
   codeRepositories: CodeRepository[];
+  testDate: Date | null;
+  setTestDate: (date: Date | null) => void;
   
   // Project actions
   updateProject: (data: Partial<Omit<Project, 'id'>>) => Promise<boolean>;
@@ -321,6 +323,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [globalSettings, setGlobalSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [testDate, setTestDate] = useState<Date | null>(null);
   
   const pathname = usePathname();
 
@@ -2087,6 +2090,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     initialHorizontals,
     environments,
     codeRepositories,
+    testDate,
+    setTestDate,
     isLoading,
     error,
     updateProject,
