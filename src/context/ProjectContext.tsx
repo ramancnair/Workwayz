@@ -108,6 +108,7 @@ interface ProjectContextType {
 
   // TestCase actions
   addTestCase: (testCase: Omit<TestCase, 'id' | 'testCaseId'>) => Promise<boolean>;
+  updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>) => Promise<boolean>;
   autoGenerateTestCases: (counts: Record<string, number>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
   
@@ -323,7 +324,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [globalSettings, setGlobalSettings] = useState<ProjectSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [testDate, setTestDate] = useState<Date | null>(null);
+  const [testDate, setTestDate] = useState<Date | null>(new Date());
   
   const pathname = usePathname();
 
@@ -499,6 +500,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                             ...lp,
                             startDate: convertTimestamp(lp.startDate),
                             endDate: convertTimestamp(lp.endDate)
+                        }))
+                    }
+                    if(name === 'stories' && docData.statusHistory) {
+                        docData.statusHistory = docData.statusHistory.map((sh: any) => ({
+                            ...sh,
+                            date: convertTimestamp(sh.date),
                         }))
                     }
                     return { id: doc.id, ...docData };
@@ -708,6 +715,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       const storyToUpdate = stories.find(s => s.id === storyId);
       const { startDate, endDate, ...rest } = data;
       const payload: any = { ...rest, updatedAt: Timestamp.now().toDate().toISOString() };
+      
+      // Handle status change history
+      if (data.status && data.status !== storyToUpdate?.status) {
+        const newHistoryEntry: StatusHistoryItem = {
+          status: data.status,
+          date: (testDate || new Date()).toISOString(),
+        };
+        payload.statusHistory = arrayUnion(sanitizeForFirestore(newHistoryEntry));
+      }
+
       if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
       if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
 
@@ -1241,7 +1258,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
       for (let i = 0; i < count; i++) {
         const riskRef = doc(collection(db, 'projects', projectId, 'risks'));
-        const sample = riskSamples[i % riskSamples.length];
         const newRisk: Omit<Risk, 'id'> = {
           riskId: `R-${currentIdCounter++}`,
           description: `${sample.desc} #${i+1}`,
@@ -2118,10 +2134,10 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addLeavePeriod,
     deleteLeavePeriod,
     addTestCase,
-    autoGenerateTestCases,
-    autoGenerateBugs,
     updateTestCase,
+    autoGenerateTestCases,
     deleteTestCase,
+    autoGenerateBugs,
     addRisk,
     updateRisk,
     deleteRisk,
