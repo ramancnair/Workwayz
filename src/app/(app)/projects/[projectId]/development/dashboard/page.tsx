@@ -67,7 +67,7 @@ export default function DevelopmentDashboard() {
       const sprint = sprints.find(s => s.id === selectedSprintId);
       if (!sprint || !sprint.startDate || !sprint.endDate) return [];
       
-      const today = startOfDay(testDate || new Date());
+      const today = testDate ? startOfDay(testDate) : null;
       const sprintStories = stories.filter(story => story.sprintId === sprint.id);
       
       const totalEffort = sprintStories.reduce((sum, story) => {
@@ -134,7 +134,7 @@ export default function DevelopmentDashboard() {
           
           return {
               date: date,
-              remaining: date <= today ? (remaining < 0 ? 0 : remaining) : null,
+              remaining: today && date <= today ? (remaining < 0 ? 0 : remaining) : null,
               ideal: idealEffort < 0 ? 0 : idealEffort,
           }
       });
