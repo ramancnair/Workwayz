@@ -134,7 +134,6 @@ export default function DevelopmentDashboard() {
           }
           
           return {
-              name: dateStr,
               date: date,
               remaining: remaining < 0 ? 0 : remaining,
               ideal: idealEffort < 0 ? 0 : idealEffort,
@@ -253,14 +252,14 @@ export default function DevelopmentDashboard() {
           <CardContent className="h-[300px]">
              {burndownData.length > 0 ? (
                 <ChartContainer config={burndownChartConfig} className="h-full w-full">
-                    <AreaChart data={burndownData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+                    <LineChart data={burndownData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                         <CartesianGrid vertical={false} />
                         <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => format(new Date(value), 'dd/MM')} />
                         <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                         <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
-                        <Area dataKey="remaining" type="monotone" fill="var(--color-remaining)" fillOpacity={0.4} stroke="var(--color-remaining)" stackId="a" />
-                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} />
-                    </AreaChart>
+                        <Line dataKey="remaining" type="monotone" stroke="var(--color-remaining)" strokeWidth={2} dot={false} name="Remaining Effort" />
+                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} strokeDasharray="3 3" name="Ideal Burndown" />
+                    </LineChart>
                 </ChartContainer>
             ) : <p className="text-center text-muted-foreground">Select a sprint with dates to view burndown.</p>}
           </CardContent>
