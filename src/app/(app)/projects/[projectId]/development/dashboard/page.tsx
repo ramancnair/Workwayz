@@ -195,7 +195,7 @@ export default function DevelopmentDashboard() {
                    } else {
                       storyCompletedEffort = checkCompletion(story);
                    }
-              } else if (!story.parentStoryId) {
+              } else if (!story.parentStoryId) { // For standalone tasks/bugs etc.
                   storyCompletedEffort = checkCompletion(story);
               }
               return sum + storyCompletedEffort;
