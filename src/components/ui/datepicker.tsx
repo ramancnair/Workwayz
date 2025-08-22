@@ -2,17 +2,9 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
-import { Calendar as CalendarIcon } from "lucide-react"
-
+import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Input } from "@/components/ui/input"
 
 interface DatePickerProps {
   date?: Date | null;
@@ -21,40 +13,26 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ date, setDate, className }: DatePickerProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value) {
+      // HTML date input value is 'yyyy-MM-dd'.
+      // We parse it and treat it as UTC to avoid timezone off-by-one issues.
+      const date = new Date(`${value}T00:00:00Z`);
+      setDate(date);
+    } else {
+      setDate(undefined);
+    }
+  };
 
-  const handleDateSelect = (newDate: Date | undefined) => {
-    setDate(newDate);
-    setIsOpen(false);
-  }
+  const formattedDate = date ? format(date, 'yyyy-MM-dd') : '';
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-full justify-start text-left font-normal",
-            !date && "text-muted-foreground",
-            className
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>Pick a date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={date ?? undefined}
-          onSelect={handleDateSelect}
-          initialFocus
-        />
-        <div className="flex justify-between p-3 border-t">
-            <Button variant="ghost" onClick={() => handleDateSelect(undefined)}>Clear</Button>
-            <Button variant="ghost" onClick={() => handleDateSelect(new Date())}>Today</Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <Input
+      type="date"
+      value={formattedDate}
+      onChange={handleDateChange}
+      className={cn("w-full", className)}
+    />
   )
 }
