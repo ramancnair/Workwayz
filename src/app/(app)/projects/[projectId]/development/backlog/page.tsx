@@ -1849,7 +1849,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Release</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <Select onValueChange={field.onChange} value={field.value || undefined}>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Assign to a release" />
@@ -2140,3 +2140,4 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
