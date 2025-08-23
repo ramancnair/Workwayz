@@ -159,7 +159,8 @@ export default function DevelopmentDashboard() {
   const burnupData = useMemo(() => {
       const release = releases.find(r => r.id === selectedReleaseId);
       if(!release || !release.startDate || !release.endDate) return [];
-
+      
+      const today = testDate ? startOfDay(testDate) : null;
       const releaseStories = stories.filter(s => s.releaseId === release.id);
       
       const totalScope = releaseStories.reduce((sum, story) => {
@@ -185,8 +186,6 @@ export default function DevelopmentDashboard() {
       let idealBurnup = 0;
 
       return releaseDates.map((date, index) => {
-          const dateStr = format(date, 'dd/MM');
-          
           const completedEffortOnDate = releaseStories.reduce((sum, story) => {
               let storyCompletedEffort = 0;
               
@@ -211,13 +210,13 @@ export default function DevelopmentDashboard() {
           idealBurnup = index * idealDailyBurnup;
           
           return {
-              date: dateStr,
-              completed: completedEffortOnDate,
+              date: format(date, 'dd/MM'),
+              completed: today && date <= today ? completedEffortOnDate : null,
               ideal: idealBurnup > totalScope ? totalScope : idealBurnup,
               scope: totalScope,
           }
       });
-  }, [selectedReleaseId, releases, stories, subItemsByStoryId]);
+  }, [selectedReleaseId, releases, stories, subItemsByStoryId, testDate]);
 
   const allTasks = stories.filter(s => s.itemType === 'Task');
   const totalTasks = allTasks.length;
@@ -287,15 +286,15 @@ export default function DevelopmentDashboard() {
           <CardContent className="h-[300px]">
             {burnupData.length > 0 ? (
                 <ChartContainer config={burnupChartConfig} className="h-full w-full">
-                    <AreaChart data={burnupData} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+                    <LineChart data={burnupData} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
                         <CartesianGrid vertical={false} />
                         <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
                         <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, burnupData[0]?.scope || 'auto']} />
                         <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
                         <ReferenceLine y={burnupData[0]?.scope} label={{ value: "Scope", position: 'insideRight', dy: -5 }} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-                        <Area dataKey="completed" type="monotone" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" stackId="a" />
+                        <Line dataKey="completed" type="monotone" stroke="var(--color-completed)" strokeWidth={2} dot={false} connectNulls={false} />
                         <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} />
-                    </AreaChart>
+                    </LineChart>
                 </ChartContainer>
             ) : <p className="text-center text-muted-foreground">Select a release with dates to view burnup.</p>}
           </CardContent>
