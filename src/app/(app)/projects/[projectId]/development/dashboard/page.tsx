@@ -14,7 +14,7 @@ import {
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { format, parseISO, eachDayOfInterval, isSameDay, startOfDay } from 'date-fns';
+import { format, parseISO, eachDayOfInterval, isSameDay, startOfDay, differenceInDays } from 'date-fns';
 import type { Story, Release, StatusHistoryItem } from '@/types';
 import { BookOpen, CheckCircle, GitFork, Boxes, CheckSquare } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
@@ -34,14 +34,13 @@ const getStatusOnDate = (statusHistory: StatusHistoryItem[] = [], targetDate: Da
 
     let effectiveStatus = null;
     
-    // Ensure history is sorted by date ascending
     const sortedHistory = [...statusHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     for (const historyItem of sortedHistory) {
         if (startOfDay(new Date(historyItem.date)) <= startOfDay(targetDate)) {
             effectiveStatus = historyItem.status;
         } else {
-            break; // Since history is sorted, no need to check further
+            break; 
         }
     }
     
@@ -91,14 +90,12 @@ export default function DevelopmentDashboard() {
       const sprintStories = stories.filter(story => story.sprintId === sprint.id);
       
       const totalEffort = sprintStories.reduce((sum, story) => {
-           // For stories/features, sum up their sub-tasks' effort
           if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
               const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
               if (subTasks.length > 0) {
                   return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
               }
           }
-          // For standalone tasks/bugs, or stories without sub-tasks, use their own effort
           if (!story.parentStoryId) {
                return sum + (story.estimatedHours || 0);
           }
@@ -182,21 +179,13 @@ export default function DevelopmentDashboard() {
       const releaseEnd = startOfDay(parseISO(release.endDate));
       const releaseDates = eachDayOfInterval({ start: releaseStart, end: releaseEnd });
       
-      const holidayDates = holidays.map(h => startOfDay(parseISO(h.date)));
-      const workingDays = releaseDates.filter(day => {
-          const dayOfWeek = day.getDay();
-          const isWeekend = weeklyOffDays.includes(dayOfWeek);
-          const isHoliday = holidayDates.some(h => isSameDay(day, h));
-          return !isWeekend && !isHoliday;
-      });
-
-      if (workingDays.length === 0) return [];
-      const idealDailyBurn = totalScope / workingDays.length;
+      if (releaseDates.length === 0) return [];
+      const idealDailyBurnup = totalScope / (differenceInDays(releaseEnd, releaseStart) || 1);
       
       let idealBurnup = 0;
 
-      return releaseDates.map(date => {
-          const dateStr = format(date, 'MMM d');
+      return releaseDates.map((date, index) => {
+          const dateStr = format(date, 'dd/MM');
           
           const completedEffortOnDate = releaseStories.reduce((sum, story) => {
               let storyCompletedEffort = 0;
@@ -219,19 +208,16 @@ export default function DevelopmentDashboard() {
               return sum + storyCompletedEffort;
           }, 0);
 
-          const isWorkingDay = workingDays.some(wd => isSameDay(wd, date));
-          if (isWorkingDay && date >= releaseStart) {
-              idealBurnup += idealDailyBurn;
-          }
+          idealBurnup = index * idealDailyBurnup;
           
           return {
-              name: dateStr,
+              date: dateStr,
               completed: completedEffortOnDate,
               ideal: idealBurnup > totalScope ? totalScope : idealBurnup,
               scope: totalScope,
           }
       });
-  }, [selectedReleaseId, releases, stories, holidays, weeklyOffDays, subItemsByStoryId]);
+  }, [selectedReleaseId, releases, stories, subItemsByStoryId]);
 
   const allTasks = stories.filter(s => s.itemType === 'Task');
   const totalTasks = allTasks.length;
@@ -301,12 +287,12 @@ export default function DevelopmentDashboard() {
           <CardContent className="h-[300px]">
             {burnupData.length > 0 ? (
                 <ChartContainer config={burnupChartConfig} className="h-full w-full">
-                    <AreaChart data={burnupData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+                    <AreaChart data={burnupData} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
                         <CartesianGrid vertical={false} />
-                        <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
-                        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                        <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, burnupData[0]?.scope || 'auto']} />
                         <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
-                        <ReferenceLine y={burnupData[0]?.scope} label="Scope" stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+                        <ReferenceLine y={burnupData[0]?.scope} label={{ value: "Scope", position: 'insideRight', dy: -5 }} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
                         <Area dataKey="completed" type="monotone" fill="var(--color-completed)" fillOpacity={0.4} stroke="var(--color-completed)" stackId="a" />
                         <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} />
                     </AreaChart>
