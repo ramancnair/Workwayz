@@ -267,7 +267,8 @@ function SprintColumn({
   onNext,
   showNav,
   onMoveStory,
-  onEditStory
+  onEditStory,
+  selectedAssigneeId
 }: { 
   sprint: Sprint, 
   stories: Story[],
@@ -281,6 +282,7 @@ function SprintColumn({
   showNav: boolean,
   onMoveStory: (storyId: string, sprintId: string | null) => void;
   onEditStory: (story: Story) => void;
+  selectedAssigneeId: string;
 }) {
     const { epics, employees, stories: allStories, impactedSystems } = useProject();
 
@@ -308,21 +310,16 @@ function SprintColumn({
             return !isWeekend && !isHoliday;
         }).length;
         
-        // Find all parent stories in the sprint to get all relevant sub-tasks
-        const parentStoriesInSprint = allStories.filter(s => 
-          s.sprintId === sprint.id && 
-          ['Requirement/Story', 'Task', 'Feature Change'].includes(s.itemType)
+        const allSubTasksInSprint = allStories.filter(story => 
+            story.itemType === 'Sub Task' && story.sprintId === sprint.id
         );
-        const parentStoryIds = new Set(parentStoriesInSprint.map(s => s.id));
-
-        const subTasksInSprint = allStories.filter(story => 
-            story.itemType === 'Sub Task' && 
-            story.parentStoryId && 
-            parentStoryIds.has(story.parentStoryId)
-        );
+        
+        const relevantEmployees = selectedAssigneeId === 'all' 
+            ? employees 
+            : employees.filter(e => e.id === selectedAssigneeId);
 
         return impactedSystems.map(system => {
-            const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
+            const resourcesForSystem = relevantEmployees.filter(emp => emp.capabilities?.includes(system.id));
             
             let totalCapacityHours = 0;
             resourcesForSystem.forEach(emp => {
@@ -330,8 +327,12 @@ function SprintColumn({
                 totalCapacityHours += workingDays * 8 * availabilityFactor;
             });
 
-            const utilizedHours = subTasksInSprint
-                .filter(task => task.impactedSystemId === system.id)
+            const utilizedHours = allSubTasksInSprint
+                .filter(task => {
+                    const isCorrectSystem = task.impactedSystemId === system.id;
+                    const isCorrectAssignee = selectedAssigneeId === 'all' || task.assigneeId === selectedAssigneeId;
+                    return isCorrectSystem && isCorrectAssignee;
+                })
                 .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
             
             const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
@@ -345,7 +346,7 @@ function SprintColumn({
                 utilization: utilization
             }
         }).filter(sys => sys.totalCapacity > 0 || sys.utilized > 0);
-    }, [sprint, allStories, impactedSystems, employees, holidays, weeklyOffDays]);
+    }, [sprint, allStories, impactedSystems, employees, holidays, weeklyOffDays, selectedAssigneeId]);
 
     const totalSprintUtilized = capacityBySystem.reduce((sum, sys) => sum + sys.utilized, 0);
 
@@ -868,6 +869,7 @@ export default function GroomingPage() {
                             showNav={sprintsWithStories.length > 1}
                             onMoveStory={moveStoryToSprint}
                             onEditStory={(story) => handleSetSelectedStory(story)}
+                            selectedAssigneeId={selectedAssigneeId}
                         />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
@@ -1559,6 +1561,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
