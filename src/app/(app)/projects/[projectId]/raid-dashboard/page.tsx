@@ -50,7 +50,7 @@ const issueConfig = {
 const dependencyConfig = {
   dependencies: { label: "Dependencies" },
   'On Track': { label: 'On Track', color: '#22c55e' },
-  'At Risk': { label: 'At Risk', color: '#f97316' },
+  'At Risk': { label: 'At Risk', color: '#facc15' },
   'Blocked': { label: 'Blocked', color: '#ef4444' },
 } satisfies ChartConfig;
 
@@ -80,7 +80,7 @@ export default function RaidDashboardPage() {
   const activeAssumptions = assumptionData.find(item => item.name === 'Active')?.value || 0;
 
   // Issues Data
- const issueData = Object.entries(
+  const issueData = Object.entries(
     issues.reduce((acc, i) => {
       const status: IssueStatus = i.status || 'Open';
       acc[status] = (acc[status] || 0) + 1;
