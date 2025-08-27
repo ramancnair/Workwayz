@@ -77,43 +77,56 @@ export default function ResourceGanttPage() {
 
   const resourcesByEpic = useMemo(() => {
     const epicMap: { [key: string]: { epic: Epic | null; resources: any[] } } = {};
+    const resourceTaskMap: { [key: string]: { resource: any; tasks: any[], dailyLoad: any } } = {};
+
+    employees.forEach(emp => {
+      resourceTaskMap[emp.id] = {
+        resource: emp,
+        tasks: [],
+        dailyLoad: {}
+      };
+    });
 
     stories.forEach(story => {
-      if (!story.assigneeId) return;
-
-      const epicId = story.epicId || 'unassigned';
-      if (!epicMap[epicId]) {
-        epicMap[epicId] = {
-          epic: epics.find(e => e.id === epicId) || null,
-          resources: [],
-        };
-      }
-
-      let resource = epicMap[epicId].resources.find(r => r.id === story.assigneeId);
-      if (!resource) {
-        const employee = employees.find(e => e.id === story.assigneeId);
-        if (employee) {
-          resource = { ...employee, tasks: [], dailyLoad: {} };
-          epicMap[epicId].resources.push(resource);
-        }
-      }
-
-      if (resource && (story.itemType === 'Sub Task' || story.itemType === 'Bug')) {
+      if (!story.assigneeId || !resourceTaskMap[story.assigneeId]) return;
+      if (story.itemType === 'Sub Task' || story.itemType === 'Bug') {
         const taskDates = getTaskDates(story, sprints);
-        if(taskDates) {
-            resource.tasks.push({ ...story, taskDates });
-            
-            const taskDuration = getWorkingDays(taskDates.start, taskDates.end);
-            const dailyHours = (story.estimatedHours || 0) / (taskDuration || 1);
-            
-            eachDayOfInterval({ start: taskDates.start, end: taskDates.end }).forEach(day => {
-              const dayStr = format(day, 'yyyy-MM-dd');
-              if (!resource.dailyLoad[dayStr]) {
-                  resource.dailyLoad[dayStr] = 0;
-              }
-              resource.dailyLoad[dayStr] += dailyHours;
-            });
+        if (taskDates) {
+          const task = { ...story, taskDates };
+          resourceTaskMap[story.assigneeId].tasks.push(task);
+          
+          const taskDuration = getWorkingDays(taskDates.start, taskDates.end);
+          const dailyHours = (story.estimatedHours || 0) / (taskDuration || 1);
+          
+          eachDayOfInterval({ start: taskDates.start, end: taskDates.end }).forEach(day => {
+            const dayStr = format(day, 'yyyy-MM-dd');
+            if (!resourceTaskMap[story.assigneeId].dailyLoad[dayStr]) {
+                resourceTaskMap[story.assigneeId].dailyLoad[dayStr] = 0;
+            }
+            resourceTaskMap[story.assigneeId].dailyLoad[dayStr] += dailyHours;
+          });
         }
+      }
+    });
+
+    Object.values(resourceTaskMap).forEach(({ resource, tasks, dailyLoad }) => {
+      if (tasks.length > 0) {
+        tasks.forEach(task => {
+          const epicId = task.epicId || 'unassigned';
+          if (!epicMap[epicId]) {
+            epicMap[epicId] = {
+              epic: epics.find(e => e.id === epicId) || null,
+              resources: [],
+            };
+          }
+          let epicResource = epicMap[epicId].resources.find(r => r.id === resource.id);
+          if (!epicResource) {
+            epicResource = { ...resource, tasks: [], dailyLoad: {} };
+            epicMap[epicId].resources.push(epicResource);
+          }
+          epicResource.tasks.push(task);
+          Object.assign(epicResource.dailyLoad, dailyLoad);
+        });
       }
     });
 
@@ -264,3 +277,4 @@ export default function ResourceGanttPage() {
     </div>
   );
 }
+
