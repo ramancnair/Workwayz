@@ -42,10 +42,10 @@ const assumptionConfig = {
 
 const issueConfig = {
   issues: { label: "Issues" },
-  'Open': { label: 'Open', color: '#ef4444' },
-  'In Progress': { label: 'In Progress', color: '#facc15' },
-  'Resolved': { label: 'Resolved', color: '#22c55e' },
-  'Closed': { label: 'Closed', color: '#a1a1aa' },
+  'Open': { label: 'Open', color: '#ef4444' }, // red
+  'In Progress': { label: 'In Progress', color: '#facc15' }, // yellow
+  'Resolved': { label: 'Resolved', color: '#22c55e' }, // green
+  'Closed': { label: 'Closed', color: '#a1a1aa' }, // grey
 } satisfies ChartConfig;
 
 const dependencyConfig = {
