@@ -28,7 +28,7 @@ const getRiskPotential = (severity: RiskSeverity, probability: RiskProbability) 
 const riskConfig = {
   risks: { label: "Risks" },
   'Low': { label: "Low", color: '#22c55e' },
-  'Medium': { label: "Medium", color: '#f97316' },
+  'Medium': { label: "Medium", color: '#facc15' },
   'High': { label: "High", color: '#ef4444' },
 } satisfies ChartConfig;
 
@@ -80,12 +80,12 @@ export default function RaidDashboardPage() {
   const activeAssumptions = assumptionData.find(item => item.name === 'Active')?.value || 0;
 
   // Issues Data
-  const issueData = Object.entries(
+ const issueData = Object.entries(
     issues.reduce((acc, i) => {
       const status: IssueStatus = i.status || 'Open';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
-    }, {} as Record<IssueStatus, number>)
+    }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value, fill: issueConfig[name as keyof typeof issueConfig]?.color || '#8884d8' }));
   const totalIssues = issueData.reduce((sum, item) => sum + item.value, 0);
   const openIssues = (issueData.find(item => item.name === 'Open')?.value || 0) + (issueData.find(item => item.name === 'In Progress')?.value || 0);
@@ -110,7 +110,7 @@ export default function RaidDashboardPage() {
         <ChartContainer config={config} className="mx-auto aspect-square h-full">
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-            <Pie data={data} dataKey="value" nameKey="name" strokeWidth={5} />
+            <Pie data={data} dataKey="value" nameKey="name" />
             <ChartLegend
                 content={<ChartLegendContent nameKey="name" />}
                 className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
