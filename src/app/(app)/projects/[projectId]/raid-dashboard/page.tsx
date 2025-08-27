@@ -84,7 +84,8 @@ export default function RaidDashboardPage() {
   const openIssues = issues.filter(i => i.status === 'Open' || i.status === 'In Progress').length;
   const issueData = Object.entries(
     issues.reduce((acc, i) => {
-      acc[i.status] = (acc[i.status] || 0) + 1;
+      const status = i.status || 'Open';
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value, fill: issueConfig[name as keyof typeof issueConfig]?.color || '#8884d8' }));
