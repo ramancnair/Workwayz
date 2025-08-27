@@ -248,7 +248,7 @@ export default function ResourceGanttPage() {
                                           backgroundColor: COLORS[epicIndex % COLORS.length]
                                       }}
                                   >
-                                     <span className="truncate">{task.title}</span>
+                                     <span className="truncate">{task.storyId}</span>
                                   </div>
                               )
                           })}
