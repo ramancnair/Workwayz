@@ -34,9 +34,9 @@ const riskConfig = {
 
 const assumptionConfig = {
   assumptions: { label: "Assumptions" },
-  'Active': { label: 'Active', color: '#3b82f6' },
+  'Active': { label: 'Active', color: '#ef4444' },
   'Validated': { label: 'Validated', color: '#22c55e' },
-  'Invalidated': { label: 'Invalidated', color: '#ef4444' },
+  'Invalidated': { label: 'Invalidated', color: '#a1a1aa' },
 } satisfies ChartConfig;
 
 const issueConfig = {
