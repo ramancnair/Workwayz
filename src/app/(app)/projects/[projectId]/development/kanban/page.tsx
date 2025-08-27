@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment, ImpactedSystem, Release, Sprint } from '@/types';
+import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -68,6 +68,15 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
+
+const priorityStyles: Record<Priority, string> = {
+    'Critical': 'text-red-500',
+    'High': 'text-orange-500',
+    'Medium': 'text-yellow-500',
+    'Low': 'text-green-500',
+    'Backburner': 'text-gray-500',
+};
 
 
 const storyFormSchema = z.object({
@@ -78,6 +87,7 @@ const storyFormSchema = z.object({
   parentStoryId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
+  priority: z.enum(priorities).optional(),
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
@@ -109,7 +119,7 @@ function StoryCard({
   className, 
   isMoveToDoneDisabled, 
   subItems, 
-  onSubItemClick,
+  onSubItemClick, 
   onSubItemStatusChange,
 }: { 
   story: Story; 
@@ -149,6 +159,18 @@ function StoryCard({
             <CollapsibleTrigger className="flex-1 pr-2 text-left space-y-1">
                 <div className="flex items-center gap-2">
                     {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                     {story.priority && (
+                        <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                            <Flag className={cn("h-4 w-4", priorityStyles[story.priority])} />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                            <p>{story.priority} Priority</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        </TooltipProvider>
+                    )}
                     <p className="text-xs font-semibold text-muted-foreground">
                     {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                     </p>
@@ -375,6 +397,7 @@ export default function KanbanPage() {
         parentStoryId: isSubItem ? selectedStory.parentStoryId || 'unassigned' : undefined,
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
+        priority: selectedStory.priority || 'Medium',
         criticality: selectedStory.criticality || 'Medium',
         environmentId: selectedStory.environmentId || 'unassigned',
         impactedSystemIds: selectedStory.impactedSystemIds || [],
@@ -398,6 +421,7 @@ export default function KanbanPage() {
         acceptanceCriteria: values.acceptanceCriteria,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         estimatedHours: values.estimatedHours,
+        priority: values.priority,
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
@@ -783,6 +807,33 @@ export default function KanbanPage() {
                           </TabsList>
                           <TabsContent value="details" className="pt-4">
                               <div className="space-y-4">
+                                <FormField
+                                    control={editStoryForm.control}
+                                    name="priority"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Priority</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                            <SelectValue placeholder="Set priority" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {priorities.map((p) => (
+                                            <SelectItem key={p} value={p}>
+                                                <div className="flex items-center gap-2">
+                                                <Flag className={cn("h-4 w-4", priorityStyles[p])} />
+                                                <span>{p}</span>
+                                                </div>
+                                            </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
                                   {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
                                     <FormField
                                         control={editStoryForm.control}

@@ -31,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem, Holiday, Release } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem, Holiday, Release, Priority } from '@/types';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +74,15 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
+
+const priorityStyles: Record<Priority, string> = {
+    'Critical': 'text-red-500',
+    'High': 'text-orange-500',
+    'Medium': 'text-yellow-500',
+    'Low': 'text-green-500',
+    'Backburner': 'text-gray-500',
+};
 
 
 const storyFormSchema = z.object({
@@ -84,6 +93,7 @@ const storyFormSchema = z.object({
   parentStoryId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
+  priority: z.enum(priorities).optional(),
   criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
@@ -147,6 +157,18 @@ function StoryItemCard({
                 <CollapsibleTrigger className="flex-1 pr-2 text-left space-y-1">
                     <div className="flex items-center gap-2">
                         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                        {story.priority && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Flag className={cn("h-4 w-4", priorityStyles[story.priority])} />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{story.priority} Priority</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         <p className="text-xs font-semibold text-muted-foreground">
                             {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                         </p>
@@ -285,7 +307,7 @@ function SprintColumn({
   selectedAssigneeId: string;
 }) {
     const { epics, employees, stories: allStories, impactedSystems } = useProject();
-
+    
     const subItemsByStoryId = useMemo(() => allStories.reduce((acc, story) => {
       if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
           if (!acc[story.parentStoryId]) {
@@ -610,6 +632,7 @@ export default function GroomingPage() {
                 parentStoryId: ['Bug'].includes(selectedStory.itemType) ? selectedStory.parentStoryId || 'unassigned' : undefined,
                 assigneeId: selectedStory.assigneeId || 'unassigned',
                 estimatedHours: selectedStory.estimatedHours,
+                priority: selectedStory.priority || 'Medium',
                 criticality: selectedStory.criticality || 'Medium',
                 environmentId: selectedStory.environmentId || 'unassigned',
                 impactedSystemIds: selectedStory.impactedSystemIds || [],
@@ -666,6 +689,7 @@ export default function GroomingPage() {
             epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
             parentStoryId: isSubItem ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
             estimatedHours: values.estimatedHours,
+            priority: values.priority,
             criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
             environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
             impactedSystemIds: values.impactedSystemIds,
@@ -1158,6 +1182,33 @@ export default function GroomingPage() {
                         </TabsList>
                         <TabsContent value="details" className="pt-4">
                         <div className="space-y-4">
+                            <FormField
+                                control={editStoryForm.control}
+                                name="priority"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Priority</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Set priority" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {priorities.map((p) => (
+                                        <SelectItem key={p} value={p}>
+                                            <div className="flex items-center gap-2">
+                                            <Flag className={cn("h-4 w-4", priorityStyles[p])} />
+                                            <span>{p}</span>
+                                            </div>
+                                        </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
                              {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
                                 <FormField
                                     control={editStoryForm.control}
@@ -1561,7 +1612,6 @@ export default function GroomingPage() {
     
 
     
-
 
 
 

@@ -51,7 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality, StoryStatus, ImpactedSystem, Release } from '@/types';
+import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality, StoryStatus, ImpactedSystem, Release, Priority } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -83,6 +83,15 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
 const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
+
+const priorityStyles: Record<Priority, string> = {
+    'Critical': 'text-red-500',
+    'High': 'text-orange-500',
+    'Medium': 'text-yellow-500',
+    'Low': 'text-green-500',
+    'Backburner': 'text-gray-500',
+};
 
 
 const epicFormSchema = z.object({
@@ -100,6 +109,7 @@ const storyFormSchema = z.object({
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
+  priority: z.enum(priorities).optional(),
   criticality: z.enum(bugCriticalities).optional(),
   releaseId: z.string().optional(),
   environmentId: z.string().optional(),
@@ -168,6 +178,18 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                   {story.priority && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Flag className={cn("h-4 w-4", priorityStyles[story.priority])} />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{story.priority} Priority</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                   <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
                   {isReadyForDev && <Flag className="h-4 w-4 text-green-500" />}
                 </div>
@@ -355,7 +377,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -457,6 +479,7 @@ export default function BacklogPage() {
             reporterId: selectedStory.reporterId || 'unassigned',
             assigneeId: selectedStory.assigneeId || 'unassigned',
             estimatedHours: selectedStory.estimatedHours,
+            priority: selectedStory.priority || 'Medium',
             criticality: selectedStory.criticality || 'Medium',
             releaseId: selectedStory.releaseId || 'unassigned',
             sprintId: selectedStory.sprintId || 'backlog',
@@ -537,6 +560,7 @@ export default function BacklogPage() {
       parentStoryId: ['Bug'].includes(values.itemType) ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
+      priority: values.priority,
       criticality: values.itemType === 'Bug' ? values.criticality : undefined,
       sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
       releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
@@ -567,6 +591,7 @@ export default function BacklogPage() {
         reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         estimatedHours: values.estimatedHours,
+        priority: values.priority,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
@@ -928,6 +953,33 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         )}
                     />
                     <div className="space-y-4 pt-4">
+                         <FormField
+                            control={addStoryForm.control}
+                            name="priority"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Priority</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Set priority" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {priorities.map((p) => (
+                                    <SelectItem key={p} value={p}>
+                                        <div className="flex items-center gap-2">
+                                        <Flag className={cn("h-4 w-4", priorityStyles[p])} />
+                                        <span>{p}</span>
+                                        </div>
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                         <FormField
                             control={addStoryForm.control}
                             name="description"
@@ -1649,6 +1701,33 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                       <div className="space-y-4">
                         <FormField
                             control={editStoryForm.control}
+                            name="priority"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Priority</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Set priority" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {priorities.map((p) => (
+                                    <SelectItem key={p} value={p}>
+                                        <div className="flex items-center gap-2">
+                                        <Flag className={cn("h-4 w-4", priorityStyles[p])} />
+                                        <span>{p}</span>
+                                        </div>
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={editStoryForm.control}
                             name="description"
                             render={({ field }) => (
                             <FormItem>
@@ -2140,4 +2219,3 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
-
