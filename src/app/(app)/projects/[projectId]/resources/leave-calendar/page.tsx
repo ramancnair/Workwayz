@@ -16,8 +16,8 @@ export default function LeaveCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const week = useMemo(() => {
-    const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
-    const end = endOfWeek(currentDate, { weekStartsOn: 1 }); // Sunday
+    const start = startOfWeek(currentDate, { weekStartsOn: 0 }); // Sunday
+    const end = endOfWeek(currentDate, { weekStartsOn: 0 }); // Saturday
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
 
