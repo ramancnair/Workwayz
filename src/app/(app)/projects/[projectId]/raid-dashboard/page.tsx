@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useProject } from '@/context/ProjectContext';
@@ -16,10 +15,10 @@ import {
 } from "@/components/ui/chart";
 import { Pie, PieChart } from 'recharts';
 import { ShieldAlert, NotebookText, AlertCircle, Link2 } from 'lucide-react';
-import type { Risk, Assumption, Issue, Dependency } from '@/types';
+import type { Risk, Assumption, Issue, Dependency, IssueStatus, RiskSeverity, RiskProbability, AssumptionStatus, DependencyStatus } from '@/types';
 
 // Helper to get risk potential
-const getRiskPotential = (severity: number, probability: number) => {
+const getRiskPotential = (severity: RiskSeverity, probability: RiskProbability) => {
   const potential = severity * probability;
   if (potential <= 3) return 'Low';
   if (potential <= 6) return 'Medium';
@@ -42,10 +41,10 @@ const assumptionConfig = {
 
 const issueConfig = {
   issues: { label: "Issues" },
-  'Open': { label: 'Open', color: '#ef4444' }, // red
-  'In Progress': { label: 'In Progress', color: '#facc15' }, // yellow
-  'Resolved': { label: 'Resolved', color: '#22c55e' }, // green
-  'Closed': { label: 'Closed', color: '#a1a1aa' }, // grey
+  'Open': { label: 'Open', color: '#ef4444' },
+  'In Progress': { label: 'In Progress', color: '#facc15' },
+  'Resolved': { label: 'Resolved', color: '#22c55e' },
+  'Closed': { label: 'Closed', color: '#a1a1aa' },
 } satisfies ChartConfig;
 
 const dependencyConfig = {
@@ -74,7 +73,7 @@ export default function RaidDashboardPage() {
   const activeAssumptions = assumptions.filter(a => a.status === 'Active').length;
   const assumptionData = Object.entries(
     assumptions.reduce((acc, a) => {
-      const status = a.status || 'Active';
+      const status: AssumptionStatus = a.status || 'Active';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
@@ -85,7 +84,7 @@ export default function RaidDashboardPage() {
   const openIssues = issues.filter(i => i.status === 'Open' || i.status === 'In Progress').length;
   const issueData = Object.entries(
     issues.reduce((acc, i) => {
-      const status = i.status || 'Open';
+      const status: IssueStatus = i.status || 'Open';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
@@ -96,7 +95,7 @@ export default function RaidDashboardPage() {
   const atRiskDependencies = dependencies.filter(d => d.status === 'At Risk' || d.status === 'Blocked').length;
   const dependencyData = Object.entries(
     dependencies.reduce((acc, d) => {
-      const status = d.status || 'On Track';
+      const status: DependencyStatus = d.status || 'On Track';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
