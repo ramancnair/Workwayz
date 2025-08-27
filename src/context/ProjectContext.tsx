@@ -278,6 +278,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/resources/resource-gantt': ['stories', 'epics', 'employees', 'sprints'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
     '/resources/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
+    '/resources/leave-calendar': ['employees', 'holidays', 'weeklyOffDays'],
     '/raid-dashboard': ['risks', 'assumptions', 'issues', 'dependencies'],
     '/risks': ['risks'],
     '/assumptions': ['assumptions', 'employees'],
