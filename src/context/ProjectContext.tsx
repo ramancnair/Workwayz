@@ -1258,6 +1258,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
       for (let i = 0; i < count; i++) {
         const riskRef = doc(collection(db, 'projects', projectId, 'risks'));
+        const sample = riskSamples[i % riskSamples.length];
         const newRisk: Omit<Risk, 'id'> = {
           riskId: `R-${currentIdCounter++}`,
           description: `${sample.desc} #${i+1}`,
