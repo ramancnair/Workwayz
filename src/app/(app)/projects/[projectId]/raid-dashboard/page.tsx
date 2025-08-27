@@ -10,9 +10,11 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
   type ChartConfig
 } from "@/components/ui/chart";
-import { Bar, BarChart, Cell, XAxis, YAxis } from 'recharts';
+import { Pie, PieChart } from 'recharts';
 import { ShieldAlert, NotebookText, AlertCircle, Link2 } from 'lucide-react';
 import type { Risk, Assumption, Issue, Dependency } from '@/types';
 
@@ -65,7 +67,7 @@ export default function RaidDashboardPage() {
       acc[potential] = (acc[potential] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value }));
+  ).map(([name, value]) => ({ name, value, fill: riskConfig[name as keyof typeof riskConfig]?.color || '#8884d8' }));
   
   // Assumptions Data
   const totalAssumptions = assumptions.length;
@@ -75,7 +77,7 @@ export default function RaidDashboardPage() {
       acc[a.status] = (acc[a.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value }));
+  ).map(([name, value]) => ({ name, value, fill: assumptionConfig[name as keyof typeof assumptionConfig]?.color || '#8884d8' }));
 
   // Issues Data
   const totalIssues = issues.length;
@@ -85,7 +87,7 @@ export default function RaidDashboardPage() {
       acc[i.status] = (acc[i.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value }));
+  ).map(([name, value]) => ({ name, value, fill: issueConfig[name as keyof typeof issueConfig]?.color || '#8884d8' }));
   
   // Dependencies Data
   const totalDependencies = dependencies.length;
@@ -95,25 +97,23 @@ export default function RaidDashboardPage() {
       acc[d.status] = (acc[d.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value }));
+  ).map(([name, value]) => ({ name, value, fill: dependencyConfig[name as keyof typeof dependencyConfig]?.color || '#8884d8' }));
 
-  const ChartCard = ({ title, config, data }: { title: string, config: ChartConfig, data: { name: string, value: number }[] }) => (
+  const ChartCard = ({ title, config, data }: { title: string, config: ChartConfig, data: { name: string, value: number, fill: string }[] }) => (
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="h-[250px]">
-        <ChartContainer config={config} className="h-full w-full">
-          <BarChart accessibilityLayer data={data} layout="vertical" margin={{ left: 10 }}>
-            <XAxis type="number" hide />
-            <YAxis type="category" dataKey="name" width={80} tickLine={false} axisLine={false} />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-            <Bar dataKey="value" layout="vertical" radius={4}>
-              {data.map((entry) => (
-                <Cell key={`cell-${entry.name}`} fill={config[entry.name as keyof typeof config]?.color} />
-              ))}
-            </Bar>
-          </BarChart>
+        <ChartContainer config={config} className="mx-auto aspect-square h-full">
+          <PieChart>
+            <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+            <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5} />
+            <ChartLegend
+                content={<ChartLegendContent nameKey="name" />}
+                className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+            />
+          </PieChart>
         </ChartContainer>
       </CardContent>
     </Card>
