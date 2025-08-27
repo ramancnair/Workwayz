@@ -34,9 +34,14 @@ const getTaskDates = (task: Story, sprints: any[]) => {
 };
 
 export default function ResourceGanttPage() {
-  const { stories, epics, employees, sprints } = useProject();
+  const { stories, epics, employees, sprints, testDate } = useProject();
   const [view, setView] = useState<'days' | 'weeks' | 'months'>('weeks');
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(testDate || new Date());
+
+  useEffect(() => {
+    setCurrentDate(testDate || new Date());
+  }, [testDate]);
+
 
   const { dateRange, ticks } = useMemo(() => {
     let start, end;
@@ -124,7 +129,8 @@ export default function ResourceGanttPage() {
     }
   };
   
-  const todayIndex = differenceInDays(startOfDay(new Date()), dateRange.start);
+  const todayMarkerDate = testDate || new Date();
+  const todayIndex = differenceInDays(startOfDay(todayMarkerDate), dateRange.start);
 
   return (
     <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full">
@@ -132,7 +138,7 @@ export default function ResourceGanttPage() {
         <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={() => handleDateChange(subWeeks, 2)}><ChevronsLeft /></Button>
             <Button variant="outline" size="icon" onClick={() => handleDateChange(subWeeks, 1)}><ChevronLeft /></Button>
-            <Button variant="outline" onClick={() => setCurrentDate(new Date())}>Today</Button>
+            <Button variant="outline" onClick={() => setCurrentDate(testDate || new Date())}>Today</Button>
             <Button variant="outline" size="icon" onClick={() => handleDateChange(addWeeks, 1)}><ChevronRight /></Button>
             <Button variant="outline" size="icon" onClick={() => handleDateChange(addWeeks, 2)}><ChevronsRight /></Button>
         </div>
