@@ -734,22 +734,33 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   }, {} as Record<string, Story[]>);
   
   const epicsAndUnassigned = useMemo(() => {
-    const epicMap: Record<string, Epic> = {};
+    const epicMap: Record<string, Epic & { hasStories: boolean }> = {};
     epics.forEach(e => {
-        epicMap[e.id] = e;
+        epicMap[e.id] = { ...e, hasStories: false };
     });
 
-    const unassignedStories = backlogItemsByEpic['unassigned'] || [];
-    if (unassignedStories.length > 0 || epics.length === 0) {
-      epicMap['unassigned'] = { id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' };
+    Object.keys(backlogItemsByEpic).forEach(epicId => {
+        if (epicMap[epicId]) {
+            epicMap[epicId].hasStories = true;
+        }
+    });
+
+    const unassignedStoriesExist = (backlogItemsByEpic['unassigned'] || []).length > 0;
+
+    let displayEpics = epics.filter(e => epicMap[e.id]?.hasStories);
+    
+    if (unassignedStoriesExist) {
+        displayEpics.push({ id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' });
     }
     
-    const allEpicIds = new Set(Object.keys(backlogItemsByEpic));
-    epics.forEach(epic => allEpicIds.add(epic.id));
-    
-    return Array.from(allEpicIds).map(id => {
-        return epicMap[id] || { id, title: 'Unassigned', description: 'Items not assigned to any epic.' };
-    }).sort((a, b) => {
+    if (displayEpics.length === 0 && epics.length > 0) {
+        displayEpics = [...epics];
+    } else if (displayEpics.length === 0 && epics.length === 0 && unassignedStoriesExist) {
+        displayEpics = [{ id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' }];
+    }
+
+
+    return displayEpics.sort((a, b) => {
         if (a.id === 'unassigned') return 1;
         if (b.id === 'unassigned') return -1;
         return a.title.localeCompare(b.title);
@@ -1276,7 +1287,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               const backlogItemsForGroup = backlogItemsByEpic[epic.id] || [];
               const selectedCount = selectedStoriesInEpic(epic.id).length;
 
-              if (backlogItemsForGroup.length === 0 && isUnassignedEpic) return null;
+              if (backlogItemsForGroup.length === 0 && isUnassignedEpic && epics.length > 0) return null;
 
               return (
                   <AccordionItem value={epic.id} key={epic.id}>
@@ -2219,5 +2230,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
