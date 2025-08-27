@@ -17,6 +17,7 @@ import {
   addMonths,
   subMonths,
   parseISO,
+  startOfDay,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
