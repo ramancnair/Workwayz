@@ -56,6 +56,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
 
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -118,6 +119,7 @@ function StoryItemCard({
     epic,
     assignee,
     subItems,
+    parentStory,
     onMove, 
     onEdit,
     onSubItemClick,
@@ -126,6 +128,7 @@ function StoryItemCard({
     epic?: Epic, 
     assignee?: User,
     subItems?: Story[],
+    parentStory?: Story,
     onMove: (sprintId: string | null) => void,
     onEdit: () => void;
     onSubItemClick: (story: Story) => void;
@@ -144,7 +147,9 @@ function StoryItemCard({
                 <CollapsibleTrigger className="flex-1 pr-2 text-left space-y-1">
                     <div className="flex items-center gap-2">
                         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                        <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
+                        <p className="text-xs font-semibold text-muted-foreground">
+                            {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
+                        </p>
                         {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
                     </div>
                     <p className="font-semibold break-words">{story.title}</p>
@@ -393,6 +398,7 @@ function SprintColumn({
                      const epic = epics.find(e => e.id === story.epicId);
                      const assignee = employees.find(e => e.id === story.assigneeId);
                      const subItems = subItemsByStoryId[story.id] || [];
+                     const parentStory = story.parentStoryId ? allStories.find(s => s.id === story.parentStoryId) : undefined;
                      return (
                         <div key={story.id}>
                             <StoryItemCard 
@@ -400,6 +406,7 @@ function SprintColumn({
                                 epic={epic}
                                 assignee={assignee}
                                 subItems={subItems}
+                                parentStory={parentStory}
                                 onMove={(newSprintId) => onMoveStory(story.id, newSprintId)}
                                 onEdit={() => onEditStory(story)}
                                 onSubItemClick={onEditStory}
@@ -442,12 +449,25 @@ export default function GroomingPage() {
     const [visibleSprintIndex, setVisibleSprintIndex] = useState<number | null>(null);
     const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
     const [showAddSubTask, setShowAddSubTask] = useState(false);
+    const [viewBy, setViewBy] = useState<'story' | 'sub-task'>('story');
+    const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
     
     const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
     const backlogItems = useMemo(() => {
-        return stories.filter(story => !story.sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
-    }, [stories]);
+      const baseItems = stories.filter(story => !story.sprintId);
+      
+      const filteredByView = baseItems.filter(story => {
+        if (viewBy === 'story') {
+          return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
+        }
+        return story.itemType === 'Sub Task';
+      });
+
+      if (selectedAssigneeId === 'all') return filteredByView;
+      return filteredByView.filter(story => story.assigneeId === selectedAssigneeId);
+
+    }, [stories, viewBy, selectedAssigneeId]);
     
      const subItemsByParentId = useMemo(() => stories.reduce((acc, story) => {
         if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
@@ -460,11 +480,25 @@ export default function GroomingPage() {
       }, {} as Record<string, Story[]>), [stories]);
 
     const sprintsWithStories = useMemo(() => {
-        return sprints.map(sprint => ({
-            ...sprint,
-            stories: stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType)),
-        })).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
-    }, [sprints, stories]);
+        return sprints.map(sprint => {
+            const baseItems = stories.filter(story => story.sprintId === sprint.id);
+            const filteredByView = baseItems.filter(story => {
+                if (viewBy === 'story') {
+                    return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
+                }
+                return story.itemType === 'Sub Task';
+            });
+
+            const filteredByAssignee = selectedAssigneeId === 'all'
+                ? filteredByView
+                : filteredByView.filter(story => story.assigneeId === selectedAssigneeId);
+            
+            return {
+                ...sprint,
+                stories: filteredByAssignee,
+            }
+        }).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+    }, [sprints, stories, viewBy, selectedAssigneeId]);
     
     useEffect(() => {
       if (visibleSprintIndex === null) {
@@ -748,6 +782,36 @@ export default function GroomingPage() {
                     title="Grooming Board"
                     description="Plan your sprints by organizing the backlog."
                 >
+                    <div className="flex items-center gap-2">
+                        <div className="grid gap-2">
+                            <Label htmlFor="view-by-filter">View</Label>
+                            <Select value={viewBy} onValueChange={(v) => setViewBy(v as any)}>
+                                <SelectTrigger id="view-by-filter" className="w-[180px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="story">Stories</SelectItem>
+                                    <SelectItem value="sub-task">Sub-tasks</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="assignee-filter">Assignee</Label>
+                            <Select value={selectedAssigneeId} onValueChange={setSelectedAssigneeId}>
+                            <SelectTrigger id="assignee-filter" className="w-[200px]">
+                                <SelectValue placeholder="Filter by assignee" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Assignees</SelectItem>
+                                {employees.map(user => (
+                                <SelectItem key={user.id} value={user.id}>
+                                    {user.firstName} {user.lastName}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                     <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Create Sprint
@@ -762,6 +826,7 @@ export default function GroomingPage() {
                                 const epic = epics.find(e => e.id === story.epicId);
                                 const assignee = employees.find(e => e.id === story.assigneeId);
                                 const subItems = subItemsByParentId[story.id] || [];
+                                const parentStory = story.parentStoryId ? stories.find(s => s.id === story.parentStoryId) : undefined;
                                 return (
                                     <div key={story.id}>
                                         <StoryItemCard 
@@ -769,6 +834,7 @@ export default function GroomingPage() {
                                             epic={epic}
                                             assignee={assignee}
                                             subItems={subItems}
+                                            parentStory={parentStory}
                                             onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
                                             onEdit={() => handleSetSelectedStory(story)}
                                             onSubItemClick={handleDrillDown}
@@ -1391,7 +1457,7 @@ export default function GroomingPage() {
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                            {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                         </SelectContent>
                                                         </Select>
                                                         <FormMessage/>
@@ -1487,4 +1553,5 @@ export default function GroomingPage() {
     
 
     
+
 
