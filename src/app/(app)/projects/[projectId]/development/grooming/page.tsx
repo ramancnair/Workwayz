@@ -257,7 +257,7 @@ function StoryItemCard({
 
 function SprintColumn({ 
   sprint, 
-  stories,
+  stories: displayedStories,
   holidays,
   weeklyOffDays,
   onEdit,
@@ -308,11 +308,17 @@ function SprintColumn({
             return !isWeekend && !isHoliday;
         }).length;
         
-        const sprintStoryIds = new Set(stories.map(s => s.id));
+        // Find all parent stories in the sprint to get all relevant sub-tasks
+        const parentStoriesInSprint = allStories.filter(s => 
+          s.sprintId === sprint.id && 
+          ['Requirement/Story', 'Task', 'Feature Change'].includes(s.itemType)
+        );
+        const parentStoryIds = new Set(parentStoriesInSprint.map(s => s.id));
+
         const subTasksInSprint = allStories.filter(story => 
             story.itemType === 'Sub Task' && 
             story.parentStoryId && 
-            sprintStoryIds.has(story.parentStoryId)
+            parentStoryIds.has(story.parentStoryId)
         );
 
         return impactedSystems.map(system => {
@@ -339,7 +345,7 @@ function SprintColumn({
                 utilization: utilization
             }
         }).filter(sys => sys.totalCapacity > 0 || sys.utilized > 0);
-    }, [sprint, stories, allStories, impactedSystems, employees, holidays, weeklyOffDays]);
+    }, [sprint, allStories, impactedSystems, employees, holidays, weeklyOffDays]);
 
     const totalSprintUtilized = capacityBySystem.reduce((sum, sys) => sum + sys.utilized, 0);
 
@@ -394,7 +400,7 @@ function SprintColumn({
 
 
             <div className="flex-1 space-y-4 overflow-y-auto">
-                {stories.map(story => {
+                {displayedStories.map(story => {
                      const epic = epics.find(e => e.id === story.epicId);
                      const assignee = employees.find(e => e.id === story.assigneeId);
                      const subItems = subItemsByStoryId[story.id] || [];
@@ -1553,5 +1559,6 @@ export default function GroomingPage() {
     
 
     
+
 
 
