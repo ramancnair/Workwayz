@@ -1,15 +1,17 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { eachDayOfInterval, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { DayContentProps } from 'react-day-picker';
 
 export default function LeaveCalendarPage() {
   const { employees, holidays, weeklyOffDays } = useProject();
@@ -19,6 +21,7 @@ export default function LeaveCalendarPage() {
     const leaves: Record<string, string[]> = {};
     employees.forEach(emp => {
       emp.leavePeriods?.forEach(period => {
+        if (!period.startDate || !period.endDate) return;
         const start = parseISO(period.startDate);
         const end = parseISO(period.endDate);
         const interval = eachDayOfInterval({ start, end });
@@ -36,7 +39,8 @@ export default function LeaveCalendarPage() {
 
   const holidayDates = useMemo(() => holidays.map(h => parseISO(h.date)), [holidays]);
 
-  const DayCell = ({ date }: { date: Date }) => {
+  const DayContent = (props: DayContentProps) => {
+    const { date, activeModifiers } = props;
     const dayStr = date.toISOString().split('T')[0];
     const namesOnLeave = leavesByDay[dayStr];
     const isHoliday = holidayDates.some(h => isSameDay(h, date));
@@ -93,7 +97,7 @@ export default function LeaveCalendarPage() {
             month={currentMonth}
             onMonthChange={setCurrentMonth}
             components={{
-                Day: DayCell,
+                DayContent: DayContent,
             }}
             className="w-full"
            />
@@ -102,4 +106,3 @@ export default function LeaveCalendarPage() {
     </div>
   );
 }
-
