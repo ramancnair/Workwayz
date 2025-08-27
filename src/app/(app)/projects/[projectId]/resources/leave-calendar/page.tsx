@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -12,6 +11,7 @@ import { eachDayOfInterval, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { DayContentProps } from 'react-day-picker';
+import { cn } from '@/lib/utils';
 
 export default function LeaveCalendarPage() {
   const { employees, holidays, weeklyOffDays } = useProject();
@@ -46,12 +46,12 @@ export default function LeaveCalendarPage() {
     const isHoliday = holidayDates.some(h => isSameDay(h, date));
     const isWeekend = weeklyOffDays.includes(date.getDay());
 
-    let cellClassName = 'h-32 p-2 flex flex-col justify-start items-start text-left relative overflow-hidden';
+    let cellClassName = 'h-32 p-2 flex flex-col justify-start items-start text-left relative overflow-hidden border-t border-l';
     if (!isSameMonth(date, currentMonth)) {
       cellClassName += ' bg-muted/50 text-muted-foreground';
     }
     if (isWeekend) {
-      cellClassName += ' bg-gray-100 dark:bg-gray-800';
+      cellClassName += ' bg-gray-100 dark:bg-gray-800/50';
     }
     if(isHoliday) {
       cellClassName += ' bg-yellow-100 dark:bg-yellow-900/50';
@@ -59,11 +59,11 @@ export default function LeaveCalendarPage() {
 
     return (
       <div className={cellClassName}>
-        <time dateTime={dayStr} className="font-semibold">{date.getDate()}</time>
+        <time dateTime={dayStr} className={cn("font-semibold", isSameDay(new Date(), date) && "flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground")}>{date.getDate()}</time>
         {namesOnLeave && (
-          <ul className="text-xs mt-1 space-y-0.5">
+          <ul className="text-xs mt-1 space-y-0.5 w-full">
             {namesOnLeave.map((name, index) => (
-              <li key={index} className="bg-red-200 dark:bg-red-800/50 rounded px-1.5 py-0.5 w-full truncate">{name}</li>
+              <li key={index} className="bg-red-200 dark:bg-red-800/50 rounded px-1.5 py-0.5 w-full truncate text-foreground">{name}</li>
             ))}
           </ul>
         )}
@@ -100,6 +100,14 @@ export default function LeaveCalendarPage() {
                 DayContent: DayContent,
             }}
             className="w-full"
+            classNames={{
+              table: 'w-full border-collapse',
+              head_row: 'grid grid-cols-7 w-full border-l',
+              head_cell: 'p-2 border-r border-t font-semibold text-sm text-center',
+              row: 'grid grid-cols-7 w-full',
+              cell: 'h-auto w-auto p-0 m-0', // reset cell padding
+              day: 'h-full w-full p-0 m-0',
+            }}
            />
         </CardContent>
       </Card>
