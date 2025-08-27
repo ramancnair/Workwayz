@@ -747,7 +747,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
     const unassignedStoriesExist = (backlogItemsByEpic['unassigned'] || []).length > 0;
 
-    let displayEpics = epics.filter(e => epicMap[e.id]?.hasStories);
+    let displayEpics: (Epic | { id: string; title: string; description: string; })[] = epics.filter(e => epicMap[e.id]?.hasStories);
     
     if (unassignedStoriesExist) {
         displayEpics.push({ id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' });
@@ -1292,7 +1292,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               return (
                   <AccordionItem value={epic.id} key={epic.id}>
                     <div className="flex items-center justify-between pr-2 bg-muted/50 rounded-t-md border-b">
-                        <div className="flex-1 px-6 py-4 flex items-center gap-4">
+                      <AccordionTrigger className="flex-1 px-6 py-4">
+                        <div className="flex items-center gap-4">
                           <span className="font-semibold">{epic.title}</span>
                           <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
                           {!isUnassignedEpic && totalEpicItemsCount > 0 && (
@@ -1302,21 +1303,17 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                           )}
                         </div>
-                      <div className="flex items-center gap-1 pl-2 pr-4">
-                        {!isUnassignedEpic && (
-                          <>
-                            <AccordionTrigger className="p-2 hover:no-underline">
-                                <span className="sr-only">Toggle Epic</span>
-                            </AccordionTrigger>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic); }}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic); }}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      </AccordionTrigger>
+                      {!isUnassignedEpic && (
+                        <div className="flex items-center gap-1 pl-2 pr-4">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic); }}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-between pl-6 pr-4 py-2 bg-muted/50 border-b">
                         <div className="flex items-center gap-3">
@@ -2230,6 +2227,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
