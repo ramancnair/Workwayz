@@ -58,8 +58,6 @@ export default function RaidDashboardPage() {
   const { risks, assumptions, issues, dependencies } = useProject();
 
   // Risks Data
-  const totalRisks = risks.length;
-  const highPotentialRisks = risks.filter(r => getRiskPotential(r.severity, r.probability) === 'High').length;
   const riskData = Object.entries(
     risks.reduce((acc, r) => {
       const potential = getRiskPotential(r.severity, r.probability);
@@ -67,10 +65,10 @@ export default function RaidDashboardPage() {
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value, fill: riskConfig[name as keyof typeof riskConfig]?.color || '#8884d8' }));
-  
+  const totalRisks = riskData.reduce((sum, item) => sum + item.value, 0);
+  const highPotentialRisks = riskData.find(item => item.name === 'High')?.value || 0;
+
   // Assumptions Data
-  const totalAssumptions = assumptions.length;
-  const activeAssumptions = assumptions.filter(a => a.status === 'Active').length;
   const assumptionData = Object.entries(
     assumptions.reduce((acc, a) => {
       const status: AssumptionStatus = a.status || 'Active';
@@ -78,21 +76,21 @@ export default function RaidDashboardPage() {
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value, fill: assumptionConfig[name as keyof typeof assumptionConfig]?.color || '#8884d8' }));
+  const totalAssumptions = assumptionData.reduce((sum, item) => sum + item.value, 0);
+  const activeAssumptions = assumptionData.find(item => item.name === 'Active')?.value || 0;
 
   // Issues Data
-  const totalIssues = issues.length;
-  const openIssues = issues.filter(i => i.status === 'Open' || i.status === 'In Progress').length;
   const issueData = Object.entries(
     issues.reduce((acc, i) => {
       const status: IssueStatus = i.status || 'Open';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
-    }, {} as Record<string, number>)
+    }, {} as Record<IssueStatus, number>)
   ).map(([name, value]) => ({ name, value, fill: issueConfig[name as keyof typeof issueConfig]?.color || '#8884d8' }));
-  
+  const totalIssues = issueData.reduce((sum, item) => sum + item.value, 0);
+  const openIssues = (issueData.find(item => item.name === 'Open')?.value || 0) + (issueData.find(item => item.name === 'In Progress')?.value || 0);
+
   // Dependencies Data
-  const totalDependencies = dependencies.length;
-  const atRiskDependencies = dependencies.filter(d => d.status === 'At Risk' || d.status === 'Blocked').length;
   const dependencyData = Object.entries(
     dependencies.reduce((acc, d) => {
       const status: DependencyStatus = d.status || 'On Track';
@@ -100,6 +98,8 @@ export default function RaidDashboardPage() {
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value, fill: dependencyConfig[name as keyof typeof dependencyConfig]?.color || '#8884d8' }));
+  const totalDependencies = dependencyData.reduce((sum, item) => sum + item.value, 0);
+  const atRiskDependencies = (dependencyData.find(item => item.name === 'At Risk')?.value || 0) + (dependencyData.find(item => item.name === 'Blocked')?.value || 0);
 
   const ChartCard = ({ title, config, data }: { title: string, config: ChartConfig, data: { name: string, value: number, fill: string }[] }) => (
     <Card>
@@ -110,7 +110,7 @@ export default function RaidDashboardPage() {
         <ChartContainer config={config} className="mx-auto aspect-square h-full">
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-            <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5} />
+            <Pie data={data} dataKey="value" nameKey="name" strokeWidth={5} />
             <ChartLegend
                 content={<ChartLegendContent nameKey="name" />}
                 className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
