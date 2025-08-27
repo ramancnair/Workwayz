@@ -43,7 +43,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { Story, StoryStatus, BugCriticality, Release } from '@/types';
+import type { Story, StoryStatus, Release } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -61,14 +61,6 @@ const statusStyles: Record<StoryStatus, string> = {
   'Done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
 };
 
-const criticalityStyles: Record<BugCriticality, string> = {
-    'Low': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    'Medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    'High': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    'Critical': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-};
-
-const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 
@@ -81,7 +73,6 @@ const bugFormSchema = z.object({
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
   sprintId: z.string().optional(),
-  criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
   attachments: z.string().optional(),
   releaseId: z.string().optional(),
@@ -147,7 +138,6 @@ export default function BugListPage() {
           assigneeId: editingBug.assigneeId || 'unassigned',
           status: editingBug.status,
           sprintId: editingBug.sprintId || 'backlog',
-          criticality: editingBug.criticality || 'Medium',
           environmentId: editingBug.environmentId || 'unassigned',
           attachments: editingBug.attachments || '',
           releaseId: editingBug.releaseId || 'unassigned',
@@ -162,7 +152,6 @@ export default function BugListPage() {
             assigneeId: 'unassigned',
             status: 'To Do',
             sprintId: 'backlog',
-            criticality: 'Medium',
             environmentId: 'unassigned',
             attachments: '',
             releaseId: 'unassigned',
@@ -189,7 +178,6 @@ export default function BugListPage() {
         parentStoryId: values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId,
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        criticality: values.criticality,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
         attachments: values.attachments,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
@@ -300,7 +288,6 @@ export default function BugListPage() {
               <TableHead>ID</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Criticality</TableHead>
               <TableHead>Environment</TableHead>
               <TableHead>Assignee</TableHead>
               <TableHead>Related Story</TableHead>
@@ -339,13 +326,6 @@ export default function BugListPage() {
                     <Badge className={cn('font-semibold', statusStyles[bug.status])}>
                       {bug.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {bug.criticality && (
-                      <Badge className={cn('font-semibold', criticalityStyles[bug.criticality])}>
-                        {bug.criticality}
-                      </Badge>
-                    )}
                   </TableCell>
                   <TableCell>
                     {environment ? (
@@ -523,30 +503,6 @@ export default function BugListPage() {
                     />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="criticality"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Criticality</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Set criticality" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {bugCriticalities.map((c) => (
-                                <SelectItem key={c} value={c}>
-                                    {c}
-                                </SelectItem>
-                                ))}
-                            </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
                     <FormField
                       control={form.control}
                       name="environmentId"

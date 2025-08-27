@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, User, WorkItemType, BugCriticality, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority } from '@/types';
+import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -66,7 +66,6 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Sub Task': CheckSquare,
 };
 
-const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
 
@@ -88,7 +87,6 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   priority: z.enum(priorities).optional(),
-  criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
@@ -398,7 +396,6 @@ export default function KanbanPage() {
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         priority: selectedStory.priority || 'Medium',
-        criticality: selectedStory.criticality || 'Medium',
         environmentId: selectedStory.environmentId || 'unassigned',
         impactedSystemIds: selectedStory.impactedSystemIds || [],
         attachments: selectedStory.attachments || '',
@@ -439,10 +436,6 @@ export default function KanbanPage() {
         payload.epicId = undefined; // Sub-items don't have direct epic link in this model
     }
     
-    if (selectedStory.itemType === 'Bug') {
-        payload.criticality = values.criticality;
-    }
-
     const success = await updateStory(selectedStory.id, payload);
 
     if (success) {
@@ -1036,30 +1029,6 @@ export default function KanbanPage() {
                                   </div>
                                   {selectedStory.itemType === 'Bug' && (
                                       <>
-                                          <FormField
-                                          control={editStoryForm.control}
-                                          name="criticality"
-                                          render={({ field }) => (
-                                              <FormItem>
-                                              <FormLabel>Criticality</FormLabel>
-                                              <Select onValueChange={field.onChange} value={field.value}>
-                                                  <FormControl>
-                                                  <SelectTrigger>
-                                                      <SelectValue placeholder="Set criticality" />
-                                                  </SelectTrigger>
-                                                  </FormControl>
-                                                  <SelectContent>
-                                                  {bugCriticalities.map((c) => (
-                                                      <SelectItem key={c} value={c}>
-                                                      {c}
-                                                      </SelectItem>
-                                                  ))}
-                                                  </SelectContent>
-                                              </Select>
-                                              <FormMessage />
-                                              </FormItem>
-                                          )}
-                                          />
                                            <FormField
                                               control={editStoryForm.control}
                                               name="environmentId"

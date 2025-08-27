@@ -51,7 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User, WorkItemType, BugCriticality, StoryStatus, ImpactedSystem, Release, Priority } from '@/types';
+import type { Epic, Story, Sprint, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -81,7 +81,6 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 };
 
 const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
-const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
 
@@ -110,7 +109,6 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   priority: z.enum(priorities).optional(),
-  criticality: z.enum(bugCriticalities).optional(),
   releaseId: z.string().optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
@@ -377,7 +375,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', criticality: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -480,7 +478,6 @@ export default function BacklogPage() {
             assigneeId: selectedStory.assigneeId || 'unassigned',
             estimatedHours: selectedStory.estimatedHours,
             priority: selectedStory.priority || 'Medium',
-            criticality: selectedStory.criticality || 'Medium',
             releaseId: selectedStory.releaseId || 'unassigned',
             sprintId: selectedStory.sprintId || 'backlog',
             environmentId: selectedStory.environmentId || 'unassigned',
@@ -561,7 +558,6 @@ export default function BacklogPage() {
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       priority: values.priority,
-      criticality: values.itemType === 'Bug' ? values.criticality : undefined,
       sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
       releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
       environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
@@ -608,10 +604,6 @@ export default function BacklogPage() {
         payload.epicId = undefined; // Sub-items don't have direct epic link in this model
     }
     
-    if (selectedStory.itemType === 'Bug') {
-        payload.criticality = values.criticality;
-    }
-
     const success = await updateStory(selectedStory.id, payload);
 
     if (success) {
@@ -1203,30 +1195,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         </div>
                         {watchedItemType === 'Bug' && (
                             <>
-                            <FormField
-                            control={addStoryForm.control}
-                            name="criticality"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Criticality</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Set criticality" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {bugCriticalities.map((c) => (
-                                        <SelectItem key={c} value={c}>
-                                        {c}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
                             <FormField
                             control={addStoryForm.control}
                             name="environmentId"
@@ -1972,30 +1940,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             <>
                             <FormField
                             control={editStoryForm.control}
-                            name="criticality"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Criticality</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Set criticality" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {bugCriticalities.map((c) => (
-                                        <SelectItem key={c} value={c}>
-                                        {c}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
-                            control={editStoryForm.control}
                             name="environmentId"
                             render={({ field }) => (
                                 <FormItem>
@@ -2227,6 +2171,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

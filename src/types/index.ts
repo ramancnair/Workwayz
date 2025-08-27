@@ -23,7 +23,6 @@ export type Epic = {
 
 export type StoryStatus = string;
 export type WorkItemType = 'Requirement/Story' | 'Bug' | 'Task' | 'Feature Change' | 'Sub Task';
-export type BugCriticality = 'Low' | 'Medium' | 'High' | 'Critical';
 export type Priority = 'Critical' | 'High' | 'Medium' | 'Low' | 'Backburner';
 
 export type StatusHistoryItem = {
@@ -45,7 +44,6 @@ export type Story = {
   status: StoryStatus;
   statusHistory?: StatusHistoryItem[];
   estimatedHours?: number;
-  criticality?: BugCriticality;
   priority?: Priority;
   startDate?: string; // ISO String
   endDate?: string; // ISO String
