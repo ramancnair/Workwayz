@@ -162,6 +162,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Leave Tracker",
       icon: CalendarCheck,
     },
+    {
+      href: `${basePath}/resources/leave-calendar`,
+      label: "Leave Calendar",
+      icon: CalendarDays,
+    },
   ];
 
   const governanceMenuItems = [
