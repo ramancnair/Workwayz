@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -86,11 +86,11 @@ const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
 
 const priorityStyles: Record<Priority, string> = {
-    'Critical': 'text-red-500',
-    'High': 'text-orange-500',
-    'Medium': 'text-yellow-500',
-    'Low': 'text-green-500',
-    'Backburner': 'text-gray-500',
+    'Critical': 'text-red-500 fill-red-500',
+    'High': 'text-orange-400 fill-orange-400',
+    'Medium': 'text-yellow-500 fill-yellow-500',
+    'Low': 'text-green-500 fill-green-500',
+    'Backburner': 'text-gray-500 fill-gray-500',
 };
 
 
@@ -182,7 +182,7 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Flag className={cn("h-4 w-4", priorityStyles[story.priority])} />
+                          <Circle className={cn("h-3 w-3", priorityStyles[story.priority])} />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{story.priority} Priority</p>
@@ -969,7 +969,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     {priorities.map((p) => (
                                     <SelectItem key={p} value={p}>
                                         <div className="flex items-center gap-2">
-                                        <Flag className={cn("h-4 w-4", priorityStyles[p])} />
+                                        <Circle className={cn("h-3 w-3", priorityStyles[p])} />
                                         <span>{p}</span>
                                         </div>
                                     </SelectItem>
@@ -1715,7 +1715,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     {priorities.map((p) => (
                                     <SelectItem key={p} value={p}>
                                         <div className="flex items-center gap-2">
-                                        <Flag className={cn("h-4 w-4", priorityStyles[p])} />
+                                        <Circle className={cn("h-3 w-3", priorityStyles[p])} />
                                         <span>{p}</span>
                                         </div>
                                     </SelectItem>
@@ -2219,3 +2219,4 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
