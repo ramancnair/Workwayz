@@ -42,8 +42,8 @@ const assumptionConfig = {
 
 const issueConfig = {
   issues: { label: "Issues" },
-  'Open': { label: 'Open', color: '#3b82f6' },
-  'In Progress': { label: 'In Progress', color: '#a855f7' },
+  'Open': { label: 'Open', color: '#ef4444' },
+  'In Progress': { label: 'In Progress', color: '#facc15' },
   'Resolved': { label: 'Resolved', color: '#22c55e' },
   'Closed': { label: 'Closed', color: '#a1a1aa' },
 } satisfies ChartConfig;
