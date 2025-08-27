@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -61,7 +62,7 @@ export default function LeaveCalendarPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Leave Calendar" description="View team availability at a glance." />
-      <Card className="max-w-sm mx-auto">
+      <Card className="max-w-md mx-auto">
         <CardContent className="p-4">
           <div className="flex justify-between items-center mb-4">
             <Button variant="ghost" size="icon" onClick={handlePrevMonth}>
@@ -74,45 +75,58 @@ export default function LeaveCalendarPage() {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-7 text-center text-xs text-muted-foreground mb-2">
+          <div className="grid grid-cols-7 text-center text-xs text-muted-foreground font-semibold border-b pb-2">
             {daysOfWeek.map(day => <div key={day}>{day}</div>)}
           </div>
-          <div className="space-y-1">
-            {monthDays.map((day, index) => {
+          <div className="mt-2 space-y-1">
+            {monthDays.map((day) => {
+              const dayOfWeek = getDay(day);
               const dayStr = day.toISOString().split('T')[0];
               const namesOnLeave = leavesByDay[dayStr];
               const isHoliday = holidayDates.some(h => isSameDay(h, day));
-              const isWeekend = weeklyOffDays.includes(getDay(day));
+              const isWeekend = weeklyOffDays.includes(dayOfWeek);
 
-              const dayClasses = cn('flex items-center justify-between p-2 rounded-md h-10', {
+              const rowClasses = cn('h-10 rounded-md flex items-center', {
                   'bg-gray-100 dark:bg-muted/50': isWeekend,
                   'bg-yellow-100 dark:bg-yellow-900/50': isHoliday,
               });
+              
+              const dayCellClasses = cn('flex-1 text-center font-medium');
 
               return (
-                <div key={dayStr} className={dayClasses}>
-                  <span className="font-medium">{format(day, 'd')}</span>
-                  {namesOnLeave && namesOnLeave.length > 0 && (
-                     <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className="flex -space-x-2">
-                                {namesOnLeave.slice(0, 3).map((name, i) => (
-                                    <div key={i} className="h-6 w-6 rounded-full bg-red-200 border-2 border-background flex items-center justify-center text-xs font-bold text-red-800">
-                                        {name.charAt(0)}
-                                    </div>
-                                ))}
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                            <p className="font-semibold">On Leave:</p>
-                            <ul className="list-disc pl-4">
-                                {namesOnLeave.map((name, i) => <li key={i}>{name}</li>)}
-                            </ul>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                  )}
+                <div key={dayStr} className={rowClasses}>
+                  <div className="grid grid-cols-7 w-full items-center">
+                    {Array.from({ length: 7 }).map((_, i) => (
+                      <div key={i} className={dayCellClasses}>
+                        {i === dayOfWeek && (
+                          <div className="flex items-center justify-between px-2">
+                             <span>{format(day, 'd')}</span>
+                              {namesOnLeave && namesOnLeave.length > 0 && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="flex -space-x-2">
+                                            {namesOnLeave.slice(0, 3).map((name, i) => (
+                                                <div key={i} className="h-6 w-6 rounded-full bg-red-200 border-2 border-background flex items-center justify-center text-xs font-bold text-red-800">
+                                                    {name.charAt(0)}
+                                                </div>
+                                            ))}
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                        <p className="font-semibold">On Leave:</p>
+                                        <ul className="list-disc pl-4">
+                                            {namesOnLeave.map((name, i) => <li key={i}>{name}</li>)}
+                                        </ul>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                              )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
