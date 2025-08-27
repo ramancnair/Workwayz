@@ -74,7 +74,8 @@ export default function RaidDashboardPage() {
   const activeAssumptions = assumptions.filter(a => a.status === 'Active').length;
   const assumptionData = Object.entries(
     assumptions.reduce((acc, a) => {
-      acc[a.status] = (acc[a.status] || 0) + 1;
+      const status = a.status || 'Active';
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value, fill: assumptionConfig[name as keyof typeof assumptionConfig]?.color || '#8884d8' }));
@@ -95,7 +96,8 @@ export default function RaidDashboardPage() {
   const atRiskDependencies = dependencies.filter(d => d.status === 'At Risk' || d.status === 'Blocked').length;
   const dependencyData = Object.entries(
     dependencies.reduce((acc, d) => {
-      acc[d.status] = (acc[d.status] || 0) + 1;
+      const status = d.status || 'On Track';
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value, fill: dependencyConfig[name as keyof typeof dependencyConfig]?.color || '#8884d8' }));
