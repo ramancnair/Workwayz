@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, Flag, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -191,7 +191,7 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
                     </TooltipProvider>
                   )}
                   <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
-                  {isReadyForDev && <Flag className="h-4 w-4 text-green-500" />}
+                  {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
                 </div>
                 <p className="font-semibold break-words">{story.title}</p>
               </div>
@@ -2219,4 +2219,5 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
