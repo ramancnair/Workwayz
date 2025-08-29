@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { type ProjectStatus, type Story, type ProjectMethodology, type PricingModel } from '@/types';
+import { type ProjectStatus, type Story, type ProjectMethodology, type PricingModel, type RagStatus } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import { Edit } from 'lucide-react';
 const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC', 'Hybrid'];
 const pricingModels: PricingModel[] = ['Fixed Price', 'T&M', 'Fixed Capacity'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
+const ragStatuses: RagStatus[] = ['Green', 'Amber', 'Red'];
 
 const projectDetailsSchema = z.object({
   description: z.string().optional(),
@@ -36,6 +37,11 @@ const projectDetailsSchema = z.object({
   pricingModel: z.enum(pricingModels).optional(),
   startDate: z.string().min(1, "Start date is required."),
   endDate: z.string().min(1, "End date is required."),
+  overallStatus: z.enum(ragStatuses).optional(),
+  scopeStatus: z.enum(ragStatuses).optional(),
+  costStatus: z.enum(ragStatuses).optional(),
+  timeStatus: z.enum(ragStatuses).optional(),
+  statusComments: z.string().optional(),
 }).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
     message: 'End date must be after or on the same day as the start date.',
     path: ['endDate'],
@@ -50,11 +56,27 @@ const statusStyles: Record<ProjectStatus, string> = {
     'Cancelled': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
+const ragStatusStyles: Record<RagStatus, string> = {
+  'Green': 'bg-green-500',
+  'Amber': 'bg-yellow-500',
+  'Red': 'bg-red-500',
+};
+
+
 function DetailCard({ title, value, className }: { title: string; value: React.ReactNode; className?: string }) {
     return (
         <div className={className}>
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
             <div className="text-lg font-semibold">{value || <span className="text-muted-foreground/70">N/A</span>}</div>
+        </div>
+    );
+}
+
+function RagStatusIndicator({ status, label }: { status?: RagStatus, label: string }) {
+    return (
+        <div className="flex items-center gap-2">
+            <span className={cn('h-4 w-4 rounded-full', status ? ragStatusStyles[status] : 'bg-gray-300')} />
+            <span className="font-medium">{label}</span>
         </div>
     );
 }
@@ -78,6 +100,11 @@ export default function ProjectDashboardPage() {
                 pricingModel: project.pricingModel,
                 startDate: project.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : '',
                 endDate: project.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
+                overallStatus: project.overallStatus,
+                scopeStatus: project.scopeStatus,
+                costStatus: project.costStatus,
+                timeStatus: project.timeStatus,
+                statusComments: project.statusComments,
             });
         }
     }, [project, form, isDialogOpen]);
@@ -214,6 +241,41 @@ export default function ProjectDashboardPage() {
                                     </FormItem>
                                 )}/>
                             </div>
+                            <Card className="pt-4">
+                              <CardHeader>
+                                <CardTitle>Project Status</CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <FormField control={form.control} name="overallStatus" render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Overall Status</FormLabel>
+                                          <Select onValueChange={field.onChange} value={field.value}>
+                                              <FormControl><SelectTrigger><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
+                                              <SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                          </Select>
+                                      </FormItem>
+                                  )}/>
+                                   <FormField control={form.control} name="statusComments" render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Status Comments</FormLabel>
+                                          <FormControl><Textarea placeholder="Add comments about the current status..." {...field} value={field.value ?? ''}/></FormControl>
+                                      </FormItem>
+                                  )}/>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <FormField control={form.control} name="scopeStatus" render={({ field }) => (
+                                      <FormItem><FormLabel>Scope</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name="costStatus" render={({ field }) => (
+                                      <FormItem><FormLabel>Cost</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name="timeStatus" render={({ field }) => (
+                                      <FormItem><FormLabel>Time</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                    )}/>
+                                </div>
+                              </CardContent>
+                            </Card>
                             <DialogFooter>
                                 <Button type="submit" disabled={form.formState.isSubmitting}>
                                     {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
@@ -265,6 +327,27 @@ export default function ProjectDashboardPage() {
                             title="End Date" 
                             value={project.endDate ? format(parseISO(project.endDate), 'PPP') : 'N/A'}
                         />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader><CardTitle>Project Status</CardTitle></CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <h4 className="font-medium">Overall Status</h4>
+                            <div className="flex items-center gap-4">
+                                <span className={cn('h-8 w-8 rounded-full', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                                <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                           <h4 className="font-medium">Sub-Statuses</h4>
+                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                               <RagStatusIndicator status={project.scopeStatus} label="Scope" />
+                               <RagStatusIndicator status={project.costStatus} label="Cost" />
+                               <RagStatusIndicator status={project.timeStatus} label="Time" />
+                           </div>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

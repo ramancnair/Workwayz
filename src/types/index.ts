@@ -1,5 +1,6 @@
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -273,6 +274,7 @@ export type Portfolio = {
 export type ProjectMethodology = 'Agile' | 'SDLC' | 'Hybrid';
 export type PricingModel = 'Fixed Price' | 'T&M' | 'Fixed Capacity';
 export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Initial Estimation';
+export type RagStatus = 'Red' | 'Amber' | 'Green';
 
 export type Project = {
   id: string;
@@ -288,6 +290,11 @@ export type Project = {
   status?: ProjectStatus;
   startDate?: string; // ISO String
   endDate?: string; // ISO String
+  overallStatus?: RagStatus;
+  scopeStatus?: RagStatus;
+  costStatus?: RagStatus;
+  timeStatus?: RagStatus;
+  statusComments?: string;
 };
 
 export type AccessControlSetting = {
