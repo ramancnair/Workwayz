@@ -11,40 +11,26 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { type ProjectStatus, type Story, type ProjectMethodology, type PricingModel, type RagStatus } from '@/types';
+import { type ProjectStatus, type RagStatus } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Edit } from 'lucide-react';
 
 
-const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC', 'Hybrid'];
-const pricingModels: PricingModel[] = ['Fixed Price', 'T&M', 'Fixed Capacity'];
-const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 const ragStatuses: RagStatus[] = ['Green', 'Amber', 'Red'];
 
-const projectDetailsSchema = z.object({
-  description: z.string().optional(),
-  status: z.enum(projectStatuses).optional(),
-  projectManagerId: z.string().optional(),
-  methodology: z.enum(projectMethodologies).optional(),
-  pricingModel: z.enum(pricingModels).optional(),
-  startDate: z.string().min(1, "Start date is required."),
-  endDate: z.string().min(1, "End date is required."),
+const statusUpdateSchema = z.object({
   overallStatus: z.enum(ragStatuses).optional(),
   scopeStatus: z.enum(ragStatuses).optional(),
   costStatus: z.enum(ragStatuses).optional(),
   timeStatus: z.enum(ragStatuses).optional(),
   statusComments: z.string().optional(),
-}).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
-    message: 'End date must be after or on the same day as the start date.',
-    path: ['endDate'],
 });
 
 const statusStyles: Record<ProjectStatus, string> = {
@@ -86,20 +72,13 @@ export default function ProjectDashboardPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const { toast } = useToast();
 
-    const form = useForm<z.infer<typeof projectDetailsSchema>>({
-        resolver: zodResolver(projectDetailsSchema),
+    const form = useForm<z.infer<typeof statusUpdateSchema>>({
+        resolver: zodResolver(statusUpdateSchema),
     });
 
     useEffect(() => {
-        if (project) {
+        if (project && isDialogOpen) {
             form.reset({
-                description: project.description || '',
-                status: project.status,
-                projectManagerId: project.projectManagerId || 'unassigned',
-                methodology: project.methodology,
-                pricingModel: project.pricingModel,
-                startDate: project.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : '',
-                endDate: project.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
                 overallStatus: project.overallStatus,
                 scopeStatus: project.scopeStatus,
                 costStatus: project.costStatus,
@@ -113,20 +92,13 @@ export default function ProjectDashboardPage() {
         ? allUsers.find(e => e.id === project.projectManagerId)
         : null;
 
-    const onSubmit = async (values: z.infer<typeof projectDetailsSchema>) => {
-        const dataToSave = {
-            ...values,
-            projectManagerId: values.projectManagerId === 'unassigned' ? undefined : values.projectManagerId,
-            startDate: new Date(values.startDate).toISOString(),
-            endDate: new Date(values.endDate).toISOString(),
-        };
-
-        const success = await updateProject(dataToSave);
+    const onSubmit = async (values: z.infer<typeof statusUpdateSchema>) => {
+        const success = await updateProject(values);
         if (success) {
-            toast({ title: 'Success', description: 'Project details updated successfully.' });
+            toast({ title: 'Success', description: 'Project status updated successfully.' });
             setIsDialogOpen(false);
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not update project details.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not update project status.' });
         }
     };
         
@@ -161,91 +133,16 @@ export default function ProjectDashboardPage() {
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <PageHeader title="Project Dashboard" description="A high-level overview of your project details.">
-                    <Button onClick={() => setIsDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Project</Button>
+                    <Button onClick={() => setIsDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Status</Button>
                 </PageHeader>
                 <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
-                        <DialogTitle>Edit Project Details</DialogTitle>
+                        <DialogTitle>Edit Project Status</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Project Objective</FormLabel>
-                                    <FormControl>
-                                    <Textarea placeholder="Describe the project's objective..." {...field} value={field.value ?? ''} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <FormField control={form.control} name="status" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Status</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>{projectStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                 <FormField control={form.control} name="projectManagerId" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Project Manager</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a PM" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {allUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <FormField control={form.control} name="methodology" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Methodology</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>{projectMethodologies.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <FormField control={form.control} name="pricingModel" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Pricing Model</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>{pricingModels.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <FormField control={form.control} name="startDate" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Start Date</FormLabel>
-                                        <FormControl><Input type="date" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <FormField control={form.control} name="endDate" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>End Date</FormLabel>
-                                        <FormControl><Input type="date" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                            </div>
-                            <Card className="pt-4">
-                              <CardHeader>
-                                <CardTitle>Project Status</CardTitle>
-                              </CardHeader>
-                              <CardContent className="space-y-4">
+                            <Card className="pt-4 border-none shadow-none">
+                              <CardContent className="space-y-4 p-0">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <FormField control={form.control} name="overallStatus" render={({ field }) => (
                                       <FormItem>
@@ -354,3 +251,4 @@ export default function ProjectDashboardPage() {
         </div>
     );
 }
+
