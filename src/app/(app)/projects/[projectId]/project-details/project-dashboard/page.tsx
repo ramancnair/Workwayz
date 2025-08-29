@@ -133,6 +133,82 @@ export default function ProjectDashboardPage() {
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <PageHeader title="Project Dashboard" description="A high-level overview of your project details." />
+                
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader><CardTitle>Project Objective</CardTitle></CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground whitespace-pre-wrap">
+                                {project.description || "No description provided."}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader><CardTitle>Key Information</CardTitle></CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <DetailCard 
+                                title="Status" 
+                                value={project.status ? (
+                                    <Badge className={cn('font-semibold text-base', statusStyles[project.status])}>
+                                        {project.status}
+                                    </Badge>
+                                ) : 'N/A'}
+                            />
+                            <DetailCard 
+                                title="Project Manager"
+                                value={projectManager ? `${projectManager.firstName} ${projectManager.lastName}` : "Unassigned"}
+                            />
+                             <DetailCard 
+                                title="Methodology" 
+                                value={project.methodology}
+                            />
+                             <DetailCard 
+                                title="Pricing Model" 
+                                value={project.pricingModel}
+                            />
+                            <DetailCard 
+                                title="Start Date" 
+                                value={project.startDate ? format(parseISO(project.startDate), 'PPP') : 'N/A'}
+                            />
+                            <DetailCard 
+                                title="End Date" 
+                                value={project.endDate ? format(parseISO(project.endDate), 'PPP') : 'N/A'}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex flex-row justify-between items-start">
+                            <div>
+                                <CardTitle>Project Status</CardTitle>
+                            </div>
+                             <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                            </DialogTrigger>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <h4 className="font-medium">Overall Status</h4>
+                                <div className="flex items-center gap-4">
+                                    <span className={cn('h-8 w-8 rounded-full', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                                    <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                               <h4 className="font-medium">Sub-Statuses</h4>
+                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                   <RagStatusIndicator status={project.scopeStatus} label="Scope" />
+                                   <RagStatusIndicator status={project.costStatus} label="Cost" />
+                                   <RagStatusIndicator status={project.timeStatus} label="Time" />
+                               </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+                
                 <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Edit Project Status</DialogTitle>
@@ -180,81 +256,6 @@ export default function ProjectDashboardPage() {
                     </Form>
                 </DialogContent>
             </Dialog>
-            
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader><CardTitle>Project Objective</CardTitle></CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground whitespace-pre-wrap">
-                            {project.description || "No description provided."}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader><CardTitle>Key Information</CardTitle></CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <DetailCard 
-                            title="Status" 
-                            value={project.status ? (
-                                <Badge className={cn('font-semibold text-base', statusStyles[project.status])}>
-                                    {project.status}
-                                </Badge>
-                            ) : 'N/A'}
-                        />
-                        <DetailCard 
-                            title="Project Manager"
-                            value={projectManager ? `${projectManager.firstName} ${projectManager.lastName}` : "Unassigned"}
-                        />
-                         <DetailCard 
-                            title="Methodology" 
-                            value={project.methodology}
-                        />
-                         <DetailCard 
-                            title="Pricing Model" 
-                            value={project.pricingModel}
-                        />
-                        <DetailCard 
-                            title="Start Date" 
-                            value={project.startDate ? format(parseISO(project.startDate), 'PPP') : 'N/A'}
-                        />
-                        <DetailCard 
-                            title="End Date" 
-                            value={project.endDate ? format(parseISO(project.endDate), 'PPP') : 'N/A'}
-                        />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row justify-between items-start">
-                        <div>
-                            <CardTitle>Project Status</CardTitle>
-                        </div>
-                         <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        </DialogTrigger>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <h4 className="font-medium">Overall Status</h4>
-                            <div className="flex items-center gap-4">
-                                <span className={cn('h-8 w-8 rounded-full', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
-                                <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                           <h4 className="font-medium">Sub-Statuses</h4>
-                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                               <RagStatusIndicator status={project.scopeStatus} label="Scope" />
-                               <RagStatusIndicator status={project.costStatus} label="Cost" />
-                               <RagStatusIndicator status={project.timeStatus} label="Time" />
-                           </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
         </div>
     );
 }
