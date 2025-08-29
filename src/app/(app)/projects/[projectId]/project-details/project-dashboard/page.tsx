@@ -132,9 +132,7 @@ export default function ProjectDashboardPage() {
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <PageHeader title="Project Dashboard" description="A high-level overview of your project details.">
-                    <Button onClick={() => setIsDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Status</Button>
-                </PageHeader>
+                <PageHeader title="Project Dashboard" description="A high-level overview of your project details." />
                 <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Edit Project Status</DialogTitle>
@@ -228,7 +226,16 @@ export default function ProjectDashboardPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader><CardTitle>Project Status</CardTitle></CardHeader>
+                    <CardHeader className="flex flex-row justify-between items-start">
+                        <div>
+                            <CardTitle>Project Status</CardTitle>
+                        </div>
+                         <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                    </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">
                             <h4 className="font-medium">Overall Status</h4>
@@ -251,4 +258,3 @@ export default function ProjectDashboardPage() {
         </div>
     );
 }
-
