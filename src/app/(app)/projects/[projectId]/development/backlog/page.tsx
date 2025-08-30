@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,7 +63,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -335,6 +335,8 @@ export default function BacklogPage() {
     autoGenerateStories,
     bulkDeleteStories,
     bulkMoveStoriesToEpic,
+    holidays,
+    weeklyOffDays,
   } = useProject();
   
   const { toast } = useToast();
@@ -366,7 +368,26 @@ export default function BacklogPage() {
   const [editParentStoryText, setEditParentStoryText] = useState('');
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
-  
+
+  const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
+    const holidayDates = holidays.map(h => parseISO(h.date));
+    const interval = eachDayOfInterval({ start, end });
+    
+    return interval.filter(day => {
+      const dayOfWeek = day.getDay();
+      const isWeekend = weeklyOffDays.includes(dayOfWeek);
+      const isHoliday = holidayDates.some(h => isSameDay(day, h));
+      return !isWeekend && !isHoliday;
+    }).length;
+  }, [holidays, weeklyOffDays]);
+
+  const actualEffort = useMemo(() => {
+    if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
+    const start = parseISO(selectedStory.developmentStartDate);
+    const end = parseISO(selectedStory.completionDate);
+    return calculateBusinessDays(start, end);
+  }, [selectedStory, calculateBusinessDays]);
+
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
     defaultValues: { title: '', description: '' },
@@ -1615,6 +1636,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                     )}
+                                    {actualEffort !== null && (
+                                        <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                            <span>Actual Effort:</span>
+                                            <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </TabsContent>
                         </Tabs>
@@ -1965,7 +1992,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormItem>
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={isEffortReadOnly} />
+                                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} readOnly={isEffortReadOnly} />
                                 </FormControl>
                                 {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked development tasks.</p>}
                                 <FormMessage />
@@ -2139,6 +2166,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             ) : (
                                 <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                             )}
+                            {actualEffort !== null && (
+                                <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                    <span>Actual Effort:</span>
+                                    <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                </div>
+                            )}
                         </div>
                     </TabsContent>
                   </Tabs>
@@ -2208,6 +2241,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -55,7 +56,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { format } from 'date-fns';
+import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay } from 'date-fns';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
@@ -315,7 +316,7 @@ function StoryCard({
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -344,6 +345,25 @@ export default function KanbanPage() {
           releaseId: 'unassigned',
       }
   });
+  
+  const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
+    const holidayDates = holidays.map(h => parseISO(h.date));
+    const interval = eachDayOfInterval({ start, end });
+    
+    return interval.filter(day => {
+      const dayOfWeek = day.getDay();
+      const isWeekend = weeklyOffDays.includes(dayOfWeek);
+      const isHoliday = holidayDates.some(h => isSameDay(day, h));
+      return !isWeekend && !isHoliday;
+    }).length;
+  }, [holidays, weeklyOffDays]);
+  
+  const actualEffort = useMemo(() => {
+    if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
+    const start = parseISO(selectedStory.developmentStartDate);
+    const end = parseISO(selectedStory.completionDate);
+    return calculateBusinessDays(start, end);
+  }, [selectedStory, calculateBusinessDays]);
 
   const handleSetSelectedStory = (story: Story | null) => {
     if (story) {
@@ -754,6 +774,12 @@ export default function KanbanPage() {
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                     )}
+                                     {actualEffort !== null && (
+                                        <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                            <span>Actual Effort:</span>
+                                            <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </TabsContent>
                         </Tabs>
@@ -1125,13 +1151,11 @@ export default function KanbanPage() {
                                         const ItemIcon = workItemIcons[item.itemType];
                                         const system = impactedSystems.find(s => s.id === item.impactedSystemId);
                                         return (
-                                            <div key={item.id} className="flex items-center justify-between text-sm p-2 hover:bg-muted/50 rounded-md">
-                                                <div className="flex items-center gap-2 flex-1">
-                                                    <ItemIcon className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="font-medium cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
-                                                </div>
-                                                <Badge variant="outline" className="w-24 justify-center mx-2">{system?.name || 'N/A'}</Badge>
-                                                <span className="w-16 text-center">{item.estimatedHours || 0}h</span>
+                                            <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
+                                                <ItemIcon className="h-4 w-4 text-muted-foreground" />
+                                                <span className="font-medium cursor-pointer hover:underline truncate" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
+                                                <Badge variant="outline" className="w-24 justify-center">{system?.name || 'N/A'}</Badge>
+                                                <span className="w-16 text-center text-muted-foreground">{item.estimatedHours || 0}h</span>
                                                 <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
                                             </div>
                                         )
@@ -1175,6 +1199,12 @@ export default function KanbanPage() {
                                     ))
                                 ) : (
                                     <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
+                                )}
+                                {actualEffort !== null && (
+                                    <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                        <span>Actual Effort:</span>
+                                        <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                    </div>
                                 )}
                             </div>
                           </TabsContent>
@@ -1254,3 +1284,4 @@ export default function KanbanPage() {
     </>
   );
 }
+
