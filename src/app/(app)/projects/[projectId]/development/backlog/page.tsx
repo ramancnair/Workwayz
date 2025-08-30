@@ -362,6 +362,9 @@ export default function BacklogPage() {
   const [storiesToDelete, setStoriesToDelete] = useState<string[]>([]);
   const [storiesToMove, setStoriesToMove] = useState<string[]>([]);
 
+  const [addParentStoryText, setAddParentStoryText] = useState('');
+  const [editParentStoryText, setEditParentStoryText] = useState('');
+
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
@@ -375,7 +378,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: 'unassigned', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -410,6 +413,10 @@ export default function BacklogPage() {
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
   const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
+  const parentStoryOptions = useMemo(() => parentStories.map(s => ({
+    value: s.id,
+    label: `[${s.storyId}] ${s.title}`
+  })), [parentStories]);
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -473,7 +480,7 @@ export default function BacklogPage() {
             description: selectedStory.description || '',
             acceptanceCriteria: selectedStory.acceptanceCriteria || '',
             epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
-            parentStoryId: isSubItem ? selectedStory.parentStoryId || 'unassigned' : undefined,
+            parentStoryId: isSubItem ? selectedStory.parentStoryId || undefined : undefined,
             reporterId: selectedStory.reporterId || 'unassigned',
             assigneeId: selectedStory.assigneeId || 'unassigned',
             estimatedHours: selectedStory.estimatedHours,
@@ -484,13 +491,20 @@ export default function BacklogPage() {
             impactedSystemIds: selectedStory.impactedSystemIds || [],
             attachments: selectedStory.attachments || '',
         });
+        if (isSubItem && selectedStory.parentStoryId) {
+            const parent = parentStoryOptions.find(p => p.value === selectedStory.parentStoryId);
+            setEditParentStoryText(parent?.label || '');
+        } else {
+            setEditParentStoryText('');
+        }
     }
-  }, [selectedStory, editStoryForm, subTaskForm]);
+  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
   
   useEffect(() => {
     if (!addRequirementOpen) {
       addStoryForm.reset();
       setAddStorySubmitting(false);
+      setAddParentStoryText('');
     }
   }, [addRequirementOpen, addStoryForm]);
 
@@ -542,7 +556,7 @@ export default function BacklogPage() {
     setAddStorySubmitting(true);
     
     let parentStory: Story | undefined;
-    if (['Bug', 'Feature Change'].includes(values.itemType) && values.parentStoryId && values.parentStoryId !== 'unassigned') {
+    if (['Bug', 'Feature Change'].includes(values.itemType) && values.parentStoryId) {
       parentStory = stories.find(s => s.id === values.parentStoryId);
     }
 
@@ -554,7 +568,7 @@ export default function BacklogPage() {
       reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       epicId: ['Task', 'Requirement/Story'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
-      parentStoryId: ['Bug', 'Feature Change'].includes(values.itemType) ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
+      parentStoryId: ['Bug', 'Feature Change'].includes(values.itemType) ? (values.parentStoryId || undefined) : undefined,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       priority: values.priority,
@@ -600,7 +614,7 @@ export default function BacklogPage() {
     }
     
     if (['Bug', 'Feature Change'].includes(selectedStory.itemType)) {
-        payload.parentStoryId = values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId;
+        payload.parentStoryId = values.parentStoryId || undefined;
         payload.epicId = undefined; // Sub-items don't have direct epic link in this model
     }
     
@@ -956,33 +970,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         )}
                     />
                     <div className="space-y-4 pt-4">
-                         <FormField
-                            control={addStoryForm.control}
-                            name="priority"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Priority</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                    <SelectValue placeholder="Set priority" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {priorities.map((p) => (
-                                    <SelectItem key={p} value={p}>
-                                        <div className="flex items-center gap-2">
-                                        <Circle className={cn("h-3 w-3", priorityStyles[p])} />
-                                        <span>{p}</span>
-                                        </div>
-                                    </SelectItem>
-                                    ))}
-                                </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
                         <FormField
                             control={addStoryForm.control}
                             name="description"
@@ -1081,31 +1068,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     </FormItem>
                                 )}
                             />
-                        ) : (
-                            <FormField
-                            control={addStoryForm.control}
-                            name="parentStoryId" 
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Parent Item</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Link to a story or feature change" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="unassigned">None</SelectItem>
-                                    {parentStories.map(story => (
-                                        <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        )}
+                        ) : null}
                         {watchedItemType === 'Bug' && (
                             <FormField
                             control={addStoryForm.control}
@@ -1155,6 +1118,68 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                         />
                         </div>
+                        {['Feature Change', 'Bug'].includes(watchedItemType) ? (
+                          <FormField
+                          control={addStoryForm.control}
+                          name="parentStoryId" 
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Parent Item</FormLabel>
+                              <FormControl>
+                                  <Input 
+                                      list="parent-story-options-add"
+                                      placeholder="Link to a story or feature change"
+                                      value={addParentStoryText}
+                                      onChange={(e) => {
+                                          const text = e.target.value;
+                                          setAddParentStoryText(text);
+                                          const matchingOption = parentStoryOptions.find(opt => opt.label === text);
+                                          field.onChange(matchingOption ? matchingOption.value : undefined);
+                                      }}
+                                      onBlur={() => {
+                                          const matchingOption = parentStoryOptions.find(opt => opt.label === addParentStoryText);
+                                          if (!matchingOption) {
+                                              setAddParentStoryText('');
+                                              field.onChange(undefined);
+                                          }
+                                      }}
+                                  />
+                              </FormControl>
+                              <datalist id="parent-story-options-add">
+                                  {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                          />
+                        ) : null}
+                         <FormField
+                            control={addStoryForm.control}
+                            name="priority"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Priority</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Set priority" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {priorities.map((p) => (
+                                    <SelectItem key={p} value={p}>
+                                        <div className="flex items-center gap-2">
+                                        <Circle className={cn("h-3 w-3", priorityStyles[p])} />
+                                        <span>{p}</span>
+                                        </div>
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                             control={addStoryForm.control}
@@ -1259,29 +1284,29 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
               return (
                   <AccordionItem value={epic.id} key={epic.id}>
-                    <div className="flex items-center justify-between pr-2 bg-muted/50 rounded-t-md border-b">
-                      <AccordionTrigger className="flex-1 px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <span className="font-semibold">{epic.title}</span>
-                          <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
-                          {!isUnassignedEpic && totalEpicItemsCount > 0 && (
-                            <div className="flex items-center gap-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
-                              <Progress value={donePercentage} className="h-2 w-24" />
-                              <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                     <div className="flex items-center justify-between pr-2 bg-muted/50 rounded-t-md border-b">
+                         <AccordionTrigger className="flex-1 px-6 py-4">
+                            <div className="flex items-center gap-4">
+                              <span className="font-semibold">{epic.title}</span>
+                              <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
+                              {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                                <div className="flex items-center gap-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
+                                  <Progress value={donePercentage} className="h-2 w-24" />
+                                  <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                                </div>
+                              )}
+                            </div>
+                         </AccordionTrigger>
+                         {!isUnassignedEpic && (
+                            <div className="flex items-center gap-1 pl-2 pr-4">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic as Epic); }}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           )}
-                        </div>
-                      </AccordionTrigger>
-                      {!isUnassignedEpic && (
-                        <div className="flex items-center gap-1 pl-2 pr-4">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic); }}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic); }}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
                     </div>
                     <div className="flex items-center justify-between pl-6 pr-4 py-2 bg-muted/50 border-b">
                         <div className="flex items-center gap-3">
@@ -1677,33 +1702,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                       <div className="space-y-4">
                         <FormField
                             control={editStoryForm.control}
-                            name="priority"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Priority</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                    <SelectValue placeholder="Set priority" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {priorities.map((p) => (
-                                    <SelectItem key={p} value={p}>
-                                        <div className="flex items-center gap-2">
-                                        <Circle className={cn("h-3 w-3", priorityStyles[p])} />
-                                        <span>{p}</span>
-                                        </div>
-                                    </SelectItem>
-                                    ))}
-                                </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={editStoryForm.control}
                             name="description"
                             render={({ field }) => (
                             <FormItem>
@@ -1802,31 +1800,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 </FormItem>
                             )}
                             />
-                        ) : (
-                            <FormField
-                            control={editStoryForm.control}
-                            name="parentStoryId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Original Requirement</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Link to a story or feature change" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="unassigned">None</SelectItem>
-                                    {parentStories.map(story => (
-                                        <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        )}
+                        ) : null}
                          {selectedStory.itemType === 'Bug' && (
                             <FormField
                                 control={editStoryForm.control}
@@ -1878,6 +1852,68 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                         />
                         </div>
+                        {['Feature Change', 'Bug'].includes(selectedStory.itemType) ? (
+                          <FormField
+                          control={editStoryForm.control}
+                          name="parentStoryId" 
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Parent Item</FormLabel>
+                              <FormControl>
+                                  <Input 
+                                      list="parent-story-options-edit"
+                                      placeholder="Link to a story or feature change"
+                                      value={editParentStoryText}
+                                      onChange={(e) => {
+                                          const text = e.target.value;
+                                          setEditParentStoryText(text);
+                                          const matchingOption = parentStoryOptions.find(opt => opt.label === text);
+                                          field.onChange(matchingOption ? matchingOption.value : undefined);
+                                      }}
+                                      onBlur={() => {
+                                          const matchingOption = parentStoryOptions.find(opt => opt.label === editParentStoryText);
+                                          if (!matchingOption) {
+                                              setEditParentStoryText('');
+                                              field.onChange(undefined);
+                                          }
+                                      }}
+                                  />
+                              </FormControl>
+                              <datalist id="parent-story-options-edit">
+                                  {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                          />
+                        ) : null}
+                         <FormField
+                            control={editStoryForm.control}
+                            name="priority"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Priority</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Set priority" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {priorities.map((p) => (
+                                    <SelectItem key={p} value={p}>
+                                        <div className="flex items-center gap-2">
+                                        <Circle className={cn("h-3 w-3", priorityStyles[p])} />
+                                        <span>{p}</span>
+                                        </div>
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                              <FormField
                                 control={editStoryForm.control}
@@ -2171,6 +2207,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

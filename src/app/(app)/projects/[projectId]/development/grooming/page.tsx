@@ -478,6 +478,7 @@ export default function GroomingPage() {
     const [showAddSubTask, setShowAddSubTask] = useState(false);
     const [viewBy, setViewBy] = useState<'story' | 'sub-task'>('story');
     const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
+    const [editParentStoryText, setEditParentStoryText] = useState('');
     
     const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -566,6 +567,12 @@ export default function GroomingPage() {
           releaseId: 'unassigned',
         }
     });
+
+    const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
+    const parentStoryOptions = useMemo(() => parentStories.map(s => ({
+        value: s.id,
+        label: `[${s.storyId}] ${s.title}`
+    })), [parentStories]);
     
     const handleSetSelectedStory = (story: Story | null) => {
         if (story) {
@@ -622,12 +629,13 @@ export default function GroomingPage() {
                 releaseId: selectedStory.releaseId || 'unassigned',
             });
         } else {
+            const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
              editStoryForm.reset({
                 title: selectedStory.title,
                 description: selectedStory.description || '',
                 acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-                epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
-                parentStoryId: ['Bug', 'Feature Change'].includes(selectedStory.itemType) ? selectedStory.parentStoryId || 'unassigned' : undefined,
+                epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
+                parentStoryId: isSubItem ? selectedStory.parentStoryId || undefined : undefined,
                 assigneeId: selectedStory.assigneeId || 'unassigned',
                 estimatedHours: selectedStory.estimatedHours,
                 priority: selectedStory.priority || 'Medium',
@@ -637,8 +645,14 @@ export default function GroomingPage() {
                 attachments: selectedStory.attachments || '',
                 sprintId: selectedStory.sprintId || 'backlog',
             });
+            if (isSubItem && selectedStory.parentStoryId) {
+                const parent = parentStoryOptions.find(p => p.value === selectedStory.parentStoryId);
+                setEditParentStoryText(parent?.label || '');
+            } else {
+                setEditParentStoryText('');
+            }
         }
-    }, [selectedStory, editStoryForm, subTaskForm]);
+    }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
 
 
     React.useEffect(() => {
@@ -684,7 +698,7 @@ export default function GroomingPage() {
             acceptanceCriteria: values.acceptanceCriteria,
             assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
             epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
-            parentStoryId: isSubItem ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
+            parentStoryId: isSubItem ? (values.parentStoryId || undefined) : undefined,
             estimatedHours: values.estimatedHours,
             priority: values.priority,
             environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
@@ -798,7 +812,6 @@ export default function GroomingPage() {
         };
     }, [selectedStory, subItemsByParentId]);
 
-    const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
     const sortedEnvironments = useMemo(() => [...environments].sort((a,b) => a.order - b.order), [environments]);
 
 
@@ -1178,33 +1191,6 @@ export default function GroomingPage() {
                         </TabsList>
                         <TabsContent value="details" className="pt-4">
                         <div className="space-y-4">
-                            <FormField
-                                control={editStoryForm.control}
-                                name="priority"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Priority</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                        <SelectValue placeholder="Set priority" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {priorities.map((p) => (
-                                        <SelectItem key={p} value={p}>
-                                            <div className="flex items-center gap-2">
-                                            <Circle className={cn("h-3 w-3", priorityStyles[p])} />
-                                            <span>{p}</span>
-                                            </div>
-                                        </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
                              {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
                                 <FormField
                                     control={editStoryForm.control}
@@ -1305,31 +1291,7 @@ export default function GroomingPage() {
                                     </FormItem>
                                 )}
                                 />
-                            ) : (
-                                <FormField
-                                control={editStoryForm.control}
-                                name="parentStoryId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Original Requirement</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                        <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Link to a story or feature change" />
-                                        </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                        <SelectItem value="unassigned">None</SelectItem>
-                                        {parentStories.map(story => (
-                                            <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
-                                        ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                            )}
+                            ) : null}
                             <FormField
                                 control={editStoryForm.control}
                                 name="assigneeId"
@@ -1356,6 +1318,76 @@ export default function GroomingPage() {
                                 )}
                             />
                             </div>
+                            {['Feature Change', 'Bug'].includes(selectedStory.itemType) ? (
+                              <FormField
+                                control={editStoryForm.control}
+                                name="parentStoryId"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Parent Item</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        list="parent-story-options-grooming"
+                                        placeholder="Link to a story or feature change"
+                                        value={editParentStoryText}
+                                        onChange={(e) => {
+                                          const text = e.target.value;
+                                          setEditParentStoryText(text);
+                                          const matchingOption = parentStoryOptions.find(
+                                            (opt) => opt.label === text
+                                          );
+                                          field.onChange(
+                                            matchingOption ? matchingOption.value : undefined
+                                          );
+                                        }}
+                                        onBlur={() => {
+                                          const matchingOption = parentStoryOptions.find(
+                                            (opt) => opt.label === editParentStoryText
+                                          );
+                                          if (!matchingOption) {
+                                            setEditParentStoryText('');
+                                            field.onChange(undefined);
+                                          }
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <datalist id="parent-story-options-grooming">
+                                      {parentStoryOptions.map((opt) => (
+                                        <option key={opt.value} value={opt.label} />
+                                      ))}
+                                    </datalist>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            ) : null}
+                             <FormField
+                                control={editStoryForm.control}
+                                name="priority"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Priority</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Set priority" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {priorities.map((p) => (
+                                        <SelectItem key={p} value={p}>
+                                            <div className="flex items-center gap-2">
+                                            <Circle className={cn("h-3 w-3", priorityStyles[p])} />
+                                            <span>{p}</span>
+                                            </div>
+                                        </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                     control={editStoryForm.control}
@@ -1549,49 +1581,6 @@ export default function GroomingPage() {
           )}
         </DialogContent>
       </Dialog>
-      
-      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Epic</DialogTitle>
-          </DialogHeader>
-          <Form {...editEpicForm}>
-            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
-              <FormField
-                control={editEpicForm.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Epic title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editEpicForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe the epic..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" disabled={isEditEpicSubmitting}>
-                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
@@ -1600,6 +1589,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
