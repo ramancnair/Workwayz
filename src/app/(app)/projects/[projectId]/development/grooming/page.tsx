@@ -152,14 +152,20 @@ function StoryItemCard({
       <Card className="bg-card">
          <div className="p-4">
             <div className="flex justify-between items-start">
-                <CollapsibleTrigger className="flex-1 pr-2 text-left space-y-1">
+                <div className="flex-1 pr-2 text-left space-y-1">
                     <div className="flex items-center gap-2">
-                        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                        <CollapsibleTrigger asChild>
+                          <button>
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </CollapsibleTrigger>
                         {story.priority && (
                           <TooltipProvider>
                             <Tooltip>
-                              <TooltipTrigger>
-                                <Circle className={cn("h-3 w-3", priorityStyles[story.priority])} />
+                              <TooltipTrigger asChild>
+                                <button>
+                                    <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[story.priority])} />
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>{story.priority} Priority</p>
@@ -173,7 +179,7 @@ function StoryItemCard({
                         {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
                     </div>
                     <p className="font-semibold break-words">{story.title}</p>
-                </CollapsibleTrigger>
+                </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                     {epic && <Badge variant="secondary">{epic.title}</Badge>}
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
@@ -1139,7 +1145,7 @@ export default function GroomingPage() {
                                     </div>
                                 </div>
                             </TabsContent>
-                             <TabsContent value="logs">
+                            <TabsContent value="logs">
                                 <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
                                     {selectedStorySubItems.logs.length > 0 ? (
                                         selectedStorySubItems.logs.map((log, index) => (
@@ -1619,6 +1625,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
