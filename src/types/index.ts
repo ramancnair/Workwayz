@@ -2,6 +2,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -28,7 +29,8 @@ export type WorkItemType = 'Requirement/Story' | 'Bug' | 'Task' | 'Feature Chang
 export type Priority = 'Critical' | 'High' | 'Medium' | 'Low' | 'Backburner';
 
 export type StatusHistoryItem = {
-  status: StoryStatus;
+  fromStatus: StoryStatus | null; // null for creation
+  toStatus: StoryStatus;
   date: string; // ISO String
 };
 
@@ -353,3 +355,5 @@ export type CodeRepository = {
   url: string;
   expiryDate?: string; // ISO String
 };
+
+export type BugCriticality = 'Low' | 'Medium' | 'High' | 'Critical';

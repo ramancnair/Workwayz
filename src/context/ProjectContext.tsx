@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -22,7 +23,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -263,9 +264,9 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories', 'sprints', 'releases'],
-    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases'],
+    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
     '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
-    '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems'],
+    '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
@@ -601,9 +602,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         };
         const prefix = prefixOverride || defaultPrefixMap[story.itemType] || 'ITEM';
         const storyId = `${prefix}-${newIdNumber}`;
+        const now = (testDate || new Date()).toISOString();
 
         const { startDate, endDate, ...rest } = story;
-        const payload: any = { ...rest, storyId, isDeleted: false, deletedAt: null };
+        const payload: any = { 
+            ...rest, 
+            storyId, 
+            isDeleted: false, 
+            deletedAt: null,
+            statusHistory: [{ fromStatus: null, toStatus: story.status, date: now }]
+        };
         if (startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
         if (endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
 
@@ -665,6 +673,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         const count = counts[itemType];
         for (let i = 0; i < count; i++) {
           const newStoryRef = doc(collection(db, 'projects', projectId, 'stories'));
+          const now = (testDate || new Date()).toISOString();
 
           const newStory: Omit<Story, 'id'> = {
             storyId: `${prefixMap[itemType]}-${currentIdCounter}`,
@@ -672,6 +681,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             description: `This is an auto-generated description for ${itemType.toLowerCase()}.`,
             itemType: itemType,
             status: 'To Do',
+            statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
             epicId: getRandomItem(epics)?.id,
             sprintId: null,
             estimatedHours: Math.floor(Math.random() * 20) + 1,
@@ -690,6 +700,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
               title: `Auto-generated sub-task ${j + 1} for ${newStory.storyId}`,
               itemType: 'Sub Task',
               status: 'To Do',
+              statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
               parentStoryId: newStoryRef.id,
               epicId: newStory.epicId,
               estimatedHours: Math.floor(Math.random() * 8) + 1,
@@ -722,7 +733,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       // Handle status change history
       if (data.status && data.status !== storyToUpdate?.status) {
         const newHistoryEntry: StatusHistoryItem = {
-          status: data.status,
+          fromStatus: storyToUpdate?.status || null,
+          toStatus: data.status,
           date: now,
         };
         payload.statusHistory = arrayUnion(sanitizeForFirestore(newHistoryEntry));
@@ -1178,6 +1190,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         for (let i = 0; i < count; i++) {
           const newBugRef = doc(collection(db, 'projects', projectId, 'stories'));
           const relatedStory = getRandomItem(storiesToLink);
+          const now = (testDate || new Date()).toISOString();
 
           const newBug: Omit<Story, 'id'> = {
             storyId: `BUG-${currentIdCounter}`,
@@ -1185,10 +1198,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             description: `Auto-generated bug for ${environmentName}. Steps to reproduce: 1. Login. 2. Navigate to ${relatedStory?.title || 'a page'}. 3. Observe error.`,
             itemType: 'Bug',
             status: 'To Do',
+            statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
             parentStoryId: relatedStory?.id,
             sprintId: relatedStory?.sprintId,
             assigneeId: getRandomItem(employees.filter(e => e.role === 'Developer'))?.id,
-            criticality: getRandomItem(criticalities),
+            priority: getRandomItem(['High', 'Critical', 'Medium']),
             environmentId: environmentId,
             isDeleted: false,
             deletedAt: null,
