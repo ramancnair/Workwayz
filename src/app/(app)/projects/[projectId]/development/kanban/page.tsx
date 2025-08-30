@@ -162,14 +162,16 @@ function StoryCard({
                     </CollapsibleTrigger>
                      {story.priority && (
                         <TooltipProvider>
-                        <Tooltip>
+                          <Tooltip>
                             <TooltipTrigger asChild>
-                              <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[story.priority])} />
+                              <button>
+                                <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[story.priority])} />
+                              </button>
                             </TooltipTrigger>
                             <TooltipContent>
                             <p>{story.priority} Priority</p>
                             </TooltipContent>
-                        </Tooltip>
+                          </Tooltip>
                         </TooltipProvider>
                     )}
                     <p className="text-xs font-semibold text-muted-foreground">
@@ -1117,24 +1119,27 @@ export default function KanbanPage() {
                           </TabsContent>
                           <TabsContent value="subTasks">
                              <div className="space-y-4 pt-4">
+                                  <div className="space-y-2 rounded-md border p-2">
                                   {selectedStorySubItems.subTasks.length > 0 ? (
-                                      <div className="space-y-2 rounded-md border p-2">
-                                      {selectedStorySubItems.subTasks.map(item => {
-                                          const ItemIcon = workItemIcons[item.itemType];
-                                          return (
-                                              <div key={item.id} className="flex items-center justify-between text-sm">
-                                                  <div className='flex items-center gap-2'>
-                                                      {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                      <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
-                                                  </div>
-                                                  <Badge variant="outline">{item.status}</Badge>
-                                              </div>
-                                          )
-                                      })}
-                                      </div>
+                                    selectedStorySubItems.subTasks.map(item => {
+                                        const ItemIcon = workItemIcons[item.itemType];
+                                        const system = impactedSystems.find(s => s.id === item.impactedSystemId);
+                                        return (
+                                            <div key={item.id} className="flex items-center justify-between text-sm p-2 hover:bg-muted/50 rounded-md">
+                                                <div className="flex items-center gap-2 flex-1">
+                                                    <ItemIcon className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="font-medium cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
+                                                </div>
+                                                <Badge variant="outline" className="w-24 justify-center mx-2">{system?.name || 'N/A'}</Badge>
+                                                <span className="w-16 text-center">{item.estimatedHours || 0}h</span>
+                                                <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
+                                            </div>
+                                        )
+                                    })
                                   ) : (
-                                      <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
+                                    <p className="text-sm text-muted-foreground italic px-2 py-4 text-center">No sub-tasks linked.</p>
                                   )}
+                                  </div>
                               </div>
                           </TabsContent>
                           <TabsContent value="bugs">
