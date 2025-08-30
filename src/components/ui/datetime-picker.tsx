@@ -48,11 +48,13 @@ export function DateTimePicker({ date, setDate, className }: DateTimePickerProps
         type="date"
         value={formattedDate}
         onChange={handleDateChange}
+        className="flex-1 min-w-0"
       />
       <Input
         type="time"
         value={formattedTime}
         onChange={handleTimeChange}
+        className="flex-1 min-w-0"
       />
     </div>
   )
