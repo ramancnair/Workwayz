@@ -159,20 +159,18 @@ function StoryItemCard({
                             <Icon className="h-4 w-4 text-muted-foreground" />
                           </button>
                         </CollapsibleTrigger>
-                        {story.priority && (
-                          <TooltipProvider>
+                         <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <button>
-                                    <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[story.priority])} />
+                                 <button>
+                                  <Circle className={cn("h-3 w-3 cursor-pointer", story.priority ? priorityStyles[story.priority] : 'text-gray-500 fill-gray-500')} />
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{story.priority} Priority</p>
+                                <p>{story.priority || 'No'} Priority</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                        )}
                         <p className="text-xs font-semibold text-muted-foreground">
                             {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                         </p>
@@ -738,7 +736,7 @@ export default function GroomingPage() {
         } else {
           toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
         }
-        setEditStorySubmitting(false);
+        setIsEditStorySubmitting(false);
     };
 
     const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
@@ -1150,7 +1148,7 @@ export default function GroomingPage() {
                                     {selectedStorySubItems.logs.length > 0 ? (
                                         selectedStorySubItems.logs.map((log, index) => (
                                             <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
-                                                <span>Status changed to <strong>{log.status}</strong></span>
+                                                <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
                                                 <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
                                             </div>
                                         ))
@@ -1588,7 +1586,7 @@ export default function GroomingPage() {
                                 {selectedStorySubItems.logs.length > 0 ? (
                                     selectedStorySubItems.logs.map((log, index) => (
                                         <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
-                                            <span>Status changed to <strong>{log.status}</strong></span>
+                                            <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
                                             <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
                                         </div>
                                     ))
@@ -1625,6 +1623,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
