@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -471,7 +472,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
                     
                     const dateFields: Record<string, string[]> = {
-                        stories: ['startDate', 'endDate', 'deletedAt', 'updatedAt'],
+                        stories: ['startDate', 'endDate', 'deletedAt', 'updatedAt', 'developmentStartDate', 'completionDate'],
                         testCases: ['deletedAt'],
                         risks: ['deletedAt'],
                         assumptions: ['validationDate', 'deletedAt'],
@@ -716,14 +717,23 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       const storyToUpdate = stories.find(s => s.id === storyId);
       const { startDate, endDate, ...rest } = data;
       const payload: any = { ...rest, updatedAt: Timestamp.now().toDate().toISOString() };
+      const now = (testDate || new Date()).toISOString();
       
       // Handle status change history
       if (data.status && data.status !== storyToUpdate?.status) {
         const newHistoryEntry: StatusHistoryItem = {
           status: data.status,
-          date: (testDate || new Date()).toISOString(),
+          date: now,
         };
         payload.statusHistory = arrayUnion(sanitizeForFirestore(newHistoryEntry));
+
+        // Track development start and completion dates
+        if(storyToUpdate?.status === 'To Do' && data.status !== 'To Do' && !storyToUpdate.developmentStartDate) {
+            payload.developmentStartDate = now;
+        }
+        if(data.status === 'Done' && !storyToUpdate.completionDate) {
+            payload.completionDate = now;
+        }
       }
 
       if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
