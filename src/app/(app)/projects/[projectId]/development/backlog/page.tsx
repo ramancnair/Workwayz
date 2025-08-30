@@ -433,6 +433,18 @@ export default function BacklogPage() {
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
+  const watchedImpactedSystem = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
+  
+  const filteredAssignees = useMemo(() => {
+    if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
+      return users;
+    }
+    return users.filter(user => 
+      user.role === 'Lead' || 
+      user.capabilities?.includes(watchedImpactedSystem)
+    );
+  }, [watchedImpactedSystem, users]);
+
   const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
@@ -1307,7 +1319,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               return (
                   <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
                      <div className="flex items-center px-4 py-2 group">
-                      <AccordionTrigger className="flex-1 p-2">
+                      <AccordionTrigger className="flex-1 p-2 group">
                          <div className="flex items-center gap-4 flex-1">
                              <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                              <span className="font-semibold">{epic.title}</span>
@@ -1546,7 +1558,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -2098,7 +2110,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                            {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                         </SelectContent>
                                                         </Select>
                                                         <FormMessage/>

@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
@@ -347,6 +347,18 @@ export default function KanbanPage() {
           releaseId: 'unassigned',
       }
   });
+
+  const watchedImpactedSystem = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
+  
+  const filteredAssignees = useMemo(() => {
+    if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
+      return users;
+    }
+    return users.filter(user => 
+      user.role === 'Lead' || 
+      user.capabilities?.includes(watchedImpactedSystem)
+    );
+  }, [watchedImpactedSystem, users]);
   
   const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
     const holidayDates = holidays.map(h => parseISO(h.date));
@@ -694,7 +706,7 @@ export default function KanbanPage() {
                                             <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                             </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -769,7 +781,7 @@ export default function KanbanPage() {
                                     {selectedStorySubItems.logs.length > 0 ? (
                                         selectedStorySubItems.logs.map((log, index) => (
                                             <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
-                                                <span>Status changed to <strong>{log.status}</strong></span>
+                                                <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
                                                 <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
                                             </div>
                                         ))
@@ -1195,7 +1207,7 @@ export default function KanbanPage() {
                                 {selectedStorySubItems.logs.length > 0 ? (
                                     selectedStorySubItems.logs.map((log, index) => (
                                         <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
-                                            <span>Status changed to <strong>{log.status}</strong></span>
+                                            <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
                                             <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
                                         </div>
                                     ))
@@ -1286,5 +1298,6 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 

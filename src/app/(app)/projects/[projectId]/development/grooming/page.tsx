@@ -572,6 +572,18 @@ export default function GroomingPage() {
         }
     });
 
+    const watchedImpactedSystem = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
+  
+    const filteredAssignees = useMemo(() => {
+      if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
+        return employees;
+      }
+      return employees.filter(user => 
+        user.role === 'Lead' || 
+        user.capabilities?.includes(watchedImpactedSystem)
+      );
+    }, [watchedImpactedSystem, employees]);
+
     const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
     const parentStoryOptions = useMemo(() => parentStories.map(s => ({
         value: s.id,
@@ -1057,7 +1069,7 @@ export default function GroomingPage() {
                                             <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                             </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -1521,7 +1533,7 @@ export default function GroomingPage() {
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                            {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                         </SelectContent>
                                                         </Select>
                                                         <FormMessage/>
@@ -1623,6 +1635,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 

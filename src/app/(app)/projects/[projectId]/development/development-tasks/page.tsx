@@ -127,6 +127,19 @@ export default function DevelopmentTasksPage() {
     resolver: zodResolver(subTaskSchema),
   });
   
+  const watchedImpactedSystem = useWatch({ control: form.control, name: 'impactedSystemId' });
+
+  const filteredAssignees = useMemo(() => {
+    if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
+      return employees;
+    }
+    return employees.filter(user => 
+      user.role === 'Lead' || 
+      user.capabilities?.includes(watchedImpactedSystem)
+    );
+  }, [watchedImpactedSystem, employees]);
+
+
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
       setSorting({ ...sorting, desc: !sorting.desc });
@@ -675,7 +688,7 @@ export default function DevelopmentTasksPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {employees.map(emp => (
+                            {filteredAssignees.map(emp => (
                               <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                             ))}
                           </SelectContent>
@@ -829,3 +842,4 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
