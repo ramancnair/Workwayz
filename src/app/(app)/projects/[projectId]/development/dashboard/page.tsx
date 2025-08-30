@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { format, parseISO, eachDayOfInterval, isSameDay, startOfDay, differenceInDays } from 'date-fns';
 import type { Story, Release, StatusHistoryItem } from '@/types';
-import { BookOpen, CheckCircle, GitFork, Boxes, CheckSquare, Bug, GitCommit } from 'lucide-react';
+import { BookOpen, CheckCircle, GitFork, Boxes, CheckSquare, Bug, GitCommit, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 
 const burndownChartConfig = {
@@ -218,37 +218,38 @@ export default function DevelopmentDashboard() {
       });
   }, [selectedReleaseId, releases, stories, subItemsByStoryId, testDate]);
 
-    const itemStats = useMemo(() => {
-        const stats = {
-            stories: { total: 0, completed: 0 },
-            featureChanges: { total: 0, completed: 0 },
-            tasks: { total: 0, completed: 0 },
-            bugs: { total: 0, completed: 0 },
-        };
+  const itemStats = useMemo(() => {
+    const stats = {
+        stories: { total: 0, completed: 0 },
+        featureChanges: { total: 0, completed: 0, totalHours: 0 },
+        tasks: { total: 0, completed: 0 },
+        bugs: { total: 0, completed: 0 },
+    };
 
-        stories.forEach(story => {
-            const isCompleted = story.status === 'Done';
-            switch (story.itemType) {
-                case 'Requirement/Story':
-                    stats.stories.total++;
-                    if (isCompleted) stats.stories.completed++;
-                    break;
-                case 'Feature Change':
-                    stats.featureChanges.total++;
-                    if (isCompleted) stats.featureChanges.completed++;
-                    break;
-                case 'Task':
-                    stats.tasks.total++;
-                    if (isCompleted) stats.tasks.completed++;
-                    break;
-                case 'Bug':
-                    stats.bugs.total++;
-                    if (isCompleted) stats.bugs.completed++;
-                    break;
-            }
-        });
-        return stats;
-    }, [stories]);
+    stories.forEach(story => {
+        const isCompleted = story.status === 'Done';
+        switch (story.itemType) {
+            case 'Requirement/Story':
+                stats.stories.total++;
+                if (isCompleted) stats.stories.completed++;
+                break;
+            case 'Feature Change':
+                stats.featureChanges.total++;
+                stats.featureChanges.totalHours += story.estimatedHours || 0;
+                if (isCompleted) stats.featureChanges.completed++;
+                break;
+            case 'Task':
+                stats.tasks.total++;
+                if (isCompleted) stats.tasks.completed++;
+                break;
+            case 'Bug':
+                stats.bugs.total++;
+                if (isCompleted) stats.bugs.completed++;
+                break;
+        }
+    });
+    return stats;
+  }, [stories]);
 
     const getCompletionDesc = (total: number, completed: number) => {
         const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -259,9 +260,10 @@ export default function DevelopmentDashboard() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Development Dashboard" description="Overview of the project's development progress." />
-       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <StatsCard title="Total Stories" value={itemStats.stories.total.toString()} icon={BookOpen} description={getCompletionDesc(itemStats.stories.total, itemStats.stories.completed)} />
         <StatsCard title="Feature Changes" value={itemStats.featureChanges.total.toString()} icon={GitCommit} description={getCompletionDesc(itemStats.featureChanges.total, itemStats.featureChanges.completed)} />
+        <StatsCard title="Feature Change Hours" value={`${itemStats.featureChanges.totalHours}h`} icon={Clock} description="Total estimated effort" />
         <StatsCard title="Tasks" value={itemStats.tasks.total.toString()} icon={CheckSquare} description={getCompletionDesc(itemStats.tasks.total, itemStats.tasks.completed)} />
         <StatsCard title="Bugs" value={itemStats.bugs.total.toString()} icon={Bug} description={getCompletionDesc(itemStats.bugs.total, itemStats.bugs.completed)} />
       </div>
