@@ -43,18 +43,18 @@ export function DateTimePicker({ date, setDate, className }: DateTimePickerProps
   const formattedTime = date ? format(date, 'HH:mm') : '';
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Input
-        type="date"
-        value={formattedDate}
-        onChange={handleDateChange}
-        className="flex-1 min-w-0"
-      />
+    <div className={cn("space-y-2", className)}>
       <Input
         type="time"
         value={formattedTime}
         onChange={handleTimeChange}
-        className="flex-1 min-w-0"
+        className="w-full"
+      />
+      <Input
+        type="date"
+        value={formattedDate}
+        onChange={handleDateChange}
+        className="w-full"
       />
     </div>
   )
