@@ -30,6 +30,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@/lib/utils';
 
 const swimlaneSchema = z.object({
   name: z.string().min(1, 'Swimlane name is required'),
@@ -82,7 +83,7 @@ function SortableItem({ column }: { column: KanbanColumn }) {
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center gap-2 bg-background p-2 rounded-md border">
+        <div ref={setNodeRef} style={style} className={cn("flex items-center gap-2 p-2 rounded-md border", column.isDefault ? 'bg-muted' : 'bg-background' )}>
             <Button variant="ghost" size="icon" {...attributes} {...listeners} className="cursor-grab" aria-label="Drag to reorder">
                 <GripVertical className="h-5 w-5" />
             </Button>
@@ -93,7 +94,7 @@ function SortableItem({ column }: { column: KanbanColumn }) {
                    handleRenameSwimlane(column.id, e.target.value)
                  }
               }}
-              className="flex-1"
+              className={cn("flex-1", column.isDefault && "bg-muted/50 border-none text-muted-foreground")}
               readOnly={column.isDefault}
             />
             <Button
