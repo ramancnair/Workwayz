@@ -52,7 +52,7 @@ import {
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useProject } from "@/context/ProjectContext";
-import { DatePicker } from "./ui/datepicker";
+import { DateTimePicker } from "./ui/datetime-picker";
 
 export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
@@ -312,7 +312,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
         <div className="group-data-[collapsible=icon]:hidden space-y-2 mb-2">
           <label className="text-xs font-semibold text-sidebar-foreground/70">Test Date</label>
-          <DatePicker date={testDate} setDate={setTestDate} />
+          <DateTimePicker date={testDate} setDate={setTestDate} />
         </div>
         <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
