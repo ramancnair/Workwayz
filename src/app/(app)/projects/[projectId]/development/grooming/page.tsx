@@ -147,6 +147,14 @@ function StoryItemCard({
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
   const hasEffort = story.estimatedHours && story.estimatedHours > 0;
 
+  const sortedSprints = useMemo(() => {
+    return [...sprints].sort((a, b) => {
+        if (a.isCurrent) return -1;
+        if (b.isCurrent) return 1;
+        return (a.title || '').localeCompare(b.title || '');
+    });
+  }, [sprints]);
+
   return (
     <Collapsible>
       <Card className="bg-card">
@@ -238,11 +246,11 @@ function StoryItemCard({
                   Backlog
                 </DropdownMenuItem>
               )}
-              {sprints
+              {sortedSprints
                 .filter((sprint) => sprint.id !== story.sprintId)
                 .map((sprint) => (
                   <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
-                    {sprint.title}
+                    {sprint.title} {sprint.isCurrent && "(current)"}
                   </DropdownMenuItem>
                 ))}
             </DropdownMenuContent>
@@ -1635,6 +1643,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
