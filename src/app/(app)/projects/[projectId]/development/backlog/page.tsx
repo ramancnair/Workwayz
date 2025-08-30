@@ -179,8 +179,10 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
                    {story.priority && (
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger>
-                          <Circle className={cn("h-3 w-3", priorityStyles[story.priority])} />
+                        <TooltipTrigger asChild>
+                           <button>
+                            <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[story.priority])} />
+                          </button>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{story.priority} Priority</p>
@@ -1307,7 +1309,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               return (
                   <AccordionItem value={epic.id} key={epic.id}>
                      <div className="flex items-center justify-between pr-2 bg-muted/50 rounded-t-md border-b">
-                         <AccordionTrigger className="flex-1 px-6 py-4">
+                         <AccordionTrigger className="flex-grow px-6 py-4">
                             <div className="flex items-center gap-4">
                               <span className="font-semibold">{epic.title}</span>
                               <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
@@ -1320,7 +1322,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                          </AccordionTrigger>
                          {!isUnassignedEpic && (
-                            <div className="flex items-center gap-1 pl-2 pr-4">
+                            <div className="flex items-center gap-1 pl-2 pr-4 flex-shrink-0">
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}>
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -2241,6 +2243,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
