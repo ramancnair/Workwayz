@@ -176,20 +176,18 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                   {story.priority && (
-                    <TooltipProvider>
+                   <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                            <button>
-                            <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[story.priority])} />
+                            <Circle className={cn("h-3 w-3 cursor-pointer", story.priority ? priorityStyles[story.priority] : 'text-gray-500 fill-gray-500')} />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{story.priority} Priority</p>
+                          <p>{story.priority || 'No'} Priority</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  )}
                   <p className="text-xs font-semibold text-muted-foreground">{story.storyId}</p>
                   {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
                 </div>
@@ -1307,9 +1305,9 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               if (backlogItemsForGroup.length === 0 && isUnassignedEpic && epics.length > 0) return null;
 
               return (
-                  <AccordionItem value={epic.id} key={epic.id}>
-                     <div className="flex items-center justify-between pr-2 bg-muted/50 rounded-t-md border-b">
-                         <AccordionTrigger className="flex-grow px-6 py-4">
+                  <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
+                     <div className="flex items-center justify-between px-6 py-4">
+                         <AccordionTrigger className="p-0 hover:no-underline flex-1">
                             <div className="flex items-center gap-4">
                               <span className="font-semibold">{epic.title}</span>
                               <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
@@ -1322,7 +1320,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                          </AccordionTrigger>
                          {!isUnassignedEpic && (
-                            <div className="flex items-center gap-1 pl-2 pr-4 flex-shrink-0">
+                            <div className="flex items-center gap-1 pl-4 flex-shrink-0">
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}>
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -1332,63 +1330,65 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                           )}
                     </div>
-                    <div className="flex items-center justify-between pl-6 pr-4 py-2 bg-muted/50 border-b">
-                        <div className="flex items-center gap-3">
-                           <Checkbox
-                                id={`select-all-${epic.id}`}
-                                checked={selectedCount > 0 && selectedCount === backlogItemsForGroup.length}
-                                onCheckedChange={() => handleToggleSelectAll(epic.id, backlogItemsForGroup)}
-                            />
-                            <Label htmlFor={`select-all-${epic.id}`} className="text-sm font-medium">
-                                {selectedCount > 0 ? `${selectedCount} selected` : 'Select All'}
-                            </Label>
-                        </div>
-                        {selectedCount > 0 && (
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setStoriesToMove(selectedStoriesInEpic(epic.id))}>
-                                    <Move className="mr-2 h-4 w-4" />
-                                    Move
-                                </Button>
-                                <Button variant="destructive" size="sm" onClick={() => setStoriesToDelete(selectedStoriesInEpic(epic.id))}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                  <AccordionContent className="space-y-2 p-2 bg-muted/50 rounded-b-md">
-                      {backlogItemsForGroup.length > 0 ? (
-                        backlogItemsForGroup.map((story) => {
-                          const storyEpic = epics.find((e) => e.id === story.epicId);
-                          const assignee = users.find((d) => d.id === story.assigneeId);
-                          const sprint = sprints.find(s => s.id === story.sprintId);
-                          const release = releases.find(r => r.id === story.releaseId);
-                          const subItems = subItemsByParentId[story.id] || [];
-                          
-                          return (
-                            <div key={story.id}>
-                              <StoryCard
-                                  story={story}
-                                  epic={storyEpic}
-                                  assignee={assignee}
-                                  onClick={() => handleSetSelectedStory(story)}
-                                  subItems={subItems}
-                                  sprint={sprint}
-                                  release={release}
-                                  onSubItemClick={(item) => handleDrillDown(item)}
-                                  isSelected={selectedStories.includes(story.id)}
-                                  onSelectionChange={(checked) => {
-                                      setSelectedStories(prev => checked ? [...prev, story.id] : prev.filter(id => id !== story.id));
-                                  }}
+                  <AccordionContent className="space-y-2 p-2">
+                      <div className="flex items-center justify-between px-4 pb-2 border-b">
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                                  id={`select-all-${epic.id}`}
+                                  checked={selectedCount > 0 && selectedCount === backlogItemsForGroup.length}
+                                  onCheckedChange={() => handleToggleSelectAll(epic.id, backlogItemsForGroup)}
                               />
-                            </div>
-                          )
-                        })
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic px-2">
-                            No items for this epic in the backlog.
-                        </p>
-                      )}
+                              <Label htmlFor={`select-all-${epic.id}`} className="text-sm font-medium">
+                                  {selectedCount > 0 ? `${selectedCount} selected` : 'Select All'}
+                              </Label>
+                          </div>
+                          {selectedCount > 0 && (
+                              <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="sm" onClick={() => setStoriesToMove(selectedStoriesInEpic(epic.id))}>
+                                      <Move className="mr-2 h-4 w-4" />
+                                      Move
+                                  </Button>
+                                  <Button variant="destructive" size="sm" onClick={() => setStoriesToDelete(selectedStoriesInEpic(epic.id))}>
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                  </Button>
+                              </div>
+                          )}
+                      </div>
+                      <div className="p-2 space-y-2">
+                        {backlogItemsForGroup.length > 0 ? (
+                          backlogItemsForGroup.map((story) => {
+                            const storyEpic = epics.find((e) => e.id === story.epicId);
+                            const assignee = users.find((d) => d.id === story.assigneeId);
+                            const sprint = sprints.find(s => s.id === story.sprintId);
+                            const release = releases.find(r => r.id === story.releaseId);
+                            const subItems = subItemsByParentId[story.id] || [];
+                            
+                            return (
+                              <div key={story.id}>
+                                <StoryCard
+                                    story={story}
+                                    epic={storyEpic}
+                                    assignee={assignee}
+                                    onClick={() => handleSetSelectedStory(story)}
+                                    subItems={subItems}
+                                    sprint={sprint}
+                                    release={release}
+                                    onSubItemClick={(item) => handleDrillDown(item)}
+                                    isSelected={selectedStories.includes(story.id)}
+                                    onSelectionChange={(checked) => {
+                                        setSelectedStories(prev => checked ? [...prev, story.id] : prev.filter(id => id !== story.id));
+                                    }}
+                                />
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic px-2">
+                              No items for this epic in the backlog.
+                          </p>
+                        )}
+                      </div>
                   </AccordionContent>
                   </AccordionItem>
               );
@@ -2243,6 +2243,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
