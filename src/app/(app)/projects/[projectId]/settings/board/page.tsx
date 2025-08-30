@@ -94,6 +94,7 @@ function SortableItem({ column }: { column: KanbanColumn }) {
                  }
               }}
               className="flex-1"
+              readOnly={column.isDefault}
             />
             <Button
               variant="ghost"
