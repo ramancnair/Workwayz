@@ -239,6 +239,7 @@ export default function DevelopmentDashboard() {
                 if (isCompleted) stats.featureChanges.completed++;
                 break;
             case 'Task':
+            case 'Sub Task':
                 stats.tasks.total++;
                 if (isCompleted) stats.tasks.completed++;
                 break;
