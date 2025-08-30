@@ -716,9 +716,10 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     setStoriesToMove([]);
   }
 
-  const allWorkItems = stories.filter(
-    (story) => !story.parentStoryId && !story.isDeleted
-  );
+  const allWorkItems = stories.filter((story) => {
+    const isSubItem = story.itemType === 'Sub Task' || (story.itemType === 'Bug' && story.parentStoryId);
+    return !isSubItem && !story.isDeleted;
+  });
 
   const subItemsByParentId = stories.reduce((acc, story) => {
       if (story.parentStoryId) {
@@ -1124,7 +1125,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                           name="parentStoryId" 
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>Parent Item</FormLabel>
+                              <FormLabel>{watchedItemType === 'Feature Change' ? 'Original Requirement' : 'Parent Item'}</FormLabel>
                               <FormControl>
                                   <Input 
                                       list="parent-story-options-add"
@@ -1858,7 +1859,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                           name="parentStoryId" 
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>Parent Item</FormLabel>
+                              <FormLabel>{selectedStory.itemType === 'Feature Change' ? 'Original Requirement' : 'Parent Item'}</FormLabel>
                               <FormControl>
                                   <Input 
                                       list="parent-story-options-edit"
@@ -2207,6 +2208,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
