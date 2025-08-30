@@ -409,7 +409,7 @@ export default function BacklogPage() {
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
-  const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType)), [stories]);
+  const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -466,7 +466,7 @@ export default function BacklogPage() {
             releaseId: selectedStory.releaseId || 'unassigned',
         });
     } else {
-        const isSubItem = ['Bug'].includes(selectedStory.itemType);
+        const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
         editStoryForm.reset({
             itemType: selectedStory.itemType,
             title: selectedStory.title,
@@ -542,7 +542,7 @@ export default function BacklogPage() {
     setAddStorySubmitting(true);
     
     let parentStory: Story | undefined;
-    if (['Bug'].includes(values.itemType) && values.parentStoryId && values.parentStoryId !== 'unassigned') {
+    if (['Bug', 'Feature Change'].includes(values.itemType) && values.parentStoryId && values.parentStoryId !== 'unassigned') {
       parentStory = stories.find(s => s.id === values.parentStoryId);
     }
 
@@ -553,8 +553,8 @@ export default function BacklogPage() {
       acceptanceCriteria: values.acceptanceCriteria,
       reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
-      parentStoryId: ['Bug'].includes(values.itemType) ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
+      epicId: ['Task', 'Requirement/Story'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
+      parentStoryId: ['Bug', 'Feature Change'].includes(values.itemType) ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
       status: 'To Do',
       estimatedHours: values.estimatedHours,
       priority: values.priority,
@@ -595,11 +595,11 @@ export default function BacklogPage() {
         attachments: values.attachments,
     };
     
-    if (['Task', 'Requirement/Story', 'Feature Change'].includes(selectedStory.itemType)) {
+    if (['Task', 'Requirement/Story'].includes(selectedStory.itemType)) {
         payload.epicId = values.epicId === 'unassigned' ? undefined : values.epicId;
     }
     
-    if (selectedStory.itemType === 'Bug' || selectedStory.itemType === 'Sub Task') {
+    if (['Bug', 'Feature Change'].includes(selectedStory.itemType)) {
         payload.parentStoryId = values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId;
         payload.epicId = undefined; // Sub-items don't have direct epic link in this model
     }
@@ -1057,7 +1057,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Feature Change', 'Task'].includes(watchedItemType) ? (
+                        {['Requirement/Story', 'Task'].includes(watchedItemType) ? (
                             <FormField
                                 control={addStoryForm.control}
                                 name="epicId"
@@ -1776,7 +1776,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? (
+                        {['Requirement/Story', 'Task'].includes(selectedStory.itemType) ? (
                             <FormField
                             control={editStoryForm.control}
                             name="epicId"
@@ -1808,7 +1808,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             name="parentStoryId"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Related Item</FormLabel>
+                                <FormLabel>Original Requirement</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                     <FormControl>
                                     <SelectTrigger>
@@ -2171,6 +2171,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

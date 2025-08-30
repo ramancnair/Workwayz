@@ -31,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, BugCriticality, ImpactedSystem, Holiday, Release, Priority } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority } from '@/types';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +72,6 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Sub Task': CheckSquare,
 };
 
-const bugCriticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
 
@@ -94,7 +93,6 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   priority: z.enum(priorities).optional(),
-  criticality: z.enum(bugCriticalities).optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   releaseId: z.string().optional(),
@@ -629,11 +627,10 @@ export default function GroomingPage() {
                 description: selectedStory.description || '',
                 acceptanceCriteria: selectedStory.acceptanceCriteria || '',
                 epicId: ['Task', 'Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) ? selectedStory.epicId || 'unassigned' : undefined,
-                parentStoryId: ['Bug'].includes(selectedStory.itemType) ? selectedStory.parentStoryId || 'unassigned' : undefined,
+                parentStoryId: ['Bug', 'Feature Change'].includes(selectedStory.itemType) ? selectedStory.parentStoryId || 'unassigned' : undefined,
                 assigneeId: selectedStory.assigneeId || 'unassigned',
                 estimatedHours: selectedStory.estimatedHours,
                 priority: selectedStory.priority || 'Medium',
-                criticality: selectedStory.criticality || 'Medium',
                 environmentId: selectedStory.environmentId || 'unassigned',
                 impactedSystemIds: selectedStory.impactedSystemIds || [],
                 releaseId: selectedStory.releaseId || 'unassigned',
@@ -679,7 +676,7 @@ export default function GroomingPage() {
         if (!selectedStory) return;
         setEditStorySubmitting(true);
         
-        const isSubItem = ['Bug'].includes(selectedStory.itemType);
+        const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
 
         const success = await updateStory(selectedStory.id, {
             title: values.title,
@@ -690,7 +687,6 @@ export default function GroomingPage() {
             parentStoryId: isSubItem ? (values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId) : undefined,
             estimatedHours: values.estimatedHours,
             priority: values.priority,
-            criticality: selectedStory.itemType === 'Bug' ? values.criticality : undefined,
             environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
             impactedSystemIds: values.impactedSystemIds,
             releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
@@ -802,7 +798,7 @@ export default function GroomingPage() {
         };
     }, [selectedStory, subItemsByParentId]);
 
-    const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType)), [stories]);
+    const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
     const sortedEnvironments = useMemo(() => [...environments].sort((a,b) => a.order - b.order), [environments]);
 
 
@@ -1283,7 +1279,7 @@ export default function GroomingPage() {
                                 )}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) ? (
+                            {['Requirement/Story', 'Task'].includes(selectedStory.itemType) ? (
                                 <FormField
                                 control={editStoryForm.control}
                                 name="epicId"
@@ -1315,7 +1311,7 @@ export default function GroomingPage() {
                                 name="parentStoryId"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Related Item</FormLabel>
+                                    <FormLabel>Original Requirement</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                         <FormControl>
                                         <SelectTrigger>
@@ -1360,57 +1356,6 @@ export default function GroomingPage() {
                                 )}
                             />
                             </div>
-                            {selectedStory.itemType === 'Bug' && (
-                                <>
-                                    <FormField
-                                    control={editStoryForm.control}
-                                    name="criticality"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Criticality</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Set criticality" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            {bugCriticalities.map((c) => (
-                                                <SelectItem key={c} value={c}>
-                                                {c}
-                                                </SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
-                                     <FormField
-                                        control={editStoryForm.control}
-                                        name="environmentId"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormLabel>Environment</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                                <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select an environment" />
-                                                </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                <SelectItem value="unassigned">None</SelectItem>
-                                                {sortedEnvironments.map(env => (
-                                                    <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
-                                                ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </>
-                            )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                     control={editStoryForm.control}
@@ -1604,6 +1549,49 @@ export default function GroomingPage() {
           )}
         </DialogContent>
       </Dialog>
+      
+      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Epic</DialogTitle>
+          </DialogHeader>
+          <Form {...editEpicForm}>
+            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
+              <FormField
+                control={editEpicForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Epic title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editEpicForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the epic..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={isEditEpicSubmitting}>
+                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -1612,6 +1600,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
