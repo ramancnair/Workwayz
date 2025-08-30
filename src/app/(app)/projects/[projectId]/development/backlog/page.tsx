@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -37,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle, ChevronRight } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -1307,16 +1306,17 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               return (
                   <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
                      <div className="flex items-center justify-between px-6 py-4">
-                         <AccordionTrigger className="p-0 hover:no-underline flex-1">
-                            <div className="flex items-center gap-4">
-                              <span className="font-semibold">{epic.title}</span>
-                              <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
-                              {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                         <AccordionTrigger className="p-0 hover:no-underline flex-1" hideChevron>
+                            <div className="flex items-center gap-4 flex-1">
+                                <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                                <span className="font-semibold">{epic.title}</span>
+                                <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
+                                {!isUnassignedEpic && totalEpicItemsCount > 0 && (
                                 <div className="flex items-center gap-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
-                                  <Progress value={donePercentage} className="h-2 w-24" />
-                                  <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                                    <Progress value={donePercentage} className="h-2 w-24" />
+                                    <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
                                 </div>
-                              )}
+                                )}
                             </div>
                          </AccordionTrigger>
                          {!isUnassignedEpic && (
@@ -1330,8 +1330,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                           )}
                     </div>
-                  <AccordionContent className="space-y-2 p-2">
-                      <div className="flex items-center justify-between px-4 pb-2 border-b">
+                  <AccordionContent className="space-y-2 px-4 pb-4">
+                      <div className="flex items-center justify-between pb-2 border-b">
                           <div className="flex items-center gap-3">
                             <Checkbox
                                   id={`select-all-${epic.id}`}
@@ -1355,7 +1355,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               </div>
                           )}
                       </div>
-                      <div className="p-2 space-y-2">
+                      <div className="pt-2 space-y-2">
                         {backlogItemsForGroup.length > 0 ? (
                           backlogItemsForGroup.map((story) => {
                             const storyEpic = epics.find((e) => e.id === story.epicId);
@@ -2255,3 +2255,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
 
 
+
+
+    
