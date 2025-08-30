@@ -274,27 +274,29 @@ function StoryCard({
         </div>
       </CardFooter>
       <CollapsibleContent>
-        <div className="px-6 pb-4 space-y-2">
+        <div className="px-4 pb-4 space-y-2">
             {(subTasks.length > 0 || bugs.length > 0) && <Separator />}
             {[...subTasks, ...bugs].map(item => {
                 const ItemIcon = workItemIcons[item.itemType];
+                const impactedSystem = useProject().impactedSystems.find(s => s.id === item.impactedSystemId);
+
                 return (
-                    <div key={item.id} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                            <ItemIcon className="h-3 w-3 text-muted-foreground" />
-                            <span 
-                                className="font-medium cursor-pointer hover:underline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onSubItemClick(item);
-                                }}
-                            >
-                                [{item.storyId}] {item.title}
-                            </span>
-                        </div>
+                    <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs">
+                        <ItemIcon className="h-3 w-3 text-muted-foreground" />
+                        <span 
+                            className="font-medium cursor-pointer hover:underline truncate"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSubItemClick(item);
+                            }}
+                        >
+                            [{item.storyId}] {item.title}
+                        </span>
+                        <Badge variant="outline" className="w-20 justify-center truncate">{impactedSystem?.name || 'N/A'}</Badge>
+                        <span className="w-12 text-center text-muted-foreground">{item.estimatedHours || 0}h</span>
                          <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Badge variant="outline" className="cursor-pointer">{item.status}</Badge>
+                            <Badge variant="outline" className="cursor-pointer w-20 justify-center">{item.status}</Badge>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
                             {statusOptions.filter(s => s !== item.status).map(status => (
@@ -1284,4 +1286,5 @@ export default function KanbanPage() {
     </>
   );
 }
+
 

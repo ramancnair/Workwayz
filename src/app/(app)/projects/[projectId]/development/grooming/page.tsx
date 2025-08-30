@@ -654,6 +654,24 @@ export default function GroomingPage() {
         }
     }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
 
+    const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
+        const holidayDates = holidays.map(h => parseISO(h.date));
+        const interval = eachDayOfInterval({ start, end });
+        
+        return interval.filter(day => {
+          const dayOfWeek = day.getDay();
+          const isWeekend = weeklyOffDays.includes(dayOfWeek);
+          const isHoliday = holidayDates.some(h => isSameDay(day, h));
+          return !isWeekend && !isHoliday;
+        }).length;
+      }, [holidays, weeklyOffDays]);
+
+    const actualEffort = useMemo(() => {
+        if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
+        const start = parseISO(selectedStory.developmentStartDate);
+        const end = parseISO(selectedStory.completionDate);
+        return calculateBusinessDays(start, end);
+    }, [selectedStory, calculateBusinessDays]);
 
     React.useEffect(() => {
         if (watchedStartDate && projectSettings?.sprintDurationInWeeks) {
@@ -688,7 +706,7 @@ export default function GroomingPage() {
     
     const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
         if (!selectedStory) return;
-        setEditStorySubmitting(true);
+        setIsEditStorySubmitting(true);
         
         const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
 
@@ -719,7 +737,7 @@ export default function GroomingPage() {
 
     const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
         if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
-        setEditStorySubmitting(true);
+        setIsEditStorySubmitting(true);
         
         const success = await updateStory(selectedStory.id, {
             title: values.title,
@@ -739,7 +757,7 @@ export default function GroomingPage() {
         } else {
             toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
         }
-        setEditStorySubmitting(false);
+        setIsEditStorySubmitting(false);
     };
 
     const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
@@ -1132,6 +1150,12 @@ export default function GroomingPage() {
                                         ))
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
+                                    )}
+                                    {actualEffort !== null && (
+                                        <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                            <span>Actual Effort:</span>
+                                            <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                        </div>
                                     )}
                                 </div>
                             </TabsContent>
@@ -1565,6 +1589,12 @@ export default function GroomingPage() {
                                 ) : (
                                     <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                 )}
+                                {actualEffort !== null && (
+                                    <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                        <span>Actual Effort:</span>
+                                        <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                    </div>
+                                )}
                             </div>
                         </TabsContent>
                     </Tabs>
@@ -1589,6 +1619,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
