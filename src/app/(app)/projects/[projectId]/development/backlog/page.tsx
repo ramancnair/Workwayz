@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -50,7 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority } from '@/types';
+import type { Epic, Story, Sprint, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority, StatusHistoryItem } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -1306,7 +1307,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               return (
                   <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
                      <div className="flex items-center justify-between px-6 py-4">
-                         <AccordionTrigger className="p-0 hover:no-underline flex-1" hideChevron>
+                         <AccordionTrigger className="p-0 hover:no-underline flex-1 group" hideChevron>
                             <div className="flex items-center gap-4 flex-1">
                                 <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                                 <span className="font-semibold">{epic.title}</span>
@@ -1330,8 +1331,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                           )}
                     </div>
-                  <AccordionContent className="space-y-2 px-4 pb-4">
-                      <div className="flex items-center justify-between pb-2 border-b">
+                  <AccordionContent className="px-4 pb-4">
+                       <div className="flex items-center justify-between pb-2 border-y py-2 mb-2">
                           <div className="flex items-center gap-3">
                             <Checkbox
                                   id={`select-all-${epic.id}`}
@@ -1355,7 +1356,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               </div>
                           )}
                       </div>
-                      <div className="pt-2 space-y-2">
+                      <div className="space-y-2">
                         {backlogItemsForGroup.length > 0 ? (
                           backlogItemsForGroup.map((story) => {
                             const storyEpic = epics.find((e) => e.id === story.epicId);
@@ -1517,7 +1518,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         <Tabs defaultValue="details" className="w-full">
                             <TabsList>
                                 <TabsTrigger value="details">Details</TabsTrigger>
-                                <TabsTrigger value="logs">Logs</TabsTrigger>
+                                <TabsTrigger value="logs">
+                                    Logs
+                                    <Badge variant="secondary" className="ml-2">
+                                        {selectedStorySubItems.logs.length}
+                                    </Badge>
+                                </TabsTrigger>
                             </TabsList>
                             <TabsContent value="details" className="pt-4">
                                 <div className="space-y-4">
@@ -1631,7 +1637,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     {selectedStorySubItems.logs.length > 0 ? (
                                         selectedStorySubItems.logs.map((log, index) => (
                                             <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
-                                                <span>Status changed to <strong>{log.status}</strong></span>
+                                                <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
                                                 <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
                                             </div>
                                         ))
@@ -2161,7 +2167,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             {selectedStorySubItems.logs.length > 0 ? (
                                 selectedStorySubItems.logs.map((log, index) => (
                                     <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
-                                        <span>Status changed to <strong>{log.status}</strong></span>
+                                        <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
                                         <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
                                     </div>
                                 ))
