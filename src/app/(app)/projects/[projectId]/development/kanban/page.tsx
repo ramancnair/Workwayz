@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -154,14 +153,18 @@ function StoryCard({
     <Card className={cn("bg-card", className)}>
       <div className="p-4">
         <div className="flex justify-between items-start">
-            <CollapsibleTrigger className="flex-1 pr-2 text-left space-y-1">
+            <div className="flex-1 pr-2 space-y-1">
                 <div className="flex items-center gap-2">
-                    {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                    <CollapsibleTrigger asChild>
+                      <button>
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </CollapsibleTrigger>
                      {story.priority && (
                         <TooltipProvider>
                         <Tooltip>
-                            <TooltipTrigger>
-                            <Circle className={cn("h-3 w-3", priorityStyles[story.priority])} />
+                            <TooltipTrigger asChild>
+                              <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[story.priority])} />
                             </TooltipTrigger>
                             <TooltipContent>
                             <p>{story.priority} Priority</p>
@@ -175,7 +178,7 @@ function StoryCard({
                     {isReadyForDev && <Flag className="h-4 w-4 text-green-500" />}
                 </div>
                 <p className="font-semibold break-words">{story.title}</p>
-            </CollapsibleTrigger>
+            </div>
             <div className="flex items-center gap-1 flex-shrink-0">
                 {epic && <Badge variant="secondary">{epic.title}</Badge>}
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
@@ -1246,6 +1249,3 @@ export default function KanbanPage() {
     </>
   );
 }
-
-    
-
