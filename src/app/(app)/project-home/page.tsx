@@ -545,7 +545,7 @@ export default function ProjectsDashboard() {
             ) : (
              <Accordion type="multiple" defaultValue={portfolios.map(p => p.id)} className="w-full">
                 {projectsByPortfolio.map(portfolio => (
-                   <AccordionItem value={portfolio.id} key={portfolio.id}>
+                   <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
                      <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
                        <div className="flex items-center gap-4">
                          <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
@@ -650,4 +650,3 @@ export default function ProjectsDashboard() {
     
 
     
-
