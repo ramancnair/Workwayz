@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -38,7 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
@@ -545,8 +546,9 @@ export default function ProjectsDashboard() {
              <Accordion type="multiple" defaultValue={portfolios.map(p => p.id)} className="w-full">
                 {projectsByPortfolio.map(portfolio => (
                    <AccordionItem value={portfolio.id} key={portfolio.id}>
-                     <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80">
-                       <div className="flex items-center gap-2">
+                     <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80 group">
+                       <div className="flex items-center gap-4">
+                         <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                          <Folder className="h-5 w-5" />
                          <span className="font-semibold">{portfolio.name}</span>
                        </div>
