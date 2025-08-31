@@ -1318,8 +1318,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
               return (
                   <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
-                     <div className="flex items-center px-4 py-2 group">
-                      <AccordionTrigger className="flex-1 p-2 group">
+                    <div className="flex items-center px-4 py-2 group">
+                      <AccordionTrigger className="flex-1 p-2" hideChevron>
                          <div className="flex items-center gap-4 flex-1">
                              <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                              <span className="font-semibold">{epic.title}</span>
@@ -2274,5 +2274,3 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
 
 
-
-    
