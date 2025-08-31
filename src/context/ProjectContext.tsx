@@ -3,6 +3,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -1785,6 +1786,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         // 1. Copy Impacted Systems
         const initialSystemsSnapshot = await getDocs(collection(projectDocRef, 'initialImpactedSystems'));
         if (!initialSystemsSnapshot.empty) {
+            const liveSystemsSnapshot = await getDocs(collection(projectDocRef, 'impactedSystems'));
+            liveSystemsSnapshot.docs.forEach(liveDoc => batch.delete(liveDoc.ref));
             initialSystemsSnapshot.docs.forEach(initialDoc => {
                 const newDocRef = doc(collection(projectDocRef, 'impactedSystems'));
                 batch.set(newDocRef, initialDoc.data());
