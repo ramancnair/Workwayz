@@ -335,7 +335,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         </SidebarMenu>
         <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:justify-center">
             <Avatar className="h-10 w-10">
-                <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
+                <AvatarImage src="https://i.imgur.com/sdGSP24.jpeg" alt="User" data-ai-hint="user avatar" />
                 <AvatarFallback>RN</AvatarFallback>
             </Avatar>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
