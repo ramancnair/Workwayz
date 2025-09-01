@@ -399,15 +399,17 @@ export default function ProjectsDashboard() {
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
         const projectsSnapshot = await getDocs(collection(db, 'projects'));
-        const newIdNumber = projectsSnapshot.size > 0
-            ? Math.max(0, ...projectsSnapshot.docs
-                .map(doc => doc.data().id)
-                .filter((id: string | undefined) => id && typeof id === 'string' && id.startsWith('P-'))
-                .map((id: string) => parseInt(id.replace('P-', ''), 10) || 0)
-            ) + 1
+        const currentYear = new Date().getFullYear().toString().slice(-2);
+        
+        const projectsFromThisYear = projectsSnapshot.docs
+            .map(doc => doc.id)
+            .filter(id => id.startsWith(`P${currentYear}`));
+
+        const newIdNumber = projectsFromThisYear.length > 0 
+            ? Math.max(...projectsFromThisYear.map(id => parseInt(id.substring(3), 10))) + 1
             : 1;
 
-        const projectId = `P-${newIdNumber.toString().padStart(5, '0')}`;
+        const projectId = `P${currentYear}${newIdNumber.toString().padStart(5, '0')}`;
         const newProjectRef = doc(db, 'projects', projectId);
         
         await setDoc(newProjectRef, { ...dataToSave, id: projectId, isDeleted: false });
@@ -641,4 +643,3 @@ export default function ProjectsDashboard() {
     
 
     
-
