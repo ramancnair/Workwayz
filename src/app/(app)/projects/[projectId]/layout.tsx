@@ -79,10 +79,10 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                   <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                       <TabsTrigger value="initial-estimation" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Initial Estimation</TabsTrigger>
                       <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
+                      <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                       <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
                       <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
                       <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
-                      <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                       <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
                        <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
                        <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
