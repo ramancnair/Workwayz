@@ -502,6 +502,15 @@ export default function InitialEstimationPage() {
                 </Table>
             </CardContent>
         </Card>
+
+        {project?.status === 'Initial Estimation' && (
+          <div className="flex justify-end mt-6">
+            <Button onClick={handleConfirmEstimation} disabled={isConfirming} size="lg">
+              <CheckCircle className="mr-2 h-4 w-4" />
+              {isConfirming ? 'Confirming...' : 'Confirm Estimation'}
+            </Button>
+          </div>
+        )}
       </div>
 
       <Dialog open={isSystemDialogOpen} onOpenChange={(open) => { setIsSystemDialogOpen(open); if (!open) setEditingSystem(null); }}>
