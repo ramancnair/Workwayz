@@ -5,6 +5,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -438,17 +439,13 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                   batch.commit().catch(e => console.error("Failed to set default initial horizontals", e));
                 }
 
-                if (name === 'horizontals' && querySnapshot.empty) {
-                  getDocs(collection(rootProjectDocRef, 'initialHorizontals')).then(initialHorizontalsSnapshot => {
-                    if (initialHorizontalsSnapshot.empty) {
-                      const batch = writeBatch(db);
-                      defaultHorizontals.forEach(h => {
-                          const docRef = doc(collection(rootProjectDocRef, 'horizontals'));
-                          batch.set(docRef, h);
-                      });
-                      batch.commit().catch(e => console.error("Failed to set default horizontals", e));
-                    }
-                  })
+                if (name === 'horizontals' && querySnapshot.empty && project?.status !== 'Initial Estimation') {
+                  const batch = writeBatch(db);
+                  defaultHorizontals.forEach(h => {
+                      const docRef = doc(collection(rootProjectDocRef, 'horizontals'));
+                      batch.set(docRef, h);
+                  });
+                  batch.commit().catch(e => console.error("Failed to set default horizontals", e));
                 }
 
                 if (name === 'environments' && querySnapshot.empty) {
@@ -559,7 +556,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       unsubGlobalHolidays();
       unsubAllUsers();
     }
-  }, [projectId, pathname, getCollectionsForPage]);
+  }, [projectId, pathname, getCollectionsForPage, project?.status]);
 
 
   const updateProject = async (data: Partial<Omit<Project, 'id'>>): Promise<boolean> => {
@@ -1781,43 +1778,37 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const confirmInitialEstimation = async (): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-        const batch = writeBatch(db);
-        const projectDocRef = doc(db, 'projects', projectId);
+      const batch = writeBatch(db);
+      const projectDocRef = doc(db, 'projects', projectId);
 
-        // 1. Copy Impacted Systems
-        const initialSystemsSnapshot = await getDocs(collection(projectDocRef, 'initialImpactedSystems'));
-        if (!initialSystemsSnapshot.empty) {
-            const liveSystemsSnapshot = await getDocs(collection(projectDocRef, 'impactedSystems'));
-            liveSystemsSnapshot.docs.forEach(liveDoc => batch.delete(liveDoc.ref));
-            initialSystemsSnapshot.docs.forEach(initialDoc => {
-                const newDocRef = doc(collection(projectDocRef, 'impactedSystems'));
-                batch.set(newDocRef, initialDoc.data());
-            });
-        }
+      // 1. Copy Impacted Systems
+      const initialSystemsSnapshot = await getDocs(collection(projectDocRef, 'initialImpactedSystems'));
+      const liveSystemsSnapshot = await getDocs(collection(projectDocRef, 'impactedSystems'));
+      liveSystemsSnapshot.docs.forEach(liveDoc => batch.delete(liveDoc.ref));
+      initialSystemsSnapshot.docs.forEach(initialDoc => {
+          const newDocRef = doc(collection(projectDocRef, 'impactedSystems'));
+          batch.set(newDocRef, initialDoc.data());
+      });
 
-        // 2. Replace Horizontals
-        const initialHorizontalsSnapshot = await getDocs(collection(projectDocRef, 'initialHorizontals'));
-        if (!initialHorizontalsSnapshot.empty) {
-            // Delete existing live horizontals first
-            const liveHorizontalsSnapshot = await getDocs(collection(projectDocRef, 'horizontals'));
-            liveHorizontalsSnapshot.docs.forEach(liveDoc => {
-                batch.delete(liveDoc.ref);
-            });
-            // Add initial horizontals to the live collection
-            initialHorizontalsSnapshot.docs.forEach(initialDoc => {
-                const newDocRef = doc(collection(projectDocRef, 'horizontals'));
-                batch.set(newDocRef, initialDoc.data());
-            });
-        }
-        
-        // 3. Update project status
-        batch.update(projectDocRef, { status: 'Not Started' });
+      // 2. Copy enabled Horizontals
+      const initialHorizontalsSnapshot = await getDocs(collection(projectDocRef, 'initialHorizontals'));
+      const liveHorizontalsSnapshot = await getDocs(collection(projectDocRef, 'horizontals'));
+      liveHorizontalsSnapshot.docs.forEach(liveDoc => batch.delete(liveDoc.ref));
+      initialHorizontalsSnapshot.docs.forEach(initialDoc => {
+          if (initialDoc.data().isEnabled) {
+              const newDocRef = doc(collection(projectDocRef, 'horizontals'));
+              batch.set(newDocRef, initialDoc.data());
+          }
+      });
+      
+      // 3. Update project status
+      batch.update(projectDocRef, { status: 'Not Started' });
 
-        await batch.commit();
-        return true;
+      await batch.commit();
+      return true;
     } catch (e) {
-        console.error("Firebase Error: Failed to confirm initial estimation.", e);
-        return false;
+      console.error("Firebase Error: Failed to confirm initial estimation.", e);
+      return false;
     }
   };
 
