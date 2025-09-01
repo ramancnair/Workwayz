@@ -1324,29 +1324,28 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               return (
                   <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
                     <AccordionTrigger className="flex-1 p-2 group" hideChevron>
-                         <div className="flex items-center gap-4 flex-1">
-                             <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                             <span className="font-semibold">{epic.title}</span>
-                             <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
-                             {!isUnassignedEpic && totalEpicItemsCount > 0 && (
-                             <div className="flex items-center gap-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
-                                 <Progress value={donePercentage} className="h-2 w-24" />
-                                 <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
-                             </div>
-                             )}
-                         </div>
-                    </AccordionTrigger>
-                       {!isUnassignedEpic && (
-                          <div className="flex items-center gap-1 pl-4 flex-shrink-0">
+                        <div className="flex items-center gap-4 flex-1">
+                            <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <span className="font-semibold">{epic.title}</span>
+                            <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
+                            {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                            <div className="flex items-center gap-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
+                                <Progress value={donePercentage} className="h-2 w-24" />
+                                <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                            </div>
+                            )}
+                        </div>
+                        {!isUnassignedEpic && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}>
-                              <Edit className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic as Epic); }}>
-                              <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
+                        </div>
                         )}
-                    
+                    </AccordionTrigger>
                   <AccordionContent className="px-4 pb-4">
                        <div className="flex items-center justify-between pb-2 border-y py-2 mb-2">
                           <div className="flex items-center gap-3">
@@ -2277,6 +2276,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
