@@ -554,78 +554,97 @@ export default function BacklogPage() {
 
   const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
     setIsAutoGenSubmitting(true);
-    const success = await autoGenerateStories(values);
-    if(success) {
-        toast({ title: "Success", description: "Test data generated successfully."});
-        setIsAutoGenOpen(false);
-    } else {
-        toast({ variant: "destructive", title: "Error", description: "Could not generate test data." });
+    try {
+        const success = await autoGenerateStories(values);
+        if(success) {
+            toast({ title: "Success", description: "Test data generated successfully."});
+            setIsAutoGenOpen(false);
+        } else {
+            toast({ variant: "destructive", title: "Error", description: "Could not generate test data." });
+        }
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "Error", description: e.message || "An unknown error occurred." });
+    } finally {
+        setIsAutoGenSubmitting(false);
     }
-    setIsAutoGenSubmitting(false);
   }
   
   const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     setAddEpicSubmitting(true);
-    const success = await addEpic({
-      title: values.title,
-      description: values.description || '',
-    });
-    if (success) {
-      setAddEpicOpen(false);
-    } else {
-      toast({ variant: "destructive", title: "Error", description: `Epic "${values.title}" already exists.` });
+    try {
+        const success = await addEpic({
+            title: values.title,
+            description: values.description || '',
+        });
+        if (success) {
+            setAddEpicOpen(false);
+        } else {
+             toast({ variant: "destructive", title: "Error", description: `An epic with this title may already exist.` });
+        }
+    } catch (e: any) {
+         toast({ variant: "destructive", title: "Error", description: e.message || "An unknown error occurred." });
+    } finally {
+        setAddEpicSubmitting(false);
     }
-    setAddEpicSubmitting(false);
   };
   
   const onEditEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     if (!editingEpic) return;
     setEditEpicSubmitting(true);
-    const success = await updateEpic(editingEpic.id, values);
-    if (success) {
-      setEditingEpic(null);
-    } else {
-      toast({ variant: "destructive", title: "Error", description: `Epic "${values.title}" already exists.` });
+    try {
+        const success = await updateEpic(editingEpic.id, values);
+        if (success) {
+          setEditingEpic(null);
+        } else {
+          toast({ variant: "destructive", title: "Error", description: `An epic with this title may already exist.` });
+        }
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "Error", description: e.message || "An unknown error occurred." });
+    } finally {
+        setEditEpicSubmitting(false);
     }
-    setEditEpicSubmitting(false);
   };
 
   const onAddStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setAddStorySubmitting(true);
-    
-    let parentStory: Story | undefined;
-    if (['Bug', 'Feature Change'].includes(values.itemType) && values.parentStoryId) {
-      parentStory = stories.find(s => s.id === values.parentStoryId);
-    }
+    try {
+        let parentStory: Story | undefined;
+        if (['Bug', 'Feature Change'].includes(values.itemType) && values.parentStoryId) {
+          parentStory = stories.find(s => s.id === values.parentStoryId);
+        }
 
-    const newStory: Omit<Story, 'id' | 'storyId'> = {
-      title: values.title,
-      description: values.description || '',
-      itemType: values.itemType,
-      acceptanceCriteria: values.acceptanceCriteria,
-      reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
-      assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-      epicId: ['Task', 'Requirement/Story'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
-      parentStoryId: ['Bug', 'Feature Change'].includes(values.itemType) ? (values.parentStoryId || undefined) : undefined,
-      status: 'To Do',
-      estimatedHours: values.estimatedHours,
-      priority: values.priority,
-      sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
-      releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
-      environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-      impactedSystemIds: values.impactedSystemIds,
-      attachments: values.attachments,
-      isDeleted: false,
-      deletedAt: null,
-    };
+        const newStory: Omit<Story, 'id' | 'storyId'> = {
+          title: values.title,
+          description: values.description || '',
+          itemType: values.itemType,
+          acceptanceCriteria: values.acceptanceCriteria,
+          reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
+          assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+          epicId: ['Task', 'Requirement/Story'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
+          parentStoryId: ['Bug', 'Feature Change'].includes(values.itemType) ? (values.parentStoryId || undefined) : undefined,
+          status: 'To Do',
+          estimatedHours: values.estimatedHours,
+          priority: values.priority,
+          sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
+          releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
+          environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+          impactedSystemIds: values.impactedSystemIds,
+          attachments: values.attachments,
+          isDeleted: false,
+          deletedAt: null,
+        };
 
-    const success = await addStory(newStory);
-    if (success) {
-      setAddRequirementOpen(false);
-    } else {
-      toast({ variant: "destructive", title: `Error Creating ${values.itemType}`, description: `Could not save your ${values.itemType.toLowerCase()}.` });
+        const success = await addStory(newStory);
+        if (success) {
+          setAddRequirementOpen(false);
+        } else {
+          toast({ variant: "destructive", title: `Error Creating ${values.itemType}`, description: `Could not save your ${values.itemType.toLowerCase()}.` });
+        }
+    } catch(e: any) {
+        toast({ variant: "destructive", title: "Error", description: e.message || "An unknown error occurred." });
+    } finally {
+        setAddStorySubmitting(false);
     }
-    setAddStorySubmitting(false);
   };
   
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
