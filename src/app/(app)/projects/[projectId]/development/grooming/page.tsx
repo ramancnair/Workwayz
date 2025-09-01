@@ -583,14 +583,16 @@ export default function GroomingPage() {
     const watchedImpactedSystem = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
   
     const filteredAssignees = useMemo(() => {
-      if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
-        return employees;
-      }
-      return employees.filter(user => 
-        user.role === 'Lead' || 
-        user.capabilities?.includes(watchedImpactedSystem)
-      );
-    }, [watchedImpactedSystem, employees]);
+        if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
+            return employees;
+        }
+        const system = impactedSystems.find(s => s.id === watchedImpactedSystem);
+        if (!system) return employees;
+        return employees.filter(user => 
+            user.role === 'Lead' || 
+            user.capabilities?.includes(system.id)
+        );
+    }, [watchedImpactedSystem, employees, impactedSystems]);
 
     const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
     const parentStoryOptions = useMemo(() => parentStories.map(s => ({
@@ -690,12 +692,14 @@ export default function GroomingPage() {
         }).length;
       }, [holidays, weeklyOffDays]);
 
-    const actualEffort = useMemo(() => {
+    const actualEffortInHours = useMemo(() => {
         if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
         const start = parseISO(selectedStory.developmentStartDate);
         const end = parseISO(selectedStory.completionDate);
-        return calculateBusinessDays(start, end);
-    }, [selectedStory, calculateBusinessDays]);
+        const days = calculateBusinessDays(start, end);
+        const hoursPerDay = projectSettings?.manDayToHours || 8;
+        return days * hoursPerDay;
+      }, [selectedStory, calculateBusinessDays, projectSettings]);
 
     React.useEffect(() => {
         if (watchedStartDate && projectSettings?.sprintDurationInWeeks) {
@@ -1175,10 +1179,10 @@ export default function GroomingPage() {
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                     )}
-                                    {actualEffort !== null && (
+                                    {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
-                                            <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                            <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
                                         </div>
                                     )}
                                 </div>
@@ -1375,7 +1379,7 @@ export default function GroomingPage() {
                                     <FormLabel>Parent Item</FormLabel>
                                     <FormControl>
                                       <Input
-                                        list="parent-story-options-grooming"
+                                        list="parent-story-options-edit"
                                         placeholder="Link to a story or feature change"
                                         value={editParentStoryText}
                                         onChange={(e) => {
@@ -1399,7 +1403,7 @@ export default function GroomingPage() {
                                         }}
                                       />
                                     </FormControl>
-                                    <datalist id="parent-story-options-grooming">
+                                    <datalist id="parent-story-options-edit">
                                       {parentStoryOptions.map((opt) => (
                                         <option key={opt.value} value={opt.label} />
                                       ))}
@@ -1613,10 +1617,10 @@ export default function GroomingPage() {
                                 ) : (
                                     <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                 )}
-                                {actualEffort !== null && (
+                                {actualEffortInHours !== null && (
                                     <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                         <span>Actual Effort:</span>
-                                        <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                        <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
                                     </div>
                                 )}
                             </div>
@@ -1643,6 +1647,8 @@ export default function GroomingPage() {
     
 
     
+
+
 
 
 

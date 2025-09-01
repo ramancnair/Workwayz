@@ -337,6 +337,7 @@ export default function BacklogPage() {
     bulkMoveStoriesToEpic,
     holidays,
     weeklyOffDays,
+    projectSettings
   } = useProject();
   
   const { toast } = useToast();
@@ -381,12 +382,14 @@ export default function BacklogPage() {
     }).length;
   }, [holidays, weeklyOffDays]);
 
-  const actualEffort = useMemo(() => {
+  const actualEffortInHours = useMemo(() => {
     if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
     const start = parseISO(selectedStory.developmentStartDate);
     const end = parseISO(selectedStory.completionDate);
-    return calculateBusinessDays(start, end);
-  }, [selectedStory, calculateBusinessDays]);
+    const days = calculateBusinessDays(start, end);
+    const hoursPerDay = projectSettings?.manDayToHours || 8;
+    return days * hoursPerDay;
+  }, [selectedStory, calculateBusinessDays, projectSettings]);
 
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
@@ -439,11 +442,13 @@ export default function BacklogPage() {
     if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
       return users;
     }
+    const system = impactedSystems.find(s => s.id === watchedImpactedSystem);
+    if (!system) return users;
     return users.filter(user => 
       user.role === 'Lead' || 
-      user.capabilities?.includes(watchedImpactedSystem)
+      user.capabilities?.includes(system.id)
     );
-  }, [watchedImpactedSystem, users]);
+  }, [watchedImpactedSystem, users, impactedSystems]);
 
   const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
@@ -1318,8 +1323,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
               return (
                   <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
-                    <div className="flex items-center px-4 py-2 group">
-                      <AccordionTrigger className="flex-1 p-2" hideChevron>
+                    <AccordionTrigger className="flex-1 p-2 group" hideChevron>
                          <div className="flex items-center gap-4 flex-1">
                              <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                              <span className="font-semibold">{epic.title}</span>
@@ -1331,7 +1335,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                              </div>
                              )}
                          </div>
-                      </AccordionTrigger>
+                    </AccordionTrigger>
                        {!isUnassignedEpic && (
                           <div className="flex items-center gap-1 pl-4 flex-shrink-0">
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}>
@@ -1342,7 +1346,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </Button>
                           </div>
                         )}
-                    </div>
+                    
                   <AccordionContent className="px-4 pb-4">
                        <div className="flex items-center justify-between pb-2 border-y py-2 mb-2">
                           <div className="flex items-center gap-3">
@@ -1656,10 +1660,10 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                     )}
-                                    {actualEffort !== null && (
+                                    {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
-                                            <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                            <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
                                         </div>
                                     )}
                                 </div>
@@ -2186,10 +2190,10 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             ) : (
                                 <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                             )}
-                            {actualEffort !== null && (
+                            {actualEffortInHours !== null && (
                                 <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                     <span>Actual Effort:</span>
-                                    <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                    <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
                                 </div>
                             )}
                         </div>
@@ -2261,6 +2265,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

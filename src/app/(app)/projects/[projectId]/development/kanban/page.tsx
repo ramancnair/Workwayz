@@ -318,7 +318,7 @@ function StoryCard({
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -354,11 +354,13 @@ export default function KanbanPage() {
     if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
       return users;
     }
+    const system = impactedSystems.find(s => s.id === watchedImpactedSystem);
+    if (!system) return users;
     return users.filter(user => 
       user.role === 'Lead' || 
-      user.capabilities?.includes(watchedImpactedSystem)
+      user.capabilities?.includes(system.id)
     );
-  }, [watchedImpactedSystem, users]);
+  }, [watchedImpactedSystem, users, impactedSystems]);
   
   const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
     const holidayDates = holidays.map(h => parseISO(h.date));
@@ -372,12 +374,14 @@ export default function KanbanPage() {
     }).length;
   }, [holidays, weeklyOffDays]);
   
-  const actualEffort = useMemo(() => {
+  const actualEffortInHours = useMemo(() => {
     if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
     const start = parseISO(selectedStory.developmentStartDate);
     const end = parseISO(selectedStory.completionDate);
-    return calculateBusinessDays(start, end);
-  }, [selectedStory, calculateBusinessDays]);
+    const days = calculateBusinessDays(start, end);
+    const hoursPerDay = projectSettings?.manDayToHours || 8;
+    return days * hoursPerDay;
+  }, [selectedStory, calculateBusinessDays, projectSettings]);
 
   const handleSetSelectedStory = (story: Story | null) => {
     if (story) {
@@ -788,10 +792,10 @@ export default function KanbanPage() {
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                     )}
-                                     {actualEffort !== null && (
+                                     {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
-                                            <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                            <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
                                         </div>
                                     )}
                                 </div>
@@ -1214,10 +1218,10 @@ export default function KanbanPage() {
                                 ) : (
                                     <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                 )}
-                                {actualEffort !== null && (
+                                {actualEffortInHours !== null && (
                                     <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                         <span>Actual Effort:</span>
-                                        <span>{actualEffort} {actualEffort === 1 ? 'day' : 'days'}</span>
+                                        <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
                                     </div>
                                 )}
                             </div>
@@ -1298,6 +1302,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
