@@ -398,29 +398,10 @@ export default function ProjectsDashboard() {
         await updateDoc(projectRef, dataToSave);
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
-        const year = new Date().getFullYear().toString().slice(-2);
-        const prefix = `P${year}`;
+        const newProjectRef = doc(collection(db, 'projects'));
+        const projectId = newProjectRef.id;
         
-        const projectsQuery = query(collection(db, 'projects'), where('id', '>=', prefix), where('id', '<', `P${parseInt(year) + 1}`));
-        const querySnapshot = await getDocs(projectsQuery);
-        
-        let maxSerial = 0;
-        querySnapshot.forEach(doc => {
-            const docId = doc.id;
-            const serialPart = docId.substring(prefix.length);
-            if (/^\d{6}$/.test(serialPart)) {
-                const serial = parseInt(serialPart, 10);
-                if (serial > maxSerial) {
-                    maxSerial = serial;
-                }
-            }
-        });
-
-        const newSerial = (maxSerial + 1).toString().padStart(6, '0');
-        const projectId = `${prefix}${newSerial}`;
-
-        const projectRef = doc(db, 'projects', projectId);
-        await setDoc(projectRef, { ...dataToSave, id: projectId, isDeleted: false });
+        await setDoc(newProjectRef, { ...dataToSave, id: projectId, isDeleted: false });
         toast({ title: 'Success', description: 'Project created successfully.' });
       }
 
@@ -551,6 +532,7 @@ export default function ProjectsDashboard() {
                          <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                          <Folder className="h-5 w-5" />
                          <span className="font-semibold">{portfolio.name}</span>
+                         <Badge variant="secondary">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}</Badge>
                        </div>
                      </AccordionTrigger>
                      <AccordionContent className="p-0">
