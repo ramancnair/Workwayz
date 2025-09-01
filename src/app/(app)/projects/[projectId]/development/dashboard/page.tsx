@@ -29,16 +29,20 @@ const burnupChartConfig = {
   ideal: { label: "Ideal Burnup", color: "hsl(var(--chart-1))" },
 } satisfies ChartConfig;
 
-const getStatusOnDate = (statusHistory: StatusHistoryItem[] = [], targetDate: Date): string | null => {
-    if (!statusHistory || statusHistory.length === 0) return null;
+const getStatusOnDate = (item: Story, targetDate: Date): string | null => {
+    if (!item.statusHistory || item.statusHistory.length === 0) {
+        return item.status; // Fallback to current status
+    }
 
-    let effectiveStatus = null;
+    const sortedHistory = [...item.statusHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    const sortedHistory = [...statusHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // The first entry in history is the creation status.
+    const creationEntry = sortedHistory[0];
+    let effectiveStatus: string | null = creationEntry.toStatus;
 
     for (const historyItem of sortedHistory) {
         if (startOfDay(new Date(historyItem.date)) <= startOfDay(targetDate)) {
-            effectiveStatus = historyItem.status;
+            effectiveStatus = historyItem.toStatus;
         } else {
             break; 
         }
@@ -124,7 +128,7 @@ export default function DevelopmentDashboard() {
               let storyCompletedEffort = 0;
               
               const checkCompletion = (item: Story) => {
-                  const statusOnDate = getStatusOnDate(item.statusHistory, date);
+                  const statusOnDate = getStatusOnDate(item, date);
                   return statusOnDate === 'Done' ? (item.estimatedHours || 0) : 0;
               }
 
@@ -190,7 +194,7 @@ export default function DevelopmentDashboard() {
               let storyCompletedEffort = 0;
               
               const checkCompletion = (item: Story) => {
-                  const statusOnDate = getStatusOnDate(item.statusHistory, date);
+                  const statusOnDate = getStatusOnDate(item, date);
                   return statusOnDate === 'Done' ? (item.estimatedHours || 0) : 0;
               }
 
