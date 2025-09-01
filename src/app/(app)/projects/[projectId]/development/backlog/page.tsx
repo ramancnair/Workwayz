@@ -1660,6 +1660,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                     )}
+                                    {selectedStory?.estimatedHours && (
+                                        <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                            <span>Planned Effort:</span>
+                                            <span>{selectedStory.estimatedHours} {selectedStory.estimatedHours === 1 ? 'hour' : 'hours'}</span>
+                                        </div>
+                                    )}
                                     {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
@@ -2190,6 +2196,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             ) : (
                                 <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                             )}
+                            {selectedStory?.estimatedHours && (
+                                <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                    <span>Planned Effort:</span>
+                                    <span>{selectedStory.estimatedHours} {selectedStory.estimatedHours === 1 ? 'hour' : 'hours'}</span>
+                                </div>
+                            )}
                             {actualEffortInHours !== null && (
                                 <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                     <span>Actual Effort:</span>
@@ -2265,6 +2277,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

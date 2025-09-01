@@ -1179,6 +1179,12 @@ export default function GroomingPage() {
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                     )}
+                                    {selectedStory?.estimatedHours && (
+                                        <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                            <span>Planned Effort:</span>
+                                            <span>{selectedStory.estimatedHours} {selectedStory.estimatedHours === 1 ? 'hour' : 'hours'}</span>
+                                        </div>
+                                    )}
                                     {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
@@ -1501,9 +1507,9 @@ export default function GroomingPage() {
                         </TabsContent>
                          <TabsContent value="subTasks">
                              <div className="space-y-4 pt-4">
-                                {selectedStorySubItems.subTasks.length > 0 ? (
-                                    <div className="space-y-2 rounded-md border p-2">
-                                    {selectedStorySubItems.subTasks.map(item => {
+                                  <div className="space-y-2 rounded-md border p-2">
+                                  {selectedStorySubItems.subTasks.length > 0 ? (
+                                    selectedStorySubItems.subTasks.map(item => {
                                         const ItemIcon = workItemIcons[item.itemType];
                                         return (
                                             <div key={item.id} className="flex items-center justify-between text-sm">
@@ -1514,11 +1520,11 @@ export default function GroomingPage() {
                                                 <Badge variant="outline">{item.status}</Badge>
                                             </div>
                                         )
-                                    })}
-                                    </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
-                                )}
+                                    })
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground italic px-2 py-4 text-center">No sub-tasks linked.</p>
+                                  )}
+                                  </div>
                                 {showAddSubTask ? (
                                     <div className='border p-4 mt-2 rounded-md'>
                                         <Form {...subTaskForm}>
@@ -1617,6 +1623,12 @@ export default function GroomingPage() {
                                 ) : (
                                     <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
                                 )}
+                                {selectedStory?.estimatedHours && (
+                                    <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                        <span>Planned Effort:</span>
+                                        <span>{selectedStory.estimatedHours} {selectedStory.estimatedHours === 1 ? 'hour' : 'hours'}</span>
+                                    </div>
+                                )}
                                 {actualEffortInHours !== null && (
                                     <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                         <span>Actual Effort:</span>
@@ -1647,6 +1659,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
