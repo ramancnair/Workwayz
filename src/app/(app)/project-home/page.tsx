@@ -398,8 +398,17 @@ export default function ProjectsDashboard() {
         await updateDoc(projectRef, dataToSave);
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
-        const newProjectRef = doc(collection(db, 'projects'));
-        const projectId = newProjectRef.id;
+        const projectsSnapshot = await getDocs(collection(db, 'projects'));
+        const newIdNumber = projectsSnapshot.size > 0
+            ? Math.max(0, ...projectsSnapshot.docs
+                .map(doc => doc.data().id)
+                .filter((id: string | undefined) => id && typeof id === 'string' && id.startsWith('P-'))
+                .map((id: string) => parseInt(id.replace('P-', ''), 10) || 0)
+            ) + 1
+            : 1;
+
+        const projectId = `P-${newIdNumber.toString().padStart(5, '0')}`;
+        const newProjectRef = doc(db, 'projects', projectId);
         
         await setDoc(newProjectRef, { ...dataToSave, id: projectId, isDeleted: false });
         toast({ title: 'Success', description: 'Project created successfully.' });
@@ -632,3 +641,4 @@ export default function ProjectsDashboard() {
     
 
     
+
