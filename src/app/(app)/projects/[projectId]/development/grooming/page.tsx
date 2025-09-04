@@ -564,7 +564,7 @@ export default function GroomingPage() {
             setVisibleSprintIndex(0);
         }
       }
-    }, [sprints, visibleSprintIndex]);
+    }, [sprints]);
 
     const sprintForm = useForm<z.infer<typeof sprintSchema>>({
         resolver: zodResolver(sprintSchema),
