@@ -264,13 +264,20 @@ function StoryItemCard({
           </DropdownMenu>
         </CardFooter>
         <CollapsibleContent>
-            <div className="px-6 pb-4 space-y-2">
+            <div className="px-4 pb-4 space-y-2">
                 {(subTasks.length > 0 || bugs.length > 0) && <Separator />}
+                <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs font-semibold text-muted-foreground px-2">
+                    <span></span>
+                    <span>Title</span>
+                    <span>Impacted System</span>
+                    <span>Effort</span>
+                    <span>Status</span>
+                </div>
                 {subItems?.map(item => {
                     const ItemIcon = workItemIcons[item.itemType];
                     const system = impactedSystems.find(s => s.id === item.impactedSystemId);
                     return (
-                         <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs">
+                         <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs py-1 px-2 rounded-md hover:bg-muted">
                             <ItemIcon className="h-3 w-3 text-muted-foreground" />
                             <span
                                 className="font-medium cursor-pointer hover:underline truncate"
