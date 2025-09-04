@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -1533,7 +1533,7 @@ export default function GroomingPage() {
                                                 </span>
                                                 <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
                                                 <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
-                                                <Badge variant="outline">{item.status}</Badge>
+                                                <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
                                             </div>
                                         )
                                     })}
@@ -1668,11 +1668,6 @@ export default function GroomingPage() {
           )}
         </DialogContent>
         </Dialog>
-    </>
-  );
+        </>
+    );
 }
-    
-
-    
-
-    
