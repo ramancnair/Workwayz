@@ -7,6 +7,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -755,13 +756,13 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         batch.update(storyRef, sanitizeForFirestore(payload));
         
         // Propagate sprint/release changes to sub-tasks
-        if (data.sprintId || data.releaseId) {
+        if (data.hasOwnProperty('sprintId') || data.hasOwnProperty('releaseId')) {
             const subTasks = stories.filter(s => s.parentStoryId === storyId && s.itemType === 'Sub Task');
             for (const task of subTasks) {
                 const taskRef = doc(db, 'projects', projectId, 'stories', task.id);
                 const subTaskUpdate: { sprintId?: string | null, releaseId?: string } = {};
-                if (data.sprintId) subTaskUpdate.sprintId = data.sprintId;
-                if (data.releaseId) subTaskUpdate.releaseId = data.releaseId;
+                if (data.hasOwnProperty('sprintId')) subTaskUpdate.sprintId = data.sprintId;
+                if (data.hasOwnProperty('releaseId')) subTaskUpdate.releaseId = data.releaseId;
                 batch.update(taskRef, subTaskUpdate);
             }
         }
