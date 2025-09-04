@@ -500,7 +500,7 @@ export default function GroomingPage() {
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
     const [selectionStack, setSelectionStack] = useState<Story[]>([]);
     const selectedStory = selectionStack[selectionStack.length - 1] || null;
-    const [visibleSprintIndex, setVisibleSprintIndex] = useState<number | null>(null);
+    const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
     const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
     const [showAddSubTask, setShowAddSubTask] = useState(false);
     const [viewBy, setViewBy] = useState<'story' | 'sub-task'>('story');
@@ -556,14 +556,12 @@ export default function GroomingPage() {
     }, [sprints, stories, viewBy, selectedAssigneeId]);
     
     useEffect(() => {
-      if (visibleSprintIndex === null) {
         const currentSprintIdx = sprints.findIndex(s => s.isCurrent);
         if (currentSprintIdx !== -1) {
             setVisibleSprintIndex(currentSprintIdx);
         } else if (sprints.length > 0) {
             setVisibleSprintIndex(0);
         }
-      }
     }, [sprints]);
 
     const sprintForm = useForm<z.infer<typeof sprintSchema>>({
@@ -854,13 +852,11 @@ export default function GroomingPage() {
     };
 
     const nextSprint = () => {
-        if (visibleSprintIndex === null) return;
-        setVisibleSprintIndex((prevIndex) => (prevIndex! + 1) % sprints.length);
+        setVisibleSprintIndex((prevIndex) => (prevIndex + 1) % sprints.length);
     };
 
     const prevSprint = () => {
-        if (visibleSprintIndex === null) return;
-        setVisibleSprintIndex((prevIndex) => (prevIndex! - 1 + sprints.length) % sprints.length);
+        setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprints.length) % sprints.length);
     };
     
     const selectedStorySubItems = useMemo(() => {
@@ -948,7 +944,7 @@ export default function GroomingPage() {
 
                     {/* Sprint Column */}
                     <div className="h-full flex flex-col">
-                    {sprintsWithStories.length > 0 && visibleSprintIndex !== null ? (
+                    {sprintsWithStories.length > 0 ? (
                         <SprintColumn 
                             key={sprintsWithStories[visibleSprintIndex].id} 
                             sprint={sprintsWithStories[visibleSprintIndex]} 
