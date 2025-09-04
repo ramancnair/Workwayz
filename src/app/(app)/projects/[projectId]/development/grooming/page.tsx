@@ -1185,7 +1185,7 @@ export default function GroomingPage() {
                                             <span>{selectedStory.estimatedHours} {selectedStory.estimatedHours === 1 ? 'hour' : 'hours'}</span>
                                         </div>
                                     )}
-                                    {actualEffortInHours !== null && (
+                                     {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
                                             <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
@@ -1505,26 +1505,33 @@ export default function GroomingPage() {
                             </div>
                         </div>
                         </TabsContent>
-                         <TabsContent value="subTasks">
-                             <div className="space-y-4 pt-4">
-                                  <div className="space-y-2 rounded-md border p-2">
-                                  {selectedStorySubItems.subTasks.length > 0 ? (
-                                    selectedStorySubItems.subTasks.map(item => {
+                        <TabsContent value="subTasks">
+                          <div className="space-y-4 pt-4">
+                            <div>
+                                <h4 className="text-sm font-medium mb-2">Sub-Tasks</h4>
+                                {selectedStorySubItems.subTasks.length > 0 ? (
+                                    <div className="space-y-2 rounded-md border p-2">
+                                    {selectedStorySubItems.subTasks.map(item => {
                                         const ItemIcon = workItemIcons[item.itemType];
+                                        const system = impactedSystems.find(s => s.id === item.impactedSystemId);
                                         return (
-                                            <div key={item.id} className="flex items-center justify-between text-sm">
-                                                <div className='flex items-center gap-2'>
-                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
-                                                </div>
-                                                <Badge variant="outline">{item.status}</Badge>
+                                            <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
+                                                <ItemIcon className="h-4 w-4 text-muted-foreground" />
+                                                <span 
+                                                  className="font-medium cursor-pointer hover:underline truncate" 
+                                                  onClick={() => handleDrillDown(item)}
+                                                >
+                                                  [{item.storyId}] {item.title}
+                                                </span>
+                                                <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
+                                                <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
                                             </div>
                                         )
-                                    })
-                                  ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2 py-4 text-center">No sub-tasks linked.</p>
-                                  )}
-                                  </div>
+                                    })}
+                                    </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground italic px-2 py-4 text-center">No sub-tasks linked.</p>
+                                )}
                                 {showAddSubTask ? (
                                     <div className='border p-4 mt-2 rounded-md'>
                                         <Form {...subTaskForm}>
@@ -1588,6 +1595,7 @@ export default function GroomingPage() {
                                     <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Sub-Task</Button>
                                 )}
                             </div>
+                          </div>
                         </TabsContent>
                         <TabsContent value="bugs">
                            <div className="space-y-4 pt-4">
@@ -1650,7 +1658,7 @@ export default function GroomingPage() {
             </>
           )}
         </DialogContent>
-      </Dialog>
+        </Dialog>
     </>
   );
 }
@@ -1659,6 +1667,8 @@ export default function GroomingPage() {
     
 
     
+
+
 
 
 
