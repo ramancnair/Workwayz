@@ -8,6 +8,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -572,10 +573,10 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   }
   
-  const updateStoryEffort = async (storyId: string, allStories: Story[]) => {
+  const updateStoryEffort = async (storyId: string) => {
     if (!db || !projectId) return;
 
-    const subItems = allStories.filter(s => s.parentStoryId === storyId);
+    const subItems = stories.filter(s => s.parentStoryId === storyId);
     const totalHours = subItems.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
     
     await updateDoc(doc(db, 'projects', projectId, 'stories', storyId), { estimatedHours: totalHours });
@@ -628,8 +629,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         
         await addDoc(collection(projectDocRef, 'stories'), sanitizeForFirestore(payload));
 
-        if ((story.itemType === 'Task' || story.itemType === 'Sub Task') && story.parentStoryId) {
-            await updateStoryEffort(story.parentStoryId, [...stories, { ...story, id: 'temp', storyId: 'temp' }]);
+        if (story.itemType === 'Sub Task' && story.parentStoryId) {
+            await updateStoryEffort(story.parentStoryId);
         }
         return true;
     } catch (e: any) {
@@ -769,9 +770,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         
         await batch.commit();
 
-        if (storyToUpdate && (storyToUpdate.itemType === 'Task' || storyToUpdate.itemType === 'Sub Task') && storyToUpdate.parentStoryId) {
-            const updatedStories = stories.map(s => s.id === storyId ? { ...s, ...data } : s);
-            await updateStoryEffort(storyToUpdate.parentStoryId, updatedStories);
+        if (storyToUpdate?.itemType === 'Sub Task' && storyToUpdate.parentStoryId) {
+            await updateStoryEffort(storyToUpdate.parentStoryId);
         }
         return true;
     } catch (e: any) {
@@ -784,7 +784,13 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     if (!db || !projectId) return false;
     try {
       const storyRef = doc(db, 'projects', projectId, 'stories', storyId);
+      const storyToDelete = stories.find(s => s.id === storyId);
+
       await updateDoc(storyRef, { isDeleted: true, deletedAt: Timestamp.now() });
+
+      if (storyToDelete?.itemType === 'Sub Task' && storyToDelete.parentStoryId) {
+        await updateStoryEffort(storyToDelete.parentStoryId);
+      }
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to soft-delete story.", { id: storyId, code: e.code, message: e.message, fullError: e });
