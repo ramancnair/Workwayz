@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle, CheckCircle } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus } from '@/types';
@@ -141,11 +141,18 @@ function StoryItemCard({
     onEdit: () => void;
     onSubItemClick: (story: Story) => void;
 }) {
-  const { sprints } = useProject();
+  const { sprints, impactedSystems } = useProject();
   const Icon = workItemIcons[story.itemType];
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
-  const hasEffort = story.estimatedHours && story.estimatedHours > 0;
+  
+  const isReadyForDev = useMemo(() => {
+    if (!story.estimatedHours || story.estimatedHours <= 0) return false;
+    if (!story.impactedSystemIds || story.impactedSystemIds.length === 0) return true; // No systems, so ready
+    
+    const subTaskSystemIds = new Set(subTasks.map(st => st.impactedSystemId).filter(Boolean));
+    return story.impactedSystemIds.every(id => subTaskSystemIds.has(id));
+  }, [story.estimatedHours, story.impactedSystemIds, subTasks]);
 
   const sortedSprints = useMemo(() => {
     return [...sprints].sort((a, b) => {
@@ -182,7 +189,7 @@ function StoryItemCard({
                         <p className="text-xs font-semibold text-muted-foreground">
                             {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                         </p>
-                        {hasEffort && <Flag className="h-4 w-4 text-green-500" />}
+                        {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
                     </div>
                     <p className="font-semibold break-words">{story.title}</p>
                 </div>
@@ -259,23 +266,24 @@ function StoryItemCard({
         <CollapsibleContent>
             <div className="px-6 pb-4 space-y-2">
                 {(subTasks.length > 0 || bugs.length > 0) && <Separator />}
-                {[...subTasks, ...bugs].map(item => {
+                {subItems?.map(item => {
                     const ItemIcon = workItemIcons[item.itemType];
+                    const system = impactedSystems.find(s => s.id === item.impactedSystemId);
                     return (
-                        <div key={item.id} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                                <ItemIcon className="h-3 w-3 text-muted-foreground" />
-                                <span 
-                                    className="font-medium cursor-pointer hover:underline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onSubItemClick(item);
-                                    }}
-                                >
-                                    [{item.storyId}] {item.title}
-                                </span>
-                            </div>
-                            <Badge variant="outline">{item.status}</Badge>
+                         <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs">
+                            <ItemIcon className="h-3 w-3 text-muted-foreground" />
+                            <span
+                                className="font-medium cursor-pointer hover:underline truncate"
+                                onClick={(e) => {
+                                e.stopPropagation();
+                                onSubItemClick(item);
+                                }}
+                            >
+                                [{item.storyId}] {item.title}
+                            </span>
+                            <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
+                            <span className="w-16 text-center text-muted-foreground">{item.estimatedHours || 0}h</span>
+                            <Badge variant="outline" className="w-20 justify-center">{item.status}</Badge>
                         </div>
                     )
                 })}
@@ -1668,21 +1676,3 @@ export default function GroomingPage() {
     
 
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

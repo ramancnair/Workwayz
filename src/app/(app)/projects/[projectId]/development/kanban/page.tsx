@@ -2,13 +2,13 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -178,7 +178,7 @@ function StoryCard({
                     <p className="text-xs font-semibold text-muted-foreground">
                     {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                     </p>
-                    {isReadyForDev && <Flag className="h-4 w-4 text-green-500" />}
+                    {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
                 </div>
                 <p className="font-semibold break-words">{story.title}</p>
             </div>
@@ -1314,6 +1314,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 
