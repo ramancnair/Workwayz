@@ -6,6 +6,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -725,42 +726,56 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateStory = async (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const storyToUpdate = stories.find(s => s.id === storyId);
-      const { startDate, endDate, ...rest } = data;
-      const payload: any = { ...rest, updatedAt: Timestamp.now().toDate().toISOString() };
-      const now = (testDate || new Date()).toISOString();
-      
-      // Handle status change history
-      if (data.status && data.status !== storyToUpdate?.status) {
-        const newHistoryEntry: StatusHistoryItem = {
-          fromStatus: storyToUpdate?.status || null,
-          toStatus: data.status,
-          date: now,
-        };
-        payload.statusHistory = arrayUnion(sanitizeForFirestore(newHistoryEntry));
+        const batch = writeBatch(db);
+        const storyRef = doc(db, 'projects', projectId, 'stories', storyId);
 
-        // Track development start and completion dates
-        if(storyToUpdate?.status === 'To Do' && data.status !== 'To Do' && !storyToUpdate.developmentStartDate) {
-            payload.developmentStartDate = now;
+        const storyToUpdate = stories.find(s => s.id === storyId);
+        const { startDate, endDate, ...rest } = data;
+        const payload: any = { ...rest, updatedAt: Timestamp.now().toDate().toISOString() };
+        const now = (testDate || new Date()).toISOString();
+
+        if (data.status && data.status !== storyToUpdate?.status) {
+            const newHistoryEntry: StatusHistoryItem = {
+                fromStatus: storyToUpdate?.status || null,
+                toStatus: data.status,
+                date: now,
+            };
+            payload.statusHistory = arrayUnion(sanitizeForFirestore(newHistoryEntry));
+            if (storyToUpdate?.status === 'To Do' && data.status !== 'To Do' && !storyToUpdate.developmentStartDate) {
+                payload.developmentStartDate = now;
+            }
+            if (data.status === 'Done' && !storyToUpdate.completionDate) {
+                payload.completionDate = now;
+            }
         }
-        if(data.status === 'Done' && !storyToUpdate.completionDate) {
-            payload.completionDate = now;
+
+        if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
+        if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
+
+        batch.update(storyRef, sanitizeForFirestore(payload));
+        
+        // Propagate sprint/release changes to sub-tasks
+        if (data.sprintId || data.releaseId) {
+            const subTasks = stories.filter(s => s.parentStoryId === storyId && s.itemType === 'Sub Task');
+            for (const task of subTasks) {
+                const taskRef = doc(db, 'projects', projectId, 'stories', task.id);
+                const subTaskUpdate: { sprintId?: string | null, releaseId?: string } = {};
+                if (data.sprintId) subTaskUpdate.sprintId = data.sprintId;
+                if (data.releaseId) subTaskUpdate.releaseId = data.releaseId;
+                batch.update(taskRef, subTaskUpdate);
+            }
         }
-      }
+        
+        await batch.commit();
 
-      if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
-      if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
-
-      await updateDoc(doc(db, 'projects', projectId, 'stories', storyId), sanitizeForFirestore(payload));
-
-      if (storyToUpdate && (storyToUpdate.itemType === 'Task' || storyToUpdate.itemType === 'Sub Task') && storyToUpdate.parentStoryId) {
-         const updatedStories = stories.map(s => s.id === storyId ? {...s, ...data} : s);
-         await updateStoryEffort(storyToUpdate.parentStoryId, updatedStories);
-      }
-      return true;
+        if (storyToUpdate && (storyToUpdate.itemType === 'Task' || storyToUpdate.itemType === 'Sub Task') && storyToUpdate.parentStoryId) {
+            const updatedStories = stories.map(s => s.id === storyId ? { ...s, ...data } : s);
+            await updateStoryEffort(storyToUpdate.parentStoryId, updatedStories);
+        }
+        return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to update story.", {});
-      return false;
+        console.error("Firebase Error: Failed to update story.", {});
+        return false;
     }
   };
 
