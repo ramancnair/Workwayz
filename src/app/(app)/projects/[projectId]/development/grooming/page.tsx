@@ -1528,7 +1528,6 @@ export default function GroomingPage() {
                                     <div className="space-y-2 rounded-md border p-2">
                                     {selectedStorySubItems.subTasks.map(item => {
                                         const ItemIcon = workItemIcons[item.itemType];
-                                        const system = impactedSystems.find(s => s.id === item.impactedSystemId);
                                         return (
                                             <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
                                                 <ItemIcon className="h-4 w-4 text-muted-foreground" />
@@ -1538,7 +1537,7 @@ export default function GroomingPage() {
                                                 >
                                                   [{item.storyId}] {item.title}
                                                 </span>
-                                                <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
+                                                <Badge variant="outline" className="w-24 justify-center truncate">{impactedSystems.find(s => s.id === item.impactedSystemId)?.name || 'N/A'}</Badge>
                                                 <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
                                                 <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
                                             </div>
