@@ -866,18 +866,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
   const isEffortReadOnly = useMemo(() => {
     if (!selectedStory) return false;
-    return (selectedStorySubItems.devTasks.length > 0 || selectedStorySubItems.subTasks.length > 0);
+    return (selectedStorySubItems.subTasks.length > 0);
   }, [selectedStory, selectedStorySubItems]);
-
-  useEffect(() => {
-    if (selectedStory) {
-      const allSubEffortItems = [...selectedStorySubItems.devTasks, ...selectedStorySubItems.subTasks];
-      const totalHours = allSubEffortItems.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-       if (isEffortReadOnly && selectedStory.estimatedHours !== totalHours) {
-        updateStory(selectedStory.id, { estimatedHours: totalHours });
-      }
-    }
-  }, [selectedStory, selectedStorySubItems, isEffortReadOnly, updateStory]);
 
   return (
     <>
@@ -2016,7 +2006,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Release</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Assign to a release" />
@@ -2042,7 +2032,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormControl>
                                     <Input type="number" placeholder="0" {...field} value={field.value ?? ''} readOnly={isEffortReadOnly} />
                                 </FormControl>
-                                {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked development tasks.</p>}
+                                {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -2295,6 +2285,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
