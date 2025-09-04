@@ -31,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -1515,7 +1515,7 @@ export default function GroomingPage() {
                                         const ItemIcon = workItemIcons[item.itemType];
                                         const system = impactedSystems.find(s => s.id === item.impactedSystemId);
                                         return (
-                                            <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
+                                            <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
                                                 <ItemIcon className="h-4 w-4 text-muted-foreground" />
                                                 <span 
                                                   className="font-medium cursor-pointer hover:underline truncate" 
@@ -1525,6 +1525,7 @@ export default function GroomingPage() {
                                                 </span>
                                                 <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
                                                 <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
+                                                <Badge variant="outline">{item.status}</Badge>
                                             </div>
                                         )
                                     })}
@@ -1667,6 +1668,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
