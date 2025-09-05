@@ -12,6 +12,7 @@ import {
   endOfMonth,
   getDaysInMonth,
   startOfWeek,
+  endOfWeek,
   eachWeekOfInterval,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
