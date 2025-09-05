@@ -39,7 +39,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns, Filter } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns, Filter, UserCog } from 'lucide-react';
 import { type Story, type StoryStatus, type Epic, Release, User, ImpactedSystem, Sprint } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +75,10 @@ const subTaskSchema = z.object({
     path: ['endDate'],
 });
 
+const bulkAssignSchema = z.object({
+  assigneeId: z.string().min(1, 'Please select an assignee.'),
+});
+
 
 const statusStyles: Record<StoryStatus, string> = {
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
@@ -101,13 +105,15 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean, f
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones } = useProject();
+  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones, bulkAssignSubTasks } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubTask, setEditingSubTask] = useState<Story | null>(null);
   const [deletingSubTask, setDeletingSubTask] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCell, setEditingCell] = useState<{ taskId: string; columnId: ColumnId } | null>(null);
+  const [selectedSubTasks, setSelectedSubTasks] = useState<string[]>([]);
+  const [tasksToAssign, setTasksToAssign] = useState<string[]>([]);
 
   
   const subTasks = stories.filter(story => story.itemType === 'Sub Task');
@@ -125,6 +131,10 @@ export default function DevelopmentTasksPage() {
 
   const form = useForm<z.infer<typeof subTaskSchema>>({
     resolver: zodResolver(subTaskSchema),
+  });
+
+  const bulkAssignForm = useForm<z.infer<typeof bulkAssignSchema>>({
+    resolver: zodResolver(bulkAssignSchema),
   });
   
   const watchedImpactedSystem = useWatch({ control: form.control, name: 'impactedSystemId' });
@@ -351,6 +361,17 @@ export default function DevelopmentTasksPage() {
     }
     setIsSubmitting(false);
   };
+  
+  const handleBulkAssign = async (values: z.infer<typeof bulkAssignSchema>) => {
+    const success = await bulkAssignSubTasks(tasksToAssign, values.assigneeId === 'unassigned' ? null : values.assigneeId);
+    if(success) {
+      toast({ title: 'Success', description: `${tasksToAssign.length} sub-task(s) assigned.` });
+      setSelectedSubTasks(prev => prev.filter(id => !tasksToAssign.includes(id)));
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not assign sub-tasks." });
+    }
+    setTasksToAssign([]);
+  }
 
   const FilterableHeader = ({ columnId, children, filterOptions }: { columnId: ColumnId, children: React.ReactNode, filterOptions: {value: string, label: string}[] }) => {
     const activeFilters = filters[columnId] || [];
@@ -412,6 +433,18 @@ export default function DevelopmentTasksPage() {
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Sub-Tasks" description="A comprehensive list of all sub-tasks for the project.">
+           {selectedSubTasks.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setTasksToAssign(selectedSubTasks)}>
+                  <UserCog className="mr-2 h-4 w-4" />
+                  Assign Selected ({selectedSubTasks.length})
+                </Button>
+                <Button variant="destructive" onClick={() => {}}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Selected ({selectedSubTasks.length})
+                </Button>
+              </div>
+            )}
            <Button onClick={() => handleDialogOpen(null)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Sub-Task
@@ -461,6 +494,15 @@ export default function DevelopmentTasksPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={filteredAndSortedSubTasks.length > 0 && selectedSubTasks.length === filteredAndSortedSubTasks.length}
+                  onCheckedChange={(value) =>
+                    setSelectedSubTasks(value ? filteredAndSortedSubTasks.map(task => task.id) : [])
+                  }
+                  aria-label="Select all"
+                />
+              </TableHead>
               {Object.entries(columnVisibility).map(([key, isVisible]) => {
                 if (!isVisible) return null;
                 const config = columnConfig[key as ColumnId];
@@ -483,7 +525,18 @@ export default function DevelopmentTasksPage() {
               const isEditing = (colId: ColumnId) => editingCell?.taskId === task.id && editingCell?.columnId === colId;
 
               return (
-                <TableRow key={task.id}>
+                <TableRow key={task.id} data-state={selectedSubTasks.includes(task.id) && "selected"}>
+                   <TableCell>
+                    <Checkbox
+                      checked={selectedSubTasks.includes(task.id)}
+                      onCheckedChange={(checked) =>
+                        setSelectedSubTasks(prev =>
+                          checked ? [...prev, task.id] : prev.filter(id => id !== task.id)
+                        )
+                      }
+                      aria-label="Select row"
+                    />
+                  </TableCell>
                   {columnVisibility.storyId && <TableCell className="font-medium">{task.storyId}</TableCell>}
                   {columnVisibility.title && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'title' })}>
                       {isEditing('title') ? (
@@ -839,8 +892,50 @@ export default function DevelopmentTasksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={tasksToAssign.length > 0} onOpenChange={(isOpen) => !isOpen && setTasksToAssign([])}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Assign Selected Tasks</DialogTitle>
+                <DialogDescription>
+                    Assign the {tasksToAssign.length} selected task(s) to a user.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...bulkAssignForm}>
+                <form onSubmit={bulkAssignForm.handleSubmit(handleBulkAssign)} className="space-y-4">
+                    <FormField
+                        control={bulkAssignForm.control}
+                        name="assigneeId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Assignee</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select an assignee" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {employees.map(emp => (
+                                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <DialogFooter>
+                        <Button type="submit">Assign Tasks</Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
 
 

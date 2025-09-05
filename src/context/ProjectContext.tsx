@@ -10,6 +10,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -96,6 +97,7 @@ interface ProjectContextType {
   bulkUpdateSubTaskReleases: (releaseId: string) => Promise<boolean>;
   bulkDeleteStories: (storyIds: string[]) => Promise<boolean>;
   bulkMoveStoriesToEpic: (storyIds: string[], targetEpicId: string | null) => Promise<boolean>;
+  bulkAssignSubTasks: (taskIds: string[], assigneeId: string | null) => Promise<boolean>;
 
 
   // Epic actions
@@ -872,6 +874,22 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to bulk move stories.", e);
+      return false;
+    }
+  };
+  
+  const bulkAssignSubTasks = async (taskIds: string[], assigneeId: string | null): Promise<boolean> => {
+    if (!db || !projectId || taskIds.length === 0) return false;
+    try {
+      const batch = writeBatch(db);
+      taskIds.forEach(id => {
+        const taskRef = doc(db, 'projects', projectId, 'stories', id);
+        batch.update(taskRef, { assigneeId: assigneeId });
+      });
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to bulk assign sub-tasks.", e);
       return false;
     }
   };
@@ -2158,6 +2176,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     bulkUpdateSubTaskReleases,
     bulkDeleteStories,
     bulkMoveStoriesToEpic,
+    bulkAssignSubTasks,
     addEpic,
     updateEpic,
     deleteEpic,
