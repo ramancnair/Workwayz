@@ -46,6 +46,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
+import { ReleaseGanttChart } from '@/components/ReleaseGanttChart';
 
 const releaseSchemaBase = z.object({
   name: z.string().min(1, 'Name is required.'),
@@ -300,6 +301,16 @@ export default function ReleasesPage() {
             Add Milestone
           </Button>
         </PageHeader>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Release Timeline</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ReleaseGanttChart releases={releasesAndMilestones} />
+            </CardContent>
+        </Card>
+
         <Card>
           <CardContent className="p-4">
              <div className="flex items-center gap-4 flex-wrap">
