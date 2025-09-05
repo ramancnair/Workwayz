@@ -3,21 +3,19 @@
 
 import { useMemo } from 'react';
 import { type Release } from '@/types';
-import { eachDayOfInterval, format, differenceInDays, parseISO, startOfDay, addDays, getDaysInMonth, startOfMonth, endOfMonth, eachWeekOfInterval, startOfWeek, endOfWeek } from 'date-fns';
-import { Card, CardContent } from './ui/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { eachDayOfInterval, format, differenceInDays, parseISO, startOfWeek, endOfWeek } from 'date-fns';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
       <div className="bg-background border rounded-md p-2 shadow-md text-sm">
         <p className="font-bold">{data.name}</p>
-        <p className="text-muted-foreground">{format(data.range[0], 'MMM d, yyyy')} - {format(data.range[1], 'MMM d, yyyy')}</p>
-        <p>Duration: {differenceInDays(data.range[1], data.range[0]) + 1} days</p>
+        <p className="text-muted-foreground">{format(new Date(data.range[0]), 'MMM d, yyyy')} - {format(new Date(data.range[1]), 'MMM d, yyyy')}</p>
+        <p>Duration: {differenceInDays(new Date(data.range[1]), new Date(data.range[0])) + 1} days</p>
       </div>
     );
   }
