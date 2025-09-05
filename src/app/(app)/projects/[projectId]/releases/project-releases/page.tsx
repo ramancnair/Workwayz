@@ -48,6 +48,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 import { ReleaseGanttChart } from '@/components/ReleaseGanttChart';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 const releaseSchemaBase = z.object({
   name: z.string().min(1, 'Name is required.'),
@@ -352,9 +353,9 @@ export default function ReleasesPage() {
                 <SortableHeader columnId="releaseId">ID</SortableHeader>
                 <SortableHeader columnId="name">Name</SortableHeader>
                 <SortableHeader columnId="parentReleaseId">Parent Release</SortableHeader>
-                <TableHead className="w-[30%]">Description</TableHead>
                 <SortableHeader columnId="startDate">Start/Milestone Date</SortableHeader>
                 <SortableHeader columnId="endDate">End Date</SortableHeader>
+                <TableHead>Completed</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -367,13 +368,9 @@ export default function ReleasesPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                        {item.name}
-                        {item.isCompleted && <CheckCircle className="h-4 w-4 text-green-500" />}
-                    </div>
+                    {item.name}
                   </TableCell>
                   <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
-                  <TableCell className="break-words">{item.description}</TableCell>
                   <TableCell>
                     {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
                         ? format(new Date(item.milestoneDate), 'PPP')
@@ -383,6 +380,12 @@ export default function ReleasesPage() {
                     {item.itemType === 'Milestone'
                         ? 'N/A'
                         : (item.endDate && !isNaN(new Date(item.endDate).getTime()) ? format(new Date(item.endDate), 'PPP') : 'N/A')}
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                        checked={item.isCompleted}
+                        onCheckedChange={(checked) => updateReleaseOrMilestone(item.id, { isCompleted: checked })}
+                    />
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
