@@ -4,6 +4,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -247,6 +248,7 @@ export type Release = {
   milestoneDate?: string; // ISO String
   itemType: ReleaseItemType;
   parentReleaseId?: string;
+  isCompleted?: boolean;
 };
 
 export type WorklogItem = {

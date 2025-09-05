@@ -39,7 +39,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle } from 'lucide-react';
 import { type Release, type ReleaseItemType } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 import { ReleaseGanttChart } from '@/components/ReleaseGanttChart';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const releaseSchemaBase = z.object({
   name: z.string().min(1, 'Name is required.'),
@@ -55,6 +56,7 @@ const releaseSchemaBase = z.object({
   endDate: z.string().optional(),
   milestoneDate: z.string().optional(),
   parentReleaseId: z.string().optional(),
+  isCompleted: z.boolean().optional(),
 });
 
 
@@ -147,6 +149,7 @@ export default function ReleasesPage() {
           endDate: editingItem.endDate ? format(new Date(editingItem.endDate), 'yyyy-MM-dd') : '',
           milestoneDate: editingItem.milestoneDate ? format(new Date(editingItem.milestoneDate), 'yyyy-MM-dd') : '',
           parentReleaseId: editingItem.parentReleaseId,
+          isCompleted: editingItem.isCompleted || false,
         });
       } else {
         form.reset({
@@ -156,6 +159,7 @@ export default function ReleasesPage() {
           endDate: '',
           milestoneDate: '',
           parentReleaseId: undefined,
+          isCompleted: false,
         });
       }
     }
@@ -258,6 +262,7 @@ export default function ReleasesPage() {
         startDate: values.startDate || undefined,
         endDate: values.endDate || undefined,
         milestoneDate: values.milestoneDate || undefined,
+        isCompleted: values.isCompleted,
     };
 
     const success = editingItem
@@ -361,7 +366,12 @@ export default function ReleasesPage() {
                         {item.releaseId}
                     </Badge>
                   </TableCell>
-                  <TableCell>{item.name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                        {item.name}
+                        {item.isCompleted && <CheckCircle className="h-4 w-4 text-green-500" />}
+                    </div>
+                  </TableCell>
                   <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
                   <TableCell className="break-words">{item.description}</TableCell>
                   <TableCell>
@@ -446,7 +456,7 @@ export default function ReleasesPage() {
                     <FormItem>
                         <FormLabel>Milestone Date</FormLabel>
                         <FormControl>
-                            <Input type="date" {...field} />
+                            <Input type="date" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -457,7 +467,7 @@ export default function ReleasesPage() {
                         <FormItem>
                             <FormLabel>Start Date</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} />
+                                <Input type="date" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -466,13 +476,34 @@ export default function ReleasesPage() {
                         <FormItem>
                             <FormLabel>End Date</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} />
+                                <Input type="date" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
                 </div>
               )}
+              
+                <FormField
+                  control={form.control}
+                  name="isCompleted"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Mark as Completed
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
 
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>

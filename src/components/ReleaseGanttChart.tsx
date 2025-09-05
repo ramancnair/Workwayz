@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo } from 'react';
@@ -16,7 +17,7 @@ import {
   eachWeekOfInterval,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Flag, Pin } from 'lucide-react';
+import { Flag, Pin, CheckCircle } from 'lucide-react';
 
 // A professional color palette
 const COLORS = [
@@ -174,7 +175,10 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                                border: `1px solid ${COLORS[groupIndex % COLORS.length]}`
                              }}
                           >
-                           <span className="font-bold text-sm truncate" style={{color: COLORS[groupIndex % COLORS.length]}}>({release.releaseId}) {release.name}</span>
+                           <span className="font-bold text-sm truncate flex items-center gap-2" style={{color: COLORS[groupIndex % COLORS.length]}}>
+                             ({release.releaseId}) {release.name}
+                             {release.isCompleted && <CheckCircle className="h-4 w-4" />}
+                           </span>
                           </div>
                       </div>
 
@@ -190,7 +194,10 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                                   backgroundColor: COLORS[(groupIndex + stageIndex + 1) % COLORS.length],
                                 }}
                               >
-                                  <span className="text-white text-xs font-medium truncate">{stage.name}</span>
+                                  <span className="text-white text-xs font-medium truncate flex items-center gap-2">
+                                    {stage.name}
+                                    {stage.isCompleted && <CheckCircle className="h-3 w-3" />}
+                                  </span>
                               </div>
                             </div>
                           ))}
@@ -201,7 +208,10 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                            <div key={milestone.id} className="absolute top-2" style={{ left: `${getOffset(milestone.milestoneDate!)}%`, height: `${2.5 + (stages.length * 1.75)}rem` }}>
                              <div className="relative flex flex-col items-center h-full">
                                <div className="whitespace-nowrap text-center text-xs font-semibold -mt-8 transform -translate-x-1/2">
-                                   <p className="truncate max-w-[100px]">{milestone.name}</p>
+                                   <p className="truncate max-w-[100px] flex items-center gap-1">
+                                    {milestone.isCompleted && <CheckCircle className="h-3 w-3 text-green-600" />}
+                                    {milestone.name}
+                                   </p>
                                </div>
                                <Pin className="h-4 w-4 text-primary" style={{color: COLORS[groupIndex % COLORS.length]}}/>
                                <div className="w-px flex-1 bg-border border-dashed"></div>
