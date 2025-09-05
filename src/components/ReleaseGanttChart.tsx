@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo } from 'react';
@@ -9,26 +8,21 @@ import {
   format,
   differenceInDays,
   parseISO,
-  startOfMonth,
-  endOfMonth,
-  getDaysInMonth,
   startOfWeek,
   endOfWeek,
-  eachWeekOfInterval,
+  addDays,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Flag, Pin, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
-// A professional color palette
 const COLORS = [
-  '#00A1E0', // Bright Blue
-  '#64C5B1', // Teal
-  '#F5A623', // Orange
-  '#F8E71C', // Yellow
-  '#7ED321', // Green
-  '#BD10E0', // Purple
-  '#4A90E2', // Sky Blue
-  '#D0021B', // Red
+  '#6366F1', // Indigo
+  '#34D399', // Emerald
+  '#F59E0B', // Amber
+  '#EF4444', // Red
+  '#3B82F6', // Blue
+  '#A855F7', // Purple
+  '#EC4899', // Pink
 ];
 
 // Custom hook to get a "Today" date that updates only once on component mount
@@ -42,47 +36,49 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
 
     const { chartData, dateInfo } = useMemo(() => {
         const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate);
-        const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate);
-        const milestones = allItems.filter(item => item.itemType === 'Milestone' && item.milestoneDate);
-
-        const allDatedItems = [...releases, ...stages, ...milestones];
+        const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate && item.parentReleaseId);
+        
+        const allDatedItems = [...releases, ...stages];
         if (allDatedItems.length === 0) {
-            return { chartData: { releases: [], stages: [], milestones: [] }, dateInfo: null };
+            return { chartData: [], dateInfo: null };
         }
 
-        const allDates = allDatedItems.flatMap(item => [item.startDate, item.endDate, item.milestoneDate]).filter(Boolean).map(d => parseISO(d!));
+        const allDates = allDatedItems.flatMap(item => [item.startDate, item.endDate]).filter(Boolean).map(d => parseISO(d!));
         if (allDates.length === 0) {
-            return { chartData: { releases: [], stages: [], milestones: [] }, dateInfo: null };
+            return { chartData: [], dateInfo: null };
         }
+        
+        const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
-        const chartStartDate = startOfWeek(startOfMonth(new Date(Math.min(...allDates.map(d => d.getTime())))), { weekStartsOn: 0 });
-        const chartEndDate = endOfMonth(new Date(Math.max(...allDates.map(d => d.getTime()))));
+        const chartStartDate = startOfWeek(addDays(minDate, -7), { weekStartsOn: 1 });
+        const chartEndDate = endOfWeek(addDays(maxDate, 7), { weekStartsOn: 1 });
+        
         const totalDays = differenceInDays(chartEndDate, chartStartDate) + 1;
 
-        const months = [];
-        let currentMonthStart = startOfMonth(chartStartDate);
-        while (currentMonthStart <= chartEndDate) {
-            months.push({
-                name: format(currentMonthStart, 'MMMM yyyy'),
-                days: getDaysInMonth(currentMonthStart),
-            });
-            currentMonthStart = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() + 1, 1);
+        const dateTicks = [];
+        let currentDate = chartStartDate;
+        while(currentDate <= chartEndDate) {
+            dateTicks.push(currentDate);
+            currentDate = addDays(currentDate, 10);
         }
-
-        const weeks = eachWeekOfInterval(
-          { start: chartStartDate, end: chartEndDate },
-          { weekStartsOn: 0 } // Sunday
-        );
 
         const todayOffset = differenceInDays(today, chartStartDate);
 
+        const releaseGroups = releases.map(release => ({
+            ...release,
+            stages: stages
+                .filter(s => s.parentReleaseId === release.id)
+                .sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime()),
+        })).sort((a,b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime());
+        
+
         return {
-            chartData: { releases, stages, milestones },
+            chartData: releaseGroups,
             dateInfo: {
                 chartStartDate,
                 totalDays,
-                months,
-                weeks,
+                dateTicks,
                 todayOffset,
                 isTodayVisible: today >= chartStartDate && today <= chartEndDate,
             },
@@ -93,7 +89,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
     }
     
-    const { chartStartDate, totalDays, months, weeks, todayOffset, isTodayVisible } = dateInfo;
+    const { chartStartDate, totalDays, dateTicks, todayOffset, isTodayVisible } = dateInfo;
 
     const getOffset = (dateStr: string) => {
         if(!dateStr) return 0;
@@ -106,122 +102,86 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         return (duration / totalDays) * 100;
     };
 
-    const releaseGroups = useMemo(() => {
-      const groups: Record<string, { release: Release, stages: Release[], milestones: Release[] }> = {};
-      chartData.releases.forEach(r => {
-        groups[r.id] = { release: r, stages: [], milestones: [] };
-      });
-      chartData.stages.forEach(s => {
-        if (s.parentReleaseId && groups[s.parentReleaseId]) {
-          groups[s.parentReleaseId].stages.push(s);
-        }
-      });
-      chartData.milestones.forEach(m => {
-        if (m.parentReleaseId && groups[m.parentReleaseId]) {
-          groups[m.parentReleaseId].milestones.push(m);
-        }
-      });
-      return Object.values(groups).sort((a,b) => parseISO(a.release.startDate!).getTime() - parseISO(b.release.startDate!).getTime());
-    }, [chartData]);
-
-
     return (
-      <div className="w-full overflow-x-auto">
-        <div className="relative pt-8" style={{ minWidth: `${totalDays * 20}px` }}>
+        <div className="w-full text-sm">
+            {/* Header */}
+            <div className="grid grid-cols-[250px_1fr_100px] items-center bg-muted/50 rounded-t-lg">
+                <div className="p-4 font-semibold">Timeline</div>
+                <div className="relative h-full border-x">
+                    <div className="flex justify-between items-center h-full px-2">
+                    {dateTicks.map((tick, index) => (
+                        <div key={index} className="text-center text-xs text-muted-foreground">
+                            {format(tick, 'd MMM')}
+                        </div>
+                    ))}
+                    </div>
+                </div>
+                <div className="p-4 font-semibold text-center">Status</div>
+            </div>
 
-          {/* Header */}
-          <div className="sticky top-0 bg-background z-20">
-              {/* Month Row */}
-              <div className="flex border-b">
-                  {months.map((month) => (
-                      <div key={month.name} style={{ width: `${(month.days / totalDays) * 100}%` }} className="p-1 text-center text-xs font-semibold border-r">
-                          {month.name}
-                      </div>
-                  ))}
-              </div>
-              {/* Week Row */}
-              <div className="flex border-b">
-                  {weeks.map((week, index) => {
-                      const weekDuration = differenceInDays(endOfWeek(week, {weekStartsOn: 0}), week) + 1;
-                      return (
-                           <div key={index} style={{ width: `${(weekDuration / totalDays) * 100}%` }} className="p-1 text-center text-xs text-muted-foreground border-r">
-                              {format(week, 'd')}
-                          </div>
-                      )
-                  })}
-              </div>
-          </div>
+            {/* Body */}
+            <div className="relative">
+                <div className="grid grid-cols-[250px_1fr_100px]">
+                    <div className="border-r"></div>
+                    <div className="grid grid-cols-1 relative">
+                        {/* Vertical Lines */}
+                        {dateTicks.map((tick, index) => (
+                           <div key={index} className="absolute h-full border-r" style={{ left: `${(differenceInDays(tick, chartStartDate)/totalDays) * 100}%`}}></div>
+                        ))}
+                    </div>
+                    <div className="border-l"></div>
+                </div>
 
-          {/* Today Marker */}
-          {isTodayVisible && (
-              <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `${(todayOffset / totalDays) * 100}%` }}>
-                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs font-bold text-red-500">Today</div>
-              </div>
-          )}
-
-          {/* Body */}
-          <div className="relative space-y-4 pt-4">
-              {releaseGroups.map(({ release, stages, milestones }, groupIndex) => (
-                  <div key={release.id} className="relative py-2">
-                      
-                      {/* Release Bar */}
-                      <div className="relative h-8 flex items-center" title={release.name}>
-                          <div 
-                             className="absolute h-full rounded flex items-center px-2 z-0"
-                             style={{
-                               left: `${getOffset(release.startDate!)}%`,
-                               width: `${getWidth(release.startDate!, release.endDate!)}%`,
-                               backgroundColor: `${COLORS[groupIndex % COLORS.length]}30`, // semi-transparent
-                               border: `1px solid ${COLORS[groupIndex % COLORS.length]}`
-                             }}
-                          >
-                           <span className="font-bold text-sm truncate flex items-center gap-2" style={{color: COLORS[groupIndex % COLORS.length]}}>
-                             ({release.releaseId}) {release.name}
-                             {release.isCompleted && <CheckCircle className="h-4 w-4" />}
-                           </span>
-                          </div>
-                      </div>
-
-                      {/* Stages for this release */}
-                      <div className="relative mt-1 space-y-1">
-                          {stages.sort((a,b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime()).map((stage, stageIndex) => (
-                            <div key={stage.id} className="relative h-6 flex items-center" title={stage.name}>
-                              <div
-                                className="absolute h-full rounded flex items-center px-2"
-                                style={{
-                                  left: `${getOffset(stage.startDate!)}%`,
-                                  width: `${getWidth(stage.startDate!, stage.endDate!)}%`,
-                                  backgroundColor: COLORS[(groupIndex + stageIndex + 1) % COLORS.length],
-                                }}
-                              >
-                                  <span className="text-white text-xs font-medium truncate flex items-center gap-2">
-                                    {stage.name}
-                                    {stage.isCompleted && <CheckCircle className="h-3 w-3" />}
-                                  </span>
-                              </div>
+                {chartData.map((release, index) => (
+                    <div key={release.id} className="grid grid-cols-[250px_1fr_100px] items-start border-b">
+                        {/* Left Column: Release & Stage Names */}
+                        <div className="p-4 border-r">
+                            <div className="font-bold text-primary mb-2">{release.name}</div>
+                            <div className="space-y-4 pl-2">
+                            {release.stages.map(stage => (
+                                <div key={stage.id} className="h-8 flex items-center">{stage.name}</div>
+                            ))}
                             </div>
-                          ))}
-                      </div>
+                        </div>
 
-                      {/* Milestones for this release */}
-                      {milestones.map((milestone) => (
-                           <div key={milestone.id} className="absolute top-2" style={{ left: `${getOffset(milestone.milestoneDate!)}%`, height: `${2.5 + (stages.length * 1.75)}rem` }}>
-                             <div className="relative flex flex-col items-center h-full">
-                               <div className="whitespace-nowrap text-center text-xs font-semibold -mt-8 transform -translate-x-1/2">
-                                   <p className="truncate max-w-[100px] flex items-center gap-1">
-                                    {milestone.isCompleted && <CheckCircle className="h-3 w-3 text-green-600" />}
-                                    {milestone.name}
-                                   </p>
-                               </div>
-                               <Pin className="h-4 w-4 text-primary" style={{color: COLORS[groupIndex % COLORS.length]}}/>
-                               <div className="w-px flex-1 bg-border border-dashed"></div>
-                             </div>
-                           </div>
-                      ))}
+                        {/* Middle Column: Timeline Bars */}
+                        <div className="relative h-full">
+                             {release.stages.map((stage, stageIndex) => (
+                                <div key={stage.id} className="relative h-8 my-4">
+                                     <div 
+                                        className="absolute h-6 top-1 rounded-full flex items-center px-2"
+                                        style={{
+                                            left: `${getOffset(stage.startDate!)}%`,
+                                            width: `${getWidth(stage.startDate!, stage.endDate!)}%`,
+                                            backgroundColor: COLORS[(index + stageIndex) % COLORS.length]
+                                        }}
+                                     >
+                                     </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Right Column: Status */}
+                        <div className="p-4 border-l">
+                            <div className="h-8 flex items-center justify-center">
+                                {/* Release status can be calculated here */}
+                            </div>
+                            <div className="space-y-4">
+                                {release.stages.map(stage => (
+                                    <div key={stage.id} className="h-8 flex items-center justify-center">
+                                        <div className={cn("h-3 w-3 rounded-full", stage.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                
+                {isTodayVisible && (
+                  <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `calc(250px + ${(todayOffset / totalDays)} * (100% - 350px))` }}>
                   </div>
-              ))}
-          </div>
+                )}
+            </div>
         </div>
-      </div>
     );
 }
