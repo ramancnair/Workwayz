@@ -31,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle, CheckCircle } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,10 +58,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
 
+const sprintStatuses: SprintStatus[] = ['Yet to Start', 'Current', 'Completed', 'Cancelled'];
+
 const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  status: z.enum(sprintStatuses).optional(),
 });
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -156,8 +159,8 @@ function StoryItemCard({
 
   const sortedSprints = useMemo(() => {
     return [...sprints].sort((a, b) => {
-        if (a.isCurrent) return -1;
-        if (b.isCurrent) return 1;
+        if (a.status === 'Current') return -1;
+        if (b.status === 'Current') return 1;
         return (a.title || '').localeCompare(b.title || '');
     });
   }, [sprints]);
@@ -257,7 +260,7 @@ function StoryItemCard({
                 .filter((sprint) => sprint.id !== story.sprintId)
                 .map((sprint) => (
                   <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
-                    {sprint.title} {sprint.isCurrent && "(current)"}
+                    {sprint.title} {sprint.status === 'Current' && "(current)"}
                   </DropdownMenuItem>
                 ))}
             </DropdownMenuContent>
@@ -309,7 +312,6 @@ function SprintColumn({
   weeklyOffDays,
   onEdit,
   onDelete,
-  onSetCurrent,
   onPrev,
   onNext,
   showNav,
@@ -323,7 +325,6 @@ function SprintColumn({
   weeklyOffDays: number[],
   onEdit: (sprint: Sprint) => void,
   onDelete: (sprint: Sprint) => void,
-  onSetCurrent: (sprintId: string) => void,
   onPrev: () => void,
   onNext: () => void,
   showNav: boolean,
@@ -414,9 +415,7 @@ function SprintColumn({
                 )}
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onSetCurrent(sprint.id)}>
-                  <Star className={cn("h-4 w-4", sprint.isCurrent && "fill-yellow-400 text-yellow-500")} />
-                </Button>
+                 <Badge variant={sprint.status === 'Current' ? 'default' : 'outline'}>{sprint.status || 'Yet to Start'}</Badge>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(sprint)}>
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -486,7 +485,6 @@ export default function GroomingPage() {
         addSprint,
         updateSprint,
         deleteSprint,
-        setCurrentSprint,
         updateStory,
         environments,
         holidays,
@@ -556,7 +554,7 @@ export default function GroomingPage() {
     }, [sprints, stories, viewBy, selectedAssigneeId]);
     
     useEffect(() => {
-        const currentSprintIdx = sprints.findIndex(s => s.isCurrent);
+        const currentSprintIdx = sprints.findIndex(s => s.status === 'Current');
         if (currentSprintIdx !== -1) {
             setVisibleSprintIndex(currentSprintIdx);
         } else if (sprints.length > 0) {
@@ -570,6 +568,7 @@ export default function GroomingPage() {
             title: '',
             startDate: '',
             endDate: '',
+            status: 'Yet to Start',
         },
     });
     
@@ -639,12 +638,14 @@ export default function GroomingPage() {
                     title: editingSprint.title,
                     startDate: editingSprint.startDate ? format(parseISO(editingSprint.startDate), 'yyyy-MM-dd') : '',
                     endDate: editingSprint.endDate ? format(parseISO(editingSprint.endDate), 'yyyy-MM-dd') : '',
+                    status: editingSprint.status || 'Yet to Start',
                 });
             } else {
                 sprintForm.reset({
                     title: '',
                     startDate: '',
                     endDate: '',
+                    status: 'Yet to Start',
                 });
             }
         }
@@ -730,7 +731,8 @@ export default function GroomingPage() {
         const payload = {
             title: values.title,
             startDate: values.startDate ? new Date(values.startDate) : undefined,
-            endDate: values.endDate ? new Date(values.endDate) : undefined
+            endDate: values.endDate ? new Date(values.endDate) : undefined,
+            status: values.status,
         };
         const success = editingSprint
             ? await updateSprint(editingSprint.id, payload)
@@ -842,15 +844,6 @@ export default function GroomingPage() {
         setDeletingSprint(null);
     }
     
-    const handleSetCurrentSprint = async (sprintId: string) => {
-        const success = await setCurrentSprint(sprintId);
-        if (success) {
-            toast({ title: 'Success', description: 'Current sprint updated.' });
-        } else {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not set current sprint.' });
-        }
-    };
-
     const nextSprint = () => {
         setVisibleSprintIndex((prevIndex) => (prevIndex + 1) % sprints.length);
     };
@@ -953,7 +946,6 @@ export default function GroomingPage() {
                             weeklyOffDays={weeklyOffDays}
                             onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
                             onDelete={(sprint) => setDeletingSprint(sprint)}
-                            onSetCurrent={handleSetCurrentSprint}
                             onPrev={prevSprint}
                             onNext={nextSprint}
                             showNav={sprintsWithStories.length > 1}
@@ -990,29 +982,47 @@ export default function GroomingPage() {
                                 </FormItem>
                             )}
                         />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={sprintForm.control}
+                                name="startDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Start Date</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} value={field.value ?? ''} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={sprintForm.control}
+                                name="endDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>End Date</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} value={field.value ?? ''} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
                          <FormField
                             control={sprintForm.control}
-                            name="startDate"
+                            name="status"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Start Date</FormLabel>
-                                    <FormControl>
-                                        <Input type="date" {...field} value={field.value ?? ''} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={sprintForm.control}
-                            name="endDate"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>End Date</FormLabel>
-                                    <FormControl>
-                                        <Input type="date" {...field} value={field.value ?? ''} />
-                                    </FormControl>
-                                    <FormMessage />
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    {sprintStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
                                 </FormItem>
                             )}
                         />

@@ -12,6 +12,7 @@
 
 
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -33,7 +34,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -107,10 +108,9 @@ interface ProjectContextType {
   deleteEpic: (epicId: string, deleteItems?: boolean) => Promise<boolean>;
 
   // Sprint actions
-  addSprint: (sprint: { title: string, startDate?: Date, endDate?: Date }) => Promise<boolean>;
-  updateSprint: (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date }) => Promise<boolean>;
+  addSprint: (sprint: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }) => Promise<boolean>;
+  updateSprint: (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }) => Promise<boolean>;
   deleteSprint: (sprintId: string) => Promise<boolean>;
-  setCurrentSprint: (sprintId: string) => Promise<boolean>;
 
   // Employee actions
   addUserToProject: (employee: Employee) => Promise<boolean>;
@@ -972,13 +972,29 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Sprint Actions
-  const addSprint = async (sprint: { title: string, startDate?: Date, endDate?: Date }): Promise<boolean> => {
+  const addSprint = async (sprint: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const payload: any = { title: sprint.title, isCurrent: false };
+      const payload: any = { title: sprint.title, status: sprint.status || 'Yet to Start', isCurrent: sprint.status === 'Current' };
       if (sprint.startDate) payload.startDate = Timestamp.fromDate(sprint.startDate);
       if (sprint.endDate) payload.endDate = Timestamp.fromDate(sprint.endDate);
-      await addDoc(collection(db, 'projects', projectId, 'sprints'), sanitizeForFirestore(payload));
+      
+      const batch = writeBatch(db);
+      
+      // If the new sprint is 'Current', set all others to 'Yet to Start' (or another appropriate status)
+      if (payload.status === 'Current') {
+        const sprintsSnapshot = await getDocs(collection(db, 'projects', projectId, 'sprints'));
+        sprintsSnapshot.forEach(sprintDoc => {
+          if (sprintDoc.data().status === 'Current') {
+            batch.update(sprintDoc.ref, { status: 'Yet to Start', isCurrent: false });
+          }
+        });
+      }
+
+      const newSprintRef = doc(collection(db, 'projects', projectId, 'sprints'));
+      batch.set(newSprintRef, sanitizeForFirestore(payload));
+
+      await batch.commit();
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to add sprint.", { code: e.code, message: e.message, fullError: e });
@@ -986,19 +1002,36 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const updateSprint = async (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date }): Promise<boolean> => {
+  const updateSprint = async (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const payload: any = { title: data.title };
+      const payload: any = { title: data.title, status: data.status, isCurrent: data.status === 'Current' };
       payload.startDate = data.startDate ? Timestamp.fromDate(data.startDate) : null;
       payload.endDate = data.endDate ? Timestamp.fromDate(data.endDate) : null;
-      await updateDoc(doc(db, 'projects', projectId, 'sprints', sprintId), sanitizeForFirestore(payload));
+      
+      const batch = writeBatch(db);
+      const sprintRef = doc(db, 'projects', projectId, 'sprints', sprintId);
+
+      // If this sprint is becoming 'Current', ensure no others are
+      if (payload.status === 'Current') {
+        const sprintsSnapshot = await getDocs(collection(db, 'projects', projectId, 'sprints'));
+        sprintsSnapshot.forEach(sprintDoc => {
+          if (sprintDoc.id !== sprintId && sprintDoc.data().status === 'Current') {
+            batch.update(sprintDoc.ref, { status: 'Completed', isCurrent: false });
+          }
+        });
+      }
+      
+      batch.update(sprintRef, sanitizeForFirestore(payload));
+
+      await batch.commit();
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update sprint.", { id: sprintId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
+
 
   const deleteSprint = async (sprintId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1016,24 +1049,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to delete sprint.", { id: sprintId, code: e.code, message: e.message, fullError: e });
-      return false;
-    }
-  };
-
-  const setCurrentSprint = async (sprintId: string): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    try {
-        const batch = writeBatch(db);
-        const sprintsSnapshot = await getDocs(collection(db, 'projects', projectId, 'sprints'));
-        
-        sprintsSnapshot.forEach(sprintDoc => {
-            batch.update(doc(db, 'projects', projectId, 'sprints', sprintDoc.id), { isCurrent: sprintDoc.id === sprintId });
-        });
-
-        await batch.commit();
-        return true;
-    } catch (e: any) {
-      console.error("Firebase Error: Failed to set current sprint.", { id: sprintId, code: e.code, message: e.message, fullError: e });
       return false;
     }
   };
@@ -2205,12 +2220,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addSprint,
     updateSprint,
     deleteSprint,
-    setCurrentSprint,
+    addLeavePeriod,
+    deleteLeavePeriod,
     addUserToProject,
     updateProjectUser,
     deleteEmployee,
-    addLeavePeriod,
-    deleteLeavePeriod,
     addTestCase,
     updateTestCase,
     autoGenerateTestCases,

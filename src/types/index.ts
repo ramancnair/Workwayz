@@ -3,6 +3,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -65,10 +66,13 @@ export type Story = {
   completionDate?: string; // ISO String
 };
 
+export type SprintStatus = 'Yet to Start' | 'Current' | 'Completed' | 'Cancelled';
+
 export type Sprint = {
   id: string;
   title: string;
-  isCurrent: boolean;
+  isCurrent: boolean; // DEPRECATED: Use status instead
+  status?: SprintStatus;
   startDate?: string; // ISO String
   endDate?: string; // ISO String
 };
