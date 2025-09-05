@@ -52,7 +52,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         const duration = differenceInDays(releaseEnd, releaseStart) + 1;
         
         const releaseStages = stages.filter(s => s.parentReleaseId === release.id)
-            .map(stage => {
+            .map((stage, stageIndex) => {
                 const stageStart = parseISO(stage.startDate!);
                 const stageEnd = parseISO(stage.endDate!);
                 const stageStartOffset = differenceInDays(stageStart, chartStartDate);
@@ -61,7 +61,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                     ...stage,
                     startOffset: (stageStartOffset / totalDays) * 100,
                     duration: (stageDuration / totalDays) * 100,
-                    color: COLORS[(index + 1) % COLORS.length]
+                    color: COLORS[(index + stageIndex + 1) % COLORS.length]
                 }
             });
 
@@ -147,8 +147,8 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div 
-                                        className="absolute h-8 rounded-md flex items-center opacity-30" 
-                                        style={{ left: `${release.startOffset}%`, width: `${release.duration}%`, backgroundColor: release.color, top: 4 }}
+                                        className="absolute h-8 rounded-md flex items-center" 
+                                        style={{ left: `${release.startOffset}%`, width: `${release.duration}%`, backgroundColor: release.color, top: 4, opacity: 0.15 }}
                                     />
                                 </TooltipTrigger>
                                 <TooltipContent>
