@@ -147,8 +147,8 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div 
-                                        className="absolute h-8 rounded-md flex items-center" 
-                                        style={{ left: `${release.startOffset}%`, width: `${release.duration}%`, backgroundColor: release.color, top: 4, opacity: 0.15 }}
+                                        className="absolute h-8 rounded-md flex items-center border" 
+                                        style={{ left: `${release.startOffset}%`, width: `${release.duration}%`, backgroundColor: release.color, borderColor: release.color, top: 4, opacity: 0.15 }}
                                     />
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -183,7 +183,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                             <TooltipProvider key={milestone.id}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="absolute" style={{ left: `calc(${milestone.offset}% - 8px)`, top: '3rem' }}>
+                                        <div className="absolute" style={{ left: `calc(${milestone.offset}% - 8px)`, top: '2.5rem' }}>
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary">
                                                 <path d="M12 2L2 12l10 10 10-10L12 2z"/>
                                             </svg>
