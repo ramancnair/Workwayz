@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { type Release } from '@/types';
 import {
   eachDayOfInterval,
@@ -12,7 +12,7 @@ import {
   addDays,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, ChevronRight, Gem } from 'lucide-react';
 
 const COLORS = [
   '#6366F1', // Indigo
@@ -32,12 +32,15 @@ const useToday = () => {
 
 export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] }) {
     const today = useToday();
+    const [expandedReleases, setExpandedReleases] = useState<string[]>([]);
 
     const { chartData, dateInfo } = useMemo(() => {
         const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate);
         const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate && item.parentReleaseId);
+        const milestones = allItems.filter(item => item.itemType === 'Milestone' && item.milestoneDate && item.parentReleaseId);
         
-        const allDatedItems = [...releases, ...stages];
+        const allDatedItems = [...releases, ...stages, ...milestones.map(m => ({...m, startDate: m.milestoneDate, endDate: m.milestoneDate}))];
+        
         if (allDatedItems.length === 0) {
             return { chartData: [], dateInfo: null };
         }
@@ -88,6 +91,9 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             stages: stages
                 .filter(s => s.parentReleaseId === release.id)
                 .sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime()),
+            milestones: milestones
+                .filter(m => m.parentReleaseId === release.id)
+                .sort((a, b) => parseISO(a.milestoneDate!).getTime() - parseISO(b.milestoneDate!).getTime()),
         })).sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
         
         return {
@@ -103,6 +109,15 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             },
         };
     }, [allItems, today]);
+
+    const toggleRelease = (releaseId: string) => {
+        setExpandedReleases(prev => 
+            prev.includes(releaseId) 
+                ? prev.filter(id => id !== releaseId) 
+                : [...prev, releaseId]
+        );
+    };
+
 
     if (!dateInfo) {
         return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
@@ -124,7 +139,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     return (
         <div className="w-full text-sm border rounded-lg overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-[250px_1fr] bg-muted/50">
+            <div className="grid grid-cols-[300px_1fr] bg-muted/50 sticky top-0 z-20">
                 <div className="p-4 font-semibold border-r">Timeline</div>
                 <div className="relative">
                     <div className="flex border-b">
@@ -147,28 +162,40 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             </div>
 
             {/* Body */}
-             <div className="grid grid-cols-[250px_1fr]">
+             <div className="grid grid-cols-[300px_1fr]">
                 {/* Left Column: Release & Stage Names */}
                 <div className="border-r">
-                   {chartData.map((release) => (
+                   {chartData.map((release) => {
+                     const isExpanded = expandedReleases.includes(release.id);
+                     return (
                         <div key={release.id} className="border-b last:border-b-0">
-                            <div className="p-2 bg-muted/30 font-bold text-primary flex items-center gap-2">
+                             <div className="p-2 bg-muted/30 font-bold text-primary flex items-center gap-2 cursor-pointer hover:bg-muted" onClick={() => toggleRelease(release.id)}>
+                               <ChevronRight className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
                                {release.isCompleted && <CheckCircle className="h-4 w-4 text-green-500"/>}
                                <span>{release.name}</span>
                             </div>
-                            <div className="space-y-1 p-2">
-                            {release.stages.map(stage => (
-                                <div key={stage.id} className="h-8 flex items-center text-xs pl-2">
-                                  {stage.isCompleted && <CheckCircle className="h-3 w-3 mr-2 text-green-500"/>}
-                                  <span>{stage.name}</span>
+                            {isExpanded && (
+                                <div className="space-y-1 p-2">
+                                    {release.stages.map(stage => (
+                                        <div key={stage.id} className="h-8 flex items-center text-xs pl-4">
+                                        {stage.isCompleted && <CheckCircle className="h-3 w-3 mr-2 text-green-500"/>}
+                                        <span>{stage.name}</span>
+                                        </div>
+                                    ))}
+                                    {release.milestones.map(milestone => (
+                                        <div key={milestone.id} className="h-8 flex items-center text-xs pl-4">
+                                        {milestone.isCompleted && <CheckCircle className="h-3 w-3 mr-2 text-green-500"/>}
+                                        <Gem className="h-3 w-3 mr-2 text-blue-500" />
+                                        <span>{milestone.name}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                            </div>
+                            )}
                         </div>
-                    ))}
+                    )})}
                 </div>
 
-                {/* Middle Column: Timeline Bars */}
+                {/* Right Column: Timeline Bars */}
                 <div className="relative">
                     {/* Vertical Lines for Weeks */}
                     <div className="absolute inset-0 flex">
@@ -181,32 +208,58 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                         <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `${(todayOffset / totalDays) * 100}%` }}></div>
                     )}
                     
-                    {/* Timeline Data */}
                      <div className="relative z-0">
-                        {chartData.map((release, index) => (
-                            <div key={release.id} className="relative border-b last:border-b-0">
-                                <div className="h-10"></div>
-                                <div className="space-y-1 p-2">
-                                {release.stages.map((stage, stageIndex) => (
-                                    <div key={stage.id} className="relative h-8 flex items-center">
-                                         <div 
-                                            className="absolute h-6 top-1 rounded-md flex items-center px-2 text-white font-semibold text-xs"
+                        {chartData.map((release, index) => {
+                            const isExpanded = expandedReleases.includes(release.id);
+                            return (
+                                <div key={release.id} className="relative border-b last:border-b-0 cursor-pointer" onClick={() => toggleRelease(release.id)}>
+                                    <div className="h-10 relative flex items-center p-2">
+                                        <div 
+                                            className="absolute h-6 top-2 rounded-md flex items-center px-2 text-white font-semibold text-xs bg-indigo-500"
                                             style={{
-                                                left: `${getOffset(stage.startDate!)}%`,
-                                                width: `${getWidth(stage.startDate!, stage.endDate!)}%`,
-                                                backgroundColor: COLORS[(index + stageIndex) % COLORS.length]
+                                                left: `${getOffset(release.startDate!)}%`,
+                                                width: `${getWidth(release.startDate!, release.endDate!)}%`,
                                             }}
-                                         >
-                                            <span className="truncate">{stage.name}</span>
+                                        >
+                                            <span className="truncate">{release.name}</span>
                                         </div>
                                     </div>
-                                ))}
+                                    {isExpanded && (
+                                        <div className="space-y-1 p-2">
+                                        {release.stages.map((stage, stageIndex) => (
+                                            <div key={stage.id} className="relative h-8 flex items-center">
+                                                <div 
+                                                    className="absolute h-6 top-1 rounded-md flex items-center px-2 text-white font-semibold text-xs"
+                                                    style={{
+                                                        left: `${getOffset(stage.startDate!)}%`,
+                                                        width: `${getWidth(stage.startDate!, stage.endDate!)}%`,
+                                                        backgroundColor: COLORS[(index + stageIndex) % COLORS.length]
+                                                    }}
+                                                >
+                                                    <span className="truncate">{stage.name}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {release.milestones.map((milestone) => (
+                                            <div key={milestone.id} className="relative h-8 flex items-center">
+                                                 <div 
+                                                    className="absolute top-1/2 -translate-y-1/2"
+                                                    style={{ left: `calc(${getOffset(milestone.milestoneDate!)}% - 8px)` }}
+                                                    title={`${milestone.name} - ${format(parseISO(milestone.milestoneDate!), 'MMM d')}`}
+                                                >
+                                                    <Gem className={cn("h-4 w-4", milestone.isCompleted ? "text-green-500" : "text-blue-500")} />
+                                                 </div>
+                                            </div>
+                                        ))}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+
