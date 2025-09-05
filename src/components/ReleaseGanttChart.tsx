@@ -34,6 +34,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     const today = useToday();
 
     const { chartData, dateInfo } = useMemo(() => {
+        const currentDate = new Date(); // Use a fresh date for calculations
         const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate);
         const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate && item.parentReleaseId);
         
@@ -51,7 +52,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
         const chartStartDate = startOfWeek(addDays(minDate, -14), { weekStartsOn: 1 });
-        const chartEndDate = addDays(startOfWeek(addDays(maxDate, 14), { weekStartsOn: 1 }), 6);
+        const chartEndDate = startOfWeek(addDays(maxDate, 21), { weekStartsOn: 1 });
         
         const totalDays = differenceInDays(chartEndDate, chartStartDate) + 1;
         
@@ -81,7 +82,6 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             currentDateForWeeks = addDays(currentDateForWeeks, 7);
         }
 
-
         const todayOffset = differenceInDays(today, chartStartDate);
 
         const releaseGroups = releases.map(release => ({
@@ -89,9 +89,8 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             stages: stages
                 .filter(s => s.parentReleaseId === release.id)
                 .sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime()),
-        })).sort((a,b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime());
+        })).sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
         
-
         return {
             chartData: releaseGroups,
             dateInfo: {
