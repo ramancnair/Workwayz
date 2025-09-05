@@ -14,12 +14,12 @@ const COLORS = [
 
 export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] }) {
 
-  const { chartData, months, todayOffset } = useMemo(() => {
+  const { chartData, months, todayOffset, totalRows } = useMemo(() => {
     const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate)
         .sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
     
     if (allItems.filter(i => i.startDate || i.milestoneDate).length === 0) {
-      return { chartData: [], months: [], totalDays: 0, todayOffset: 0, milestones: [] };
+      return { chartData: [], months: [], totalDays: 0, todayOffset: 0, milestones: [], totalRows: 0 };
     }
 
     const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate);
@@ -43,6 +43,8 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     const totalDays = differenceInDays(chartEndDate, chartStartDate);
     const today = startOfDay(new Date());
     const todayOffset = differenceInDays(today, chartStartDate);
+    
+    let currentTotalRows = 0;
 
     const chartData = releases.map((release, index) => {
         const releaseStart = parseISO(release.startDate!);
@@ -51,7 +53,9 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         const startOffset = differenceInDays(releaseStart, chartStartDate);
         const duration = differenceInDays(releaseEnd, releaseStart) + 1;
         
-        const releaseStages = stages.filter(s => s.parentReleaseId === release.id)
+        const releaseStages = stages
+            .filter(s => s.parentReleaseId === release.id)
+            .sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime())
             .map((stage, stageIndex) => {
                 const stageStart = parseISO(stage.startDate!);
                 const stageEnd = parseISO(stage.endDate!);
@@ -75,6 +79,8 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                     offset: (offset / totalDays) * 100,
                 }
             });
+        
+        currentTotalRows += 1 + releaseStages.length; // 1 for release + N for stages
 
         return {
             ...release,
@@ -102,7 +108,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         currentDate = addDays(monthStart, daysInMonth);
     }
 
-    return { chartData, months: currentMonths, totalDays, todayOffset: (todayOffset / totalDays) * 100 };
+    return { chartData, months: currentMonths, todayOffset: (todayOffset / totalDays) * 100, totalRows: currentTotalRows };
   }, [allItems]);
 
 
@@ -110,9 +116,12 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
   }
 
+  const rowHeight = 40; // in pixels
+  const rowGap = 16; // in pixels
+
   return (
     <div className="w-full overflow-x-auto">
-        <div className="relative pt-12 pb-4 min-w-[1200px]" style={{ minHeight: `${chartData.length * 6 + 10}rem` }}>
+        <div className="relative pt-12 pb-4 min-w-[1200px]" style={{ minHeight: `${totalRows * (rowHeight + rowGap) + 80}px` }}>
              {/* Background Grid Lines */}
             <div className="absolute top-0 left-0 w-full h-full">
                 {months.map((month, index) => (
@@ -139,46 +148,63 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             )}
 
             {/* Release Rows */}
-            <div className="relative mt-4 space-y-12">
-                {chartData.map((release, index) => (
-                    <div key={release.id} className="relative h-10">
-                        {/* Main Release Bar Container */}
-                         <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <div 
-                                        className="absolute h-8 rounded-md flex items-center justify-between px-3" 
-                                        style={{ left: `${release.startOffset}%`, width: `${release.duration}%`, top: 4 }}
-                                    >
-                                        <p className="font-bold text-sm text-foreground truncate">{release.name}</p>
-                                        <p className="text-xs text-muted-foreground truncate ml-4">{format(parseISO(release.startDate!), 'MMM d')} - {format(parseISO(release.endDate!), 'MMM d')}</p>
-                                    </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="font-bold">{release.name}</p>
-                                    <p>{format(parseISO(release.startDate!), 'PPP')} - {format(parseISO(release.endDate!), 'PPP')}</p>
-                                </TooltipContent>
-                            </Tooltip>
+            <div className="relative mt-4">
+              {chartData.map((release, releaseIndex) => {
+                let cumulativeHeight = 0;
+                if(releaseIndex > 0) {
+                  for (let i = 0; i < releaseIndex; i++) {
+                     cumulativeHeight += (1 + chartData[i].stages.length) * (rowHeight + rowGap);
+                  }
+                }
+                
+                return (
+                  <div key={release.id} className="relative" style={{ top: `${cumulativeHeight}px`, height: `${(1 + release.stages.length) * (rowHeight + rowGap)}px`}}>
+                      {/* Main Release Bar Container */}
+                        <TooltipProvider>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <div 
+                                      className="absolute h-8 rounded-md flex items-center justify-between px-3 bg-muted/80 border-l-4" 
+                                      style={{ 
+                                        left: `${release.startOffset}%`, 
+                                        width: `${release.duration}%`, 
+                                        top: 0,
+                                        borderColor: release.color,
+                                      }}
+                                  >
+                                      <p className="font-bold text-sm text-foreground truncate">{release.name}</p>
+                                  </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                  <p className="font-bold">{release.name}</p>
+                                  <p>{format(parseISO(release.startDate!), 'PPP')} - {format(parseISO(release.endDate!), 'PPP')}</p>
+                              </TooltipContent>
+                          </Tooltip>
                         </TooltipProvider>
 
                         {/* Stages */}
-                        {release.stages.map(stage => (
-                             <TooltipProvider key={stage.id}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div 
-                                            className="absolute h-8 rounded-md flex items-center justify-center px-2 text-white text-xs font-semibold overflow-hidden" 
-                                            style={{ left: `${stage.startOffset}%`, width: `${stage.duration}%`, backgroundColor: stage.color, top: 4 }}
-                                        >
-                                           <span className="truncate">{stage.name}</span>
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p className="font-bold">{stage.name}</p>
-                                        <p>{format(parseISO(stage.startDate!), 'PPP')} - {format(parseISO(stage.endDate!), 'PPP')}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                        {release.stages.map((stage, stageIndex) => (
+                           <TooltipProvider key={stage.id}>
+                              <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <div 
+                                          className="absolute h-8 rounded-md flex items-center justify-center px-2 text-white text-xs font-semibold overflow-hidden" 
+                                          style={{ 
+                                            left: `${stage.startOffset}%`, 
+                                            width: `${stage.duration}%`, 
+                                            backgroundColor: stage.color, 
+                                            top: `${(stageIndex + 1) * (rowHeight + rowGap)}px` 
+                                          }}
+                                      >
+                                         <span className="truncate">{stage.name}</span>
+                                      </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                      <p className="font-bold">{stage.name}</p>
+                                      <p>{format(parseISO(stage.startDate!), 'PPP')} - {format(parseISO(stage.endDate!), 'PPP')}</p>
+                                  </TooltipContent>
+                              </Tooltip>
+                          </TooltipProvider>
                         ))}
 
                         {/* Milestones for this release */}
@@ -186,7 +212,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                             <TooltipProvider key={milestone.id}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="absolute" style={{ left: `calc(${milestone.offset}% - 8px)`, top: '2.5rem' }}>
+                                        <div className="absolute" style={{ left: `calc(${milestone.offset}% - 8px)`, top: `${rowHeight - 8}px` }}>
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary">
                                                 <path d="M12 2L2 12l10 10 10-10L12 2z"/>
                                             </svg>
@@ -199,8 +225,9 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                                 </Tooltip>
                             </TooltipProvider>
                         ))}
-                    </div>
-                ))}
+                  </div>
+                )
+              })}
             </div>
         </div>
     </div>
