@@ -39,6 +39,10 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         .filter(Boolean)
         .map(dateStr => parseISO(dateStr!));
     
+    if (allDates.length === 0) {
+      return { chartData: [], yAxisLabels: [], domain: [0,0], ticks: [] };
+    }
+
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
@@ -56,12 +60,14 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         const releaseStart = parseISO(release.startDate!);
         const releaseEnd = parseISO(release.endDate!);
 
+        const yIndex = yLabels.length - 1;
+
         processedData.push({
-            y: yLabels.length - 1,
+            y: yIndex,
             name: release.name,
             range: [releaseStart.getTime(), releaseEnd.getTime()],
             fill: 'transparent',
-            stroke: COLORS[yLabels.length % COLORS.length]
+            stroke: COLORS[yIndex % COLORS.length]
         });
 
         const releaseStages = stages
@@ -72,15 +78,15 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             const stageStart = parseISO(stage.startDate!);
             const stageEnd = parseISO(stage.endDate!);
             processedData.push({
-                y: yLabels.length - 1,
+                y: yIndex,
                 name: stage.name,
                 range: [stageStart.getTime(), stageEnd.getTime()],
-                fill: COLORS[yLabels.length % COLORS.length],
+                fill: COLORS[yIndex % COLORS.length],
             });
         });
     });
 
-    return { chartData: processedData, yAxisLabels, domain: chartDomain, ticks: chartTicks };
+    return { chartData: processedData, yAxisLabels: yLabels, domain: chartDomain, ticks: chartTicks };
 
   }, [allItems]);
 
