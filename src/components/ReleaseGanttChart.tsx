@@ -9,7 +9,6 @@ import {
   differenceInDays,
   parseISO,
   startOfWeek,
-  endOfWeek,
   addDays,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -51,17 +50,35 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
         const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
-        const chartStartDate = startOfWeek(addDays(minDate, -7), { weekStartsOn: 1 });
-        const chartEndDate = endOfWeek(addDays(maxDate, 7), { weekStartsOn: 1 });
+        const chartStartDate = startOfWeek(addDays(minDate, -14), { weekStartsOn: 1 });
+        const chartEndDate = startOfWeek(addDays(maxDate, 14), { weekStartsOn: 1 });
         
         const totalDays = differenceInDays(chartEndDate, chartStartDate) + 1;
-
-        const dateTicks = [];
-        let currentDate = chartStartDate;
-        while(currentDate <= chartEndDate) {
-            dateTicks.push(currentDate);
-            currentDate = addDays(currentDate, 10);
+        
+        const months = [];
+        let currentMonth = new Date(chartStartDate);
+        while (currentMonth <= chartEndDate) {
+            const startOfMonth = new Date(currentMonth);
+            const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+            const daysInMonth = differenceInDays(endOfMonth, startOfMonth) + 1;
+            months.push({
+                name: format(currentMonth, 'MMMM yyyy'),
+                width: (daysInMonth / totalDays) * 100,
+            });
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
         }
+
+        const weeks = [];
+        currentDate = new Date(chartStartDate);
+        while (currentDate <= chartEndDate) {
+            const weekEnd = addDays(currentDate, 6);
+             weeks.push({
+                name: format(currentDate, 'd'),
+                isSunday: currentDate.getDay() === 0,
+            });
+            currentDate = addDays(currentDate, 7);
+        }
+
 
         const todayOffset = differenceInDays(today, chartStartDate);
 
@@ -77,8 +94,10 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             chartData: releaseGroups,
             dateInfo: {
                 chartStartDate,
+                chartEndDate,
                 totalDays,
-                dateTicks,
+                months,
+                weeks,
                 todayOffset,
                 isTodayVisible: today >= chartStartDate && today <= chartEndDate,
             },
@@ -89,7 +108,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
     }
     
-    const { chartStartDate, totalDays, dateTicks, todayOffset, isTodayVisible } = dateInfo;
+    const { chartStartDate, totalDays, months, weeks, todayOffset, isTodayVisible } = dateInfo;
 
     const getOffset = (dateStr: string) => {
         if(!dateStr) return 0;
@@ -103,84 +122,106 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     };
 
     return (
-        <div className="w-full text-sm">
+        <div className="w-full text-sm border rounded-lg overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-[250px_1fr_100px] items-center bg-muted/50 rounded-t-lg">
-                <div className="p-4 font-semibold">Timeline</div>
-                <div className="relative h-full border-x">
-                    <div className="flex justify-between items-center h-full px-2">
-                    {dateTicks.map((tick, index) => (
-                        <div key={index} className="text-center text-xs text-muted-foreground">
-                            {format(tick, 'd MMM')}
-                        </div>
-                    ))}
+            <div className="grid grid-cols-[250px_1fr] bg-muted/50">
+                <div className="p-4 font-semibold border-r">Timeline</div>
+                <div className="relative">
+                    <div className="flex border-b">
+                        {months.map((month, index) => (
+                            <div key={index} className="p-2 text-center font-semibold text-xs" style={{ width: `${month.width}%`}}>
+                                {month.name}
+                            </div>
+                        ))}
+                    </div>
+                     <div className="flex h-8">
+                        {weeks.map((week, index) => (
+                            <div key={index} className="flex-1 text-center text-xs text-muted-foreground border-r pt-1">
+                                <span className={cn(week.isSunday && "font-bold text-foreground")}>
+                                    {week.name}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
-                <div className="p-4 font-semibold text-center">Status</div>
             </div>
 
             {/* Body */}
-            <div className="relative">
-                <div className="grid grid-cols-[250px_1fr_100px]">
-                    <div className="border-r"></div>
-                    <div className="grid grid-cols-1 relative">
-                        {/* Vertical Lines */}
-                        {dateTicks.map((tick, index) => (
-                           <div key={index} className="absolute h-full border-r" style={{ left: `${(differenceInDays(tick, chartStartDate)/totalDays) * 100}%`}}></div>
-                        ))}
-                    </div>
-                    <div className="border-l"></div>
+             <div className="grid grid-cols-[250px_1fr]">
+                {/* Left Column: Release & Stage Names */}
+                <div className="border-r">
+                   {chartData.map((release, index) => (
+                        <div key={release.id} className="border-b last:border-b-0">
+                            <div className="p-2 bg-muted/30 font-bold text-primary flex items-center gap-2">
+                               {release.isCompleted && <CheckCircle className="h-4 w-4 text-green-500"/>}
+                               <span>{release.name}</span>
+                            </div>
+                            <div className="space-y-1 p-2">
+                            {release.stages.map(stage => (
+                                <div key={stage.id} className="h-8 flex items-center text-xs pl-2">{stage.name}</div>
+                            ))}
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
-                {chartData.map((release, index) => (
-                    <div key={release.id} className="grid grid-cols-[250px_1fr_100px] items-start border-b">
-                        {/* Left Column: Release & Stage Names */}
-                        <div className="p-4 border-r">
-                            <div className="font-bold text-primary mb-2">{release.name}</div>
-                            <div className="space-y-4 pl-2">
-                            {release.stages.map(stage => (
-                                <div key={stage.id} className="h-8 flex items-center">{stage.name}</div>
-                            ))}
-                            </div>
-                        </div>
-
-                        {/* Middle Column: Timeline Bars */}
-                        <div className="relative h-full">
-                             {release.stages.map((stage, stageIndex) => (
-                                <div key={stage.id} className="relative h-8 my-4">
-                                     <div 
-                                        className="absolute h-6 top-1 rounded-full flex items-center px-2"
-                                        style={{
-                                            left: `${getOffset(stage.startDate!)}%`,
-                                            width: `${getWidth(stage.startDate!, stage.endDate!)}%`,
-                                            backgroundColor: COLORS[(index + stageIndex) % COLORS.length]
-                                        }}
-                                     >
-                                     </div>
+                {/* Right Column: Timeline Bars */}
+                <div className="relative">
+                    {/* Vertical Lines for Weeks */}
+                    <div className="absolute inset-0 flex">
+                        {weeks.map((_, index) => (
+                            <div key={index} className="flex-1 border-r last:border-r-0"></div>
+                        ))}
+                    </div>
+                    {/* Today Marker */}
+                    {isTodayVisible && (
+                        <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `${(todayOffset / totalDays) * 100}%` }}></div>
+                    )}
+                    
+                    {/* Timeline Data */}
+                     <div className="relative z-0">
+                        {chartData.map((release, index) => (
+                            <div key={release.id} className="relative border-b last:border-b-0">
+                                <div className="h-10"></div>
+                                <div className="space-y-1 p-2">
+                                {release.stages.map((stage, stageIndex) => (
+                                    <div key={stage.id} className="relative h-8 flex items-center">
+                                         <div 
+                                            className="absolute h-6 top-1 rounded-md flex items-center px-2 text-white font-semibold text-xs"
+                                            style={{
+                                                left: `${getOffset(stage.startDate!)}%`,
+                                                width: `${getWidth(stage.startDate!, stage.endDate!)}%`,
+                                                backgroundColor: COLORS[(index + stageIndex) % COLORS.length]
+                                            }}
+                                         >
+                                            <span className="truncate">{stage.name}</span>
+                                        </div>
+                                    </div>
+                                ))}
                                 </div>
-                            ))}
-                        </div>
-
-                        {/* Right Column: Status */}
-                        <div className="p-4 border-l">
-                            <div className="h-8 flex items-center justify-center">
-                                {/* Release status can be calculated here */}
                             </div>
-                            <div className="space-y-4">
-                                {release.stages.map(stage => (
+                        ))}
+                    </div>
+
+                     {/* Status column */}
+                    <div className="absolute top-0 right-0 h-full w-[100px] bg-background/80 backdrop-blur-sm border-l">
+                         <div className="p-4 font-semibold text-center border-b h-[73px] flex items-center justify-center">Status</div>
+                        {chartData.map((release) => (
+                            <div key={release.id} className="relative border-b last:border-b-0">
+                               <div className="h-10 flex items-center justify-center">
+                                    <div className={cn("h-3 w-3 rounded-full", release.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
+                               </div>
+                               <div className="space-y-1 p-2">
+                                  {release.stages.map(stage => (
                                     <div key={stage.id} className="h-8 flex items-center justify-center">
                                         <div className={cn("h-3 w-3 rounded-full", stage.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
                                     </div>
-                                ))}
+                                  ))}
+                                </div>
                             </div>
-                        </div>
+                        ))}
                     </div>
-                ))}
-                
-                {isTodayVisible && (
-                  <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `calc(250px + ${(todayOffset / totalDays)} * (100% - 350px))` }}>
-                  </div>
-                )}
+                </div>
             </div>
         </div>
     );
