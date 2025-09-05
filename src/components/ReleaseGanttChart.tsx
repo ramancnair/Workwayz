@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { type Release } from '@/types';
-import { eachDayOfInterval, format, differenceInDays, parseISO, startOfDay, addDays, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
+import { eachDayOfInterval, format, differenceInDays, parseISO, startOfDay, addDays, getDaysInMonth, startOfMonth, endOfMonth, eachWeekOfInterval, startOfWeek, endOfWeek } from 'date-fns';
 import { Card, CardContent } from './ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
@@ -14,12 +14,12 @@ const COLORS = [
 
 export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] }) {
 
-  const { chartData, months, todayOffset, totalRows } = useMemo(() => {
+  const { chartData, months, weeks, todayOffset, totalRows } = useMemo(() => {
     const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate)
         .sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
     
     if (allItems.filter(i => i.startDate || i.milestoneDate).length === 0) {
-      return { chartData: [], months: [], totalDays: 0, todayOffset: 0, milestones: [], totalRows: 0 };
+      return { chartData: [], months: [], weeks: [], totalDays: 0, todayOffset: 0, totalRows: 0 };
     }
 
     const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate);
@@ -37,8 +37,8 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
-    const chartStartDate = startOfDay(addDays(startOfMonth(minDate), -7));
-    const chartEndDate = startOfDay(addDays(endOfMonth(maxDate), 7));
+    const chartStartDate = startOfDay(addDays(startOfMonth(minDate), -14));
+    const chartEndDate = startOfDay(addDays(endOfMonth(maxDate), 14));
 
     const totalDays = differenceInDays(chartEndDate, chartStartDate);
     const today = startOfDay(new Date());
@@ -80,7 +80,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                 }
             });
         
-        currentTotalRows += 1 + releaseStages.length; // 1 for release + N for stages
+        currentTotalRows += 1 + releaseStages.length;
 
         return {
             ...release,
@@ -93,22 +93,37 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     });
 
     let currentMonths = [];
-    let currentDate = chartStartDate;
-    while(currentDate <= chartEndDate) {
-        const monthStart = startOfMonth(currentDate);
+    let currentDateIterator = chartStartDate;
+    while(currentDateIterator <= chartEndDate) {
+        const monthStart = startOfMonth(currentDateIterator);
         const daysInMonth = getDaysInMonth(monthStart);
         const startOffset = differenceInDays(monthStart, chartStartDate);
 
-        currentMonths.push({
-            name: format(monthStart, 'MMMM yyyy'),
-            offset: (startOffset / totalDays) * 100,
-            width: (daysInMonth / totalDays) * 100,
-        });
-
-        currentDate = addDays(monthStart, daysInMonth);
+        if(startOffset >= 0 && startOffset < totalDays) {
+            currentMonths.push({
+                name: format(monthStart, 'MMMM yyyy'),
+                offset: (startOffset / totalDays) * 100,
+                width: (daysInMonth / totalDays) * 100,
+            });
+        }
+        currentDateIterator = addDays(monthStart, daysInMonth);
     }
+    
+    const weekIntervals = eachWeekOfInterval(
+        { start: chartStartDate, end: chartEndDate },
+        { weekStartsOn: 0 } // Sunday
+    );
 
-    return { chartData, months: currentMonths, todayOffset: (todayOffset / totalDays) * 100, totalRows: currentTotalRows };
+    const currentWeeks = weekIntervals.map(weekStart => {
+        const startOffset = differenceInDays(weekStart, chartStartDate);
+        return {
+            name: format(weekStart, 'd'),
+            offset: (startOffset / totalDays) * 100,
+            width: (7 / totalDays) * 100,
+        };
+    });
+
+    return { chartData, months: currentMonths, weeks: currentWeeks, todayOffset: (todayOffset / totalDays) * 100, totalRows: currentTotalRows };
   }, [allItems]);
 
 
@@ -116,25 +131,35 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
   }
 
-  const rowHeight = 40; // in pixels
-  const rowGap = 16; // in pixels
+  const rowHeight = 40;
+  const rowGap = 16;
+  const headerHeight = 80;
 
   return (
     <div className="w-full overflow-x-auto">
-        <div className="relative pt-12 pb-4 min-w-[1200px]" style={{ minHeight: `${totalRows * (rowHeight + rowGap) + 80}px` }}>
-             {/* Background Grid Lines */}
+        <div className="relative pt-12 pb-4 min-w-[1800px]" style={{ minHeight: `${totalRows * (rowHeight + rowGap) + headerHeight}px` }}>
+            {/* Background Grid Lines */}
             <div className="absolute top-0 left-0 w-full h-full">
-                {months.map((month, index) => (
-                    <div key={index} className="absolute top-0 bottom-0 border-l border-dashed" style={{ left: `${month.offset}%` }}></div>
+                {weeks.map((week, index) => (
+                    <div key={index} className="absolute top-0 bottom-0 border-l border-dashed" style={{ left: `${week.offset}%` }}></div>
                 ))}
             </div>
 
-            {/* Months Header */}
-            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm">
-                <div className="relative h-8 flex border-b">
+            {/* Months and Weeks Header */}
+            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm" style={{ height: `${headerHeight}px` }}>
+                {/* Months Row */}
+                <div className="relative h-10 flex border-b">
                     {months.map(month => (
                         <div key={month.name} className="flex-shrink-0 border-l flex items-center justify-center" style={{ width: `${month.width}%`}}>
                             <span className="font-semibold text-sm">{month.name}</span>
+                        </div>
+                    ))}
+                </div>
+                {/* Weeks Row */}
+                <div className="relative h-10 flex border-b">
+                    {weeks.map(week => (
+                        <div key={week.name + week.offset} className="flex-shrink-0 border-l flex items-center justify-center" style={{ width: `${week.width}%`}}>
+                            <span className="text-xs text-muted-foreground">{week.name}</span>
                         </div>
                     ))}
                 </div>
