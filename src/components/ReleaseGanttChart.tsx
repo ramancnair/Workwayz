@@ -124,7 +124,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm">
                 <div className="relative h-8 flex border-b">
                     {months.map(month => (
-                        <div key={month.name} className="flex-shrink-0 border-l flex items-center justify-center" style={{ left: `${month.offset}%`, width: `${month.width}%`}}>
+                        <div key={month.name} className="flex-shrink-0 border-l flex items-center justify-center" style={{ width: `${month.width}%`}}>
                             <span className="font-semibold text-sm">{month.name}</span>
                         </div>
                     ))}
@@ -142,14 +142,17 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
             <div className="relative mt-4 space-y-12">
                 {chartData.map((release, index) => (
                     <div key={release.id} className="relative h-10">
-                        {/* Main Release Bar */}
+                        {/* Main Release Bar Container */}
                          <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div 
-                                        className="absolute h-8 rounded-md flex items-center border" 
-                                        style={{ left: `${release.startOffset}%`, width: `${release.duration}%`, backgroundColor: release.color, borderColor: release.color, top: 4, opacity: 0.15 }}
-                                    />
+                                        className="absolute h-8 rounded-md flex items-center justify-between px-3" 
+                                        style={{ left: `${release.startOffset}%`, width: `${release.duration}%`, top: 4 }}
+                                    >
+                                        <p className="font-bold text-sm text-foreground truncate">{release.name}</p>
+                                        <p className="text-xs text-muted-foreground truncate ml-4">{format(parseISO(release.startDate!), 'MMM d')} - {format(parseISO(release.endDate!), 'MMM d')}</p>
+                                    </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p className="font-bold">{release.name}</p>
