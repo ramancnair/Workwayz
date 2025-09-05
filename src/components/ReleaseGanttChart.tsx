@@ -51,7 +51,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
         const chartStartDate = startOfWeek(addDays(minDate, -14), { weekStartsOn: 1 });
-        const chartEndDate = startOfWeek(addDays(maxDate, 14), { weekStartsOn: 1 });
+        const chartEndDate = addDays(startOfWeek(addDays(maxDate, 14), { weekStartsOn: 1 }), 6);
         
         const totalDays = differenceInDays(chartEndDate, chartStartDate) + 1;
         
@@ -60,7 +60,10 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         while (currentMonth <= chartEndDate) {
             const startOfMonth = new Date(currentMonth);
             const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-            const daysInMonth = differenceInDays(endOfMonth, startOfMonth) + 1;
+            const daysInMonth = differenceInDays(
+                endOfMonth > chartEndDate ? chartEndDate : endOfMonth,
+                startOfMonth < chartStartDate ? chartStartDate : startOfMonth
+            ) + 1;
             months.push({
                 name: format(currentMonth, 'MMMM yyyy'),
                 width: (daysInMonth / totalDays) * 100,
@@ -69,10 +72,9 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         }
 
         const weeks = [];
-        currentDate = new Date(chartStartDate);
+        let currentDate = new Date(chartStartDate);
         while (currentDate <= chartEndDate) {
-            const weekEnd = addDays(currentDate, 6);
-             weeks.push({
+            weeks.push({
                 name: format(currentDate, 'd'),
                 isSunday: currentDate.getDay() === 0,
             });
@@ -124,7 +126,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     return (
         <div className="w-full text-sm border rounded-lg overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-[250px_1fr] bg-muted/50">
+            <div className="grid grid-cols-[250px_1fr_100px] bg-muted/50">
                 <div className="p-4 font-semibold border-r">Timeline</div>
                 <div className="relative">
                     <div className="flex border-b">
@@ -144,13 +146,14 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                         ))}
                     </div>
                 </div>
+                 <div className="p-4 font-semibold text-center border-l h-[73px] flex items-center justify-center">Status</div>
             </div>
 
             {/* Body */}
-             <div className="grid grid-cols-[250px_1fr]">
+             <div className="grid grid-cols-[250px_1fr_100px]">
                 {/* Left Column: Release & Stage Names */}
                 <div className="border-r">
-                   {chartData.map((release, index) => (
+                   {chartData.map((release) => (
                         <div key={release.id} className="border-b last:border-b-0">
                             <div className="p-2 bg-muted/30 font-bold text-primary flex items-center gap-2">
                                {release.isCompleted && <CheckCircle className="h-4 w-4 text-green-500"/>}
@@ -165,7 +168,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                     ))}
                 </div>
 
-                {/* Right Column: Timeline Bars */}
+                {/* Middle Column: Timeline Bars */}
                 <div className="relative">
                     {/* Vertical Lines for Weeks */}
                     <div className="absolute inset-0 flex">
@@ -202,25 +205,23 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                             </div>
                         ))}
                     </div>
-
-                     {/* Status column */}
-                    <div className="absolute top-0 right-0 h-full w-[100px] bg-background/80 backdrop-blur-sm border-l">
-                         <div className="p-4 font-semibold text-center border-b h-[73px] flex items-center justify-center">Status</div>
-                        {chartData.map((release) => (
-                            <div key={release.id} className="relative border-b last:border-b-0">
-                               <div className="h-10 flex items-center justify-center">
-                                    <div className={cn("h-3 w-3 rounded-full", release.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
-                               </div>
-                               <div className="space-y-1 p-2">
-                                  {release.stages.map(stage => (
-                                    <div key={stage.id} className="h-8 flex items-center justify-center">
-                                        <div className={cn("h-3 w-3 rounded-full", stage.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
-                                    </div>
-                                  ))}
-                                </div>
+                </div>
+                {/* Status column */}
+                <div className="border-l">
+                    {chartData.map((release) => (
+                        <div key={release.id} className="relative border-b last:border-b-0">
+                            <div className="h-10 flex items-center justify-center">
+                                <div className={cn("h-3 w-3 rounded-full", release.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
                             </div>
-                        ))}
-                    </div>
+                            <div className="space-y-1 p-2">
+                                {release.stages.map(stage => (
+                                <div key={stage.id} className="h-8 flex items-center justify-center">
+                                    <div className={cn("h-3 w-3 rounded-full", stage.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
+                                </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
