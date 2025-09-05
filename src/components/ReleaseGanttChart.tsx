@@ -34,7 +34,6 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     const today = useToday();
 
     const { chartData, dateInfo } = useMemo(() => {
-        const currentDate = new Date(); // Use a fresh date for calculations
         const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate);
         const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate && item.parentReleaseId);
         
@@ -125,7 +124,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
     return (
         <div className="w-full text-sm border rounded-lg overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-[250px_1fr_100px] bg-muted/50">
+            <div className="grid grid-cols-[250px_1fr] bg-muted/50">
                 <div className="p-4 font-semibold border-r">Timeline</div>
                 <div className="relative">
                     <div className="flex border-b">
@@ -145,11 +144,10 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                         ))}
                     </div>
                 </div>
-                 <div className="p-4 font-semibold text-center border-l h-[73px] flex items-center justify-center">Status</div>
             </div>
 
             {/* Body */}
-             <div className="grid grid-cols-[250px_1fr_100px]">
+             <div className="grid grid-cols-[250px_1fr]">
                 {/* Left Column: Release & Stage Names */}
                 <div className="border-r">
                    {chartData.map((release) => (
@@ -160,7 +158,10 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                             </div>
                             <div className="space-y-1 p-2">
                             {release.stages.map(stage => (
-                                <div key={stage.id} className="h-8 flex items-center text-xs pl-2">{stage.name}</div>
+                                <div key={stage.id} className="h-8 flex items-center text-xs pl-2">
+                                  {stage.isCompleted && <CheckCircle className="h-3 w-3 mr-2 text-green-500"/>}
+                                  <span>{stage.name}</span>
+                                </div>
                             ))}
                             </div>
                         </div>
@@ -204,23 +205,6 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                             </div>
                         ))}
                     </div>
-                </div>
-                {/* Status column */}
-                <div className="border-l">
-                    {chartData.map((release) => (
-                        <div key={release.id} className="relative border-b last:border-b-0">
-                            <div className="h-10 flex items-center justify-center">
-                                <div className={cn("h-3 w-3 rounded-full", release.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
-                            </div>
-                            <div className="space-y-1 p-2">
-                                {release.stages.map(stage => (
-                                <div key={stage.id} className="h-8 flex items-center justify-center">
-                                    <div className={cn("h-3 w-3 rounded-full", stage.isCompleted ? 'bg-green-500' : 'bg-gray-300')} />
-                                </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
                 </div>
             </div>
         </div>
