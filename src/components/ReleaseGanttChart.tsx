@@ -3,132 +3,161 @@
 
 import { useMemo } from 'react';
 import { type Release } from '@/types';
-import { eachDayOfInterval, format, differenceInDays, parseISO, startOfWeek, endOfWeek } from 'date-fns';
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { eachDayOfInterval, format, differenceInDays, parseISO, startOfMonth, endOfMonth, getDaysInMonth } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Flag, Pin } from 'lucide-react';
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
+// A more professional color palette
+const COLORS = [
+  '#00A1E0', // Bright Blue
+  '#64C5B1', // Teal
+  '#F5A623', // Orange
+  '#F8E71C', // Yellow
+  '#7ED321', // Green
+  '#BD10E0', // Purple
+  '#4A90E2', // Sky Blue
+  '#D0021B', // Red
+];
 
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-background border rounded-md p-2 shadow-md text-sm">
-        <p className="font-bold">{data.name}</p>
-        <p className="text-muted-foreground">{format(new Date(data.range[0]), 'MMM d, yyyy')} - {format(new Date(data.range[1]), 'MMM d, yyyy')}</p>
-        <p>Duration: {differenceInDays(new Date(data.range[1]), new Date(data.range[0])) + 1} days</p>
-      </div>
-    );
-  }
-  return null;
+// Custom hook to get a "Today" date that updates only once on component mount
+const useToday = () => {
+    const todayRef = useMemo(() => new Date(), []);
+    return todayRef;
 };
 
 export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] }) {
+    const today = useToday();
 
-  const { chartData, yAxisLabels, domain, ticks } = useMemo(() => {
-    const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate)
-        .sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
-    
-    if (releases.length === 0) {
-      return { chartData: [], yAxisLabels: [], domain: [0,0], ticks: [] };
-    }
+    const { chartData, dateInfo } = useMemo(() => {
+        const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate);
+        const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate);
+        const milestones = allItems.filter(item => item.itemType === 'Milestone' && item.milestoneDate);
 
-    const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate);
-    
-    const allDates = allItems
-        .flatMap(item => [item.startDate, item.endDate, item.milestoneDate])
-        .filter(Boolean)
-        .map(dateStr => parseISO(dateStr!));
-    
-    if (allDates.length === 0) {
-      return { chartData: [], yAxisLabels: [], domain: [0,0], ticks: [] };
-    }
+        const allDatedItems = [...releases, ...stages, ...milestones];
+        if (allDatedItems.length === 0) {
+            return { chartData: { releases: [], stages: [], milestones: [] }, dateInfo: null };
+        }
 
-    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
-    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+        const allDates = allDatedItems.flatMap(item => [item.startDate, item.endDate, item.milestoneDate]).filter(Boolean).map(d => parseISO(d!));
+        if (allDates.length === 0) {
+            return { chartData: { releases: [], stages: [], milestones: [] }, dateInfo: null };
+        }
 
-    const chartStartDate = startOfWeek(minDate);
-    const chartEndDate = endOfWeek(maxDate);
-    
-    const chartDomain: [number, number] = [chartStartDate.getTime(), chartEndDate.getTime()];
-    const chartTicks = eachDayOfInterval({ start: chartStartDate, end: chartEndDate }).filter((d, i) => i % 7 === 0).map(d => d.getTime());
-    
-    const yLabels: string[] = [];
-    const processedData: any[] = [];
-    
-    releases.forEach((release) => {
-        yLabels.push(`(R) ${release.name}`);
-        const releaseStart = parseISO(release.startDate!);
-        const releaseEnd = parseISO(release.endDate!);
+        const chartStartDate = startOfMonth(new Date(Math.min(...allDates.map(d => d.getTime()))));
+        const chartEndDate = endOfMonth(new Date(Math.max(...allDates.map(d => d.getTime()))));
+        const totalDays = differenceInDays(chartEndDate, chartStartDate) + 1;
 
-        const yIndex = yLabels.length - 1;
-
-        processedData.push({
-            y: yIndex,
-            name: release.name,
-            range: [releaseStart.getTime(), releaseEnd.getTime()],
-            fill: 'transparent',
-            stroke: COLORS[yIndex % COLORS.length]
-        });
-
-        const releaseStages = stages
-            .filter(s => s.parentReleaseId === release.id)
-            .sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
-
-        releaseStages.forEach(stage => {
-            const stageStart = parseISO(stage.startDate!);
-            const stageEnd = parseISO(stage.endDate!);
-            processedData.push({
-                y: yIndex,
-                name: stage.name,
-                range: [stageStart.getTime(), stageEnd.getTime()],
-                fill: COLORS[yIndex % COLORS.length],
+        const months = [];
+        let current = chartStartDate;
+        while (current <= chartEndDate) {
+            const monthStart = startOfMonth(current);
+            const daysInMonth = getDaysInMonth(monthStart);
+            months.push({
+                name: format(monthStart, 'MMM'),
+                year: format(monthStart, 'yyyy'),
+                days: daysInMonth,
             });
-        });
-    });
-
-    return { chartData: processedData, yAxisLabels: yLabels, domain: chartDomain, ticks: chartTicks };
-
-  }, [allItems]);
-
-
-  if (chartData.length === 0) {
-    return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height={yAxisLabels.length * 50 + 60}>
-      <BarChart
-        data={chartData}
-        layout="vertical"
-        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        barCategoryGap={8}
-      >
-        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-        <XAxis 
-            type="number" 
-            domain={domain}
-            ticks={ticks}
-            tickFormatter={(tick) => format(new Date(tick), 'MMM d')}
-            scale="time"
-        />
-        <YAxis 
-            type="number" 
-            dataKey="y"
-            domain={[-1, yAxisLabels.length]}
-            ticks={yAxisLabels.map((_, i) => i)}
-            tickFormatter={(tick) => yAxisLabels[tick]}
-            width={150}
-            tickLine={false}
-            axisLine={false}
-        />
-        <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(200, 200, 200, 0.2)'}} />
+            current = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+        }
         
-        <Bar dataKey="range" isAnimationActive={false}>
-          {chartData.map((entry, index) => (
-             <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.stroke} strokeWidth={2} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  );
+        const todayOffset = differenceInDays(today, chartStartDate);
+
+        return {
+            chartData: { releases, stages, milestones },
+            dateInfo: {
+                chartStartDate,
+                chartEndDate,
+                totalDays,
+                months,
+                todayOffset,
+                isTodayVisible: today >= chartStartDate && today <= chartEndDate,
+            },
+        };
+    }, [allItems, today]);
+
+    if (!dateInfo) {
+        return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
+    }
+    
+    const { chartStartDate, totalDays, months, todayOffset, isTodayVisible } = dateInfo;
+
+    const getOffset = (dateStr: string) => {
+        return (differenceInDays(parseISO(dateStr), chartStartDate) / totalDays) * 100;
+    };
+    
+    const getWidth = (startDateStr: string, endDateStr: string) => {
+        const duration = differenceInDays(parseISO(endDateStr), parseISO(startDateStr)) + 1;
+        return (duration / totalDays) * 100;
+    };
+
+    return (
+        <div className="space-y-8 font-sans text-sm">
+            {/* Top timeline with months and milestones */}
+            <div className="relative pt-12">
+                {/* Main axis bar */}
+                <div className="relative h-6 bg-secondary rounded-lg shadow-inner flex">
+                    {months.map((month, index) => (
+                        <div key={`${month.name}-${month.year}`} style={{ width: `${(month.days / totalDays) * 100}%` }} className={cn("h-full text-center flex items-center justify-center text-xs font-semibold text-secondary-foreground/80", index < months.length -1 && "border-r border-background/50")}>
+                            {month.name}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Today Marker */}
+                {isTodayVisible && (
+                    <div className="absolute top-0 bottom-[-8px]" style={{ left: `${(todayOffset / totalDays) * 100}%` }}>
+                       <div className="relative flex flex-col items-center">
+                           <div className="text-xs font-bold text-red-500 mb-1">Today</div>
+                           <div className="h-2 w-2 bg-red-500 transform rotate-45"></div>
+                           <div className="w-px h-12 bg-red-500"></div>
+                       </div>
+                    </div>
+                )}
+                
+                {/* Milestones */}
+                {chartData.milestones.map((milestone, index) => (
+                    <div key={milestone.id} className="absolute top-0" style={{ left: `${getOffset(milestone.milestoneDate!)}%` }}>
+                       <div className="relative flex flex-col items-center">
+                           <div className="whitespace-nowrap text-center text-xs mb-1">
+                               <p className="font-bold">{milestone.name}</p>
+                               <p className="text-muted-foreground">{format(parseISO(milestone.milestoneDate!), 'MMM d')}</p>
+                           </div>
+                           <Flag className="h-4 w-4 text-primary" style={{color: COLORS[index % COLORS.length]}} fill={COLORS[index % COLORS.length]} />
+                           <div className="w-px h-6 bg-border"></div>
+                       </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Bottom section with stage/release bars */}
+            <div className="relative space-y-2.5 pr-4">
+                {[...chartData.releases, ...chartData.stages]
+                    .sort((a,b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime())
+                    .map((item, index) => (
+                    <div key={item.id} className="relative h-6 flex items-center">
+                        <div className="w-40 pr-4 text-right truncate font-medium text-muted-foreground">{item.name}</div>
+                        <div 
+                           className="h-full rounded flex items-center px-2"
+                           style={{
+                             left: `${getOffset(item.startDate!)}%`,
+                             width: `${getWidth(item.startDate!, item.endDate!)}%`,
+                             backgroundColor: `${COLORS[index % COLORS.length]}A0`, // with transparency
+                             border: `1px solid ${COLORS[index % COLORS.length]}`
+                           }}
+                        >
+                            <span className="text-white text-xs font-bold truncate">
+                                {format(parseISO(item.startDate!), 'MMM d')} - {format(parseISO(item.endDate!), 'MMM d')}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+                 {/* Dotted lines from timeline */}
+                 <div className="absolute top-0 bottom-0 left-40 w-full -z-10 flex">
+                     {months.map((month, index) => (
+                         <div key={`${month.name}-${index}`} style={{ width: `${(month.days / totalDays) * 100}%` }} className={cn("h-full", index < months.length -1 && "border-r border-dashed border-border")}></div>
+                     ))}
+                 </div>
+            </div>
+        </div>
+    );
 }
