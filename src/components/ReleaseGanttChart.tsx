@@ -72,13 +72,13 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         }
 
         const weeks = [];
-        let currentDate = new Date(chartStartDate);
-        while (currentDate <= chartEndDate) {
+        let currentDateForWeeks = new Date(chartStartDate);
+        while (currentDateForWeeks <= chartEndDate) {
             weeks.push({
-                name: format(currentDate, 'd'),
-                isSunday: currentDate.getDay() === 0,
+                name: format(currentDateForWeeks, 'd'),
+                isSunday: currentDateForWeeks.getDay() === 0,
             });
-            currentDate = addDays(currentDate, 7);
+            currentDateForWeeks = addDays(currentDateForWeeks, 7);
         }
 
 
