@@ -1,19 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -369,40 +354,40 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
     const rootProjectDocRef = doc(db, 'projects', projectId);
 
-    const allCollections: { name: CollectionName, setState: React.Dispatch<any> }[] = [
-        { name: 'project', setState: setProject },
-        { name: 'epics', setState: setEpics },
-        { name: 'stories', setState: setStories },
-        { name: 'sprints', setState: setSprints },
-        { name: 'employees', setState: setEmployees },
-        { name: 'testCases', setState: setTestCases },
-        { name: 'risks', setState: setRisks },
-        { name: 'assumptions', setState: setAssumptions },
-        { name: 'issues', setState: setIssues },
-        { name: 'dependencies', setState: setDependencies },
-        { name: 'documents', setState: setDocuments },
-        { name: 'paymentMilestones', setState: setPaymentMilestones },
-        { name: 'kanbanColumns', setState: setKanbanColumns },
-        { name: 'holidays', setState: setProjectHolidays },
-        { name: 'releases', setState: setReleasesAndMilestones },
-        { name: 'impactedSystems', setState: setImpactedSystems },
-        { name: 'horizontals', setState: setHorizontals },
-        { name: 'initialImpactedSystems', setState: setInitialImpactedSystems },
-        { name: 'initialHorizontals', setState: setInitialHorizontals },
-        { name: 'environments', setState: setEnvironments },
-        { name: 'codeRepositories', setState: setCodeRepositories },
-        { name: 'worklogs', setState: setWorklogs },
-        { name: 'worklogSubmissions', setState: setWorklogSubmissions },
-        { name: 'settings', setState: setProjectSettings },
+    const allCollections: { name: CollectionName, setState: React.Dispatch<any>, isDoc: boolean }[] = [
+        { name: 'project', setState: setProject, isDoc: true },
+        { name: 'epics', setState: setEpics, isDoc: false },
+        { name: 'stories', setState: setStories, isDoc: false },
+        { name: 'sprints', setState: setSprints, isDoc: false },
+        { name: 'employees', setState: setEmployees, isDoc: false },
+        { name: 'testCases', setState: setTestCases, isDoc: false },
+        { name: 'risks', setState: setRisks, isDoc: false },
+        { name: 'assumptions', setState: setAssumptions, isDoc: false },
+        { name: 'issues', setState: setIssues, isDoc: false },
+        { name: 'dependencies', setState: setDependencies, isDoc: false },
+        { name: 'documents', setState: setDocuments, isDoc: false },
+        { name: 'paymentMilestones', setState: setPaymentMilestones, isDoc: false },
+        { name: 'kanbanColumns', setState: setKanbanColumns, isDoc: false },
+        { name: 'holidays', setState: setProjectHolidays, isDoc: false },
+        { name: 'releases', setState: setReleasesAndMilestones, isDoc: false },
+        { name: 'impactedSystems', setState: setImpactedSystems, isDoc: false },
+        { name: 'horizontals', setState: setHorizontals, isDoc: false },
+        { name: 'initialImpactedSystems', setState: setInitialImpactedSystems, isDoc: false },
+        { name: 'initialHorizontals', setState: setInitialHorizontals, isDoc: false },
+        { name: 'environments', setState: setEnvironments, isDoc: false },
+        { name: 'codeRepositories', setState: setCodeRepositories, isDoc: false },
+        { name: 'worklogs', setState: setWorklogs, isDoc: false },
+        { name: 'worklogSubmissions', setState: setWorklogSubmissions, isDoc: false },
+        { name: 'settings', setState: setProjectSettings, isDoc: true },
     ];
 
     const neededCollectionNames = getCollectionsForPage(pathname);
     const neededCollections = allCollections.filter(c => neededCollectionNames.includes(c.name));
     
     const initialFetchPromises: Promise<any>[] = [];
-    const unsubscribers = neededCollections.map(({ name, setState }) => {
+    const unsubscribers = neededCollections.map(({ name, setState, isDoc }) => {
         let collectionRef: any;
-        if (name === 'project') {
+         if (name === 'project') {
             collectionRef = rootProjectDocRef;
         } else if (name === 'settings') {
             collectionRef = doc(rootProjectDocRef, 'settings', 'main');
@@ -410,7 +395,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             collectionRef = collection(rootProjectDocRef, name);
         }
 
-        initialFetchPromises.push(getDocs(query(collectionRef.path ? collectionRef : collection(db, collectionRef.path))));
+        if (isDoc) {
+            initialFetchPromises.push(getDoc(collectionRef));
+        } else {
+            initialFetchPromises.push(getDocs(collectionRef));
+        }
         
         return onSnapshot(collectionRef, (snapshot: any) => {
             if (snapshot.docs) { // This is a query snapshot
@@ -482,7 +471,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                  } else if (name === 'project') {
                     setError(`Project with ID "${projectId}" not found.`);
                  }
-                 setState(name.endsWith('s') ? [] : null); // empty array for collections, null for docs
+                 setState(isDoc ? null : []);
             }
         }, (err: any) => {
             console.error(`Error fetching ${name}:`, err);
@@ -2292,3 +2281,5 @@ export function useProject() {
   }
   return context;
 }
+
+    
