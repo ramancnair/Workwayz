@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -39,13 +39,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
 import { type Release, type ReleaseItemType } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 const releaseSchemaBase = z.object({
   name: z.string().min(1, 'Name is required.'),
@@ -65,6 +65,10 @@ export default function ReleasesPage() {
   const [deletingItem, setDeletingItem] = useState<Release | null>(null);
   const [itemTypeToAdd, setItemTypeToAdd] = useState<ReleaseItemType>('Release');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [filters, setFilters] = useState({ search: '', itemType: 'all', parentReleaseId: 'all' });
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
+
 
   const releases = releasesAndMilestones.filter(item => item.itemType === 'Release');
   
@@ -155,6 +159,76 @@ export default function ReleasesPage() {
       }
     }
   }, [isDialogOpen, editingItem, form]);
+  
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ search: '', itemType: 'all', parentReleaseId: 'all' });
+  };
+  
+  const handleSort = (columnId: string) => {
+    if (sorting?.id === columnId) {
+      setSorting({ ...sorting, desc: !sorting.desc });
+    } else {
+      setSorting({ id: columnId, desc: false });
+    }
+  };
+
+  const filteredAndSortedItems = useMemo(() => {
+    let filtered = [...releasesAndMilestones];
+    const searchTerm = filters.search.toLowerCase();
+
+    if (searchTerm) {
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(searchTerm) ||
+        (item.description && item.description.toLowerCase().includes(searchTerm)) ||
+        item.releaseId.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    if (filters.itemType !== 'all') {
+        filtered = filtered.filter(item => item.itemType === filters.itemType);
+    }
+    
+    if (filters.parentReleaseId !== 'all') {
+        filtered = filtered.filter(item => item.parentReleaseId === filters.parentReleaseId);
+    }
+
+    if (sorting) {
+      filtered.sort((a, b) => {
+        let valA: any, valB: any;
+        if (sorting.id === 'parentReleaseId') {
+            valA = getParentReleaseName(a.parentReleaseId);
+            valB = getParentReleaseName(b.parentReleaseId);
+        } else if (sorting.id === 'startDate') {
+            valA = a.milestoneDate || a.startDate;
+            valB = b.milestoneDate || b.startDate;
+        } else {
+             valA = (a as any)[sorting.id];
+             valB = (b as any)[sorting.id];
+        }
+
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+        
+        if (['startDate', 'endDate'].includes(sorting.id)) {
+          const dateA = new Date(valA).getTime();
+          const dateB = new Date(valB).getTime();
+          return sorting.desc ? dateB - dateA : dateA - dateB;
+        }
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sorting.desc ? valB.localeCompare(valA) : valA.localeCompare(valB);
+        }
+        
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [releasesAndMilestones, filters, sorting]);
 
   const handleDialogOpen = (item: Release | null, type: ReleaseItemType) => {
     setEditingItem(item);
@@ -198,6 +272,16 @@ export default function ReleasesPage() {
     }
     setIsSubmitting(false);
   };
+  
+  const SortableHeader = ({ columnId, children }: { columnId: string, children: React.ReactNode }) => (
+    <TableHead>
+      <Button variant="ghost" onClick={() => handleSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+
 
   return (
     <>
@@ -217,56 +301,80 @@ export default function ReleasesPage() {
           </Button>
         </PageHeader>
         <Card>
-          <CardHeader>
-            <CardTitle>Project Releases</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Parent Release</TableHead>
-                  <TableHead className="w-[30%]">Description</TableHead>
-                  <TableHead>Start/Milestone Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {releasesAndMilestones.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">
-                      <Badge variant={item.itemType === 'Release' ? 'default' : (item.itemType === 'Stage' ? 'secondary' : 'outline')}>
-                          {item.releaseId}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
-                    <TableCell className="break-words">{item.description}</TableCell>
-                    <TableCell>
-                      {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
-                          ? format(new Date(item.milestoneDate), 'PPP')
-                          : (item.startDate && !isNaN(new Date(item.startDate).getTime()) ? format(new Date(item.startDate), 'PPP') : 'N/A')}
-                    </TableCell>
-                    <TableCell>
-                      {item.itemType === 'Milestone'
-                          ? 'N/A'
-                          : (item.endDate && !isNaN(new Date(item.endDate).getTime()) ? format(new Date(item.endDate), 'PPP') : 'N/A')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <CardContent className="p-4">
+             <div className="flex items-center gap-4 flex-wrap">
+                <Input
+                    placeholder="Filter by ID, name, or description..."
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    className="max-w-sm"
+                />
+                <Select value={filters.itemType} onValueChange={(v) => handleFilterChange('itemType', v)}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by type..."/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Item Types</SelectItem>
+                        <SelectItem value="Release">Release</SelectItem>
+                        <SelectItem value="Stage">Stage</SelectItem>
+                        <SelectItem value="Milestone">Milestone</SelectItem>
+                    </SelectContent>
+                </Select>
+                 <Select value={filters.parentReleaseId} onValueChange={(v) => handleFilterChange('parentReleaseId', v)}>
+                    <SelectTrigger className="w-[220px]"><SelectValue placeholder="Filter by parent release..."/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Parent Releases</SelectItem>
+                        {releases.map(r => <SelectItem key={r.id} value={r.id}>({r.releaseId}) {r.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                 <Button variant="ghost" onClick={clearFilters}>
+                    <X className="mr-2 h-4 w-4" /> Clear Filters
+                </Button>
+            </div>
           </CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <SortableHeader columnId="releaseId">ID</SortableHeader>
+                <SortableHeader columnId="name">Name</SortableHeader>
+                <SortableHeader columnId="parentReleaseId">Parent Release</SortableHeader>
+                <TableHead className="w-[30%]">Description</TableHead>
+                <SortableHeader columnId="startDate">Start/Milestone Date</SortableHeader>
+                <SortableHeader columnId="endDate">End Date</SortableHeader>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAndSortedItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">
+                    <Badge variant={item.itemType === 'Release' ? 'default' : (item.itemType === 'Stage' ? 'secondary' : 'outline')}>
+                        {item.releaseId}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
+                  <TableCell className="break-words">{item.description}</TableCell>
+                  <TableCell>
+                    {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
+                        ? format(new Date(item.milestoneDate), 'PPP')
+                        : (item.startDate && !isNaN(new Date(item.startDate).getTime()) ? format(new Date(item.startDate), 'PPP') : 'N/A')}
+                  </TableCell>
+                  <TableCell>
+                    {item.itemType === 'Milestone'
+                        ? 'N/A'
+                        : (item.endDate && !isNaN(new Date(item.endDate).getTime()) ? format(new Date(item.endDate), 'PPP') : 'N/A')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </Card>
       </div>
 
