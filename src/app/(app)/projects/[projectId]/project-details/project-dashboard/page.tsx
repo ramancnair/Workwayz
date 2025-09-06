@@ -75,12 +75,12 @@ export default function ProjectDashboardPage() {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Tasks</CardTitle>
-             <ChartLegend content={<ChartLegendContent />} />
           </CardHeader>
           <CardContent className="flex items-center justify-center">
             <ChartContainer config={{}} className="mx-auto aspect-square h-[250px]">
                 <PieChart>
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                    <ChartLegend content={<ChartLegendContent />} />
                     <Pie data={taskChartData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={100} strokeWidth={5}>
                         <LabelList
                             dataKey="value"
@@ -121,13 +121,13 @@ export default function ProjectDashboardPage() {
          <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Time</CardTitle>
-             <ChartLegend content={<ChartLegendContent />} />
           </CardHeader>
           <CardContent>
              <ChartContainer config={{}} className="h-[250px] w-full">
                 <BarChart data={timeChartData} layout="vertical" margin={{ left: 50, right: 20 }}>
                     <XAxis type="number" domain={[-100, 100]} hide />
                     <YAxis type="category" dataKey="name" hide />
+                    <ChartLegend content={<ChartLegendContent />} />
                     <Bar dataKey="value" layout="vertical" stackId="a" radius={4} barSize={20} />
                 </BarChart>
             </ChartContainer>
@@ -137,13 +137,13 @@ export default function ProjectDashboardPage() {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Cost</CardTitle>
-             <ChartLegend content={<ChartLegendContent />} />
           </CardHeader>
           <CardContent>
             <ChartContainer config={{}} className="h-[250px] w-full">
                 <BarChart data={costChartData} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
-                    <YAxis tickFormatter={(value) => `${value/1000}K`} />
+                    <YAxis tickFormatter={(value) => `${'${value/1000}'}K`} />
                     <XAxis dataKey="name" hide/>
+                    <ChartLegend content={<ChartLegendContent />} />
                     <Bar dataKey="value" radius={4} />
                 </BarChart>
             </ChartContainer>
@@ -153,13 +153,13 @@ export default function ProjectDashboardPage() {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Workload</CardTitle>
-            <ChartLegend content={<ChartLegendContent />} />
           </CardHeader>
           <CardContent>
             <ChartContainer config={{}} className="h-[250px] w-full">
                 <BarChart data={workloadChartData} layout="vertical" stackOffset="expand" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                     <XAxis type="number" hide />
                     <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <ChartLegend content={<ChartLegendContent />} />
                     <Bar dataKey="completed" stackId="a" fill="hsl(var(--chart-2))" radius={[4,0,0,4]} />
                     <Bar dataKey="remaining" stackId="a" fill="hsl(var(--chart-1))" radius={[0,4,4,0]} />
                 </BarChart>
