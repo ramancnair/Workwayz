@@ -20,7 +20,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Cell, Legend, Tooltip } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Cell, Legend, Tooltip } from 'recharts';
 import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,7 +36,7 @@ const taskChartConfig = {
 } satisfies ChartConfig;
 
 const workloadChartConfig = {
-  actual: { label: 'Actual (Non-Bug)', color: 'hsl(var(--chart-2))' },
+  actual: { label: 'Non-Bug Effort', color: 'hsl(var(--chart-2))' },
   bug: { label: 'Bug Effort', color: 'hsl(var(--chart-4))' },
 } satisfies ChartConfig;
 
@@ -169,52 +169,38 @@ export default function ProjectDashboardPage() {
   
   const workloadData = useMemo(() => {
     const sprint = sprints.find(s => s.id === workloadSprintId);
+    if (!sprint?.startDate || !sprint.endDate) return [];
 
-    const sprintStories = workloadSprintId === 'all'
-      ? stories
-      : stories.filter(s => s.sprintId === workloadSprintId);
+    const sprintStart = parseISO(sprint.startDate);
+    const sprintEnd = parseISO(sprint.endDate);
+    const sprintDates = eachDayOfInterval({ start: sprintStart, end: sprintEnd });
+
+    const sprintBugs = stories.filter(s => s.itemType === 'Bug' && s.sprintId === workloadSprintId);
+    const bugIdsInSprint = new Set(sprintBugs.map(b => b.id));
+
+    return sprintDates.map(date => {
+      const dateKey = format(date, 'yyyy-MM-dd');
+      const dailyWorklogs = worklogs.filter(log => format(parseISO(log.date), 'yyyy-MM-dd') === dateKey);
+
+      let totalHours = 0;
+      let bugHours = 0;
+
+      dailyWorklogs.forEach(log => {
+        totalHours += log.totalHours;
+        log.items.forEach(item => {
+          if (bugIdsInSprint.has(item.itemId)) {
+            bugHours += item.hours;
+          }
+        });
+      });
       
-    const resourceIdsInSprint = new Set<string>();
-    sprintStories.forEach(item => {
-      if (item.assigneeId) resourceIdsInSprint.add(item.assigneeId);
-    });
-    const resourcesInSprint = employees.filter(emp => resourceIdsInSprint.has(emp.id));
-
-    return resourcesInSprint.map(resource => {
-      let bugEffort = 0;
-      let actualEffort = 0;
-      
-      const sprintStart = sprint?.startDate ? parseISO(sprint.startDate) : null;
-      const sprintEnd = sprint?.endDate ? parseISO(sprint.endDate) : null;
-
-      if(sprintStart && sprintEnd) {
-        const userWorklogs = worklogs.filter(w => 
-            w.employeeId === resource.id &&
-            isWithinInterval(parseISO(w.date), { start: sprintStart, end: sprintEnd })
-        );
-
-        actualEffort = userWorklogs.reduce((sum, log) => sum + log.totalHours, 0);
-        
-        const assignedBugIds = new Set(sprintStories.filter(i => i.itemType === 'Bug' && i.assigneeId === resource.id).map(i => i.id));
-        
-        bugEffort = userWorklogs.reduce((sum, log) => {
-            const bugHoursInLog = log.items.reduce((itemSum, item) => {
-                if (assignedBugIds.has(item.itemId)) {
-                    return itemSum + item.hours;
-                }
-                return itemSum;
-            }, 0);
-            return sum + bugHoursInLog;
-        }, 0);
-      }
-
       return {
-        name: `${resource.firstName}`,
-        actual: actualEffort - bugEffort,
-        bug: bugEffort,
-      };
+        date: format(date, 'MMM d'),
+        actual: totalHours - bugHours,
+        bug: bugHours,
+      }
     });
-  }, [workloadSprintId, sprints, stories, employees, worklogs]);
+  }, [workloadSprintId, sprints, stories, worklogs]);
 
 
   const calculateEffort = useCallback((relevantStories: Story[]) => {
@@ -428,16 +414,16 @@ export default function ProjectDashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
-              <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-                <CartesianGrid horizontal={false} />
-                <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <XAxis type="number" />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Legend />
-                <Bar dataKey="actual" stackId="a" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="bug" stackId="a" fill="var(--color-bug)" radius={[0, 0, 0, 0]} />
-              </BarChart>
+             <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
+                <AreaChart data={workloadData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                    <YAxis tickFormatter={(value) => `${value}h`} />
+                    <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+                    <Area dataKey="actual" type="monotone" fill="var(--color-actual)" fillOpacity={0.4} stroke="var(--color-actual)" stackId="a" />
+                    <Area dataKey="bug" type="monotone" fill="var(--color-bug)" fillOpacity={0.4} stroke="var(--color-bug)" stackId="a" />
+                    <ChartLegend content={<ChartLegendContent />} />
+                </AreaChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -551,3 +537,4 @@ export default function ProjectDashboardPage() {
 
     
 
+    
