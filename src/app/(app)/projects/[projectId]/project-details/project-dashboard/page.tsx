@@ -36,8 +36,8 @@ const taskChartConfig = {
 } satisfies ChartConfig;
 
 const workloadChartConfig = {
-  actual: { label: 'Actual (Non-Bug)', color: 'hsl(142, 71%, 45%)' }, // Green
-  bug: { label: 'Bug Effort', color: 'hsl(36, 96%, 54%)' }, // Orange
+  actual: { label: 'Actual (Non-Bug)', color: 'hsl(var(--chart-2))' },
+  bug: { label: 'Bug Effort', color: 'hsl(var(--chart-4))' },
 } satisfies ChartConfig;
 
 
@@ -168,40 +168,33 @@ export default function ProjectDashboardPage() {
   }, [holidays, weeklyOffDays]);
   
   const workloadData = useMemo(() => {
-    // 1. Identify all stories/tasks/bugs in the selected sprint
+    const sprint = sprints.find(s => s.id === workloadSprintId);
+
     const sprintStories = workloadSprintId === 'all'
       ? stories
       : stories.filter(s => s.sprintId === workloadSprintId);
-  
-    // 2. Identify all unique resources assigned to those items
+      
     const resourceIdsInSprint = new Set<string>();
     sprintStories.forEach(item => {
-      if (item.assigneeId) {
-        resourceIdsInSprint.add(item.assigneeId);
-      }
+      if (item.assigneeId) resourceIdsInSprint.add(item.assigneeId);
     });
     const resourcesInSprint = employees.filter(emp => resourceIdsInSprint.has(emp.id));
-    const sprint = sprints.find(s => s.id === workloadSprintId);
-  
-    // 3. For each resource, calculate their effort
+
     return resourcesInSprint.map(resource => {
-      // 3a. Filter worklogs for this user within the sprint's date range
+      let bugEffort = 0;
+      let actualEffort = 0;
+      
       const sprintStart = sprint?.startDate ? parseISO(sprint.startDate) : null;
       const sprintEnd = sprint?.endDate ? parseISO(sprint.endDate) : null;
-      
-      let totalActual = 0;
-      let bugEffort = 0;
-      
-      if (sprintStart && sprintEnd) {
+
+      if(sprintStart && sprintEnd) {
         const userWorklogs = worklogs.filter(w => 
             w.employeeId === resource.id &&
             isWithinInterval(parseISO(w.date), { start: sprintStart, end: sprintEnd })
         );
+
+        actualEffort = userWorklogs.reduce((sum, log) => sum + log.totalHours, 0);
         
-        // 3b. Calculate total actual hours from their worklogs
-        totalActual = userWorklogs.reduce((sum, log) => sum + log.totalHours, 0);
-  
-        // 3c. Isolate bug effort
         const assignedBugIds = new Set(sprintStories.filter(i => i.itemType === 'Bug' && i.assigneeId === resource.id).map(i => i.id));
         
         bugEffort = userWorklogs.reduce((sum, log) => {
@@ -214,10 +207,10 @@ export default function ProjectDashboardPage() {
             return sum + bugHoursInLog;
         }, 0);
       }
-  
+
       return {
         name: `${resource.firstName}`,
-        actual: totalActual - bugEffort, // Non-bug actual effort
+        actual: actualEffort - bugEffort,
         bug: bugEffort,
       };
     });
@@ -436,15 +429,15 @@ export default function ProjectDashboardPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
-                <BarChart data={workloadData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis type="number" />
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Legend />
-                    <Bar dataKey="actual" stackId="a" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="bug" stackId="a" fill="var(--color-bug)" radius={[0, 0, 0, 0]} />
-                </BarChart>
+              <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                <CartesianGrid horizontal={false} />
+                <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <XAxis type="number" />
+                <Tooltip content={<ChartTooltipContent />} />
+                <Legend />
+                <Bar dataKey="actual" stackId="a" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="bug" stackId="a" fill="var(--color-bug)" radius={[0, 0, 0, 0]} />
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -557,3 +550,4 @@ export default function ProjectDashboardPage() {
 }
 
     
+
