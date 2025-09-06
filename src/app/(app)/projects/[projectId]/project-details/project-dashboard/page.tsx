@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -25,6 +25,8 @@ import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label as UiLabel } from '@/components/ui/label';
+import { format, parseISO, isSameDay, eachDayOfInterval } from 'date-fns';
+import type { Story } from '@/types';
 
 const taskChartConfig = {
   'To Do': { label: 'To Do', color: 'hsl(var(--muted-foreground))' },
@@ -48,12 +50,6 @@ const costChartData = [
     { name: 'Planned', value: 320, fill: 'hsl(var(--primary))' },
     { name: 'Budget', value: 350, fill: 'hsl(var(--destructive))' },
 ]
-
-const timeChartData = [
-  { name: 'Planned Completion', value: 88, fill: 'hsl(var(--primary))' },
-  { name: 'Actual Completion', value: 92, fill: 'hsl(var(--primary))' },
-  { name: 'Ahead', value: 4, fill: 'hsl(var(--chart-2))' },
-];
 
 const resourceCostsData = [
   { name: 'Developer', planned: 150000, actual: 90000 },
@@ -92,9 +88,11 @@ const otherCostsConfig = {
 
 
 export default function ProjectDashboardPage() {
-  const { stories, releasesAndMilestones, sprints, epics } = useProject();
+  const { stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings } = useProject();
   const [selectedReleaseId, setSelectedReleaseId] = useState('all');
   const [selectedSprintId, setSelectedSprintId] = useState('all');
+  const [timeFilterType, setTimeFilterType] = useState<'sprint' | 'release'>('sprint');
+  const [timeFilterId, setTimeFilterId] = useState('all');
 
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
   
@@ -156,7 +154,46 @@ export default function ProjectDashboardPage() {
       return { name: epic.title, progress };
     });
   }, [epics, stories]);
+  
+  const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
+    if(!start || !end) return 0;
+    const holidayDates = holidays.map(h => parseISO(h.date));
+    const interval = eachDayOfInterval({ start, end });
+    
+    return interval.filter(day => {
+      const dayOfWeek = day.getDay();
+      const isWeekend = weeklyOffDays.includes(dayOfWeek);
+      const isHoliday = holidayDates.some(h => isSameDay(day, h));
+      return !isWeekend && !isHoliday;
+    }).length;
+  }, [holidays, weeklyOffDays]);
 
+  const timeChartData = useMemo(() => {
+    let relevantStories: Story[] = [];
+    if (timeFilterType === 'sprint') {
+        relevantStories = timeFilterId === 'all' ? stories : stories.filter(s => s.sprintId === timeFilterId);
+    } else {
+        relevantStories = timeFilterId === 'all' ? stories : stories.filter(s => s.releaseId === timeFilterId);
+    }
+
+    const planned = relevantStories.reduce((sum, story) => sum + (story.estimatedHours || 0), 0);
+    
+    const actual = relevantStories.reduce((total, story) => {
+        if (!story.developmentStartDate || !story.completionDate) return total;
+        const start = parseISO(story.developmentStartDate);
+        const end = parseISO(story.completionDate);
+        const days = calculateBusinessDays(start, end);
+        const hoursPerDay = projectSettings?.manDayToHours || 8;
+        return total + (days * hoursPerDay);
+    }, 0);
+
+    return [
+        { name: 'Planned', value: planned, fill: 'hsl(var(--chart-2))' },
+        { name: 'Actual', value: actual, fill: 'hsl(var(--primary))' },
+    ];
+  }, [timeFilterType, timeFilterId, stories, sprints, releasesAndMilestones, calculateBusinessDays, projectSettings]);
+
+  const timeFilterOptions = timeFilterType === 'sprint' ? sprints : releases;
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -262,15 +299,38 @@ export default function ProjectDashboardPage() {
        <div className="grid gap-6 grid-cols-1 lg:grid-cols-4 mt-6">
          <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>Time</CardTitle>
-          </CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Time</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Select value={timeFilterType} onValueChange={(v) => {setTimeFilterType(v as any); setTimeFilterId('all');}}>
+                    <SelectTrigger className="h-8 w-[90px]"><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sprint">Sprint</SelectItem>
+                      <SelectItem value="release">Release</SelectItem>
+                    </SelectContent>
+                  </Select>
+                   <Select value={timeFilterId} onValueChange={setTimeFilterId}>
+                    <SelectTrigger className="h-8 w-[120px]"><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {timeFilterOptions.map(opt => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {timeFilterType === 'sprint' ? (opt as any).title : (opt as any).name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
           <CardContent>
              <ChartContainer config={{}} className="h-[250px] w-full">
-                <BarChart data={timeChartData} layout="vertical" margin={{ left: 50, right: 20 }}>
-                    <XAxis type="number" domain={[-100, 100]} hide />
+                <BarChart data={timeChartData} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
                     <YAxis type="category" dataKey="name" hide />
+                    <XAxis type="number" hide />
+                    <ChartTooltip content={<ChartTooltipContent />} />
                     <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="value" layout="vertical" stackId="a" radius={4} barSize={20} />
+                    <Bar dataKey="value" layout="vertical" radius={4} />
                 </BarChart>
             </ChartContainer>
           </CardContent>
