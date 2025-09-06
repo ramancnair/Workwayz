@@ -245,12 +245,15 @@ export default function ProjectDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
               {epicProgressData.length > 0 ? epicProgressData.map((epic, index) => (
-                <div key={index}>
-                    <p className="text-sm font-medium">{index + 1}. {epic.name}</p>
+                <div key={index} className="space-y-1">
+                    <div className="flex justify-between text-sm font-medium">
+                      <span>{index + 1}. {epic.name}</span>
+                      <span>{epic.progress}%</span>
+                    </div>
                     <Progress value={epic.progress} className="h-3" />
                 </div>
               )) : (
-                <p className="text-sm text-muted-foreground">No epics found for this project.</p>
+                <p className="text-sm text-muted-foreground text-center py-10">No epics found for this project.</p>
               )}
           </CardContent>
         </Card>
