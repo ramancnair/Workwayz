@@ -541,6 +541,7 @@ export default function GroomingPage() {
     const sprintsWithStories = useMemo(() => {
         return sprints.map(sprint => {
             const baseItems = stories.filter(story => story.sprintId === sprint.id);
+            
             const filteredByView = baseItems.filter(story => {
                 if (viewBy === 'story') {
                     return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
@@ -1715,5 +1716,6 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 

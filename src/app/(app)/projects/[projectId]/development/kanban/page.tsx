@@ -559,7 +559,7 @@ export default function KanbanPage() {
   const sprintStories = useMemo(() => {
     const filteredByView = baseSprintStories.filter(story => {
       if (viewBy === 'story') {
-        return ['Requirement/Story', 'Feature Change', 'Bug', 'Task'].includes(story.itemType) && !story.parentStoryId;
+        return ['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType) && !story.parentStoryId;
       }
       if (viewBy === 'sub-task') {
         return story.itemType === 'Sub Task';
@@ -1340,5 +1340,6 @@ export default function KanbanPage() {
     </>
     );
 }
+
 
 
