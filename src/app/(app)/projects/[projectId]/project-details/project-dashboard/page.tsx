@@ -36,8 +36,8 @@ const taskChartConfig = {
 } satisfies ChartConfig;
 
 const workloadChartConfig = {
-  actual: { label: 'Non-Bug Effort', color: 'hsl(var(--chart-2))' },
-  bug: { label: 'Bug Effort', color: 'hsl(var(--chart-4))' },
+  subTaskEffort: { label: 'Sub-Task Effort', color: 'hsl(var(--chart-2))' },
+  bugEffort: { label: 'Bug Effort', color: 'hsl(var(--chart-4))' },
 } satisfies ChartConfig;
 
 
@@ -95,6 +95,15 @@ export default function ProjectDashboardPage() {
 
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
   
+  useEffect(() => {
+    const currentSprint = sprints.find(s => s.isCurrent);
+    if (currentSprint) {
+      setWorkloadSprintId(currentSprint.id);
+    } else if (sprints.length > 0) {
+      setWorkloadSprintId(sprints[0].id);
+    }
+  }, [sprints]);
+
   const releaseChartData = useMemo(() => {
     const filteredStories = selectedReleaseId === 'all'
       ? stories
@@ -168,39 +177,33 @@ export default function ProjectDashboardPage() {
   }, [holidays, weeklyOffDays]);
   
   const workloadData = useMemo(() => {
-    const sprint = sprints.find(s => s.id === workloadSprintId);
-    if (!sprint?.startDate || !sprint.endDate) return [];
+    const sprintStories = workloadSprintId === 'all'
+      ? stories
+      : stories.filter(s => s.sprintId === workloadSprintId);
 
-    const sprintStart = parseISO(sprint.startDate);
-    const sprintEnd = parseISO(sprint.endDate);
-    const sprintDates = eachDayOfInterval({ start: sprintStart, end: sprintEnd });
+    const resourceEffort: Record<string, { name: string; subTaskEffort: number; bugEffort: number }> = {};
 
-    const sprintBugs = stories.filter(s => s.itemType === 'Bug' && s.sprintId === workloadSprintId);
-    const bugIdsInSprint = new Set(sprintBugs.map(b => b.id));
+    sprintStories.forEach(story => {
+      if (!story.assigneeId) return;
 
-    return sprintDates.map(date => {
-      const dateKey = format(date, 'yyyy-MM-dd');
-      const dailyWorklogs = worklogs.filter(log => format(parseISO(log.date), 'yyyy-MM-dd') === dateKey);
+      if (!resourceEffort[story.assigneeId]) {
+        const user = employees.find(e => e.id === story.assigneeId);
+        resourceEffort[story.assigneeId] = {
+          name: user ? `${user.firstName} ${user.lastName}` : 'Unassigned',
+          subTaskEffort: 0,
+          bugEffort: 0,
+        };
+      }
 
-      let totalHours = 0;
-      let bugHours = 0;
-
-      dailyWorklogs.forEach(log => {
-        totalHours += log.totalHours;
-        log.items.forEach(item => {
-          if (bugIdsInSprint.has(item.itemId)) {
-            bugHours += item.hours;
-          }
-        });
-      });
-      
-      return {
-        date: format(date, 'MMM d'),
-        actual: totalHours - bugHours,
-        bug: bugHours,
+      if (story.itemType === 'Sub Task') {
+        resourceEffort[story.assigneeId].subTaskEffort += story.estimatedHours || 0;
+      } else if (story.itemType === 'Bug') {
+        resourceEffort[story.assigneeId].bugEffort += story.estimatedHours || 0;
       }
     });
-  }, [workloadSprintId, sprints, stories, worklogs]);
+
+    return Object.values(resourceEffort).filter(r => r.subTaskEffort > 0 || r.bugEffort > 0);
+  }, [workloadSprintId, stories, employees, sprints]);
 
 
   const calculateEffort = useCallback((relevantStories: Story[]) => {
@@ -415,15 +418,15 @@ export default function ProjectDashboardPage() {
           </CardHeader>
           <CardContent>
              <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
-                <AreaChart data={workloadData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
+                <BarChart data={workloadData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
                     <CartesianGrid vertical={false} />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={true} tickMargin={8} />
                     <YAxis tickFormatter={(value) => `${value}h`} />
                     <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
-                    <Area dataKey="actual" type="monotone" fill="var(--color-actual)" fillOpacity={0.4} stroke="var(--color-actual)" stackId="a" />
-                    <Area dataKey="bug" type="monotone" fill="var(--color-bug)" fillOpacity={0.4} stroke="var(--color-bug)" stackId="a" />
                     <ChartLegend content={<ChartLegendContent />} />
-                </AreaChart>
+                    <Bar dataKey="subTaskEffort" stackId="a" fill="var(--color-subTaskEffort)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="bugEffort" stackId="a" fill="var(--color-bugEffort)" radius={[0, 0, 0, 0]} />
+                </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -534,7 +537,3 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
-
-    
-
-    
