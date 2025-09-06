@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
@@ -20,7 +21,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Cell } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Cell, Tooltip } from 'recharts';
 import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -190,23 +191,23 @@ export default function ProjectDashboardPage() {
       
       const planned = assignedItems.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
 
-      // Calculate Actuals from Worklogs within the sprint date range
-      let actual = 0;
+      let totalActual = 0;
       let bugEffort = 0;
-      if(sprint?.startDate && sprint?.endDate) {
+
+      if (sprint?.startDate && sprint?.endDate) {
         const sprintStart = parseISO(sprint.startDate);
         const sprintEnd = parseISO(sprint.endDate);
         const userWorklogs = worklogs.filter(w => w.employeeId === resource.id);
-
+        
         userWorklogs.forEach(log => {
           const logDate = parseISO(log.date);
-          if (isWithinInterval(logDate, {start: sprintStart, end: sprintEnd})) {
-            actual += log.totalHours;
+          if (isWithinInterval(logDate, { start: sprintStart, end: sprintEnd })) {
+            totalActual += log.totalHours;
             
-            // Calculate bug effort
+            // Check if any of the logged items for that day were bugs assigned to the user in this sprint
             log.items.forEach((item: WorklogItem) => {
               const storyItem = stories.find(s => s.id === item.itemId);
-              if (storyItem?.itemType === 'Bug') {
+              if (storyItem?.itemType === 'Bug' && assignedItems.some(i => i.id === storyItem.id)) {
                 bugEffort += item.hours;
               }
             });
@@ -215,9 +216,9 @@ export default function ProjectDashboardPage() {
       }
 
       return {
-        name: `${resource.firstName} ${resource.lastName}`,
+        name: `${resource.firstName}`,
         planned: planned,
-        actual: actual - bugEffort, // Non-bug actual effort
+        actual: totalActual - bugEffort, // Non-bug actual effort
         bug: bugEffort, // Bug effort
       };
     });
@@ -436,15 +437,15 @@ export default function ProjectDashboardPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
-              <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-                <CartesianGrid horizontal={false} />
-                <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} width={100} />
-                <XAxis type="number" hide />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="planned" stackId="a" fill="var(--color-planned)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="actual" stackId="b" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="bug" stackId="b" fill="var(--color-bug)" radius={[4, 4, 0, 0]} />
+              <BarChart data={workloadData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis />
+                <Tooltip content={<ChartTooltipContent />} />
+                <Legend content={<ChartLegendContent />} />
+                <Bar dataKey="planned" fill="var(--color-planned)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual" stackId="actual" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="bug" stackId="actual" fill="var(--color-bug)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -556,3 +557,4 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
+
