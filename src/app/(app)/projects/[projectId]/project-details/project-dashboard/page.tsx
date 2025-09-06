@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label as UiLabel } from '@/components/ui/label';
 import { format, parseISO, isSameDay, eachDayOfInterval } from 'date-fns';
 import type { Story } from '@/types';
+import { Separator } from '@/components/ui/separator';
 
 const taskChartConfig = {
   'To Do': { label: 'To Do', color: 'hsl(var(--muted-foreground))' },
@@ -91,8 +92,10 @@ export default function ProjectDashboardPage() {
   const { stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings } = useProject();
   const [selectedReleaseId, setSelectedReleaseId] = useState('all');
   const [selectedSprintId, setSelectedSprintId] = useState('all');
-  const [timeFilterType, setTimeFilterType] = useState<'sprint' | 'release'>('sprint');
-  const [timeFilterId, setTimeFilterId] = useState('all');
+  
+  const [timeFilterSprintId, setTimeFilterSprintId] = useState('all');
+  const [timeFilterReleaseId, setTimeFilterReleaseId] = useState('all');
+
 
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
   
@@ -144,7 +147,7 @@ export default function ProjectDashboardPage() {
     if (!epics || epics.length === 0) return [];
 
     return epics.map(epic => {
-      const epicStories = stories.filter(story => story.epicId === epic.id);
+      const epicStories = stories.filter(story => story.epicId === epic.id && !story.parentStoryId);
       const totalStories = epicStories.length;
       if (totalStories === 0) {
         return { name: epic.title, progress: 0 };
@@ -168,15 +171,8 @@ export default function ProjectDashboardPage() {
     }).length;
   }, [holidays, weeklyOffDays]);
 
-  const timeChartData = useMemo(() => {
-    let relevantStories: Story[] = [];
-    if (timeFilterType === 'sprint') {
-        relevantStories = timeFilterId === 'all' ? stories : stories.filter(s => s.sprintId === timeFilterId);
-    } else {
-        relevantStories = timeFilterId === 'all' ? stories : stories.filter(s => s.releaseId === timeFilterId);
-    }
-
-    const planned = relevantStories.reduce((sum, story) => sum + (story.estimatedHours || 0), 0);
+  const calculateEffort = useCallback((relevantStories: Story[]) => {
+     const planned = relevantStories.reduce((sum, story) => sum + (story.estimatedHours || 0), 0);
     
     const actual = relevantStories.reduce((total, story) => {
         if (!story.developmentStartDate || !story.completionDate) return total;
@@ -186,14 +182,23 @@ export default function ProjectDashboardPage() {
         const hoursPerDay = projectSettings?.manDayToHours || 8;
         return total + (days * hoursPerDay);
     }, 0);
-
+    
     return [
         { name: 'Planned', value: planned, fill: 'hsl(var(--chart-2))' },
         { name: 'Actual', value: actual, fill: 'hsl(var(--primary))' },
     ];
-  }, [timeFilterType, timeFilterId, stories, sprints, releasesAndMilestones, calculateBusinessDays, projectSettings]);
+  }, [calculateBusinessDays, projectSettings]);
 
-  const timeFilterOptions = timeFilterType === 'sprint' ? sprints : releases;
+  const sprintTimeChartData = useMemo(() => {
+    const relevantStories = timeFilterSprintId === 'all' ? stories : stories.filter(s => s.sprintId === timeFilterSprintId);
+    return calculateEffort(relevantStories);
+  }, [timeFilterSprintId, stories, calculateEffort]);
+  
+  const releaseTimeChartData = useMemo(() => {
+      const relevantStories = timeFilterReleaseId === 'all' ? stories : stories.filter(s => s.releaseId === timeFilterReleaseId);
+      return calculateEffort(relevantStories);
+  }, [timeFilterReleaseId, stories, calculateEffort]);
+
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -296,59 +301,58 @@ export default function ProjectDashboardPage() {
         </Card>
       </div>
 
-       <div className="grid gap-6 grid-cols-1 lg:grid-cols-4 mt-6">
+       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 mt-6">
          <Card className="lg:col-span-1">
           <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Time</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Select value={timeFilterType} onValueChange={(v) => {setTimeFilterType(v as any); setTimeFilterId('all');}}>
-                    <SelectTrigger className="h-8 w-[90px]"><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sprint">Sprint</SelectItem>
-                      <SelectItem value="release">Release</SelectItem>
-                    </SelectContent>
-                  </Select>
-                   <Select value={timeFilterId} onValueChange={setTimeFilterId}>
-                    <SelectTrigger className="h-8 w-[120px]"><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {timeFilterOptions.map(opt => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {timeFilterType === 'sprint' ? (opt as any).title : (opt as any).name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-          <CardContent>
-             <ChartContainer config={{}} className="h-[250px] w-full">
-                <BarChart data={timeChartData} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                    <YAxis type="category" dataKey="name" hide />
-                    <XAxis type="number" hide />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="value" layout="vertical" radius={4} />
-                </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Cost</CardTitle>
+            <CardTitle>Time</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}} className="h-[250px] w-full">
-                <BarChart data={costChartData} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
-                    <YAxis tickFormatter={(value) => `${'$'}{value/1000}K`} />
-                    <XAxis dataKey="name" hide/>
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="value" radius={4} />
-                </BarChart>
-            </ChartContainer>
+          <CardContent className="flex flex-col h-[300px]">
+             <div className="flex-1 flex flex-col border-b pb-4">
+                <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold text-sm">Sprints</h4>
+                    <Select value={timeFilterSprintId} onValueChange={setTimeFilterSprintId}>
+                      <SelectTrigger className="h-8 w-[150px]"><SelectValue/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sprints</SelectItem>
+                        {sprints.map(opt => (
+                          <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                </div>
+                <ChartContainer config={{}} className="h-[100px] w-full">
+                    <BarChart data={sprintTimeChartData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
+                        <YAxis type="category" dataKey="name" hide />
+                        <XAxis type="number" hide />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Bar dataKey="value" layout="vertical" radius={4} />
+                    </BarChart>
+                </ChartContainer>
+            </div>
+             <div className="flex-1 flex flex-col pt-4">
+                <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold text-sm">Releases</h4>
+                     <Select value={timeFilterReleaseId} onValueChange={setTimeFilterReleaseId}>
+                        <SelectTrigger className="h-8 w-[150px]"><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Releases</SelectItem>
+                          {releases.map(opt => (
+                            <SelectItem key={opt.id} value={opt.id}>{opt.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                </div>
+                <ChartContainer config={{}} className="h-[100px] w-full">
+                    <BarChart data={releaseTimeChartData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
+                        <YAxis type="category" dataKey="name" hide />
+                        <XAxis type="number" hide />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Bar dataKey="value" layout="vertical" radius={4} />
+                    </BarChart>
+                </ChartContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -357,10 +361,11 @@ export default function ProjectDashboardPage() {
             <CardTitle>Workload</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{}} className="h-[250px] w-full">
+            <ChartContainer config={{}} className="h-[300px] w-full">
                 <BarChart data={workloadChartData} layout="vertical" stackOffset="expand" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                     <XAxis type="number" hide />
                     <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
                     <ChartLegend content={<ChartLegendContent />} />
                     <Bar dataKey="completed" stackId="a" fill="hsl(var(--chart-2))" radius={[4,0,0,4]} />
                     <Bar dataKey="remaining" stackId="a" fill="hsl(var(--chart-1))" radius={[0,4,4,0]} />
