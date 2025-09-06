@@ -92,8 +92,9 @@ const otherCostsConfig = {
 
 
 export default function ProjectDashboardPage() {
-  const { stories, releasesAndMilestones } = useProject();
+  const { stories, releasesAndMilestones, sprints } = useProject();
   const [selectedReleaseId, setSelectedReleaseId] = useState('all');
+  const [selectedSprintId, setSelectedSprintId] = useState('all');
 
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
   
@@ -119,12 +120,34 @@ export default function ProjectDashboardPage() {
     }));
   }, [stories, selectedReleaseId]);
 
+  const sprintChartData = useMemo(() => {
+    const filteredStories = selectedSprintId === 'all'
+      ? stories
+      : stories.filter(story => story.sprintId === selectedSprintId);
+      
+    const statusCounts = filteredStories.reduce((acc, story) => {
+        const status = story.status || 'To Do';
+        if(acc[status]) {
+            acc[status]++;
+        } else {
+            acc[status] = 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(statusCounts).map(([name, value]) => ({
+      name,
+      value,
+      fill: (taskChartConfig[name as keyof typeof taskChartConfig] || { color: '#ccc' }).color,
+    }));
+  }, [stories, selectedSprintId]);
+
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Project Dashboard" description="A high-level overview of the project's status." />
       
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-4">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Health</CardTitle>
@@ -171,6 +194,47 @@ export default function ProjectDashboardPage() {
                             position="center"
                             formatter={(value: string) => releaseChartData.reduce((acc, curr) => acc + curr.value, 0).toString()}
                         />
+                         {releaseChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                    </Pie>
+                </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Sprint</CardTitle>
+              <div className="w-[180px]">
+                <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+                  <SelectTrigger id="sprint-filter" className="h-8">
+                      <SelectValue placeholder="Select a sprint" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="all">All Sprints</SelectItem>
+                      {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center">
+            <ChartContainer config={taskChartConfig} className="mx-auto aspect-square h-[250px]">
+                <PieChart>
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Pie data={sprintChartData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={100} strokeWidth={5}>
+                        <LabelList
+                            dataKey="value"
+                            className="fill-foreground text-2xl font-bold"
+                            position="center"
+                            formatter={(value: string) => sprintChartData.reduce((acc, curr) => acc + curr.value, 0).toString()}
+                        />
+                         {sprintChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
                     </Pie>
                 </PieChart>
             </ChartContainer>
@@ -233,7 +297,7 @@ export default function ProjectDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Workload</CardTitle>
           </CardHeader>
