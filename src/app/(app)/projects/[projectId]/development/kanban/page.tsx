@@ -322,7 +322,7 @@ export default function KanbanPage() {
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
-  const [viewBy, setViewBy] = useState<'story' | 'sub-task'>('story');
+  const [viewBy, setViewBy] = useState<'story' | 'sub-task' | 'bug'>('story');
   const [selectionStack, setSelectionStack] = useState<Story[]>([]);
   const selectedStory = selectionStack[selectionStack.length - 1] || null;
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
@@ -561,7 +561,13 @@ export default function KanbanPage() {
       if (viewBy === 'story') {
         return ['Requirement/Story', 'Feature Change', 'Bug', 'Task'].includes(story.itemType) && !story.parentStoryId;
       }
-      return story.itemType === 'Sub Task';
+      if (viewBy === 'sub-task') {
+        return story.itemType === 'Sub Task';
+      }
+      if (viewBy === 'bug') {
+        return story.itemType === 'Bug';
+      }
+      return false;
     });
 
     return selectedAssigneeId === 'all'
@@ -614,6 +620,7 @@ export default function KanbanPage() {
                     <SelectContent>
                         <SelectItem value="story">Stories</SelectItem>
                         <SelectItem value="sub-task">Sub-tasks</SelectItem>
+                        <SelectItem value="bug">Bugs</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -1331,12 +1338,7 @@ export default function KanbanPage() {
       </Dialog>
       
     </>
-  );
+    );
 }
-
-
-
-
-
 
 

@@ -501,7 +501,7 @@ export default function GroomingPage() {
     const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
     const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
     const [showAddSubTask, setShowAddSubTask] = useState(false);
-    const [viewBy, setViewBy] = useState<'story' | 'sub-task'>('story');
+    const [viewBy, setViewBy] = useState<'story' | 'sub-task' | 'bug'>('story');
     const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
     const [editParentStoryText, setEditParentStoryText] = useState('');
     
@@ -514,7 +514,13 @@ export default function GroomingPage() {
         if (viewBy === 'story') {
           return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
         }
-        return story.itemType === 'Sub Task';
+        if (viewBy === 'sub-task') {
+          return story.itemType === 'Sub Task';
+        }
+        if (viewBy === 'bug') {
+          return story.itemType === 'Bug';
+        }
+        return false;
       });
 
       if (selectedAssigneeId === 'all') return filteredByView;
@@ -539,7 +545,13 @@ export default function GroomingPage() {
                 if (viewBy === 'story') {
                     return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
                 }
-                return story.itemType === 'Sub Task';
+                if (viewBy === 'sub-task') {
+                  return story.itemType === 'Sub Task';
+                }
+                if (viewBy === 'bug') {
+                  return story.itemType === 'Bug';
+                }
+                return false;
             });
 
             const filteredByAssignee = selectedAssigneeId === 'all'
@@ -901,6 +913,7 @@ export default function GroomingPage() {
                                 <SelectContent>
                                     <SelectItem value="story">Stories</SelectItem>
                                     <SelectItem value="sub-task">Sub-tasks</SelectItem>
+                                    <SelectItem value="bug">Bugs</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -1702,4 +1715,5 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
