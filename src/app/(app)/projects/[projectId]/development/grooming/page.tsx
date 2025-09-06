@@ -304,6 +304,104 @@ function StoryItemCard({
   );
 }
 
+function SprintColumn({ 
+    sprint, 
+    stories,
+    holidays,
+    weeklyOffDays,
+    onEdit, 
+    onDelete, 
+    onPrev, 
+    onNext, 
+    showNav,
+    onMoveStory,
+    onEditStory,
+    selectedAssigneeId
+}: { 
+    sprint: Sprint & { stories: Story[] }, 
+    stories: Story[],
+    holidays: Holiday[],
+    weeklyOffDays: number[],
+    onEdit: (sprint: Sprint) => void, 
+    onDelete: (sprint: Sprint) => void, 
+    onPrev: () => void, 
+    onNext: () => void, 
+    showNav: boolean,
+    onMoveStory: (storyId: string, sprintId: string | null) => void,
+    onEditStory: (story: Story) => void,
+    selectedAssigneeId: string;
+}) {
+    const { epics, employees: users, subItemsByParentId, project } = useProject();
+
+    const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
+        if(!start || !end) return 0;
+        const holidayDates = holidays.map(h => parseISO(h.date));
+        const interval = eachDayOfInterval({ start, end });
+        
+        return interval.filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(h => isSameDay(day, h));
+            return !isWeekend && !isHoliday;
+        }).length;
+    }, [holidays, weeklyOffDays]);
+
+    const totalBusinessDays = sprint.startDate && sprint.endDate ? calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate)) : 0;
+    const capacityInHours = totalBusinessDays * (project?.projectSettings?.manDayToHours || 8);
+    const totalEffort = stories.reduce((sum, story) => sum + (story.estimatedHours || 0), 0);
+    const capacityUtilization = capacityInHours > 0 ? (totalEffort / capacityInHours) * 100 : 0;
+    
+    return (
+        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                     <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                     {sprint.status === 'Current' && <Badge>Current</Badge>}
+                </div>
+                <div className="flex items-center gap-1">
+                    {showNav && (
+                        <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev}><ChevronLeft /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext}><ChevronRight /></Button>
+                        </>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(sprint)}><Edit /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(sprint)}><Trash2 /></Button>
+                </div>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                <span>Total Effort: <strong>{totalEffort}h</strong></span>
+                <span>Capacity: <strong>{capacityInHours}h</strong></span>
+            </div>
+            <div className="mb-4">
+                <Progress value={capacityUtilization} className="h-2" />
+                <p className="text-xs text-muted-foreground text-right mt-1">{capacityUtilization.toFixed(0)}% Capacity Utilized</p>
+            </div>
+            <div className="flex-1 space-y-4 overflow-y-auto">
+                {stories.map(story => {
+                    const epic = epics.find(e => e.id === story.epicId);
+                    const assignee = users.find(e => e.id === story.assigneeId);
+                    const subItems = subItemsByParentId?.[story.id] || [];
+                    const parentStory = story.parentStoryId ? stories.find(s => s.id === story.parentStoryId) : undefined;
+                    return (
+                         <div key={story.id}>
+                            <StoryItemCard 
+                                story={story} 
+                                epic={epic}
+                                assignee={assignee}
+                                subItems={subItems}
+                                parentStory={parentStory}
+                                onMove={onMoveStory}
+                                onEdit={() => onEditStory(story)}
+                                onSubItemClick={onEditStory}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
 
 export default function GroomingPage() {
     const { 
