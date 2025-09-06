@@ -147,24 +147,7 @@ export default function ProjectDashboardPage() {
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Project Dashboard" description="A high-level overview of the project's status." />
       
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-4">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Health</CardTitle>
-          </CardHeader>
-          <CardContent>
-             <Table>
-                <TableBody>
-                    <TableRow><TableCell className="font-medium">Time</TableCell><TableCell className="text-right">4% ahead of schedule</TableCell></TableRow>
-                    <TableRow><TableCell className="font-medium">Tasks</TableCell><TableCell className="text-right">6 tasks to be completed</TableCell></TableRow>
-                    <TableRow><TableCell className="font-medium">Workload</TableCell><TableCell className="text-right text-green-600">0 tasks overdue</TableCell></TableRow>
-                    <TableRow><TableCell className="font-medium">Progress</TableCell><TableCell className="text-right">92% complete</TableCell></TableRow>
-                    <TableRow><TableCell className="font-medium">Cost</TableCell><TableCell className="text-right text-red-500">4% over budget</TableCell></TableRow>
-                </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -264,7 +247,9 @@ export default function ProjectDashboardPage() {
               </div>
           </CardContent>
         </Card>
-        
+      </div>
+
+       <div className="grid gap-6 grid-cols-1 lg:grid-cols-4 mt-6">
          <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Time</CardTitle>
