@@ -20,12 +20,12 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Label, Cell } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Cell } from 'recharts';
 import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label as UiLabel } from '@/components/ui/label';
-import { format, parseISO, isSameDay, eachDayOfInterval } from 'date-fns';
+import { format, parseISO, isSameDay, eachDayOfInterval, differenceInDays } from 'date-fns';
 import type { Story } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
@@ -184,8 +184,8 @@ export default function ProjectDashboardPage() {
     }, 0);
     
     return [
-        { name: 'Planned', value: planned, fill: 'hsl(var(--chart-2))' },
         { name: 'Actual', value: actual, fill: 'hsl(var(--primary))' },
+        { name: 'Planned', value: planned, fill: 'hsl(var(--chart-2))' },
     ];
   }, [calculateBusinessDays, projectSettings]);
 
@@ -325,8 +325,12 @@ export default function ProjectDashboardPage() {
                         <YAxis type="category" dataKey="name" hide />
                         <XAxis type="number" hide />
                         <ChartTooltip content={<ChartTooltipContent />} />
-                        <ChartLegend content={<ChartLegendContent />} />
-                        <Bar dataKey="value" layout="vertical" radius={4} />
+                        <Bar dataKey="value" layout="vertical" radius={4}>
+                           <LabelList dataKey="name" position="insideRight" offset={8} className="fill-background" fontSize={12} />
+                           {sprintTimeChartData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.fill} />
+                          ))}
+                        </Bar>
                     </BarChart>
                 </ChartContainer>
             </div>
@@ -348,8 +352,12 @@ export default function ProjectDashboardPage() {
                         <YAxis type="category" dataKey="name" hide />
                         <XAxis type="number" hide />
                         <ChartTooltip content={<ChartTooltipContent />} />
-                        <ChartLegend content={<ChartLegendContent />} />
-                        <Bar dataKey="value" layout="vertical" radius={4} />
+                        <Bar dataKey="value" layout="vertical" radius={4}>
+                           <LabelList dataKey="name" position="insideRight" offset={8} className="fill-background" fontSize={12} />
+                           {releaseTimeChartData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.fill} />
+                          ))}
+                        </Bar>
                     </BarChart>
                 </ChartContainer>
             </div>
