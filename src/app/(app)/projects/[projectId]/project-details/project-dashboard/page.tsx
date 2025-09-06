@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
@@ -227,7 +226,6 @@ export default function ProjectDashboardPage() {
             <ChartContainer config={taskChartConfig} className="mx-auto aspect-square h-[250px]">
                 <PieChart>
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                    <ChartLegend content={<ChartLegendContent />} />
                     <Pie data={releaseChartData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={100} strokeWidth={5}>
                         <LabelList
                             dataKey="value"
@@ -239,6 +237,7 @@ export default function ProjectDashboardPage() {
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                     </Pie>
+                    <ChartLegend content={<ChartLegendContent />} />
                 </PieChart>
             </ChartContainer>
           </CardContent>
@@ -265,7 +264,6 @@ export default function ProjectDashboardPage() {
             <ChartContainer config={taskChartConfig} className="mx-auto aspect-square h-[250px]">
                 <PieChart>
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                    <ChartLegend content={<ChartLegendContent />} />
                     <Pie data={sprintChartData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={100} strokeWidth={5}>
                         <LabelList
                             dataKey="value"
@@ -277,6 +275,7 @@ export default function ProjectDashboardPage() {
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                     </Pie>
+                    <ChartLegend content={<ChartLegendContent />} />
                 </PieChart>
             </ChartContainer>
           </CardContent>
@@ -481,4 +480,3 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
-
