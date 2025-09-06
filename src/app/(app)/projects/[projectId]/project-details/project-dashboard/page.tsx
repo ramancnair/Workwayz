@@ -168,25 +168,30 @@ export default function ProjectDashboardPage() {
   }, [holidays, weeklyOffDays]);
   
   const workloadData = useMemo(() => {
-    const sprint = sprints.find(s => s.id === workloadSprintId);
-  
-    const sprintStoryItems = workloadSprintId === 'all'
+    const sprintStories = workloadSprintId === 'all'
       ? stories
       : stories.filter(s => s.sprintId === workloadSprintId);
   
     const resourceIdsInSprint = new Set<string>();
-    sprintStoryItems.forEach(item => {
+    sprintStories.forEach(item => {
       if (item.assigneeId) {
         resourceIdsInSprint.add(item.assigneeId);
       }
     });
   
     const resourcesInSprint = employees.filter(emp => resourceIdsInSprint.has(emp.id));
+    const sprint = sprints.find(s => s.id === workloadSprintId);
   
     return resourcesInSprint.map(resource => {
-      const assignedItems = sprintStoryItems.filter(item => item.assigneeId === resource.id);
-  
-      const planned = assignedItems.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+      const assignedItems = sprintStories.filter(item => item.assigneeId === resource.id);
+      
+      // Correctly calculate planned effort from sub-tasks and standalone bugs
+      const planned = assignedItems.reduce((sum, item) => {
+        if (item.itemType === 'Sub Task' || item.itemType === 'Bug') {
+          return sum + (item.estimatedHours || 0);
+        }
+        return sum;
+      }, 0);
   
       let totalActual = 0;
       let bugEffort = 0;
@@ -195,21 +200,24 @@ export default function ProjectDashboardPage() {
       const sprintEnd = sprint?.endDate ? parseISO(sprint.endDate) : null;
   
       if (sprintStart && sprintEnd) {
-        const userWorklogs = worklogs.filter(w => w.employeeId === resource.id);
+        const userWorklogs = worklogs.filter(w => 
+            w.employeeId === resource.id &&
+            isWithinInterval(parseISO(w.date), { start: sprintStart, end: sprintEnd })
+        );
+        
+        totalActual = userWorklogs.reduce((sum, log) => sum + log.totalHours, 0);
   
-        userWorklogs.forEach(log => {
-          const logDate = parseISO(log.date);
-          if (isWithinInterval(logDate, { start: sprintStart, end: sprintEnd })) {
-            totalActual += log.totalHours;
-  
-            log.items.forEach((item: WorklogItem) => {
-              const storyItem = stories.find(s => s.id === item.itemId);
-              if (storyItem?.itemType === 'Bug' && assignedItems.some(i => i.id === storyItem.id)) {
-                bugEffort += item.hours;
-              }
-            });
-          }
-        });
+        const assignedBugIds = new Set(assignedItems.filter(i => i.itemType === 'Bug').map(i => i.id));
+        
+        bugEffort = userWorklogs.reduce((sum, log) => {
+            const bugHoursInLog = log.items.reduce((itemSum, item) => {
+                if (assignedBugIds.has(item.itemId)) {
+                    return itemSum + item.hours;
+                }
+                return itemSum;
+            }, 0);
+            return sum + bugHoursInLog;
+        }, 0);
       }
   
       return {
@@ -434,15 +442,15 @@ export default function ProjectDashboardPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
-                <BarChart data={workloadData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis />
+                <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                    <CartesianGrid horizontal={false} />
+                    <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <XAxis type="number" />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend />
-                    <Bar dataKey="planned" fill="var(--color-planned)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="actual" stackId="a" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="bug" stackId="a" fill="var(--color-bug)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="planned" fill="var(--color-planned)" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="actual" stackId="a" fill="var(--color-actual)" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="bug" stackId="a" fill="var(--color-bug)" radius={[0, 4, 4, 0]} />
                 </BarChart>
             </ChartContainer>
           </CardContent>
