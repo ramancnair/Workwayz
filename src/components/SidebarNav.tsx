@@ -114,6 +114,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const projectMenuItems = [
     {
+      href: `${basePath}/project-details/project-dashboard`,
+      label: "Project Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
       href: `${basePath}/project-details/project-synopsis`,
       label: "Project Synopsis",
       icon: ClipboardList,
