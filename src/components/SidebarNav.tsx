@@ -116,7 +116,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     {
       href: `${basePath}/project-details/project-synopsis`,
       label: "Project Synopsis",
-      icon: LayoutDashboard,
+      icon: ClipboardList,
     },
     {
       href: `${basePath}/project-details/architecture`,
