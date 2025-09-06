@@ -180,39 +180,27 @@ export default function ProjectDashboardPage() {
     const sprintStories = workloadSprintId === 'all'
       ? stories
       : stories.filter(s => s.sprintId === workloadSprintId);
-
-    const resourceEffort: Record<string, { name: string; subTaskEffort: number; bugEffort: number; completedSubTasks: number; totalSubTasks: number, completedBugs: number, totalBugs: number }> = {};
-
+  
+    const resourceEffort: Record<string, { name: string; subTaskEffort: number; bugEffort: number; }> = {};
+  
     employees.forEach(emp => {
       resourceEffort[emp.id] = {
         name: `${emp.firstName} ${emp.lastName}`,
         subTaskEffort: 0,
         bugEffort: 0,
-        completedSubTasks: 0,
-        totalSubTasks: 0,
-        completedBugs: 0,
-        totalBugs: 0,
       };
     });
-
+  
     sprintStories.forEach(story => {
       if (!story.assigneeId || !resourceEffort[story.assigneeId]) return;
-
+  
       if (story.itemType === 'Sub Task') {
         resourceEffort[story.assigneeId].subTaskEffort += story.estimatedHours || 0;
-        resourceEffort[story.assigneeId].totalSubTasks++;
-        if (story.status === 'Done') {
-            resourceEffort[story.assigneeId].completedSubTasks++;
-        }
       } else if (story.itemType === 'Bug') {
         resourceEffort[story.assigneeId].bugEffort += story.estimatedHours || 0;
-        resourceEffort[story.assigneeId].totalBugs++;
-        if (story.status === 'Done') {
-            resourceEffort[story.assigneeId].completedBugs++;
-        }
       }
     });
-
+  
     return Object.values(resourceEffort).filter(r => r.subTaskEffort > 0 || r.bugEffort > 0);
   }, [workloadSprintId, stories, employees]);
 
@@ -427,7 +415,7 @@ export default function ProjectDashboardPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4">
+          <CardContent>
              <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
                 <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
                     <CartesianGrid horizontal={false} />
@@ -439,20 +427,6 @@ export default function ProjectDashboardPage() {
                     <Bar dataKey="bugEffort" stackId="a" fill="var(--color-bugEffort)" radius={[4, 4, 0, 0]} />
                 </BarChart>
             </ChartContainer>
-             <div className="space-y-2 text-sm text-muted-foreground">
-                <h4 className="font-semibold text-foreground">Completion %</h4>
-                {workloadData.map(d => {
-                  const taskPercent = d.totalSubTasks > 0 ? Math.round((d.completedSubTasks / d.totalSubTasks) * 100) : 0;
-                  const bugPercent = d.totalBugs > 0 ? Math.round((d.completedBugs / d.totalBugs) * 100) : 0;
-                  return (
-                    <div key={d.name} className="p-2 border rounded-md">
-                      <p className="font-medium text-foreground">{d.name}</p>
-                      <div className="flex justify-between"><span>Tasks:</span> <span>{taskPercent}%</span></div>
-                      <div className="flex justify-between"><span>Bugs:</span> <span>{bugPercent}%</span></div>
-                    </div>
-                  )
-                })}
-            </div>
           </CardContent>
         </Card>
       </div>
