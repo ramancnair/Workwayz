@@ -92,7 +92,7 @@ const otherCostsConfig = {
 
 
 export default function ProjectDashboardPage() {
-  const { stories, releasesAndMilestones, sprints } = useProject();
+  const { stories, releasesAndMilestones, sprints, epics } = useProject();
   const [selectedReleaseId, setSelectedReleaseId] = useState('all');
   const [selectedSprintId, setSelectedSprintId] = useState('all');
 
@@ -141,6 +141,21 @@ export default function ProjectDashboardPage() {
       fill: (taskChartConfig[name as keyof typeof taskChartConfig] || { color: '#ccc' }).color,
     }));
   }, [stories, selectedSprintId]);
+
+  const epicProgressData = useMemo(() => {
+    if (!epics || epics.length === 0) return [];
+
+    return epics.map(epic => {
+      const epicStories = stories.filter(story => story.epicId === epic.id);
+      const totalStories = epicStories.length;
+      if (totalStories === 0) {
+        return { name: epic.title, progress: 0 };
+      }
+      const doneStories = epicStories.filter(story => story.status === 'Done').length;
+      const progress = Math.round((doneStories / totalStories) * 100);
+      return { name: epic.title, progress };
+    });
+  }, [epics, stories]);
 
 
   return (
@@ -229,22 +244,14 @@ export default function ProjectDashboardPage() {
             <CardTitle>Progress</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-              <div>
-                  <p className="text-sm font-medium">1. Analysis</p>
-                  <Progress value={100} className="h-3" />
-              </div>
-               <div>
-                  <p className="text-sm font-medium">2. Design</p>
-                  <Progress value={100} className="h-3" />
-              </div>
-               <div>
-                  <p className="text-sm font-medium">3. Development</p>
-                  <Progress value={80} className="h-3" />
-              </div>
-               <div>
-                  <p className="text-sm font-medium">4. Testing</p>
-                  <Progress value={60} className="h-3" />
-              </div>
+              {epicProgressData.length > 0 ? epicProgressData.map((epic, index) => (
+                <div key={index}>
+                    <p className="text-sm font-medium">{index + 1}. {epic.name}</p>
+                    <Progress value={epic.progress} className="h-3" />
+                </div>
+              )) : (
+                <p className="text-sm text-muted-foreground">No epics found for this project.</p>
+              )}
           </CardContent>
         </Card>
       </div>
