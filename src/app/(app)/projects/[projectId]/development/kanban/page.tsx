@@ -558,16 +558,16 @@ export default function KanbanPage() {
 
   const sprintStories = useMemo(() => {
     const filteredByView = baseSprintStories.filter(story => {
-      if (viewBy === 'story') {
-        return ['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType) && !story.parentStoryId;
-      }
-      if (viewBy === 'sub-task') {
-        return story.itemType === 'Sub Task';
-      }
-      if (viewBy === 'bug') {
-        return story.itemType === 'Bug';
-      }
-      return false;
+        if (viewBy === 'story') {
+            return ['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType);
+        }
+        if (viewBy === 'sub-task') {
+            return story.itemType === 'Sub Task';
+        }
+        if (viewBy === 'bug') {
+            return story.itemType === 'Bug';
+        }
+        return false;
     });
 
     return selectedAssigneeId === 'all'
@@ -1340,6 +1340,3 @@ export default function KanbanPage() {
     </>
     );
 }
-
-
-

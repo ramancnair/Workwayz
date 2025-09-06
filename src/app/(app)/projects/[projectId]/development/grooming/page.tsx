@@ -305,173 +305,6 @@ function StoryItemCard({
 }
 
 
-function SprintColumn({ 
-  sprint, 
-  stories: displayedStories,
-  holidays,
-  weeklyOffDays,
-  onEdit,
-  onDelete,
-  onPrev,
-  onNext,
-  showNav,
-  onMoveStory,
-  onEditStory,
-  selectedAssigneeId
-}: { 
-  sprint: Sprint, 
-  stories: Story[],
-  holidays: Holiday[],
-  weeklyOffDays: number[],
-  onEdit: (sprint: Sprint) => void,
-  onDelete: (sprint: Sprint) => void,
-  onPrev: () => void,
-  onNext: () => void,
-  showNav: boolean,
-  onMoveStory: (storyId: string, sprintId: string | null) => void;
-  onEditStory: (story: Story) => void;
-  selectedAssigneeId: string;
-}) {
-    const { epics, employees, stories: allStories, impactedSystems } = useProject();
-    
-    const subItemsByStoryId = useMemo(() => allStories.reduce((acc, story) => {
-      if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
-          if (!acc[story.parentStoryId]) {
-              acc[story.parentStoryId] = [];
-          }
-          acc[story.parentStoryId].push(story);
-      }
-      return acc;
-    }, {} as Record<string, Story[]>), [allStories]);
-    
-    const capacityBySystem = useMemo(() => {
-        if (!sprint.startDate || !sprint.endDate) return [];
-
-        const start = parseISO(sprint.startDate);
-        const end = parseISO(sprint.endDate);
-        const holidayDates = holidays.map(h => parseISO(h.date));
-
-        const workingDays = eachDayOfInterval({ start, end }).filter(day => {
-            const dayOfWeek = day.getDay();
-            const isWeekend = weeklyOffDays.includes(dayOfWeek);
-            const isHoliday = holidayDates.some(h => isSameDay(day, h));
-            return !isWeekend && !isHoliday;
-        }).length;
-        
-        const allSubTasksInSprint = allStories.filter(story => 
-            story.itemType === 'Sub Task' && story.sprintId === sprint.id
-        );
-        
-        const relevantEmployees = selectedAssigneeId === 'all' 
-            ? employees 
-            : employees.filter(e => e.id === selectedAssigneeId);
-
-        return impactedSystems.map(system => {
-            const resourcesForSystem = relevantEmployees.filter(emp => emp.capabilities?.includes(system.id));
-            
-            let totalCapacityHours = 0;
-            resourcesForSystem.forEach(emp => {
-                const availabilityFactor = (emp.availability || 100) / 100;
-                totalCapacityHours += workingDays * 8 * availabilityFactor;
-            });
-
-            const utilizedHours = allSubTasksInSprint
-                .filter(task => {
-                    const isCorrectSystem = task.impactedSystemId === system.id;
-                    const isCorrectAssignee = selectedAssigneeId === 'all' || task.assigneeId === selectedAssigneeId;
-                    return isCorrectSystem && isCorrectAssignee;
-                })
-                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-            
-            const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
-
-            return {
-                systemId: system.id,
-                systemName: system.name,
-                totalCapacity: totalCapacityHours,
-                utilized: utilizedHours,
-                remaining: totalCapacityHours - utilizedHours,
-                utilization: utilization
-            }
-        }).filter(sys => sys.totalCapacity > 0 || sys.utilized > 0);
-    }, [sprint, allStories, impactedSystems, employees, holidays, weeklyOffDays, selectedAssigneeId]);
-
-    const totalSprintUtilized = capacityBySystem.reduce((sum, sys) => sum + sys.utilized, 0);
-
-    return (
-        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-w-[320px] w-full">
-            <div className="flex justify-between items-center mb-1">
-              <div className="flex items-center gap-2">
-                {showNav && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev}>
-                        <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                )}
-                <h3 className="text-lg font-semibold">{sprint.title}</h3>
-                 {showNav && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext}>
-                        <ChevronRight className="h-5 w-5" />
-                    </Button>
-                )}
-              </div>
-              <div className="flex gap-1">
-                 <Badge variant={sprint.status === 'Current' ? 'default' : 'outline'}>{sprint.status || 'Yet to Start'}</Badge>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(sprint)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(sprint)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground mb-2 pl-1">
-                {(sprint.startDate && sprint.endDate) && (
-                    <div>{format(parseISO(sprint.startDate), 'MMM d')} - {format(parseISO(sprint.endDate), 'MMM d, yyyy')}</div>
-                )}
-            </div>
-
-            <div className="space-y-3 mb-4">
-              <div className="text-sm font-semibold text-muted-foreground">Capacity</div>
-              {capacityBySystem.map(sys => (
-                   <div key={sys.systemId} className="grid grid-cols-[1fr_140px] items-center gap-4 text-xs">
-                       <div className="font-semibold">{sys.systemName}</div>
-                       <div className="flex items-center gap-2">
-                            <Progress value={sys.utilization} className="h-2" />
-                            <span className={cn("w-24 text-right", sys.remaining < 0 && "text-red-500")}>
-                              {sys.utilized.toFixed(0)}/{sys.totalCapacity.toFixed(0)}h
-                            </span>
-                       </div>
-                   </div>
-              ))}
-            </div>
-
-
-            <div className="flex-1 space-y-4 overflow-y-auto">
-                {displayedStories.map(story => {
-                     const epic = epics.find(e => e.id === story.epicId);
-                     const assignee = employees.find(e => e.id === story.assigneeId);
-                     const subItems = subItemsByStoryId[story.id] || [];
-                     const parentStory = story.parentStoryId ? allStories.find(s => s.id === story.parentStoryId) : undefined;
-                     return (
-                        <div key={story.id}>
-                            <StoryItemCard 
-                                story={story} 
-                                epic={epic}
-                                assignee={assignee}
-                                subItems={subItems}
-                                parentStory={parentStory}
-                                onMove={(newSprintId) => onMoveStory(story.id, newSprintId)}
-                                onEdit={() => onEditStory(story)}
-                                onSubItemClick={onEditStory}
-                            />
-                        </div>
-                     );
-                })}
-            </div>
-        </div>
-    )
-}
-
 export default function GroomingPage() {
     const { 
         stories, 
@@ -508,23 +341,23 @@ export default function GroomingPage() {
     const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
     const backlogItems = useMemo(() => {
-      const baseItems = stories.filter(story => !story.sprintId);
-      
-      const filteredByView = baseItems.filter(story => {
-        if (viewBy === 'story') {
-          return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
-        }
-        if (viewBy === 'sub-task') {
-          return story.itemType === 'Sub Task';
-        }
-        if (viewBy === 'bug') {
-          return story.itemType === 'Bug';
-        }
-        return false;
-      });
+        const baseItems = stories.filter(story => !story.sprintId);
+        
+        const filteredByView = baseItems.filter(story => {
+            if (viewBy === 'story') {
+                return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
+            }
+            if (viewBy === 'sub-task') {
+                return story.itemType === 'Sub Task';
+            }
+            if (viewBy === 'bug') {
+                return story.itemType === 'Bug';
+            }
+            return false;
+        });
 
-      if (selectedAssigneeId === 'all') return filteredByView;
-      return filteredByView.filter(story => story.assigneeId === selectedAssigneeId);
+        if (selectedAssigneeId === 'all') return filteredByView;
+        return filteredByView.filter(story => story.assigneeId === selectedAssigneeId);
 
     }, [stories, viewBy, selectedAssigneeId]);
     
@@ -1716,6 +1549,3 @@ export default function GroomingPage() {
         </>
     );
 }
-
-
-
