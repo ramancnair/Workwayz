@@ -139,6 +139,7 @@ function StoryCard({
   
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
+  const showSubItems = story.itemType !== 'Bug' && (subTasks.length > 0 || bugs.length > 0);
   
   const isReadyForDev = useMemo(() => {
     if (!story.estimatedHours || story.estimatedHours <= 0) return false;
@@ -156,11 +157,15 @@ function StoryCard({
         <div className="flex justify-between items-start">
             <div className="flex-1 pr-2 space-y-1">
                 <div className="flex items-center gap-2">
-                    <CollapsibleTrigger asChild>
-                      <button>
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </CollapsibleTrigger>
+                    {showSubItems ? (
+                      <CollapsibleTrigger asChild>
+                          <button>
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                      </CollapsibleTrigger>
+                    ) : (
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    )}
                      {story.priority && (
                         <TooltipProvider>
                           <Tooltip>
@@ -211,7 +216,7 @@ function StoryCard({
                     <span>{story.estimatedHours}h</span>
                 </div>
             )}
-            {(subTasks.length > 0 || bugs.length > 0) && (
+            {showSubItems && (
               <CollapsibleTrigger asChild>
                 <div className="flex items-center gap-2 cursor-pointer">
                   {subTasks.length > 0 && (
@@ -358,7 +363,7 @@ export default function KanbanPage() {
     if (!system) return users;
     return users.filter(user => 
       user.role === 'Lead' || 
-      user.capabilities?.includes(watchedImpactedSystem)
+      user.capabilities?.includes(system.id)
     );
   }, [watchedImpactedSystem, users, impactedSystems]);
   
@@ -557,19 +562,18 @@ export default function KanbanPage() {
       : [], [stories, currentSprint]);
 
   const sprintStories = useMemo(() => {
-    const filteredByView = baseSprintStories.filter(story => {
-        if (viewBy === 'story') {
-            return ['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType);
-        }
-        if (viewBy === 'sub-task') {
-            return story.itemType === 'Sub Task';
-        }
-        if (viewBy === 'bug') {
-            return story.itemType === 'Bug';
-        }
-        return false;
-    });
+    let filteredByView: Story[];
 
+    if (viewBy === 'story') {
+        filteredByView = baseSprintStories.filter(story => ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
+    } else if (viewBy === 'sub-task') {
+        filteredByView = baseSprintStories.filter(story => story.itemType === 'Sub Task');
+    } else if (viewBy === 'bug') {
+        filteredByView = baseSprintStories.filter(story => story.itemType === 'Bug');
+    } else {
+        filteredByView = [];
+    }
+    
     return selectedAssigneeId === 'all'
       ? filteredByView
       : filteredByView.filter(story => story.assigneeId === selectedAssigneeId);

@@ -148,6 +148,7 @@ function StoryItemCard({
   const Icon = workItemIcons[story.itemType];
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
+  const showSubItems = story.itemType !== 'Bug' && (subTasks.length > 0 || bugs.length > 0);
   
   const isReadyForDev = useMemo(() => {
     if (!story.estimatedHours || story.estimatedHours <= 0) return false;
@@ -170,13 +171,17 @@ function StoryItemCard({
       <Card className="bg-card">
          <div className="p-4">
             <div className="flex justify-between items-start">
-                <div className="flex-1 pr-2 text-left space-y-1">
+                <div className="flex-1 pr-2 space-y-1">
                     <div className="flex items-center gap-2">
-                        <CollapsibleTrigger asChild>
-                          <button>
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        </CollapsibleTrigger>
+                        {showSubItems ? (
+                            <CollapsibleTrigger asChild>
+                              <button>
+                                <Icon className="h-4 w-4 text-muted-foreground" />
+                              </button>
+                            </CollapsibleTrigger>
+                        ) : (
+                             <Icon className="h-4 w-4 text-muted-foreground" />
+                        )}
                          <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -225,7 +230,7 @@ function StoryItemCard({
                     <span>{story.estimatedHours}h</span>
                 </div>
             )}
-            {(subTasks.length > 0 || bugs.length > 0) && (
+            {showSubItems && (
               <CollapsibleTrigger asChild>
                 <div className="flex items-center gap-2 cursor-pointer">
                   {subTasks.length > 0 && (
@@ -439,23 +444,20 @@ export default function GroomingPage() {
     const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
     const backlogItems = useMemo(() => {
-        const baseItems = stories.filter(story => !story.sprintId);
-        
-        const filteredByView = baseItems.filter(story => {
-            if (viewBy === 'story') {
-                return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
-            }
-            if (viewBy === 'sub-task') {
-                return story.itemType === 'Sub Task';
-            }
-            if (viewBy === 'bug') {
-                return story.itemType === 'Bug';
-            }
-            return false;
-        });
+        let baseItems: Story[];
 
-        if (selectedAssigneeId === 'all') return filteredByView;
-        return filteredByView.filter(story => story.assigneeId === selectedAssigneeId);
+        if (viewBy === 'story') {
+            baseItems = stories.filter(story => !story.sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
+        } else if (viewBy === 'sub-task') {
+            baseItems = stories.filter(story => !story.sprintId && story.itemType === 'Sub Task');
+        } else if (viewBy === 'bug') {
+            baseItems = stories.filter(story => !story.sprintId && story.itemType === 'Bug');
+        } else {
+            baseItems = [];
+        }
+
+        if (selectedAssigneeId === 'all') return baseItems;
+        return baseItems.filter(story => story.assigneeId === selectedAssigneeId);
 
     }, [stories, viewBy, selectedAssigneeId]);
     
@@ -471,24 +473,21 @@ export default function GroomingPage() {
 
     const sprintsWithStories = useMemo(() => {
         return sprints.map(sprint => {
-            const baseItems = stories.filter(story => story.sprintId === sprint.id);
-            
-            const filteredByView = baseItems.filter(story => {
-                if (viewBy === 'story') {
-                    return ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType);
-                }
-                if (viewBy === 'sub-task') {
-                  return story.itemType === 'Sub Task';
-                }
-                if (viewBy === 'bug') {
-                  return story.itemType === 'Bug';
-                }
-                return false;
-            });
+            let baseItems: Story[];
 
+            if (viewBy === 'story') {
+                baseItems = stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
+            } else if (viewBy === 'sub-task') {
+                baseItems = stories.filter(story => story.sprintId === sprint.id && story.itemType === 'Sub Task');
+            } else if (viewBy === 'bug') {
+                baseItems = stories.filter(story => story.sprintId === sprint.id && story.itemType === 'Bug');
+            } else {
+                baseItems = [];
+            }
+            
             const filteredByAssignee = selectedAssigneeId === 'all'
-                ? filteredByView
-                : filteredByView.filter(story => story.assigneeId === selectedAssigneeId);
+                ? baseItems
+                : baseItems.filter(story => story.assigneeId === selectedAssigneeId);
             
             return {
                 ...sprint,
