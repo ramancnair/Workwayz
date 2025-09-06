@@ -1,6 +1,8 @@
 
 'use client';
 
+import { useMemo, useState } from 'react';
+import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -21,12 +23,15 @@ import {
 import { Bar, BarChart, CartesianGrid, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Label, Cell } from 'recharts';
 import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label as UiLabel } from '@/components/ui/label';
 
-const taskChartData = [
-  { name: 'Not Started', value: 2, fill: 'hsl(var(--muted-foreground))' },
-  { name: 'Complete', value: 24, fill: 'hsl(var(--chart-2))' },
-  { name: 'In Progress', value: 4, fill: 'hsl(var(--chart-1))' },
-];
+const taskChartConfig = {
+  'To Do': { label: 'To Do', color: 'hsl(var(--muted-foreground))' },
+  'In Progress': { label: 'In Progress', color: 'hsl(var(--chart-1))' },
+  'Done': { label: 'Done', color: 'hsl(var(--chart-2))' },
+} satisfies ChartConfig;
+
 
 const workloadChartData = [
   { name: 'Jennifer', completed: 120, remaining: 30 },
@@ -87,6 +92,34 @@ const otherCostsConfig = {
 
 
 export default function ProjectDashboardPage() {
+  const { stories, releasesAndMilestones } = useProject();
+  const [selectedReleaseId, setSelectedReleaseId] = useState('all');
+
+  const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
+  
+  const releaseChartData = useMemo(() => {
+    const filteredStories = selectedReleaseId === 'all'
+      ? stories
+      : stories.filter(story => story.releaseId === selectedReleaseId);
+      
+    const statusCounts = filteredStories.reduce((acc, story) => {
+        const status = story.status || 'To Do';
+        if(acc[status]) {
+            acc[status]++;
+        } else {
+            acc[status] = 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(statusCounts).map(([name, value]) => ({
+      name,
+      value,
+      fill: (taskChartConfig[name as keyof typeof taskChartConfig] || { color: '#ccc' }).color,
+    }));
+  }, [stories, selectedReleaseId]);
+
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Project Dashboard" description="A high-level overview of the project's status." />
@@ -111,19 +144,32 @@ export default function ProjectDashboardPage() {
         
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>Tasks</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Release</CardTitle>
+              <div className="w-[180px]">
+                <Select value={selectedReleaseId} onValueChange={setSelectedReleaseId}>
+                  <SelectTrigger id="release-filter" className="h-8">
+                      <SelectValue placeholder="Select a release" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="all">All Releases</SelectItem>
+                      {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="flex items-center justify-center">
-            <ChartContainer config={{}} className="mx-auto aspect-square h-[250px]">
+            <ChartContainer config={taskChartConfig} className="mx-auto aspect-square h-[250px]">
                 <PieChart>
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                     <ChartLegend content={<ChartLegendContent />} />
-                    <Pie data={taskChartData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={100} strokeWidth={5}>
+                    <Pie data={releaseChartData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={100} strokeWidth={5}>
                         <LabelList
                             dataKey="value"
                             className="fill-foreground text-2xl font-bold"
                             position="center"
-                            formatter={(value: string) => taskChartData.reduce((acc, curr) => acc + curr.value, 0).toString()}
+                            formatter={(value: string) => releaseChartData.reduce((acc, curr) => acc + curr.value, 0).toString()}
                         />
                     </Pie>
                 </PieChart>
