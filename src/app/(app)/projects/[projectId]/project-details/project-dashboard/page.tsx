@@ -20,7 +20,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Cell, Legend } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Cell, Legend, Tooltip } from 'recharts';
 import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -39,6 +39,7 @@ const workloadChartConfig = {
   actual: { label: 'Actual (Non-Bug)', color: 'hsl(142, 71%, 45%)' }, // Green
   bug: { label: 'Bug Effort', color: 'hsl(36, 96%, 54%)' }, // Orange
 } satisfies ChartConfig;
+
 
 const costChartData = [
     { name: 'Actual', value: 380, fill: 'hsl(var(--chart-1))' },
@@ -435,14 +436,14 @@ export default function ProjectDashboardPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
-                <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-                    <CartesianGrid horizontal={false} />
-                    <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <XAxis type="number" />
+                <BarChart data={workloadData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis type="number" />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend />
                     <Bar dataKey="actual" stackId="a" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="bug" stackId="a" fill="var(--color-bug)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="bug" stackId="a" fill="var(--color-bug)" radius={[0, 0, 0, 0]} />
                 </BarChart>
             </ChartContainer>
           </CardContent>
@@ -554,3 +555,5 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
+
+    
