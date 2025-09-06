@@ -25,8 +25,8 @@ import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label as UiLabel } from '@/components/ui/label';
-import { format, parseISO, isSameDay, eachDayOfInterval, differenceInDays } from 'date-fns';
-import type { Story } from '@/types';
+import { format, parseISO, isSameDay, eachDayOfInterval, differenceInDays, isWithinInterval } from 'date-fns';
+import type { Story, WorklogItem } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
 const taskChartConfig = {
@@ -35,16 +35,11 @@ const taskChartConfig = {
   'Done': { label: 'Done', color: 'hsl(var(--chart-2))' },
 } satisfies ChartConfig;
 
-
-const workloadChartData = [
-  { name: 'Jennifer', completed: 120, remaining: 30 },
-  { name: 'Monica', completed: 80, remaining: 10 },
-  { name: 'Natalie', completed: 90, remaining: 0 },
-  { name: 'Rachel', completed: 75, remaining: 20 },
-  { name: 'Steve', completed: 85, remaining: 0 },
-  { name: 'Joe', completed: 40, remaining: 25 },
-  { name: 'Danny', completed: 50, remaining: 0 },
-];
+const workloadChartConfig = {
+  planned: { label: 'Planned', color: 'hsl(221, 83%, 53%)' }, // Blue
+  actual: { label: 'Actual (Non-Bug)', color: 'hsl(142, 71%, 45%)' }, // Green
+  bug: { label: 'Bug Effort', color: 'hsl(36, 96%, 54%)' }, // Orange
+} satisfies ChartConfig;
 
 const costChartData = [
     { name: 'Actual', value: 380, fill: 'hsl(var(--chart-1))' },
@@ -89,9 +84,10 @@ const otherCostsConfig = {
 
 
 export default function ProjectDashboardPage() {
-  const { stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings } = useProject();
+  const { stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings, employees, worklogs } = useProject();
   const [selectedReleaseId, setSelectedReleaseId] = useState('all');
   const [selectedSprintId, setSelectedSprintId] = useState('all');
+  const [workloadSprintId, setWorkloadSprintId] = useState('all');
   
   const [timeFilterSprintId, setTimeFilterSprintId] = useState('all');
   const [timeFilterReleaseId, setTimeFilterReleaseId] = useState('all');
@@ -170,6 +166,63 @@ export default function ProjectDashboardPage() {
       return !isWeekend && !isHoliday;
     }).length;
   }, [holidays, weeklyOffDays]);
+  
+  const workloadData = useMemo(() => {
+    const sprint = sprints.find(s => s.id === workloadSprintId);
+
+    // 1. Identify all resources involved in the sprint
+    const sprintStoryItems = workloadSprintId === 'all'
+      ? stories
+      : stories.filter(s => s.sprintId === workloadSprintId);
+    
+    const resourceIdsInSprint = new Set<string>();
+    sprintStoryItems.forEach(item => {
+      if (item.assigneeId) {
+        resourceIdsInSprint.add(item.assigneeId);
+      }
+    });
+
+    const resourcesInSprint = employees.filter(emp => resourceIdsInSprint.has(emp.id));
+
+    // 2. Calculate planned and actual effort for each resource
+    return resourcesInSprint.map(resource => {
+      const assignedItems = sprintStoryItems.filter(item => item.assigneeId === resource.id);
+      
+      const planned = assignedItems.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+
+      // Calculate Actuals from Worklogs within the sprint date range
+      let actual = 0;
+      let bugEffort = 0;
+      if(sprint?.startDate && sprint?.endDate) {
+        const sprintStart = parseISO(sprint.startDate);
+        const sprintEnd = parseISO(sprint.endDate);
+        const userWorklogs = worklogs.filter(w => w.employeeId === resource.id);
+
+        userWorklogs.forEach(log => {
+          const logDate = parseISO(log.date);
+          if (isWithinInterval(logDate, {start: sprintStart, end: sprintEnd})) {
+            actual += log.totalHours;
+            
+            // Calculate bug effort
+            log.items.forEach((item: WorklogItem) => {
+              const storyItem = stories.find(s => s.id === item.itemId);
+              if (storyItem?.itemType === 'Bug') {
+                bugEffort += item.hours;
+              }
+            });
+          }
+        });
+      }
+
+      return {
+        name: `${resource.firstName} ${resource.lastName}`,
+        planned: planned,
+        actual: actual - bugEffort, // Non-bug actual effort
+        bug: bugEffort, // Bug effort
+      };
+    });
+  }, [workloadSprintId, sprints, stories, employees, worklogs]);
+
 
   const calculateEffort = useCallback((relevantStories: Story[]) => {
      const planned = relevantStories.reduce((sum, story) => sum + (story.estimatedHours || 0), 0);
@@ -320,7 +373,7 @@ export default function ProjectDashboardPage() {
                       </SelectContent>
                     </Select>
                 </div>
-                <ChartContainer config={{}} className="h-[100px] w-full">
+                 <ChartContainer config={{}} className="h-[100px] w-full">
                     <BarChart data={sprintTimeChartData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
                         <YAxis type="category" dataKey="name" hide />
                         <XAxis type="number" hide />
@@ -366,18 +419,33 @@ export default function ProjectDashboardPage() {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Workload</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Workload</CardTitle>
+              <div className="w-[180px]">
+                <Select value={workloadSprintId} onValueChange={setWorkloadSprintId}>
+                  <SelectTrigger id="workload-sprint-filter" className="h-8">
+                      <SelectValue placeholder="Select a sprint" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="all">All Sprints</SelectItem>
+                      {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{}} className="h-[300px] w-full">
-                <BarChart data={workloadChartData} layout="vertical" stackOffset="expand" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-                    <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="completed" stackId="a" fill="hsl(var(--chart-2))" radius={[4,0,0,4]} />
-                    <Bar dataKey="remaining" stackId="a" fill="hsl(var(--chart-1))" radius={[0,4,4,0]} />
-                </BarChart>
+            <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
+              <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                <CartesianGrid horizontal={false} />
+                <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} width={100} />
+                <XAxis type="number" hide />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="planned" stackId="a" fill="var(--color-planned)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual" stackId="b" fill="var(--color-actual)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="bug" stackId="b" fill="var(--color-bug)" radius={[4, 4, 0, 0]} />
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
