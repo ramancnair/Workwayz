@@ -358,11 +358,12 @@ export default function KanbanPage() {
     if (!system) return users;
     return users.filter(user => 
       user.role === 'Lead' || 
-      user.capabilities?.includes(system.id)
+      user.capabilities?.includes(watchedImpactedSystem)
     );
   }, [watchedImpactedSystem, users, impactedSystems]);
   
   const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
+    if(!start || !end) return 0;
     const holidayDates = holidays.map(h => parseISO(h.date));
     const interval = eachDayOfInterval({ start, end });
     
@@ -375,13 +376,31 @@ export default function KanbanPage() {
   }, [holidays, weeklyOffDays]);
   
   const actualEffortInHours = useMemo(() => {
+    if (!selectedStory) return null;
+    // For parent stories, actual effort is sum of sub-tasks' actual effort
+    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
+        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && s.itemType === 'Sub Task');
+        if (subTasks.length === 0) return null; // Or show based on parent dates if no sub-tasks?
+
+        return subTasks.reduce((total, task) => {
+            if (!task.developmentStartDate || !task.completionDate) return total;
+            const start = parseISO(task.developmentStartDate);
+            const end = parseISO(task.completionDate);
+            const days = calculateBusinessDays(start, end);
+            const hoursPerDay = projectSettings?.manDayToHours || 8;
+            return total + (days * hoursPerDay);
+        }, 0);
+    }
+    
+    // For sub-tasks or bugs, calculate based on own dates
     if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
     const start = parseISO(selectedStory.developmentStartDate);
     const end = parseISO(selectedStory.completionDate);
     const days = calculateBusinessDays(start, end);
     const hoursPerDay = projectSettings?.manDayToHours || 8;
     return days * hoursPerDay;
-  }, [selectedStory, calculateBusinessDays, projectSettings]);
+
+}, [selectedStory, stories, calculateBusinessDays, projectSettings]);
 
   const handleSetSelectedStory = (story: Story | null) => {
     if (story) {
@@ -801,7 +820,7 @@ export default function KanbanPage() {
                                      {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
-                                            <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
+                                            <span>{actualEffortInHours.toFixed(2)} hours</span>
                                         </div>
                                     )}
                                 </div>
@@ -1178,8 +1197,8 @@ export default function KanbanPage() {
                                             <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
                                                 <ItemIcon className="h-4 w-4 text-muted-foreground" />
                                                 <span className="font-medium cursor-pointer hover:underline truncate" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
-                                                <Badge variant="outline" className="w-24 justify-center">{system?.name || 'N/A'}</Badge>
-                                                <span className="w-16 text-center text-muted-foreground">{item.estimatedHours || 0}h</span>
+                                                <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
+                                                <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
                                                 <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
                                             </div>
                                         )
@@ -1233,7 +1252,7 @@ export default function KanbanPage() {
                                 {actualEffortInHours !== null && (
                                     <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                         <span>Actual Effort:</span>
-                                        <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
+                                        <span>{actualEffortInHours.toFixed(2)} hours</span>
                                     </div>
                                 )}
                             </div>
@@ -1314,6 +1333,7 @@ export default function KanbanPage() {
     </>
   );
 }
+
 
 
 

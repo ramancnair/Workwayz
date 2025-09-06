@@ -371,6 +371,7 @@ export default function BacklogPage() {
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
+    if(!start || !end) return 0;
     const holidayDates = holidays.map(h => parseISO(h.date));
     const interval = eachDayOfInterval({ start, end });
     
@@ -383,13 +384,31 @@ export default function BacklogPage() {
   }, [holidays, weeklyOffDays]);
 
   const actualEffortInHours = useMemo(() => {
+    if (!selectedStory) return null;
+    // For parent stories, actual effort is sum of sub-tasks' actual effort
+    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
+        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && s.itemType === 'Sub Task');
+        if (subTasks.length === 0) return null; // Or show based on parent dates if no sub-tasks?
+
+        return subTasks.reduce((total, task) => {
+            if (!task.developmentStartDate || !task.completionDate) return total;
+            const start = parseISO(task.developmentStartDate);
+            const end = parseISO(task.completionDate);
+            const days = calculateBusinessDays(start, end);
+            const hoursPerDay = projectSettings?.manDayToHours || 8;
+            return total + (days * hoursPerDay);
+        }, 0);
+    }
+    
+    // For sub-tasks or bugs, calculate based on own dates
     if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
     const start = parseISO(selectedStory.developmentStartDate);
     const end = parseISO(selectedStory.completionDate);
     const days = calculateBusinessDays(start, end);
     const hoursPerDay = projectSettings?.manDayToHours || 8;
     return days * hoursPerDay;
-  }, [selectedStory, calculateBusinessDays, projectSettings]);
+
+}, [selectedStory, stories, calculateBusinessDays, projectSettings]);
 
   const addEpicForm = useForm<z.infer<typeof epicFormSchema>>({
     resolver: zodResolver(epicFormSchema),
@@ -1677,7 +1696,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
-                                            <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
+                                            <span>{actualEffortInHours.toFixed(2)} hours</span>
                                         </div>
                                     )}
                                 </div>
@@ -2213,7 +2232,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             {actualEffortInHours !== null && (
                                 <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                     <span>Actual Effort:</span>
-                                    <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
+                                    <span>{actualEffortInHours.toFixed(2)} hours</span>
                                 </div>
                             )}
                         </div>
@@ -2285,6 +2304,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

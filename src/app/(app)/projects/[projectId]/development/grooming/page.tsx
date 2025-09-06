@@ -695,25 +695,44 @@ export default function GroomingPage() {
     }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
 
     const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
-        const holidayDates = holidays.map(h => parseISO(h.date));
-        const interval = eachDayOfInterval({ start, end });
-        
-        return interval.filter(day => {
-          const dayOfWeek = day.getDay();
-          const isWeekend = weeklyOffDays.includes(dayOfWeek);
-          const isHoliday = holidayDates.some(h => isSameDay(day, h));
-          return !isWeekend && !isHoliday;
-        }).length;
-      }, [holidays, weeklyOffDays]);
+      if(!start || !end) return 0;
+      const holidayDates = holidays.map(h => parseISO(h.date));
+      const interval = eachDayOfInterval({ start, end });
+      
+      return interval.filter(day => {
+        const dayOfWeek = day.getDay();
+        const isWeekend = weeklyOffDays.includes(dayOfWeek);
+        const isHoliday = holidayDates.some(h => isSameDay(day, h));
+        return !isWeekend && !isHoliday;
+      }).length;
+    }, [holidays, weeklyOffDays]);
 
-    const actualEffortInHours = useMemo(() => {
-        if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
-        const start = parseISO(selectedStory.developmentStartDate);
-        const end = parseISO(selectedStory.completionDate);
-        const days = calculateBusinessDays(start, end);
-        const hoursPerDay = projectSettings?.manDayToHours || 8;
-        return days * hoursPerDay;
-      }, [selectedStory, calculateBusinessDays, projectSettings]);
+  const actualEffortInHours = useMemo(() => {
+    if (!selectedStory) return null;
+    // For parent stories, actual effort is sum of sub-tasks' actual effort
+    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
+        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && s.itemType === 'Sub Task');
+        if (subTasks.length === 0) return null; // Or show based on parent dates if no sub-tasks?
+
+        return subTasks.reduce((total, task) => {
+            if (!task.developmentStartDate || !task.completionDate) return total;
+            const start = parseISO(task.developmentStartDate);
+            const end = parseISO(task.completionDate);
+            const days = calculateBusinessDays(start, end);
+            const hoursPerDay = projectSettings?.manDayToHours || 8;
+            return total + (days * hoursPerDay);
+        }, 0);
+    }
+    
+    // For sub-tasks or bugs, calculate based on own dates
+    if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
+    const start = parseISO(selectedStory.developmentStartDate);
+    const end = parseISO(selectedStory.completionDate);
+    const days = calculateBusinessDays(start, end);
+    const hoursPerDay = projectSettings?.manDayToHours || 8;
+    return days * hoursPerDay;
+
+}, [selectedStory, stories, calculateBusinessDays, projectSettings]);
 
     React.useEffect(() => {
         if (watchedStartDate && projectSettings?.sprintDurationInWeeks) {
@@ -1209,7 +1228,7 @@ export default function GroomingPage() {
                                      {actualEffortInHours !== null && (
                                         <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                             <span>Actual Effort:</span>
-                                            <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
+                                            <span>{actualEffortInHours.toFixed(2)} hours</span>
                                         </div>
                                     )}
                                 </div>
@@ -1661,7 +1680,7 @@ export default function GroomingPage() {
                                 {actualEffortInHours !== null && (
                                     <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
                                         <span>Actual Effort:</span>
-                                        <span>{actualEffortInHours} {actualEffortInHours === 1 ? 'hour' : 'hours'}</span>
+                                        <span>{actualEffortInHours.toFixed(2)} hours</span>
                                     </div>
                                 )}
                             </div>
@@ -1683,3 +1702,4 @@ export default function GroomingPage() {
         </>
     );
 }
+

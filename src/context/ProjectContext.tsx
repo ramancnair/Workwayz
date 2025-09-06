@@ -532,13 +532,28 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   
   const updateStoryEffort = async (storyId: string) => {
     if (!db || !projectId) return;
+    const parentStoryRef = doc(db, 'projects', projectId, 'stories', storyId);
 
     const subItemsSnapshot = await getDocs(query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyId)));
     const subItems = subItemsSnapshot.docs.map(doc => doc.data() as Story);
 
     const totalHours = subItems.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
     
-    await updateDoc(doc(db, 'projects', projectId, 'stories', storyId), { estimatedHours: totalHours });
+    const updatePayload: any = { estimatedHours: totalHours };
+
+    const subItemsWithDates = subItems.filter(s => s.developmentStartDate);
+    if(subItemsWithDates.length > 0) {
+      const parentDevStart = Math.min(...subItemsWithDates.map(s => new Date(s.developmentStartDate!).getTime()));
+      updatePayload.developmentStartDate = new Date(parentDevStart).toISOString();
+
+      const completedSubItems = subItems.filter(s => s.completionDate);
+      if(completedSubItems.length === subItems.length) {
+        const parentCompletion = Math.max(...completedSubItems.map(s => new Date(s.completionDate!).getTime()));
+        updatePayload.completionDate = new Date(parentCompletion).toISOString();
+      }
+    }
+    
+    await updateDoc(parentStoryRef, updatePayload);
   };
 
   // Story Actions
