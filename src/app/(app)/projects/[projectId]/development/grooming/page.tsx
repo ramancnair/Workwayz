@@ -320,6 +320,7 @@ function SprintColumn({
     showNav,
     onMoveStory,
     onEditStory,
+    viewBy,
 }: { 
     sprint: Sprint & { stories: Story[] }, 
     holidays: Holiday[],
@@ -331,6 +332,7 @@ function SprintColumn({
     showNav: boolean,
     onMoveStory: (storyId: string, sprintId: string | null) => void,
     onEditStory: (story: Story) => void,
+    viewBy: 'story' | 'sub-task' | 'bug',
 }) {
     const { epics, employees, impactedSystems, projectSettings, stories: allStories } = useProject();
 
@@ -362,11 +364,18 @@ function SprintColumn({
         const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
         if (businessDaysInSprint <= 0) return [];
         
-        const sprintStoryIds = new Set(allStories.filter(s => s.sprintId === sprint.id).map(s => s.id));
-        
-        const sprintSubTasks = allStories.filter(sub => 
-            sub.itemType === 'Sub Task' && sub.parentStoryId && sprintStoryIds.has(sub.parentStoryId)
-        );
+        const allSprintStories = allStories.filter(s => s.sprintId === sprint.id);
+
+        let typesToInclude: WorkItemType[] = [];
+        if (viewBy === 'story') {
+            typesToInclude = ['Sub Task', 'Task', 'Bug'];
+        } else if (viewBy === 'sub-task') {
+            typesToInclude = ['Sub Task', 'Task'];
+        } else if (viewBy === 'bug') {
+            typesToInclude = ['Bug'];
+        }
+
+        const sprintSubItems = allSprintStories.filter(sub => typesToInclude.includes(sub.itemType));
 
         return impactedSystems.map(system => {
             const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
@@ -376,7 +385,7 @@ function SprintColumn({
                 totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
             });
             
-            const utilizedHours = sprintSubTasks
+            const utilizedHours = sprintSubItems
                 .filter(task => task.impactedSystemId === system.id)
                 .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
             
@@ -390,7 +399,7 @@ function SprintColumn({
                 utilization
             };
         });
-    }, [sprint, impactedSystems, employees, projectSettings, allStories, calculateBusinessDays]);
+    }, [sprint, impactedSystems, employees, projectSettings, allStories, calculateBusinessDays, viewBy]);
 
     
     return (
@@ -955,6 +964,7 @@ export default function GroomingPage() {
                             showNav={sprintsWithStories.length > 1}
                             onMoveStory={moveStoryToSprint}
                             onEditStory={(story) => handleSetSelectedStory(story)}
+                            viewBy={viewBy}
                         />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
