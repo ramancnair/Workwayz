@@ -140,7 +140,7 @@ function StoryItemCard({
     assignee?: User,
     subItems?: Story[],
     parentStory?: Story,
-    onMove: (sprintId: string | null) => void,
+    onMove: (storyId: string | null) => void,
     onEdit: () => void;
     onSubItemClick: (story: Story) => void;
 }) {
@@ -311,7 +311,6 @@ function StoryItemCard({
 
 function SprintColumn({ 
     sprint, 
-    stories,
     holidays,
     weeklyOffDays,
     onEdit, 
@@ -323,7 +322,6 @@ function SprintColumn({
     onEditStory,
 }: { 
     sprint: Sprint & { stories: Story[] }, 
-    stories: Story[],
     holidays: Holiday[],
     weeklyOffDays: number[],
     onEdit: (sprint: Sprint) => void, 
@@ -334,7 +332,7 @@ function SprintColumn({
     onMoveStory: (storyId: string, sprintId: string | null) => void,
     onEditStory: (story: Story) => void,
 }) {
-    const { epics, employees, impactedSystems, projectSettings, subItemsByParentId: allSubItemsByParentId } = useProject();
+    const { epics, employees, impactedSystems, projectSettings, subItemsByParentId } = useProject();
 
     const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
         if(!start || !end) return 0;
@@ -354,8 +352,10 @@ function SprintColumn({
         const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
         if (businessDaysInSprint <= 0) return [];
         
-        const sprintStories = stories;
-        const sprintSubTasks = sprintStories.flatMap(story => allSubItemsByParentId?.[story.id] || []).filter(sub => sub.itemType === 'Sub Task');
+        const sprintStoryIds = new Set(sprint.stories.map(s => s.id));
+        const sprintSubTasks = Object.values(subItemsByParentId).flat().filter(sub => 
+            sprintStoryIds.has(sub.parentStoryId!) && sub.itemType === 'Sub Task'
+        );
 
         return impactedSystems.map(system => {
             const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
@@ -379,7 +379,7 @@ function SprintColumn({
                 utilization
             };
         });
-    }, [sprint, stories, impactedSystems, employees, projectSettings, allSubItemsByParentId, calculateBusinessDays]);
+    }, [sprint, impactedSystems, employees, projectSettings, subItemsByParentId, calculateBusinessDays]);
 
     
     return (
@@ -417,7 +417,7 @@ function SprintColumn({
                 {sprint.stories.map(story => {
                     const epic = epics.find(e => e.id === story.epicId);
                     const assignee = employees.find(e => e.id === story.assigneeId);
-                    const subItems = allSubItemsByParentId?.[story.id] || [];
+                    const subItems = subItemsByParentId?.[story.id] || [];
                     const parentStory = story.parentStoryId ? stories.find(s => s.id === story.parentStoryId) : undefined;
                     return (
                          <div key={story.id}>
@@ -935,7 +935,6 @@ export default function GroomingPage() {
                         <SprintColumn 
                             key={sprintsWithStories[visibleSprintIndex].id} 
                             sprint={sprintsWithStories[visibleSprintIndex]} 
-                            stories={stories}
                             holidays={holidays}
                             weeklyOffDays={weeklyOffDays}
                             onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
