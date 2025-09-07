@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -331,9 +332,9 @@ function SprintColumn({
     onMoveStory: (storyId: string, sprintId: string | null) => void,
     onEditStory: (story: Story) => void,
 }) {
-    const { epics, employees, impactedSystems, projectSettings, stories } = useProject();
+    const { epics, employees, impactedSystems, projectSettings, stories: allStories } = useProject();
 
-    const subItemsByParentId = useMemo(() => stories.reduce((acc, story) => {
+    const subItemsByParentId = useMemo(() => allStories.reduce((acc, story) => {
         if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
             if (!acc[story.parentStoryId]) {
                 acc[story.parentStoryId] = [];
@@ -341,7 +342,7 @@ function SprintColumn({
             acc[story.parentStoryId].push(story);
         }
         return acc;
-    }, {} as Record<string, Story[]>), [stories]);
+    }, {} as Record<string, Story[]>), [allStories]);
 
     const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
         if(!start || !end) return 0;
@@ -361,12 +362,11 @@ function SprintColumn({
         const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
         if (businessDaysInSprint <= 0) return [];
         
-        const sprintStoryIds = new Set(sprint.stories.map(s => s.id));
-        const sprintSubTasks = subItemsByParentId 
-          ? Object.values(subItemsByParentId).flat().filter(sub => 
-              sprintStoryIds.has(sub.parentStoryId!) && sub.itemType === 'Sub Task'
-            )
-          : [];
+        const sprintStoryIds = new Set(allStories.filter(s => s.sprintId === sprint.id).map(s => s.id));
+        
+        const sprintSubTasks = allStories.filter(sub => 
+            sub.itemType === 'Sub Task' && sub.parentStoryId && sprintStoryIds.has(sub.parentStoryId)
+        );
 
         return impactedSystems.map(system => {
             const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
@@ -390,7 +390,7 @@ function SprintColumn({
                 utilization
             };
         });
-    }, [sprint, impactedSystems, employees, projectSettings, subItemsByParentId, calculateBusinessDays]);
+    }, [sprint, impactedSystems, employees, projectSettings, allStories, calculateBusinessDays]);
 
     
     return (
@@ -429,7 +429,7 @@ function SprintColumn({
                     const epic = epics.find(e => e.id === story.epicId);
                     const assignee = employees.find(e => e.id === story.assigneeId);
                     const subItems = subItemsByParentId?.[story.id] || [];
-                    const parentStory = story.parentStoryId ? stories.find(s => s.id === story.parentStoryId) : undefined;
+                    const parentStory = story.parentStoryId ? allStories.find(s => s.id === story.parentStoryId) : undefined;
                     return (
                          <div key={story.id}>
                             <StoryItemCard 
