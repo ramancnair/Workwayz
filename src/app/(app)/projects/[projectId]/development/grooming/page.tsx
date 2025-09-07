@@ -381,48 +381,71 @@ function SprintColumn({
             viewFilteredItems = allRelevantSprintItems.filter(item => item.itemType === 'Bug');
         }
 
-        const systemUtilization = impactedSystems.map(system => {
-            const utilizedHours = viewFilteredItems
-                .filter(task => task.impactedSystemId === system.id)
-                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-            return { systemId: system.id, systemName: system.name, utilizedHours };
+        const systemUtilization: Record<string, { systemName: string, utilizedHours: number }> = {};
+        impactedSystems.forEach(sys => {
+            systemUtilization[sys.id] = { systemName: sys.name, utilizedHours: 0 };
         });
+        systemUtilization['unassigned'] = { systemName: 'Unassigned', utilizedHours: 0 };
 
-        const unassignedEffort = viewFilteredItems
-            .filter(task => !task.impactedSystemId && !['Bug'].includes(task.itemType))
-            .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-        
-        if (unassignedEffort > 0) {
-            systemUtilization.push({ systemId: 'unassigned', systemName: 'Unassigned', utilizedHours: unassignedEffort });
-        }
-
-        if (viewBy === 'bug') {
-            const totalBugEffort = viewFilteredItems
-                .filter(item => item.itemType === 'Bug')
-                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-
-            if (totalBugEffort > 0) {
-                return [{
-                    systemId: 'bugs',
-                    systemName: 'Bug Fix Effort',
-                    utilizedHours: totalBugEffort,
-                    totalCapacityHours: 0, 
-                    utilization: 0,
-                }];
+        viewFilteredItems.forEach(task => {
+            if (viewBy === 'bug') {
+                 systemUtilization['unassigned'].utilizedHours += task.estimatedHours || 0;
+            } else {
+                const systemId = task.impactedSystemId || 'unassigned';
+                if (systemUtilization[systemId]) {
+                    systemUtilization[systemId].utilizedHours += task.estimatedHours || 0;
+                } else if(systemId === 'unassigned') {
+                    systemUtilization['unassigned'].utilizedHours += task.estimatedHours || 0;
+                }
             }
-        }
-
-        return systemUtilization.map(sysUtil => {
-            const systemResources = employees.filter(emp => emp.capabilities?.includes(sysUtil.systemId));
+        });
+        
+        const systemData = impactedSystems.map(system => {
+            const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
             let totalCapacityHours = 0;
             systemResources.forEach(res => {
                 const availabilityFactor = (res.availability || 100) / 100;
                 totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
             });
 
-            const utilization = totalCapacityHours > 0 ? (sysUtil.utilizedHours / totalCapacityHours) * 100 : 0;
-            return { ...sysUtil, totalCapacityHours, utilization };
+            const utilizedHours = systemUtilization[system.id]?.utilizedHours || 0;
+            const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+            
+            return {
+                systemId: system.id,
+                systemName: system.name,
+                utilizedHours,
+                totalCapacityHours,
+                utilization
+            };
         }).filter(d => d.utilizedHours > 0 || d.totalCapacityHours > 0);
+
+        if (viewBy === 'bug') {
+             const totalBugEffort = systemUtilization['unassigned']?.utilizedHours || 0;
+             if(totalBugEffort > 0) {
+                 return [{
+                    systemId: 'bugs',
+                    systemName: 'Bug Fix Effort',
+                    utilizedHours: totalBugEffort,
+                    totalCapacityHours: 0, 
+                    utilization: 0,
+                }];
+             }
+        } else {
+             const unassignedEffort = systemUtilization['unassigned']?.utilizedHours || 0;
+             if (unassignedEffort > 0) {
+                systemData.push({
+                    systemId: 'unassigned',
+                    systemName: 'Unassigned',
+                    utilizedHours: unassignedEffort,
+                    totalCapacityHours: 0, // No capacity for "unassigned"
+                    utilization: 0
+                });
+             }
+        }
+
+
+        return systemData;
 
     }, [sprint.startDate, sprint.endDate, sprint.id, allStories, impactedSystems, employees, projectSettings, viewBy, calculateBusinessDays]);
 
@@ -456,9 +479,9 @@ function SprintColumn({
                                 {data.totalCapacityHours > 0 && ` / ${data.totalCapacityHours.toFixed(0)}h`}
                             </span>
                         </div>
-                         {data.totalCapacityHours > 0 && (
-                            <Progress value={data.utilization} className="h-2" />
-                        )}
+                         {data.totalCapacityHours > 0 || data.utilizedHours > 0 ? (
+                            <Progress value={data.totalCapacityHours > 0 ? data.utilization : 100} className="h-2" />
+                        ) : null}
                     </div>
                 ))}
             </div>
@@ -1733,6 +1756,7 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
 
