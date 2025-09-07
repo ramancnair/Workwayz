@@ -321,7 +321,6 @@ function SprintColumn({
     showNav,
     onMoveStory,
     onEditStory,
-    selectedAssigneeId
 }: { 
     sprint: Sprint & { stories: Story[] }, 
     stories: Story[],
@@ -334,9 +333,8 @@ function SprintColumn({
     showNav: boolean,
     onMoveStory: (storyId: string, sprintId: string | null) => void,
     onEditStory: (story: Story) => void,
-    selectedAssigneeId: string;
 }) {
-    const { epics, employees: users, subItemsByParentId, project } = useProject();
+    const { epics, employees, impactedSystems, projectSettings, subItemsByParentId: allSubItemsByParentId } = useProject();
 
     const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
         if(!start || !end) return 0;
@@ -351,10 +349,38 @@ function SprintColumn({
         }).length;
     }, [holidays, weeklyOffDays]);
 
-    const totalBusinessDays = sprint.startDate && sprint.endDate ? calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate)) : 0;
-    const capacityInHours = totalBusinessDays * (project?.projectSettings?.manDayToHours || 8);
-    const totalEffort = stories.reduce((sum, story) => sum + (story.estimatedHours || 0), 0);
-    const capacityUtilization = capacityInHours > 0 ? (totalEffort / capacityInHours) * 100 : 0;
+    const systemCapacityData = useMemo(() => {
+        if (!sprint.startDate || !sprint.endDate) return [];
+        const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
+        if (businessDaysInSprint <= 0) return [];
+        
+        const sprintStories = stories;
+        const sprintSubTasks = sprintStories.flatMap(story => allSubItemsByParentId?.[story.id] || []).filter(sub => sub.itemType === 'Sub Task');
+
+        return impactedSystems.map(system => {
+            const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
+            let totalCapacityHours = 0;
+            systemResources.forEach(res => {
+                const availabilityFactor = (res.availability || 100) / 100;
+                totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
+            });
+            
+            const utilizedHours = sprintSubTasks
+                .filter(task => task.impactedSystemId === system.id)
+                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+            
+            const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+            
+            return {
+                systemId: system.id,
+                systemName: system.name,
+                utilizedHours,
+                totalCapacityHours,
+                utilization
+            };
+        });
+    }, [sprint, stories, impactedSystems, employees, projectSettings, allSubItemsByParentId, calculateBusinessDays]);
+
     
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
@@ -374,19 +400,24 @@ function SprintColumn({
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(sprint)}><Trash2 /></Button>
                 </div>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                <span>Total Effort: <strong>{totalEffort}h</strong></span>
-                <span>Capacity: <strong>{capacityInHours}h</strong></span>
+
+            <div className="mb-4 space-y-2">
+                {systemCapacityData.map(data => (
+                    <div key={data.systemId} className="text-xs">
+                        <div className="flex justify-between mb-1">
+                            <span className="font-semibold">{data.systemName}</span>
+                            <span className="text-muted-foreground">{data.utilizedHours.toFixed(0)}h / {data.totalCapacityHours.toFixed(0)}h</span>
+                        </div>
+                        <Progress value={data.utilization} className="h-2" />
+                    </div>
+                ))}
             </div>
-            <div className="mb-4">
-                <Progress value={capacityUtilization} className="h-2" />
-                <p className="text-xs text-muted-foreground text-right mt-1">{capacityUtilization.toFixed(0)}% Capacity Utilized</p>
-            </div>
+
             <div className="flex-1 space-y-4 overflow-y-auto">
-                {stories.map(story => {
+                {sprint.stories.map(story => {
                     const epic = epics.find(e => e.id === story.epicId);
-                    const assignee = users.find(e => e.id === story.assigneeId);
-                    const subItems = subItemsByParentId?.[story.id] || [];
+                    const assignee = employees.find(e => e.id === story.assigneeId);
+                    const subItems = allSubItemsByParentId?.[story.id] || [];
                     const parentStory = story.parentStoryId ? stories.find(s => s.id === story.parentStoryId) : undefined;
                     return (
                          <div key={story.id}>
@@ -904,7 +935,7 @@ export default function GroomingPage() {
                         <SprintColumn 
                             key={sprintsWithStories[visibleSprintIndex].id} 
                             sprint={sprintsWithStories[visibleSprintIndex]} 
-                            stories={sprintsWithStories[visibleSprintIndex].stories} 
+                            stories={stories}
                             holidays={holidays}
                             weeklyOffDays={weeklyOffDays}
                             onEdit={(sprint) => { setEditingSprint(sprint); setIsSprintDialogOpen(true); }}
@@ -914,7 +945,6 @@ export default function GroomingPage() {
                             showNav={sprintsWithStories.length > 1}
                             onMoveStory={moveStoryToSprint}
                             onEditStory={(story) => handleSetSelectedStory(story)}
-                            selectedAssigneeId={selectedAssigneeId}
                         />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
