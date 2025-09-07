@@ -150,6 +150,9 @@ function StoryItemCard({
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
   const showSubTasks = subTasks.length > 0;
   const showBugs = bugs.length > 0;
+
+  const [isSubtaskOpen, setIsSubtaskOpen] = useState(false);
+  const [isBugOpen, setIsBugOpen] = useState(false);
   
   const isReadyForDev = useMemo(() => {
     if (!story.estimatedHours || story.estimatedHours <= 0) return false;
@@ -235,7 +238,7 @@ function StoryItemCard({
           </div>
         </div>
       </div>
-      <CardFooter className="flex justify-between items-center p-4 pt-0">
+       <CardFooter className="flex justify-between items-center p-4 pt-0">
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           {assignee && (
             <TooltipProvider>
@@ -258,20 +261,16 @@ function StoryItemCard({
           )}
           <div className="flex items-center gap-2">
             {showSubTasks && (
-                <CollapsibleTrigger asChild>
-                    <div className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
-                        <CheckSquare className="h-3 w-3" />
-                        <span>{subTasks.length}</span>
-                    </div>
-                </CollapsibleTrigger>
+                <div onClick={(e) => { e.stopPropagation(); setIsSubtaskOpen(!isSubtaskOpen); setIsBugOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
+                    <CheckSquare className="h-3 w-3" />
+                    <span>{subTasks.length}</span>
+                </div>
             )}
             {showBugs && (
-                <CollapsibleTrigger asChild>
-                    <div className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
-                        <Bug className="h-3 w-3" />
-                        <span>{bugs.length}</span>
-                    </div>
-                </CollapsibleTrigger>
+                <div onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
+                    <Bug className="h-3 w-3" />
+                    <span>{bugs.length}</span>
+                </div>
             )}
           </div>
         </div>
@@ -297,16 +296,8 @@ function StoryItemCard({
           </DropdownMenuContent>
         </DropdownMenu>
       </CardFooter>
-      {showSubTasks && (
-        <CollapsibleContent>
-          {renderSubItemList(subTasks, 'Sub-Task')}
-        </CollapsibleContent>
-      )}
-      {showBugs && (
-        <CollapsibleContent>
-          {renderSubItemList(bugs, 'Bug')}
-        </CollapsibleContent>
-      )}
+      {isSubtaskOpen && showSubTasks && renderSubItemList(subTasks, 'Sub-Task')}
+      {isBugOpen && showBugs && renderSubItemList(bugs, 'Bug')}
     </Card>
   );
 }
@@ -339,7 +330,7 @@ function SprintColumn({
     const { epics, employees, impactedSystems, projectSettings, stories: allStories } = useProject();
 
      const subItemsByParentId = useMemo(() => allStories.reduce((acc, story) => {
-        if (story.parentStoryId && ['Bug', 'Sub Task'].includes(story.itemType)) {
+        if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
             if (!acc[story.parentStoryId]) {
                 acc[story.parentStoryId] = [];
             }
@@ -362,67 +353,70 @@ function SprintColumn({
     }, [holidays, weeklyOffDays]);
 
     const systemCapacityData = useMemo(() => {
-      if (!sprint.startDate || !sprint.endDate) return [];
-      const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
-      if (businessDaysInSprint <= 0) return [];
-      
-      let typesToInclude: WorkItemType[] = [];
-      if (viewBy === 'story') {
-        typesToInclude = ['Sub Task', 'Task', 'Bug'];
-      } else if (viewBy === 'sub-task') {
-        typesToInclude = ['Sub Task', 'Task'];
-      } else if (viewBy === 'bug') {
-        typesToInclude = ['Bug'];
-      }
+        if (!sprint.startDate || !sprint.endDate) return [];
+        const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
+        if (businessDaysInSprint <= 0) return [];
+        
+        let typesToInclude: WorkItemType[] = ['Sub Task', 'Task', 'Bug'];
+    
+        const sprintStoryIds = new Set(allStories.filter(s => s.sprintId === sprint.id).map(s => s.id));
+        const allRelevantSprintItems = allStories.filter(item => 
+            sprintStoryIds.has(item.parentStoryId || '') || sprintStoryIds.has(item.id)
+        ).filter(item => typesToInclude.includes(item.itemType));
+        
+        let viewFilteredItems: Story[];
+        if (viewBy === 'story') {
+            viewFilteredItems = allRelevantSprintItems;
+        } else if (viewBy === 'sub-task') {
+            viewFilteredItems = allRelevantSprintItems.filter(item => ['Sub Task', 'Task'].includes(item.itemType));
+        } else { // 'bug'
+            viewFilteredItems = allRelevantSprintItems.filter(item => item.itemType === 'Bug');
+        }
 
-      const sprintStoryIds = new Set(allStories.filter(s => s.sprintId === sprint.id).map(s => s.id));
-      const relevantSprintItems = allStories.filter(item => 
-          sprintStoryIds.has(item.parentStoryId || '') || sprintStoryIds.has(item.id)
-      ).filter(item => typesToInclude.includes(item.itemType));
-      
-      if (viewBy === 'bug') {
-          const totalBugEffort = relevantSprintItems
-              .filter(item => item.itemType === 'Bug')
-              .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-          
-          const teamTotalCapacity = employees.reduce((acc, emp) => {
-              const availabilityFactor = (emp.availability || 100) / 100;
-              return acc + (businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor);
-          }, 0);
-          const utilization = teamTotalCapacity > 0 ? (totalBugEffort / teamTotalCapacity) * 100 : 0;
-          
-          return [{
-              systemId: 'bugs',
-              systemName: 'Bug Fix Effort',
-              utilizedHours: totalBugEffort,
-              totalCapacityHours: teamTotalCapacity,
-              utilization,
-          }];
-      }
+        const systemUtilization = impactedSystems.map(system => {
+            const utilizedHours = viewFilteredItems
+                .filter(task => task.impactedSystemId === system.id)
+                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+            return { systemId: system.id, systemName: system.name, utilizedHours };
+        });
 
-      return impactedSystems.map(system => {
-          const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
-          let totalCapacityHours = 0;
-          systemResources.forEach(res => {
-              const availabilityFactor = (res.availability || 100) / 100;
-              totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
-          });
-          
-          const utilizedHours = relevantSprintItems
-              .filter(task => task.impactedSystemId === system.id)
-              .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-          
-          const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
-          
-          return {
-              systemId: system.id,
-              systemName: system.name,
-              utilizedHours,
-              totalCapacityHours,
-              utilization
-          };
-      });
-  }, [sprint, impactedSystems, employees, projectSettings, allStories, calculateBusinessDays, viewBy]);
+        const unassignedEffort = viewFilteredItems
+            .filter(task => !task.impactedSystemId && !['Bug'].includes(task.itemType))
+            .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+        
+        if (unassignedEffort > 0) {
+            systemUtilization.push({ systemId: 'unassigned', systemName: 'Unassigned', utilizedHours: unassignedEffort });
+        }
+
+        if (viewBy === 'bug') {
+            const totalBugEffort = viewFilteredItems
+                .filter(item => item.itemType === 'Bug')
+                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+
+            if (totalBugEffort > 0) {
+                return [{
+                    systemId: 'bugs',
+                    systemName: 'Bug Fix Effort',
+                    utilizedHours: totalBugEffort,
+                    totalCapacityHours: 0, // Capacity not broken down by bug type
+                    utilization: 0,
+                }];
+            }
+        }
+
+        return systemUtilization.map(sysUtil => {
+            const systemResources = employees.filter(emp => emp.capabilities?.includes(sysUtil.systemId));
+            let totalCapacityHours = 0;
+            systemResources.forEach(res => {
+                const availabilityFactor = (res.availability || 100) / 100;
+                totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
+            });
+
+            const utilization = totalCapacityHours > 0 ? (sysUtil.utilizedHours / totalCapacityHours) * 100 : 0;
+            return { ...sysUtil, totalCapacityHours, utilization };
+        }).filter(d => d.utilizedHours > 0 || d.totalCapacityHours > 0);
+
+    }, [sprint.startDate, sprint.endDate, sprint.id, allStories, impactedSystems, employees, projectSettings, viewBy, calculateBusinessDays]);
 
     
     return (
@@ -449,9 +443,14 @@ function SprintColumn({
                     <div key={data.systemId} className="text-xs">
                         <div className="flex justify-between mb-1">
                             <span className="font-semibold">{data.systemName}</span>
-                            <span className="text-muted-foreground">{data.utilizedHours.toFixed(0)}h / {data.totalCapacityHours.toFixed(0)}h</span>
+                            <span className="text-muted-foreground">
+                                {data.utilizedHours.toFixed(0)}h 
+                                {data.totalCapacityHours > 0 && ` / ${data.totalCapacityHours.toFixed(0)}h`}
+                            </span>
                         </div>
-                        <Progress value={data.utilization} className="h-2" />
+                         {data.totalCapacityHours > 0 && (
+                            <Progress value={data.utilization} className="h-2" />
+                        )}
                     </div>
                 ))}
             </div>
@@ -1719,4 +1718,5 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
