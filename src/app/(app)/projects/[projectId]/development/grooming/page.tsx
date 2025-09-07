@@ -238,8 +238,7 @@ function StoryItemCard({
           </div>
         </div>
       </div>
-      <Collapsible>
-        <CardFooter className="flex justify-between items-center p-4 pt-0">
+      <CardFooter className="flex justify-between items-center p-4 pt-0">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {assignee && (
               <TooltipProvider>
@@ -262,20 +261,16 @@ function StoryItemCard({
             )}
             <div className="flex items-center gap-2">
               {showSubTasks && (
-                  <CollapsibleTrigger asChild>
-                      <div onClick={(e) => { e.stopPropagation(); setIsSubtaskOpen(!isSubtaskOpen); setIsBugOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
-                          <CheckSquare className="h-3 w-3" />
-                          <span>{subTasks.length}</span>
-                      </div>
-                  </CollapsibleTrigger>
+                  <button onClick={(e) => { e.stopPropagation(); setIsSubtaskOpen(!isSubtaskOpen); setIsBugOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
+                      <CheckSquare className="h-3 w-3" />
+                      <span>{subTasks.length}</span>
+                  </button>
               )}
               {showBugs && (
-                  <CollapsibleTrigger asChild>
-                      <div onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
-                          <Bug className="h-3 w-3" />
-                          <span>{bugs.length}</span>
-                      </div>
-                  </CollapsibleTrigger>
+                  <button onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
+                      <Bug className="h-3 w-3" />
+                      <span>{bugs.length}</span>
+                  </button>
               )}
             </div>
           </div>
@@ -301,13 +296,8 @@ function StoryItemCard({
             </DropdownMenuContent>
           </DropdownMenu>
         </CardFooter>
-        <CollapsibleContent forceMount className={cn(isSubtaskOpen ? 'block' : 'hidden')}>
-            {showSubTasks && renderSubItemList(subTasks, 'Sub-Task')}
-        </CollapsibleContent>
-        <CollapsibleContent forceMount className={cn(isBugOpen ? 'block' : 'hidden')}>
-            {showBugs && renderSubItemList(bugs, 'Bug')}
-        </CollapsibleContent>
-       </Collapsible>
+         {isSubtaskOpen && showSubTasks && renderSubItemList(subTasks, 'Sub-Task')}
+         {isBugOpen && showBugs && renderSubItemList(bugs, 'Bug')}
     </Card>
   );
 }
@@ -339,7 +329,7 @@ function SprintColumn({
 }) {
     const { epics, employees, impactedSystems, projectSettings, stories: allStories } = useProject();
 
-     const subItemsByParentId = useMemo(() => allStories.reduce((acc, story) => {
+    const subItemsByParentId = useMemo(() => allStories.reduce((acc, story) => {
         if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
             if (!acc[story.parentStoryId]) {
                 acc[story.parentStoryId] = [];
@@ -366,40 +356,29 @@ function SprintColumn({
         if (!sprint.startDate || !sprint.endDate) return [];
         const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
         if (businessDaysInSprint <= 0) return [];
+    
+        const sprintStoryIds = new Set(sprint.stories.map(s => s.id));
         
-        const sprintStoryIds = new Set(allStories.filter(s => s.sprintId === sprint.id).map(s => s.id));
-        const allRelevantSprintItems = allStories.filter(item => 
-            sprintStoryIds.has(item.parentStoryId || '') || sprintStoryIds.has(item.id)
-        );
-        
-        let viewFilteredItems: Story[];
-        if (viewBy === 'story') {
-            viewFilteredItems = allRelevantSprintItems.filter(item => ['Sub Task', 'Task', 'Bug'].includes(item.itemType));
-        } else if (viewBy === 'sub-task') {
-            viewFilteredItems = allRelevantSprintItems.filter(item => ['Sub Task', 'Task'].includes(item.itemType));
-        } else { // 'bug'
-            viewFilteredItems = allRelevantSprintItems.filter(item => item.itemType === 'Bug');
-        }
-
-        const systemUtilization: Record<string, { systemName: string, utilizedHours: number }> = {};
+        const systemUtilization: Record<string, { utilizedHours: number }> = {};
+    
         impactedSystems.forEach(sys => {
-            systemUtilization[sys.id] = { systemName: sys.name, utilizedHours: 0 };
+            systemUtilization[sys.id] = { utilizedHours: 0 };
         });
-        systemUtilization['unassigned'] = { systemName: 'Unassigned', utilizedHours: 0 };
-
-        viewFilteredItems.forEach(task => {
-            if (viewBy === 'bug') {
-                 systemUtilization['unassigned'].utilizedHours += task.estimatedHours || 0;
-            } else {
+        systemUtilization['unassigned'] = { utilizedHours: 0 };
+    
+        allStories.forEach(task => {
+            // Only consider sub-tasks that belong to a story in the current sprint
+            if (task.parentStoryId && sprintStoryIds.has(task.parentStoryId) && ['Sub Task', 'Task'].includes(task.itemType)) {
                 const systemId = task.impactedSystemId || 'unassigned';
                 if (systemUtilization[systemId]) {
                     systemUtilization[systemId].utilizedHours += task.estimatedHours || 0;
-                } else if(systemId === 'unassigned') {
-                    systemUtilization['unassigned'].utilizedHours += task.estimatedHours || 0;
                 }
+            } else if (sprintStoryIds.has(task.id) && ['Bug'].includes(task.itemType)) {
+                 const systemId = 'unassigned'; // Bugs contribute to unassigned effort
+                 systemUtilization[systemId].utilizedHours += task.estimatedHours || 0;
             }
         });
-        
+    
         const systemData = impactedSystems.map(system => {
             const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
             let totalCapacityHours = 0;
@@ -407,10 +386,10 @@ function SprintColumn({
                 const availabilityFactor = (res.availability || 100) / 100;
                 totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
             });
-
+    
             const utilizedHours = systemUtilization[system.id]?.utilizedHours || 0;
             const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
-            
+    
             return {
                 systemId: system.id,
                 systemName: system.name,
@@ -420,34 +399,20 @@ function SprintColumn({
             };
         }).filter(d => d.utilizedHours > 0 || d.totalCapacityHours > 0);
 
-        if (viewBy === 'bug') {
-             const totalBugEffort = systemUtilization['unassigned']?.utilizedHours || 0;
-             if(totalBugEffort > 0) {
-                 return [{
-                    systemId: 'bugs',
-                    systemName: 'Bug Fix Effort',
-                    utilizedHours: totalBugEffort,
-                    totalCapacityHours: 0, 
-                    utilization: 0,
-                }];
-             }
-        } else {
-             const unassignedEffort = systemUtilization['unassigned']?.utilizedHours || 0;
-             if (unassignedEffort > 0) {
-                systemData.push({
-                    systemId: 'unassigned',
-                    systemName: 'Unassigned',
-                    utilizedHours: unassignedEffort,
-                    totalCapacityHours: 0, // No capacity for "unassigned"
-                    utilization: 0
-                });
-             }
+        const unassignedEffort = systemUtilization['unassigned']?.utilizedHours || 0;
+        if (unassignedEffort > 0) {
+            systemData.push({
+                systemId: 'unassigned',
+                systemName: 'Unassigned',
+                utilizedHours: unassignedEffort,
+                totalCapacityHours: 0, // No capacity for "unassigned"
+                utilization: 0
+            });
         }
-
-
+    
         return systemData;
-
-    }, [sprint.startDate, sprint.endDate, sprint.id, allStories, impactedSystems, employees, projectSettings, viewBy, calculateBusinessDays]);
+    
+    }, [sprint, allStories, impactedSystems, employees, projectSettings, calculateBusinessDays]);
 
     
     return (
@@ -1756,6 +1721,7 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
 
