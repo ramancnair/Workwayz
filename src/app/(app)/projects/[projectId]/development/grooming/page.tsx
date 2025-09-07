@@ -203,106 +203,110 @@ function StoryItemCard({
 
   return (
     <Card className="bg-card">
-        <div className="p-4">
+      <div className="p-4">
         <div className="flex justify-between items-start">
-            <div className="flex-1 pr-2 space-y-1">
-                <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                        <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button>
-                                <Circle className={cn("h-3 w-3 cursor-pointer", story.priority ? priorityStyles[story.priority] : 'text-gray-500 fill-gray-500')} />
-                            </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                            <p>{story.priority || 'No'} Priority</p>
-                            </TooltipContent>
-                        </Tooltip>
-                        </TooltipProvider>
-                    <p className="text-xs font-semibold text-muted-foreground">
-                        {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
-                    </p>
-                    {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
-                </div>
-                <p className="font-semibold break-words">{story.title}</p>
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-                {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                    <Edit className="h-4 w-4" />
-                </Button>
-            </div>
-        </div>
-        </div>
-    <CardFooter className="flex justify-between items-center p-4 pt-0">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {assignee && (
-            <TooltipProvider>
+          <div className="flex-1 pr-2 space-y-1">
+            <div className="flex items-center gap-2">
+              <Icon className="h-4 w-4 text-muted-foreground" />
+              <TooltipProvider>
                 <Tooltip>
-                    <TooltipTrigger>
-                        <Avatar className="h-6 w-6">
-                            <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
-                            <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
+                  <TooltipTrigger asChild>
+                    <button>
+                      <Circle className={cn("h-3 w-3 cursor-pointer", story.priority ? priorityStyles[story.priority] : 'text-gray-500 fill-gray-500')} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{story.priority || 'No'} Priority</p>
+                  </TooltipContent>
                 </Tooltip>
-            </TooltipProvider>
-        )}
-        {story.estimatedHours !== undefined && (
-            <div className="flex items-center gap-1" title="Development effort">
-                <Clock className="h-3 w-3" />
-                <span>{story.estimatedHours}h</span>
+              </TooltipProvider>
+              <p className="text-xs font-semibold text-muted-foreground">
+                {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
+              </p>
+              {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
             </div>
-        )}
-        <div className="flex items-center gap-2">
-          {showSubTasks && (
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
-                  <CheckSquare className="h-3 w-3" />
-                  <span>{subTasks.length}</span>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>{renderSubItemList(subTasks, 'Sub-Task')}</CollapsibleContent>
-            </Collapsible>
-          )}
-          {showBugs && (
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                 <div className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
-                  <Bug className="h-3 w-3" />
-                  <span>{bugs.length}</span>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>{renderSubItemList(bugs, 'Bug')}</CollapsibleContent>
-            </Collapsible>
-          )}
+            <p className="font-semibold break-words">{story.title}</p>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {epic && <Badge variant="secondary">{epic.title}</Badge>}
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+      </div>
+      <CardFooter className="flex justify-between items-center p-4 pt-0">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          {assignee && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
+                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {story.estimatedHours !== undefined && (
+            <div className="flex items-center gap-1" title="Development effort">
+              <Clock className="h-3 w-3" />
+              <span>{story.estimatedHours}h</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            {showSubTasks && (
+                <CollapsibleTrigger asChild>
+                    <div className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
+                        <CheckSquare className="h-3 w-3" />
+                        <span>{subTasks.length}</span>
+                    </div>
+                </CollapsibleTrigger>
+            )}
+            {showBugs && (
+                <CollapsibleTrigger asChild>
+                    <div className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
+                        <Bug className="h-3 w-3" />
+                        <span>{bugs.length}</span>
+                    </div>
+                </CollapsibleTrigger>
+            )}
+          </div>
         </div>
         <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-7" onClick={(e) => e.stopPropagation()}>
-            Move <ChevronDown className="ml-2 h-4 w-4" />
+              Move <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
             {story.sprintId !== null && (
-            <DropdownMenuItem onClick={() => onMove(null)}>
+              <DropdownMenuItem onClick={() => onMove(null)}>
                 Backlog
-            </DropdownMenuItem>
+              </DropdownMenuItem>
             )}
             {sortedSprints
-            .filter((sprint) => sprint.id !== story.sprintId)
-            .map((sprint) => (
+              .filter((sprint) => sprint.id !== story.sprintId)
+              .map((sprint) => (
                 <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
-                {sprint.title} {sprint.status === 'Current' && "(current)"}
+                  {sprint.title} {sprint.status === 'Current' && "(current)"}
                 </DropdownMenuItem>
-            ))}
-        </DropdownMenuContent>
+              ))}
+          </DropdownMenuContent>
         </DropdownMenu>
-    </CardFooter>
+      </CardFooter>
+      {showSubTasks && (
+        <CollapsibleContent>
+          {renderSubItemList(subTasks, 'Sub-Task')}
+        </CollapsibleContent>
+      )}
+      {showBugs && (
+        <CollapsibleContent>
+          {renderSubItemList(bugs, 'Bug')}
+        </CollapsibleContent>
+      )}
     </Card>
   );
 }
@@ -358,68 +362,67 @@ function SprintColumn({
     }, [holidays, weeklyOffDays]);
 
     const systemCapacityData = useMemo(() => {
-        if (!sprint.startDate || !sprint.endDate) return [];
-        const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
-        if (businessDaysInSprint <= 0) return [];
-        
-        let typesToInclude: WorkItemType[] = [];
-        if (viewBy === 'story') {
-            typesToInclude = ['Sub Task', 'Task', 'Bug'];
-        } else if (viewBy === 'sub-task') {
-            typesToInclude = ['Sub Task', 'Task'];
-        } else if (viewBy === 'bug') {
-            typesToInclude = ['Bug'];
-        }
+      if (!sprint.startDate || !sprint.endDate) return [];
+      const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
+      if (businessDaysInSprint <= 0) return [];
+      
+      let typesToInclude: WorkItemType[] = [];
+      if (viewBy === 'story') {
+        typesToInclude = ['Sub Task', 'Task', 'Bug'];
+      } else if (viewBy === 'sub-task') {
+        typesToInclude = ['Sub Task', 'Task'];
+      } else if (viewBy === 'bug') {
+        typesToInclude = ['Bug'];
+      }
 
-        const sprintStoryIds = new Set(allStories.filter(s => s.sprintId === sprint.id).map(s => s.id));
-        const relevantSprintItems = allStories.filter(item => 
-            sprintStoryIds.has(item.parentStoryId || item.id) &&
-            typesToInclude.includes(item.itemType)
-        );
-        
-        if (viewBy === 'bug') {
-            const totalBugEffort = relevantSprintItems
-                .filter(item => item.itemType === 'Bug')
-                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-            
-            const teamTotalCapacity = employees.reduce((acc, emp) => {
-                const availabilityFactor = (emp.availability || 100) / 100;
-                return acc + (businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor);
-            }, 0);
-            const utilization = teamTotalCapacity > 0 ? (totalBugEffort / teamTotalCapacity) * 100 : 0;
-            
-            return [{
-                systemId: 'bugs',
-                systemName: 'Bug Fix Effort',
-                utilizedHours: totalBugEffort,
-                totalCapacityHours: teamTotalCapacity,
-                utilization,
-            }];
-        }
+      const sprintStoryIds = new Set(allStories.filter(s => s.sprintId === sprint.id).map(s => s.id));
+      const relevantSprintItems = allStories.filter(item => 
+          sprintStoryIds.has(item.parentStoryId || '') || sprintStoryIds.has(item.id)
+      ).filter(item => typesToInclude.includes(item.itemType));
+      
+      if (viewBy === 'bug') {
+          const totalBugEffort = relevantSprintItems
+              .filter(item => item.itemType === 'Bug')
+              .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+          
+          const teamTotalCapacity = employees.reduce((acc, emp) => {
+              const availabilityFactor = (emp.availability || 100) / 100;
+              return acc + (businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor);
+          }, 0);
+          const utilization = teamTotalCapacity > 0 ? (totalBugEffort / teamTotalCapacity) * 100 : 0;
+          
+          return [{
+              systemId: 'bugs',
+              systemName: 'Bug Fix Effort',
+              utilizedHours: totalBugEffort,
+              totalCapacityHours: teamTotalCapacity,
+              utilization,
+          }];
+      }
 
-        return impactedSystems.map(system => {
-            const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
-            let totalCapacityHours = 0;
-            systemResources.forEach(res => {
-                const availabilityFactor = (res.availability || 100) / 100;
-                totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
-            });
-            
-            const utilizedHours = relevantSprintItems
-                .filter(task => task.impactedSystemId === system.id)
-                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
-            
-            const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
-            
-            return {
-                systemId: system.id,
-                systemName: system.name,
-                utilizedHours,
-                totalCapacityHours,
-                utilization
-            };
-        });
-    }, [sprint, impactedSystems, employees, projectSettings, allStories, calculateBusinessDays, viewBy]);
+      return impactedSystems.map(system => {
+          const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
+          let totalCapacityHours = 0;
+          systemResources.forEach(res => {
+              const availabilityFactor = (res.availability || 100) / 100;
+              totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
+          });
+          
+          const utilizedHours = relevantSprintItems
+              .filter(task => task.impactedSystemId === system.id)
+              .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+          
+          const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
+          
+          return {
+              systemId: system.id,
+              systemName: system.name,
+              utilizedHours,
+              totalCapacityHours,
+              utilization
+          };
+      });
+  }, [sprint, impactedSystems, employees, projectSettings, allStories, calculateBusinessDays, viewBy]);
 
     
     return (
@@ -460,7 +463,7 @@ function SprintColumn({
                     const subItems = subItemsByParentId?.[story.id] || [];
                     const parentStory = story.parentStoryId ? allStories.find(s => s.id === story.parentStoryId) : undefined;
                     return (
-                         <div key={story.id}>
+                         <Collapsible key={story.id}>
                             <StoryItemCard 
                                 story={story} 
                                 epic={epic}
@@ -471,7 +474,7 @@ function SprintColumn({
                                 onEdit={() => onEditStory(story)}
                                 onSubItemClick={onEditStory}
                             />
-                        </div>
+                        </Collapsible>
                     );
                 })}
             </div>
@@ -952,7 +955,7 @@ export default function GroomingPage() {
                                 const subItems = subItemsByParentId[story.id] || [];
                                 const parentStory = story.parentStoryId ? stories.find(s => s.id === story.parentStoryId) : undefined;
                                 return (
-                                    <div key={story.id}>
+                                    <Collapsible key={story.id}>
                                         <StoryItemCard 
                                             story={story} 
                                             epic={epic}
@@ -963,7 +966,7 @@ export default function GroomingPage() {
                                             onEdit={() => handleSetSelectedStory(story)}
                                             onSubItemClick={handleDrillDown}
                                         />
-                                    </div>
+                                    </Collapsible>
                                 );
                             })}
                         </div>
@@ -1716,3 +1719,4 @@ export default function GroomingPage() {
         </>
     );
 }
+
