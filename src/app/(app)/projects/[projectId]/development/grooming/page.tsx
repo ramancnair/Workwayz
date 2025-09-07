@@ -336,8 +336,8 @@ function SprintColumn({
 }) {
     const { epics, employees, impactedSystems, projectSettings, stories: allStories } = useProject();
 
-    const subItemsByParentId = useMemo(() => allStories.reduce((acc, story) => {
-        if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
+     const subItemsByParentId = useMemo(() => allStories.reduce((acc, story) => {
+        if (story.parentStoryId && ['Bug', 'Sub Task'].includes(story.itemType)) {
             if (!acc[story.parentStoryId]) {
                 acc[story.parentStoryId] = [];
             }
@@ -375,7 +375,24 @@ function SprintColumn({
             typesToInclude = ['Bug'];
         }
 
-        const sprintSubItems = allSprintStories.filter(sub => typesToInclude.includes(sub.itemType));
+        const relevantSprintItems = allSprintStories.filter(sub => typesToInclude.includes(sub.itemType));
+        
+        if (viewBy === 'bug') {
+            const totalBugEffort = relevantSprintItems.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+            const teamTotalCapacity = employees.reduce((acc, emp) => {
+                const availabilityFactor = (emp.availability || 100) / 100;
+                return acc + (businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor);
+            }, 0);
+            const utilization = teamTotalCapacity > 0 ? (totalBugEffort / teamTotalCapacity) * 100 : 0;
+            
+            return [{
+                systemId: 'bugs',
+                systemName: 'Bug Fix Effort',
+                utilizedHours: totalBugEffort,
+                totalCapacityHours: teamTotalCapacity,
+                utilization,
+            }];
+        }
 
         return impactedSystems.map(system => {
             const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
@@ -385,7 +402,7 @@ function SprintColumn({
                 totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
             });
             
-            const utilizedHours = sprintSubItems
+            const utilizedHours = relevantSprintItems
                 .filter(task => task.impactedSystemId === system.id)
                 .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
             
