@@ -148,7 +148,8 @@ function StoryItemCard({
   const Icon = workItemIcons[story.itemType];
   const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
   const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
-  const showSubItems = story.itemType !== 'Bug' && (subTasks.length > 0 || bugs.length > 0);
+  const showSubTasks = subTasks.length > 0;
+  const showBugs = bugs.length > 0;
   
   const isReadyForDev = useMemo(() => {
     if (!story.estimatedHours || story.estimatedHours <= 0) return false;
@@ -165,147 +166,144 @@ function StoryItemCard({
         return (a.title || '').localeCompare(b.title || '');
     });
   }, [sprints]);
+  
+  const renderSubItemList = (items: Story[], type: 'Sub-Task' | 'Bug') => (
+    <div className="px-4 pb-4 space-y-2">
+      <Separator />
+      <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs font-semibold text-muted-foreground px-2">
+          <span></span>
+          <span>Title</span>
+          <span>Impacted System</span>
+          <span>Effort</span>
+          <span>Status</span>
+      </div>
+      {items.map(item => {
+          const ItemIcon = workItemIcons[item.itemType];
+          const system = impactedSystems.find(s => s.id === item.impactedSystemId);
+          return (
+                <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs py-1 px-2 rounded-md hover:bg-muted">
+                  <ItemIcon className="h-3 w-3 text-muted-foreground" />
+                  <span
+                      className="font-medium cursor-pointer hover:underline truncate"
+                      onClick={(e) => {
+                      e.stopPropagation();
+                      onSubItemClick(item);
+                      }}
+                  >
+                      [{item.storyId}] {item.title}
+                  </span>
+                  <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
+                  <span className="w-16 text-center text-muted-foreground">{item.estimatedHours || 0}h</span>
+                  <Badge variant="outline" className="w-20 justify-center">{item.status}</Badge>
+              </div>
+          )
+      })}
+    </div>
+  );
 
   return (
-    <Collapsible>
-      <Card className="bg-card">
-         <div className="p-4">
-            <div className="flex justify-between items-start">
-                <div className="flex-1 pr-2 space-y-1">
-                    <div className="flex items-center gap-2">
-                        {showSubItems ? (
-                            <CollapsibleTrigger asChild>
-                              <button>
-                                <Icon className="h-4 w-4 text-muted-foreground" />
-                              </button>
-                            </CollapsibleTrigger>
-                        ) : (
-                             <Icon className="h-4 w-4 text-muted-foreground" />
-                        )}
-                         <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                 <button>
-                                  <Circle className={cn("h-3 w-3 cursor-pointer", story.priority ? priorityStyles[story.priority] : 'text-gray-500 fill-gray-500')} />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{story.priority || 'No'} Priority</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        <p className="text-xs font-semibold text-muted-foreground">
-                            {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
-                        </p>
-                        {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
-                    </div>
-                    <p className="font-semibold break-words">{story.title}</p>
+    <Card className="bg-card">
+        <div className="p-4">
+        <div className="flex justify-between items-start">
+            <div className="flex-1 pr-2 space-y-1">
+                <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                        <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button>
+                                <Circle className={cn("h-3 w-3 cursor-pointer", story.priority ? priorityStyles[story.priority] : 'text-gray-500 fill-gray-500')} />
+                            </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                            <p>{story.priority || 'No'} Priority</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        </TooltipProvider>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                        {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
+                    </p>
+                    {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                    {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                        <Edit className="h-4 w-4" />
-                    </Button>
-                </div>
+                <p className="font-semibold break-words">{story.title}</p>
             </div>
-          </div>
-        <CardFooter className="flex justify-between items-center p-4 pt-0">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {assignee && (
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger>
-                            <Avatar className="h-6 w-6">
-                                <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
-                                <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            )}
-            {story.estimatedHours !== undefined && (
-                <div className="flex items-center gap-1" title="Development effort">
-                    <Clock className="h-3 w-3" />
-                    <span>{story.estimatedHours}h</span>
-                </div>
-            )}
-            {showSubItems && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+                {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                    <Edit className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
+        </div>
+    <CardFooter className="flex justify-between items-center p-4 pt-0">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        {assignee && (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger>
+                        <Avatar className="h-6 w-6">
+                            <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
+                            <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        )}
+        {story.estimatedHours !== undefined && (
+            <div className="flex items-center gap-1" title="Development effort">
+                <Clock className="h-3 w-3" />
+                <span>{story.estimatedHours}h</span>
+            </div>
+        )}
+        <div className="flex items-center gap-2">
+          {showSubTasks && (
+            <Collapsible>
               <CollapsibleTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer">
-                  {subTasks.length > 0 && (
-                    <div className="flex items-center gap-1" title={`${subTasks.length} sub-tasks`}>
-                      <CheckSquare className="h-3 w-3" />
-                      <span>{subTasks.length}</span>
-                    </div>
-                  )}
-                  {bugs.length > 0 && (
-                    <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
-                      <Bug className="h-3 w-3" />
-                      <span>{bugs.length}</span>
-                    </div>
-                  )}
+                <div className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
+                  <CheckSquare className="h-3 w-3" />
+                  <span>{subTasks.length}</span>
                 </div>
               </CollapsibleTrigger>
-            )}
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7" onClick={(e) => e.stopPropagation()}>
-                Move <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {story.sprintId !== null && (
-                <DropdownMenuItem onClick={() => onMove(null)}>
-                  Backlog
-                </DropdownMenuItem>
-              )}
-              {sortedSprints
-                .filter((sprint) => sprint.id !== story.sprintId)
-                .map((sprint) => (
-                  <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
-                    {sprint.title} {sprint.status === 'Current' && "(current)"}
-                  </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </CardFooter>
-        <CollapsibleContent>
-            <div className="px-4 pb-4 space-y-2">
-                {(subTasks.length > 0 || bugs.length > 0) && <Separator />}
-                <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs font-semibold text-muted-foreground px-2">
-                    <span></span>
-                    <span>Title</span>
-                    <span>Impacted System</span>
-                    <span>Effort</span>
-                    <span>Status</span>
+              <CollapsibleContent>{renderSubItemList(subTasks, 'Sub-Task')}</CollapsibleContent>
+            </Collapsible>
+          )}
+          {showBugs && (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                 <div className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
+                  <Bug className="h-3 w-3" />
+                  <span>{bugs.length}</span>
                 </div>
-                {subItems?.map(item => {
-                    const ItemIcon = workItemIcons[item.itemType];
-                    const system = impactedSystems.find(s => s.id === item.impactedSystemId);
-                    return (
-                         <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs py-1 px-2 rounded-md hover:bg-muted">
-                            <ItemIcon className="h-3 w-3 text-muted-foreground" />
-                            <span
-                                className="font-medium cursor-pointer hover:underline truncate"
-                                onClick={(e) => {
-                                e.stopPropagation();
-                                onSubItemClick(item);
-                                }}
-                            >
-                                [{item.storyId}] {item.title}
-                            </span>
-                            <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
-                            <span className="w-16 text-center text-muted-foreground">{item.estimatedHours || 0}h</span>
-                            <Badge variant="outline" className="w-20 justify-center">{item.status}</Badge>
-                        </div>
-                    )
-                })}
-            </div>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
+              </CollapsibleTrigger>
+              <CollapsibleContent>{renderSubItemList(bugs, 'Bug')}</CollapsibleContent>
+            </Collapsible>
+          )}
+        </div>
+        </div>
+        <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7" onClick={(e) => e.stopPropagation()}>
+            Move <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+            {story.sprintId !== null && (
+            <DropdownMenuItem onClick={() => onMove(null)}>
+                Backlog
+            </DropdownMenuItem>
+            )}
+            {sortedSprints
+            .filter((sprint) => sprint.id !== story.sprintId)
+            .map((sprint) => (
+                <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
+                {sprint.title} {sprint.status === 'Current' && "(current)"}
+                </DropdownMenuItem>
+            ))}
+        </DropdownMenuContent>
+        </DropdownMenu>
+    </CardFooter>
+    </Card>
   );
 }
 
@@ -364,8 +362,6 @@ function SprintColumn({
         const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
         if (businessDaysInSprint <= 0) return [];
         
-        const allSprintStories = allStories.filter(s => s.sprintId === sprint.id);
-
         let typesToInclude: WorkItemType[] = [];
         if (viewBy === 'story') {
             typesToInclude = ['Sub Task', 'Task', 'Bug'];
@@ -375,10 +371,17 @@ function SprintColumn({
             typesToInclude = ['Bug'];
         }
 
-        const relevantSprintItems = allSprintStories.filter(sub => typesToInclude.includes(sub.itemType));
+        const sprintStoryIds = new Set(allStories.filter(s => s.sprintId === sprint.id).map(s => s.id));
+        const relevantSprintItems = allStories.filter(item => 
+            sprintStoryIds.has(item.parentStoryId || item.id) &&
+            typesToInclude.includes(item.itemType)
+        );
         
         if (viewBy === 'bug') {
-            const totalBugEffort = relevantSprintItems.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+            const totalBugEffort = relevantSprintItems
+                .filter(item => item.itemType === 'Bug')
+                .reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+            
             const teamTotalCapacity = employees.reduce((acc, emp) => {
                 const availabilityFactor = (emp.availability || 100) / 100;
                 return acc + (businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor);
