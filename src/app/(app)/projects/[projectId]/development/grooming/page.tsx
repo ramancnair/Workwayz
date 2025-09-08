@@ -347,12 +347,13 @@ function SprintColumn({
         const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
         if (businessDaysInSprint <= 0) return [];
     
-        const utilizationMap: Record<string, { utilizedHours: number, totalCapacityHours: number }> = {};
-        
-        impactedSystems.forEach(sys => {
-            utilizationMap[sys.id] = { utilizedHours: 0, totalCapacityHours: 0 };
-        });
+        const utilizationMap: Record<string, { utilizedHours: number, totalCapacityHours: number, systemName: string }> = {};
 
+        // Initialize with all systems
+        impactedSystems.forEach(sys => {
+            utilizationMap[sys.id] = { utilizedHours: 0, totalCapacityHours: 0, systemName: sys.name };
+        });
+        
         // Calculate total capacity for each system
         impactedSystems.forEach(system => {
             const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
@@ -364,55 +365,45 @@ function SprintColumn({
             utilizationMap[system.id].totalCapacityHours = systemCapacity;
         });
 
-        const sprintStoryIds = new Set(sprint.stories.map(s => s.id));
-        const allSubItemsInSprint = allStories.filter(story => 
-            sprint.stories.some(sprintStory => sprintStory.id === story.parentStoryId)
-        );
-        
-        // Calculate utilized hours based on view
-        const allItemsInSprint = allStories.filter(s => s.sprintId === sprint.id);
+        const allSubItemsInSprint = allStories.filter(story => story.sprintId === sprint.id);
 
         let itemsToConsider: Story[] = [];
-        if (viewBy === 'story') {
-            itemsToConsider = allItemsInSprint.filter(i => ['Sub Task', 'Task', 'Bug'].includes(i.itemType));
-        } else if (viewBy === 'sub-task') {
-            itemsToConsider = allItemsInSprint.filter(i => ['Sub Task', 'Task'].includes(i.itemType));
-        } else if (viewBy === 'bug') {
-            itemsToConsider = allItemsInSprint.filter(i => i.itemType === 'Bug');
-        }
 
-        itemsToConsider.forEach(task => {
-            const systemId = task.impactedSystemId;
-            if (viewBy === 'bug') {
-                if (!utilizationMap['bugs']) {
-                    utilizationMap['bugs'] = { utilizedHours: 0, totalCapacityHours: 0 };
-                }
-                utilizationMap['bugs'].utilizedHours += task.estimatedHours || 0;
-            } else if (systemId && utilizationMap[systemId]) {
-                utilizationMap[systemId].utilizedHours += task.estimatedHours || 0;
-            } else if (task.estimatedHours) {
-                if (!utilizationMap['unassigned']) {
-                    utilizationMap['unassigned'] = { utilizedHours: 0, totalCapacityHours: 0 };
-                }
-                utilizationMap['unassigned'].utilizedHours += task.estimatedHours || 0;
+        if (viewBy === 'bug') {
+            itemsToConsider = allSubItemsInSprint.filter(i => i.itemType === 'Bug');
+            const totalBugEffort = itemsToConsider.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+            if (totalBugEffort > 0) {
+                 utilizationMap['bugs'] = { utilizedHours: totalBugEffort, totalCapacityHours: 0, systemName: 'Bugs' };
             }
-        });
+        } else {
+            if (viewBy === 'story') {
+                itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Task', 'Bug'].includes(i.itemType));
+            } else if (viewBy === 'sub-task') {
+                itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Task'].includes(i.itemType));
+            }
+            
+            itemsToConsider.forEach(task => {
+                const systemId = task.impactedSystemId;
+                if (systemId && utilizationMap[systemId]) {
+                    utilizationMap[systemId].utilizedHours += task.estimatedHours || 0;
+                } else if (task.estimatedHours) {
+                    if (!utilizationMap['unassigned']) {
+                        utilizationMap['unassigned'] = { utilizedHours: 0, totalCapacityHours: 0, systemName: 'Unassigned' };
+                    }
+                    utilizationMap['unassigned'].utilizedHours += task.estimatedHours || 0;
+                }
+            });
+        }
         
         const result = Object.entries(utilizationMap).map(([systemId, data]) => {
-            let systemName = 'Unknown';
-            if (systemId === 'unassigned') systemName = 'Unassigned';
-            else if (systemId === 'bugs') systemName = 'Bugs';
-            else systemName = impactedSystems.find(s => s.id === systemId)?.name || 'Unknown';
-             
              return {
                 systemId,
-                systemName,
                 ...data,
                 utilization: data.totalCapacityHours > 0 ? (data.utilizedHours / data.totalCapacityHours) * 100 : 0
             }
         });
     
-        return result.filter(d => d.utilizedHours > 0 || d.totalCapacityHours > 0);
+        return result.filter(d => d.utilizedHours > 0 || (d.totalCapacityHours > 0 && viewBy !== 'bug'));
     
     }, [sprint, allStories, impactedSystems, employees, projectSettings, calculateBusinessDays, viewBy]);
     
@@ -1289,19 +1280,23 @@ export default function GroomingPage() {
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
-                            <TabsTrigger value="subTasks">
-                                Sub-Tasks
-                                <Badge variant="secondary" className="ml-2">
-                                    {selectedStorySubItems.subTasks.length}
-                                </Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="bugs">
-                                Bugs
-                                <Badge variant="secondary" className="ml-2">
-                                    {selectedStorySubItems.bugs.length}
-                                </Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="logs">
+                             {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
+                                <>
+                                    <TabsTrigger value="subTasks">
+                                        Sub-Tasks
+                                        <Badge variant="secondary" className="ml-2">
+                                            {selectedStorySubItems.subTasks.length}
+                                        </Badge>
+                                    </TabsTrigger>
+                                    <TabsTrigger value="bugs">
+                                        Bugs
+                                        <Badge variant="secondary" className="ml-2">
+                                            {selectedStorySubItems.bugs.length}
+                                        </Badge>
+                                    </TabsTrigger>
+                                </>
+                            )}
+                             <TabsTrigger value="logs">
                                 Logs
                                 <Badge variant="secondary" className="ml-2">
                                     {selectedStorySubItems.logs.length}
@@ -1310,7 +1305,7 @@ export default function GroomingPage() {
                         </TabsList>
                         <TabsContent value="details" className="pt-4">
                         <div className="space-y-4">
-                             {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
+                            {['Requirement/Story', 'Feature Change', 'Bug'].includes(selectedStory.itemType) && (
                                 <FormField
                                     control={editStoryForm.control}
                                     name="impactedSystemIds"
@@ -1723,3 +1718,4 @@ export default function GroomingPage() {
         </>
     );
 }
+
