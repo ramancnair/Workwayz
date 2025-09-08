@@ -205,99 +205,99 @@ function StoryItemCard({
   );
 
   return (
-    <Card className="bg-card">
-      <div className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex-1 pr-2 space-y-1">
-            <div className="flex items-center gap-2">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button>
-                      <Circle className={cn("h-3 w-3 cursor-pointer", story.priority ? priorityStyles[story.priority] : 'text-gray-500 fill-gray-500')} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{story.priority || 'No'} Priority</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <p className="text-xs font-semibold text-muted-foreground">
-                {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
-              </p>
-              {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
+     <Card className="bg-card">
+        <div className="p-4">
+            <div className="flex justify-between items-start">
+            <div className="flex-1 pr-2 space-y-1">
+                <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <TooltipProvider>
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button>
+                        <Circle className={cn("h-3 w-3 cursor-pointer", story.priority ? priorityStyles[story.priority] : 'text-gray-500 fill-gray-500')} />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>{story.priority || 'No'} Priority</p>
+                    </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+                <p className="text-xs font-semibold text-muted-foreground">
+                    {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
+                </p>
+                {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
+                </div>
+                <p className="font-semibold break-words">{story.title}</p>
             </div>
-            <p className="font-semibold break-words">{story.title}</p>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {epic && <Badge variant="secondary">{epic.title}</Badge>}
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-              <Edit className="h-4 w-4" />
-            </Button>
-          </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+                {epic && <Badge variant="secondary">{epic.title}</Badge>}
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                <Edit className="h-4 w-4" />
+                </Button>
+            </div>
+            </div>
         </div>
-      </div>
-      <CardFooter className="flex justify-between items-center p-4 pt-0">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {assignee && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
-                      <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            {story.estimatedHours !== undefined && (
-              <div className="flex items-center gap-1" title="Development effort">
-                <Clock className="h-3 w-3" />
-                <span>{story.estimatedHours}h</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              {showSubTasks && (
-                  <button onClick={(e) => { e.stopPropagation(); setIsSubtaskOpen(!isSubtaskOpen); setIsBugOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
-                      <CheckSquare className="h-3 w-3" />
-                      <span>{subTasks.length}</span>
-                  </button>
-              )}
-              {showBugs && (
-                  <button onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
-                      <Bug className="h-3 w-3" />
-                      <span>{bugs.length}</span>
-                  </button>
-              )}
+        <CardFooter className="flex justify-between items-center p-4 pt-0">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {assignee && (
+                <TooltipProvider>
+                    <Tooltip>
+                    <TooltipTrigger>
+                        <Avatar className="h-6 w-6">
+                        <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
+                        <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+                )}
+                {story.estimatedHours !== undefined && (
+                <div className="flex items-center gap-1" title="Development effort">
+                    <Clock className="h-3 w-3" />
+                    <span>{story.estimatedHours}h</span>
+                </div>
+                )}
+                <div className="flex items-center gap-2">
+                {showSubTasks && (
+                    <button onClick={(e) => { e.stopPropagation(); setIsSubtaskOpen(!isSubtaskOpen); setIsBugOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${subTasks.length} sub-tasks`}>
+                        <CheckSquare className="h-3 w-3" />
+                        <span>{subTasks.length}</span>
+                    </button>
+                )}
+                {showBugs && (
+                    <button onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
+                        <Bug className="h-3 w-3" />
+                        <span>{bugs.length}</span>
+                    </button>
+                )}
+                </div>
             </div>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7" onClick={(e) => e.stopPropagation()}>
-                Move <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {story.sprintId !== null && (
-                <DropdownMenuItem onClick={() => onMove(null)}>
-                  Backlog
-                </DropdownMenuItem>
-              )}
-              {sortedSprints
-                .filter((sprint) => sprint.id !== story.sprintId)
-                .map((sprint) => (
-                  <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
-                    {sprint.title} {sprint.status === 'Current' && "(current)"}
-                  </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7" onClick={(e) => e.stopPropagation()}>
+                    Move <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                {story.sprintId !== null && (
+                    <DropdownMenuItem onClick={() => onMove(null)}>
+                    Backlog
+                    </DropdownMenuItem>
+                )}
+                {sortedSprints
+                    .filter((sprint) => sprint.id !== story.sprintId)
+                    .map((sprint) => (
+                    <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
+                        {sprint.title} {sprint.status === 'Current' && "(current)"}
+                    </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
         </CardFooter>
-         {isSubtaskOpen && showSubTasks && renderSubItemList(subTasks, 'Sub-Task')}
-         {isBugOpen && showBugs && renderSubItemList(bugs, 'Bug')}
+        {isSubtaskOpen && showSubTasks && renderSubItemList(subTasks, 'Sub-Task')}
+        {isBugOpen && showBugs && renderSubItemList(bugs, 'Bug')}
     </Card>
   );
 }
@@ -348,9 +348,8 @@ function SprintColumn({
         if (businessDaysInSprint <= 0) return [];
     
         const utilizationMap: Record<string, { utilizedHours: number, totalCapacityHours: number }> = {};
-    
-        // Initialize map for all systems and unassigned
-        [...impactedSystems, { id: 'unassigned', name: 'Unassigned' }].forEach(sys => {
+        
+        impactedSystems.forEach(sys => {
             utilizationMap[sys.id] = { utilizedHours: 0, totalCapacityHours: 0 };
         });
 
@@ -365,42 +364,54 @@ function SprintColumn({
             utilizationMap[system.id].totalCapacityHours = systemCapacity;
         });
 
-        // Get all sub-tasks for stories in the current sprint
         const sprintStoryIds = new Set(sprint.stories.map(s => s.id));
-        const relevantSubItems = allStories.filter(story => 
-            sprintStoryIds.has(story.parentStoryId!) && 
-            (story.itemType === 'Sub Task' || story.itemType === 'Task' || story.itemType === 'Bug')
+        const allSubItemsInSprint = allStories.filter(story => 
+            sprintStoryIds.has(story.parentStoryId!)
         );
         
         let itemsToConsider: Story[] = [];
         if (viewBy === 'story') {
-            itemsToConsider = relevantSubItems.filter(i => ['Sub Task', 'Task', 'Bug'].includes(i.itemType));
+            itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Task', 'Bug'].includes(i.itemType));
         } else if (viewBy === 'sub-task') {
-            itemsToConsider = relevantSubItems.filter(i => ['Sub Task', 'Task'].includes(i.itemType));
+            itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Task'].includes(i.itemType));
         } else if (viewBy === 'bug') {
-            itemsToConsider = relevantSubItems.filter(i => i.itemType === 'Bug');
+            itemsToConsider = allSubItemsInSprint.filter(i => i.itemType === 'Bug');
         }
 
+        let unassignedHours = 0;
         // Calculate utilized hours
         itemsToConsider.forEach(task => {
-            const systemId = task.impactedSystemId || 'unassigned';
-            if (utilizationMap[systemId]) {
+            const systemId = task.impactedSystemId;
+            if (systemId && utilizationMap[systemId]) {
                 utilizationMap[systemId].utilizedHours += task.estimatedHours || 0;
+            } else {
+                unassignedHours += task.estimatedHours || 0;
             }
         });
-
-        return Object.entries(utilizationMap).map(([systemId, data]) => {
+        
+        const result = Object.entries(utilizationMap).map(([systemId, data]) => {
              const system = impactedSystems.find(s => s.id === systemId);
              return {
                 systemId,
-                systemName: system?.name || 'Unassigned',
+                systemName: system?.name || 'Unknown',
                 ...data,
                 utilization: data.totalCapacityHours > 0 ? (data.utilizedHours / data.totalCapacityHours) * 100 : 0
             }
-        }).filter(d => d.utilizedHours > 0 || d.totalCapacityHours > 0);
-    
-    }, [sprint.startDate, sprint.endDate, sprint.stories, allStories, impactedSystems, employees, projectSettings, calculateBusinessDays, viewBy]);
+        });
 
+        if (unassignedHours > 0) {
+            result.push({
+                systemId: 'unassigned',
+                systemName: 'Unassigned',
+                utilizedHours: unassignedHours,
+                totalCapacityHours: 0, // No defined capacity for unassigned
+                utilization: 0,
+            });
+        }
+    
+        return result.filter(d => d.utilizedHours > 0 || d.totalCapacityHours > 0);
+    
+    }, [sprint, allStories, impactedSystems, employees, projectSettings, calculateBusinessDays, viewBy]);
     
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
@@ -431,9 +442,10 @@ function SprintColumn({
                                 {data.totalCapacityHours > 0 && ` / ${data.totalCapacityHours.toFixed(0)}h`}
                             </span>
                         </div>
-                         {(data.totalCapacityHours > 0 || data.utilizedHours > 0) && (
-                            <Progress value={data.totalCapacityHours > 0 ? data.utilization : 100} className={cn("h-2", data.utilization > 100 && "bg-red-500")} />
-                        )}
+                        <Progress 
+                            value={data.totalCapacityHours > 0 ? data.utilization : 100}
+                            indicatorClassName={cn(data.utilization > 100 && "bg-red-500")}
+                        />
                     </div>
                 ))}
             </div>
@@ -1708,6 +1720,7 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
 
