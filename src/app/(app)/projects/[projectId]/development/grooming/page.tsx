@@ -329,16 +329,6 @@ function SprintColumn({
 }) {
     const { epics, employees, impactedSystems, projectSettings, stories: allStories } = useProject();
 
-    const subItemsByParentId = useMemo(() => allStories.reduce((acc, story) => {
-        if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
-            if (!acc[story.parentStoryId]) {
-                acc[story.parentStoryId] = [];
-            }
-            acc[story.parentStoryId].push(story);
-        }
-        return acc;
-    }, {} as Record<string, Story[]>), [allStories]);
-
     const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
         if(!start || !end) return 0;
         const holidayDates = holidays.map(h => parseISO(h.date));
@@ -357,62 +347,59 @@ function SprintColumn({
         const businessDaysInSprint = calculateBusinessDays(parseISO(sprint.startDate), parseISO(sprint.endDate));
         if (businessDaysInSprint <= 0) return [];
     
-        const sprintStoryIds = new Set(sprint.stories.map(s => s.id));
-        
-        const systemUtilization: Record<string, { utilizedHours: number }> = {};
+        const utilizationMap: Record<string, { utilizedHours: number, totalCapacityHours: number }> = {};
     
-        impactedSystems.forEach(sys => {
-            systemUtilization[sys.id] = { utilizedHours: 0 };
+        // Initialize map for all systems and unassigned
+        [...impactedSystems, { id: 'unassigned', name: 'Unassigned' }].forEach(sys => {
+            utilizationMap[sys.id] = { utilizedHours: 0, totalCapacityHours: 0 };
         });
-        systemUtilization['unassigned'] = { utilizedHours: 0 };
-    
-        allStories.forEach(task => {
-            // Only consider sub-tasks that belong to a story in the current sprint
-            if (task.parentStoryId && sprintStoryIds.has(task.parentStoryId) && ['Sub Task', 'Task'].includes(task.itemType)) {
-                const systemId = task.impactedSystemId || 'unassigned';
-                if (systemUtilization[systemId]) {
-                    systemUtilization[systemId].utilizedHours += task.estimatedHours || 0;
-                }
-            } else if (sprintStoryIds.has(task.id) && ['Bug'].includes(task.itemType)) {
-                 const systemId = 'unassigned'; // Bugs contribute to unassigned effort
-                 systemUtilization[systemId].utilizedHours += task.estimatedHours || 0;
-            }
-        });
-    
-        const systemData = impactedSystems.map(system => {
+
+        // Calculate total capacity for each system
+        impactedSystems.forEach(system => {
             const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
-            let totalCapacityHours = 0;
+            let systemCapacity = 0;
             systemResources.forEach(res => {
                 const availabilityFactor = (res.availability || 100) / 100;
-                totalCapacityHours += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
+                systemCapacity += businessDaysInSprint * (projectSettings?.manDayToHours || 8) * availabilityFactor;
             });
-    
-            const utilizedHours = systemUtilization[system.id]?.utilizedHours || 0;
-            const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
-    
-            return {
-                systemId: system.id,
-                systemName: system.name,
-                utilizedHours,
-                totalCapacityHours,
-                utilization
-            };
-        }).filter(d => d.utilizedHours > 0 || d.totalCapacityHours > 0);
+            utilizationMap[system.id].totalCapacityHours = systemCapacity;
+        });
 
-        const unassignedEffort = systemUtilization['unassigned']?.utilizedHours || 0;
-        if (unassignedEffort > 0) {
-            systemData.push({
-                systemId: 'unassigned',
-                systemName: 'Unassigned',
-                utilizedHours: unassignedEffort,
-                totalCapacityHours: 0, // No capacity for "unassigned"
-                utilization: 0
-            });
+        // Get all sub-tasks for stories in the current sprint
+        const sprintStoryIds = new Set(sprint.stories.map(s => s.id));
+        const relevantSubItems = allStories.filter(story => 
+            sprintStoryIds.has(story.parentStoryId!) && 
+            (story.itemType === 'Sub Task' || story.itemType === 'Task' || story.itemType === 'Bug')
+        );
+        
+        let itemsToConsider: Story[] = [];
+        if (viewBy === 'story') {
+            itemsToConsider = relevantSubItems.filter(i => ['Sub Task', 'Task', 'Bug'].includes(i.itemType));
+        } else if (viewBy === 'sub-task') {
+            itemsToConsider = relevantSubItems.filter(i => ['Sub Task', 'Task'].includes(i.itemType));
+        } else if (viewBy === 'bug') {
+            itemsToConsider = relevantSubItems.filter(i => i.itemType === 'Bug');
         }
+
+        // Calculate utilized hours
+        itemsToConsider.forEach(task => {
+            const systemId = task.impactedSystemId || 'unassigned';
+            if (utilizationMap[systemId]) {
+                utilizationMap[systemId].utilizedHours += task.estimatedHours || 0;
+            }
+        });
+
+        return Object.entries(utilizationMap).map(([systemId, data]) => {
+             const system = impactedSystems.find(s => s.id === systemId);
+             return {
+                systemId,
+                systemName: system?.name || 'Unassigned',
+                ...data,
+                utilization: data.totalCapacityHours > 0 ? (data.utilizedHours / data.totalCapacityHours) * 100 : 0
+            }
+        }).filter(d => d.utilizedHours > 0 || d.totalCapacityHours > 0);
     
-        return systemData;
-    
-    }, [sprint, allStories, impactedSystems, employees, projectSettings, calculateBusinessDays]);
+    }, [sprint.startDate, sprint.endDate, sprint.stories, allStories, impactedSystems, employees, projectSettings, calculateBusinessDays, viewBy]);
 
     
     return (
@@ -444,9 +431,9 @@ function SprintColumn({
                                 {data.totalCapacityHours > 0 && ` / ${data.totalCapacityHours.toFixed(0)}h`}
                             </span>
                         </div>
-                         {data.totalCapacityHours > 0 || data.utilizedHours > 0 ? (
-                            <Progress value={data.totalCapacityHours > 0 ? data.utilization : 100} className="h-2" />
-                        ) : null}
+                         {(data.totalCapacityHours > 0 || data.utilizedHours > 0) && (
+                            <Progress value={data.totalCapacityHours > 0 ? data.utilization : 100} className={cn("h-2", data.utilization > 100 && "bg-red-500")} />
+                        )}
                     </div>
                 ))}
             </div>
@@ -455,7 +442,7 @@ function SprintColumn({
                 {sprint.stories.map(story => {
                     const epic = epics.find(e => e.id === story.epicId);
                     const assignee = employees.find(e => e.id === story.assigneeId);
-                    const subItems = subItemsByParentId?.[story.id] || [];
+                    const subItems = allStories.filter(s => s.parentStoryId === story.id);
                     const parentStory = story.parentStoryId ? allStories.find(s => s.id === story.parentStoryId) : undefined;
                     return (
                          <div key={story.id}>
@@ -1721,6 +1708,7 @@ export default function GroomingPage() {
         </>
     );
 }
+
 
 
 
