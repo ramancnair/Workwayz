@@ -5,6 +5,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -56,7 +57,7 @@ export type Story = {
   updatedAt?: string; // ISO String for tracking completion date
   effortDays?: number;
   impactedSystemId?: string; // For Sub-Task
-  impactedSystemIds?: string[]; // For Story/Feature Change
+  impactedSystemIds?: string[]; // For Story/Feature Change/Bug
   releaseId?: string;
   isDeleted?: boolean;
   deletedAt?: string;

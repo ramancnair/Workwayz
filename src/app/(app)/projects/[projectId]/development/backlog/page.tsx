@@ -1050,7 +1050,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </FormItem>
                             )}
                         />
-                        {['Requirement/Story', 'Feature Change'].includes(watchedItemType) && (
+                        {['Requirement/Story', 'Feature Change', 'Bug'].includes(watchedItemType) && (
                         <FormField
                             control={addStoryForm.control}
                             name="impactedSystemIds"
@@ -1760,7 +1760,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
-                            {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
+                            {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
                                 <>
                                     <TabsTrigger value="subTasks">
                                         Sub-Tasks
@@ -1798,7 +1798,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </FormItem>
                             )}
                         />
-                        {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
+                        {['Requirement/Story', 'Feature Change', 'Bug'].includes(selectedStory.itemType) && (
                           <FormField
                             control={editStoryForm.control}
                             name="impactedSystemIds"
@@ -2304,6 +2304,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
