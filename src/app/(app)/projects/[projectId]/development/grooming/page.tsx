@@ -504,7 +504,7 @@ export default function GroomingPage() {
         }
 
         if (selectedAssigneeId === 'all') return baseItems;
-        if (selectedAssigneeId === 'unassigned') return baseItems.filter(story => !story.assigneeId);
+        if (selectedAssigneeId === 'unassigned') return baseItems.filter(story => !story.assigneeId || story.assigneeId === '');
         return baseItems.filter(story => story.assigneeId === selectedAssigneeId);
 
     }, [stories, viewBy, selectedAssigneeId]);
@@ -531,21 +531,24 @@ export default function GroomingPage() {
             } else {
                 items = [];
             }
-
-            if (selectedAssigneeId !== 'all') {
-                if (selectedAssigneeId === 'unassigned') {
-                    items = items.filter(story => story.assigneeId === null || story.assigneeId === undefined);
-                } else {
-                    items = items.filter(story => story.assigneeId === selectedAssigneeId);
-                }
-            }
-            return {
-                ...sprint,
-                stories: items,
-            }
+            return { ...sprint, stories: items }
         });
         
-        return sprintStories.sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+        let filteredSprints = sprintStories;
+        
+        if (selectedAssigneeId !== 'all') {
+            filteredSprints = sprintStories.map(sprint => ({
+                ...sprint,
+                stories: sprint.stories.filter(story => {
+                    if (selectedAssigneeId === 'unassigned') {
+                        return !story.assigneeId || story.assigneeId === '';
+                    }
+                    return story.assigneeId === selectedAssigneeId;
+                })
+            })).filter(sprint => sprint.stories.length > 0);
+        }
+
+        return filteredSprints.sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
 
     }, [sprints, stories, viewBy, selectedAssigneeId]);
     
@@ -750,6 +753,7 @@ export default function GroomingPage() {
         setIsEditStorySubmitting(true);
         const success = await updateStory(selectedStory.id, {
             ...values,
+            assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
         });
         if (success) {
             handleSetSelectedStory(null);
@@ -766,6 +770,7 @@ export default function GroomingPage() {
         
         const success = await updateStory(selectedStory.id, {
             ...values,
+            assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
             startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
             endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         });
