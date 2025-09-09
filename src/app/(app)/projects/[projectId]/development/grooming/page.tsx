@@ -535,26 +535,41 @@ export default function GroomingPage() {
       }, {} as Record<string, Story[]>), [stories]);
 
     const sprintsWithStories = useMemo(() => {
-        return sprints.map(sprint => {
-            let baseItems: Story[];
-
-            if (viewBy === 'story') {
-                baseItems = stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
+        const getItemsForSprint = (sprintId: string) => {
+            let items: Story[];
+             if (viewBy === 'story') {
+                items = stories.filter(story => story.sprintId === sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
             } else if (viewBy === 'sub-task') {
-                baseItems = stories.filter(story => story.sprintId === sprint.id && story.itemType === 'Sub Task');
+                items = stories.filter(story => story.sprintId === sprintId && story.itemType === 'Sub Task');
             } else if (viewBy === 'bug') {
-                baseItems = stories.filter(story => story.sprintId === sprint.id && story.itemType === 'Bug');
+                items = stories.filter(story => story.sprintId === sprintId && story.itemType === 'Bug');
             } else {
-                baseItems = [];
+                items = [];
             }
-            
+            return items;
+        };
+        
+        let sprintPool = [...sprints];
+        
+        if (selectedAssigneeId !== 'all') {
+            sprintPool = sprints.filter(sprint => {
+                const itemsInSprint = getItemsForSprint(sprint.id);
+                if (selectedAssigneeId === 'unassigned') {
+                    return itemsInSprint.some(item => !item.assigneeId);
+                }
+                return itemsInSprint.some(item => item.assigneeId === selectedAssigneeId);
+            });
+        }
+        
+        return sprintPool.map(sprint => {
+            const itemsInSprint = getItemsForSprint(sprint.id);
             let filteredByAssignee;
             if (selectedAssigneeId === 'all') {
-                filteredByAssignee = baseItems;
+                filteredByAssignee = itemsInSprint;
             } else if (selectedAssigneeId === 'unassigned') {
-                filteredByAssignee = baseItems.filter(story => !story.assigneeId);
+                filteredByAssignee = itemsInSprint.filter(story => !story.assigneeId);
             } else {
-                filteredByAssignee = baseItems.filter(story => story.assigneeId === selectedAssigneeId);
+                filteredByAssignee = itemsInSprint.filter(story => story.assigneeId === selectedAssigneeId);
             }
             
             return {
@@ -565,13 +580,12 @@ export default function GroomingPage() {
     }, [sprints, stories, viewBy, selectedAssigneeId]);
     
     useEffect(() => {
-        const currentSprintIdx = sprints.findIndex(s => s.status === 'Current');
-        if (currentSprintIdx !== -1) {
-            setVisibleSprintIndex(currentSprintIdx);
-        } else if (sprints.length > 0) {
+        if(sprintsWithStories.length > 0 && visibleSprintIndex >= sprintsWithStories.length) {
+            setVisibleSprintIndex(0);
+        } else if (sprintsWithStories.length === 0) {
             setVisibleSprintIndex(0);
         }
-    }, [sprints]);
+    }, [sprintsWithStories, visibleSprintIndex]);
 
     const sprintForm = useForm<z.infer<typeof sprintSchema>>({
         resolver: zodResolver(sprintSchema),
@@ -836,11 +850,11 @@ export default function GroomingPage() {
     }
     
     const nextSprint = () => {
-        setVisibleSprintIndex((prevIndex) => (prevIndex + 1) % sprints.length);
+        setVisibleSprintIndex((prevIndex) => (prevIndex + 1) % sprintsWithStories.length);
     };
 
     const prevSprint = () => {
-        setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprints.length) % sprints.length);
+        setVisibleSprintIndex((prevIndex) => (prevIndex - 1 + sprintsWithStories.length) % sprintsWithStories.length);
     };
     
     const selectedStorySubItems = useMemo(() => {
@@ -947,7 +961,7 @@ export default function GroomingPage() {
                         />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
-                            <p className="text-muted-foreground">No sprints created yet.</p>
+                            <p className="text-muted-foreground">No sprints found matching the current filters.</p>
                         </div>
                     )}
                     </div>
@@ -1083,7 +1097,7 @@ export default function GroomingPage() {
                                             <FormItem><FormLabel>Impacted System</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             <FormMessage/></FormItem>
                                         )}/>
@@ -1564,7 +1578,7 @@ export default function GroomingPage() {
                                                         <FormItem><FormLabel>Impacted System</FormLabel>
                                                             <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                                <SelectContent><SelectItem value="unassigned">None</SelectItem>{users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}</SelectContent>
+                                                                <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                                             </Select>
                                                         <FormMessage/></FormItem>
                                                     )}/>
