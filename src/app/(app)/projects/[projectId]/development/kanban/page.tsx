@@ -476,33 +476,13 @@ export default function KanbanPage() {
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
     setIsEditStorySubmitting(true);
-
-    const payload: Partial<Story> = {};
-    const originalStory = stories.find(s => s.id === selectedStory.id);
-
-    for (const key in values) {
-        const formKey = key as keyof typeof values;
-        const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
-        let formValue = values[formKey];
-
-        if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
-        if (formKey === 'epicId' && formValue === 'unassigned') formValue = undefined;
-        if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
-
-        if (formValue !== originalValue) {
-            (payload as any)[formKey] = formValue;
-        }
-    }
-
-    if (Object.keys(payload).length > 0) {
-        const success = await updateStory(selectedStory.id, payload);
-        if (success) {
-            handleSetSelectedStory(null);
-        } else {
-            toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
-        }
+    const success = await updateStory(selectedStory.id, {
+        ...values,
+    });
+    if (success) {
+        handleSetSelectedStory(null);
     } else {
-        handleSetSelectedStory(null); // No changes, just close
+        toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
     }
     setIsEditStorySubmitting(false);
 };
@@ -511,32 +491,14 @@ export default function KanbanPage() {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
     
-    const payload: Partial<Story> = {};
-    const originalStory = stories.find(s => s.id === selectedStory.id);
-    
-    for (const key in values) {
-        const formKey = key as keyof typeof values;
-        const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
-        let formValue = values[formKey];
+    const success = await updateStory(selectedStory.id, {
+        ...values,
+    });
 
-        if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
-        if (formKey === 'impactedSystemId' && formValue === 'unassigned') formValue = undefined;
-        if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
-
-        if (formValue !== originalValue) {
-            (payload as any)[formKey] = formValue;
-        }
-    }
-
-    if (Object.keys(payload).length > 0) {
-        const success = await updateStory(selectedStory.id, payload);
-        if (success) {
-            handleSetSelectedStory(null);
-        } else {
-            toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
-        }
+    if (success) {
+        handleSetSelectedStory(null);
     } else {
-       handleSetSelectedStory(null);
+        toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
     }
     setIsEditStorySubmitting(false);
   };
@@ -722,7 +684,7 @@ export default function KanbanPage() {
                                             <FormItem><FormLabel>Impacted System</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             <FormMessage/></FormItem>
                                         )}/>
@@ -1337,5 +1299,3 @@ export default function KanbanPage() {
     </>
     );
 }
-
-
