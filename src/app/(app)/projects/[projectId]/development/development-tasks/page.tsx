@@ -275,16 +275,16 @@ export default function DevelopmentTasksPage() {
   }, [isDialogOpen, editingSubTask, form]);
   
   const handleUpdateCell = async (taskId: string, columnId: ColumnId, value: any) => {
-    let payload = { [columnId]: value };
+    let payload: Partial<Story> = { [columnId]: value };
 
-    if (columnId === 'assigneeId' && value === 'unassigned') {
-        payload = { [columnId]: undefined };
+    if (columnId === 'assigneeId') {
+        payload[columnId] = value === 'unassigned' ? undefined : value;
     }
-    if (columnId === 'sprintId' && value === 'backlog') {
-        payload = { [columnId]: null };
+    if (columnId === 'sprintId') {
+        payload[columnId] = value === 'backlog' ? null : value;
     }
     if (['startDate', 'endDate'].includes(columnId) && value) {
-      payload = { [columnId]: new Date(value).toISOString() };
+      payload[columnId] = new Date(value).toISOString();
     }
     
     await updateStory(taskId, payload);
@@ -312,30 +312,37 @@ export default function DevelopmentTasksPage() {
     setIsSubmitting(true);
     
     const parentStory = parentStories.find(p => p.id === values.parentStoryId);
-
-    const subTaskData: Partial<Omit<Story, 'id' | 'storyId'>> = {
+    
+    // Explicitly construct the payload to avoid unintended fields
+    const subTaskData: Partial<Story> = {
         title: values.title,
-        itemType: 'Sub Task',
         description: values.description,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         parentStoryId: values.parentStoryId,
         status: values.status,
+        itemType: 'Sub Task',
         estimatedHours: values.estimatedHours,
         impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
+        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
-        epicId: parentStory?.epicId,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     };
+    
+    if (editingSubTask) {
+        // No need to set epicId if it's already there
+    } else {
+        subTaskData.epicId = parentStory?.epicId;
+        // Inherit sprint/release from parent if not specified
+        if (!subTaskData.sprintId && parentStory?.sprintId) subTaskData.sprintId = parentStory.sprintId;
+        if (!subTaskData.releaseId && parentStory?.releaseId) subTaskData.releaseId = parentStory.releaseId;
+    }
+
 
     let success = false;
     if (editingSubTask) {
       success = await updateStory(editingSubTask.id, subTaskData);
     } else {
-      // Inherit sprint/release from parent if not specified
-      if (!subTaskData.sprintId && parentStory?.sprintId) subTaskData.sprintId = parentStory.sprintId;
-      if (!subTaskData.releaseId && parentStory?.releaseId) subTaskData.releaseId = parentStory.releaseId;
       success = await addStory(subTaskData as Omit<Story, 'id' | 'storyId'>, 'SUB');
     }
 
