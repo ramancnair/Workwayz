@@ -349,12 +349,10 @@ function SprintColumn({
     
         const utilizationMap: Record<string, { utilizedHours: number, totalCapacityHours: number, systemName: string }> = {};
 
-        // Initialize with all systems
         impactedSystems.forEach(sys => {
             utilizationMap[sys.id] = { utilizedHours: 0, totalCapacityHours: 0, systemName: sys.name };
         });
         
-        // Calculate total capacity for each system
         impactedSystems.forEach(system => {
             const systemResources = employees.filter(emp => emp.capabilities?.includes(system.id));
             let systemCapacity = 0;
@@ -386,11 +384,6 @@ function SprintColumn({
                 const systemId = task.impactedSystemId;
                 if (systemId && utilizationMap[systemId]) {
                     utilizationMap[systemId].utilizedHours += task.estimatedHours || 0;
-                } else if (task.estimatedHours) {
-                    if (!utilizationMap['unassigned']) {
-                        utilizationMap['unassigned'] = { utilizedHours: 0, totalCapacityHours: 0, systemName: 'Unassigned' };
-                    }
-                    utilizationMap['unassigned'].utilizedHours += task.estimatedHours || 0;
                 }
             });
         }
@@ -770,7 +763,6 @@ export default function GroomingPage() {
         setIsEditStorySubmitting(true);
         const success = await updateStory(selectedStory.id, {
             ...values,
-            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId
         });
         if (success) {
             handleSetSelectedStory(null);
@@ -789,7 +781,6 @@ export default function GroomingPage() {
             ...values,
             startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
             endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
-            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId
         });
 
         if (success) {
