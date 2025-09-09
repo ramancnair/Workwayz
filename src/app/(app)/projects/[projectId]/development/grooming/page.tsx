@@ -603,20 +603,6 @@ export default function GroomingPage() {
         }
     });
 
-    const watchedImpactedSystem = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
-  
-    const filteredAssignees = useMemo(() => {
-        if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
-            return employees;
-        }
-        const system = impactedSystems.find(s => s.id === watchedImpactedSystem);
-        if (!system) return employees;
-        return employees.filter(user => 
-            user.role === 'Lead' || 
-            user.capabilities?.includes(system.id)
-        );
-    }, [watchedImpactedSystem, employees, impactedSystems]);
-
     const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
     const parentStoryOptions = useMemo(() => parentStories.map(s => ({
         value: s.id,
@@ -781,21 +767,35 @@ export default function GroomingPage() {
         if (!selectedStory) return;
         setIsEditStorySubmitting(true);
         
-        const payload: Partial<Story> = { ...values };
-        if (values.assigneeId === 'unassigned') {
-            payload.assigneeId = null;
+        const payload: Partial<Story> = {};
+        const originalStory = stories.find(s => s.id === selectedStory.id);
+
+        for (const key in values) {
+            const formKey = key as keyof typeof values;
+            const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
+            let formValue = values[formKey];
+
+            if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
+            if (formKey === 'epicId' && formValue === 'unassigned') formValue = undefined;
+            if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
+
+            if (formValue !== originalValue) {
+                (payload as any)[formKey] = formValue;
+            }
         }
-        if (values.epicId === 'unassigned') payload.epicId = undefined;
-        if (values.sprintId === 'backlog') payload.sprintId = null;
 
-        const success = await updateStory(selectedStory.id, payload);
-
-        if (success) {
-          handleSetSelectedStory(null);
-          toast({ title: 'Success', description: 'Story updated.' });
+        if (Object.keys(payload).length > 0) {
+            const success = await updateStory(selectedStory.id, payload);
+            if (success) {
+                handleSetSelectedStory(null);
+                toast({ title: 'Success', description: 'Story updated.' });
+            } else {
+                toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+            }
         } else {
-          toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+            handleSetSelectedStory(null);
         }
+
         setIsEditStorySubmitting(false);
     };
 
@@ -803,27 +803,35 @@ export default function GroomingPage() {
         if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
         setIsEditStorySubmitting(true);
         
-        const payload: Partial<Story> = { ...values };
-        if (values.assigneeId === 'unassigned') {
-            payload.assigneeId = null;
-        }
-        if (values.impactedSystemId === 'unassigned') {
-            payload.impactedSystemId = undefined;
-        }
-        if (values.sprintId === 'backlog') {
-            payload.sprintId = null;
-        }
+        const payload: Partial<Story> = {};
+        const originalStory = stories.find(s => s.id === selectedStory.id);
 
-        const success = await updateStory(selectedStory.id, {
-            ...payload,
-            startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
-            endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
-        });
+        for (const key in values) {
+            const formKey = key as keyof typeof values;
+            const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
+            let formValue = values[formKey];
 
-        if (success) {
-            handleSetSelectedStory(null);
+            if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
+            if (formKey === 'impactedSystemId' && formValue === 'unassigned') formValue = undefined;
+            if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
+
+            if (formValue !== originalValue) {
+                (payload as any)[formKey] = formValue;
+            }
+        }
+        
+        if (values.startDate) payload.startDate = new Date(values.startDate).toISOString();
+        if (values.endDate) payload.endDate = new Date(values.endDate).toISOString();
+
+        if (Object.keys(payload).length > 0) {
+            const success = await updateStory(selectedStory.id, payload);
+            if (success) {
+                handleSetSelectedStory(null);
+            } else {
+                toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
+            }
         } else {
-            toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
+           handleSetSelectedStory(null);
         }
         setIsEditStorySubmitting(false);
     };
@@ -1128,7 +1136,7 @@ export default function GroomingPage() {
                                             <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                             </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -1609,7 +1617,7 @@ export default function GroomingPage() {
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                            {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                         </SelectContent>
                                                         </Select>
                                                         <FormMessage/>
@@ -1697,21 +1705,91 @@ export default function GroomingPage() {
                             </div>
                         </TabsContent>
                     </Tabs>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isEditStorySubmitting}>
+                  <DialogFooter className="flex justify-end items-center pt-4">
+                    <div className="flex items-center gap-2">
+                      <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                        </Button>
-                    </DialogFooter>
-                    </form>
-                </Form>
-                </>
+                      </Button>
+                    </div>
+                  </DialogFooter>
+                </form>
+              </Form>
+              </>
               )}
             </>
           )}
         </DialogContent>
-        </Dialog>
-        </>
-    );
+      </Dialog>
+      
+      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Epic</DialogTitle>
+          </DialogHeader>
+          <Form {...editEpicForm}>
+            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
+              <FormField
+                control={editEpicForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Epic title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editEpicForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the epic..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={isEditEpicSubmitting}>
+                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
+    
+
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -353,19 +353,6 @@ export default function KanbanPage() {
       }
   });
 
-  const watchedImpactedSystem = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
-  
-  const filteredAssignees = useMemo(() => {
-    if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
-      return users;
-    }
-    const system = impactedSystems.find(s => s.id === watchedImpactedSystem);
-    if (!system) return users;
-    return users.filter(user => 
-      user.role === 'Lead' || 
-      user.capabilities?.includes(system.id)
-    );
-  }, [watchedImpactedSystem, users, impactedSystems]);
   
   const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
     if(!start || !end) return 0;
@@ -489,41 +476,67 @@ export default function KanbanPage() {
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
     setIsEditStorySubmitting(true);
-    
-    const payload: Partial<Story> = { ...values };
-    if (values.assigneeId === 'unassigned') {
-        payload.assigneeId = null;
+
+    const payload: Partial<Story> = {};
+    const originalStory = stories.find(s => s.id === selectedStory.id);
+
+    for (const key in values) {
+        const formKey = key as keyof typeof values;
+        const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
+        let formValue = values[formKey];
+
+        if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
+        if (formKey === 'epicId' && formValue === 'unassigned') formValue = undefined;
+        if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
+
+        if (formValue !== originalValue) {
+            (payload as any)[formKey] = formValue;
+        }
     }
-    if (values.epicId === 'unassigned') payload.epicId = undefined;
-    if (values.sprintId === 'backlog') payload.sprintId = null;
 
-    const success = await updateStory(selectedStory.id, payload);
-
-    if (success) {
-      handleSetSelectedStory(null);
+    if (Object.keys(payload).length > 0) {
+        const success = await updateStory(selectedStory.id, payload);
+        if (success) {
+            handleSetSelectedStory(null);
+        } else {
+            toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+        }
     } else {
-      toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+        handleSetSelectedStory(null); // No changes, just close
     }
     setIsEditStorySubmitting(false);
-  };
+};
   
   const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
     
-    const payload: Partial<Story> = { ...values };
-    if (values.assigneeId === 'unassigned') {
-        payload.assigneeId = null;
+    const payload: Partial<Story> = {};
+    const originalStory = stories.find(s => s.id === selectedStory.id);
+    
+    for (const key in values) {
+        const formKey = key as keyof typeof values;
+        const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
+        let formValue = values[formKey];
+
+        if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
+        if (formKey === 'impactedSystemId' && formValue === 'unassigned') formValue = undefined;
+        if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
+
+        if (formValue !== originalValue) {
+            (payload as any)[formKey] = formValue;
+        }
     }
-    if (values.impactedSystemId === 'unassigned') payload.impactedSystemId = undefined;
-    if (values.sprintId === 'backlog') payload.sprintId = null;
 
-    const success = await updateStory(selectedStory.id, payload);
-
-    if (success) {
-      handleSetSelectedStory(null);
+    if (Object.keys(payload).length > 0) {
+        const success = await updateStory(selectedStory.id, payload);
+        if (success) {
+            handleSetSelectedStory(null);
+        } else {
+            toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
+        }
     } else {
-      toast({ variant: "destructive", title: `Error Editing Sub Task`, description: "Could not save your changes." });
+       handleSetSelectedStory(null);
     }
     setIsEditStorySubmitting(false);
   };
@@ -720,7 +733,7 @@ export default function KanbanPage() {
                                             <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                             </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -1324,4 +1337,5 @@ export default function KanbanPage() {
     </>
     );
 }
+
 

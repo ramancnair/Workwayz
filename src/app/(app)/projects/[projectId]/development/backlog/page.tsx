@@ -455,20 +455,7 @@ export default function BacklogPage() {
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
-  const watchedImpactedSystem = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
   
-  const filteredAssignees = useMemo(() => {
-    if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
-      return users;
-    }
-    const system = impactedSystems.find(s => s.id === watchedImpactedSystem);
-    if (!system) return users;
-    return users.filter(user => 
-      user.role === 'Lead' || 
-      user.capabilities?.includes(system.id)
-    );
-  }, [watchedImpactedSystem, users, impactedSystems]);
-
   const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
@@ -666,57 +653,77 @@ export default function BacklogPage() {
     }
   };
   
-  const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
+const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
     setIsEditStorySubmitting(true);
-    
-    const payload: Partial<Story> = { ...values };
-    
-    if (values.assigneeId === 'unassigned') {
-        payload.assigneeId = null;
-    }
-    if (values.epicId === 'unassigned') {
-        payload.epicId = undefined;
-    }
-    if (values.sprintId === 'backlog') {
-        payload.sprintId = null;
-    }
-    
-    const success = await updateStory(selectedStory.id, payload);
 
-    if (success) {
-        handleSetSelectedStory(null);
-    } else {
-        toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+    const payload: Partial<Story> = {};
+    const originalStory = stories.find(s => s.id === selectedStory.id);
+
+    // Only include fields that have changed
+    for (const key in values) {
+        const formKey = key as keyof typeof values;
+        const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
+        let formValue = values[formKey];
+
+        if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
+        if (formKey === 'epicId' && formValue === 'unassigned') formValue = undefined;
+        if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
+
+        if (formValue !== originalValue) {
+            (payload as any)[formKey] = formValue;
+        }
     }
+
+    if (Object.keys(payload).length > 0) {
+        const success = await updateStory(selectedStory.id, payload);
+        if (success) {
+            handleSetSelectedStory(null);
+        } else {
+            toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+        }
+    } else {
+        handleSetSelectedStory(null); // No changes, just close the dialog
+    }
+
     setIsEditStorySubmitting(false);
 };
 
 const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
-    
-    const payload: Partial<Story> = { ...values };
-    if (values.assigneeId === 'unassigned') {
-        payload.assigneeId = null;
-    }
-    if (values.impactedSystemId === 'unassigned') {
-        payload.impactedSystemId = undefined;
-    }
-    if (values.sprintId === 'backlog') {
-        payload.sprintId = null;
-    }
-    
-    const success = await updateStory(selectedStory.id, {
-        ...payload,
-        startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
-        endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
-    });
 
-    if (success) {
-        handleSetSelectedStory(null);
+    const payload: Partial<Story> = {};
+    const originalStory = stories.find(s => s.id === selectedStory.id);
+
+    // Only include fields that have changed
+     for (const key in values) {
+        const formKey = key as keyof typeof values;
+        const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
+        let formValue = values[formKey];
+
+        if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
+        if (formKey === 'impactedSystemId' && formValue === 'unassigned') formValue = undefined;
+        if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
+
+        if (formValue !== originalValue) {
+             (payload as any)[formKey] = formValue;
+        }
+    }
+     
+    if (values.startDate) payload.startDate = new Date(values.startDate).toISOString();
+    if (values.endDate) payload.endDate = new Date(values.endDate).toISOString();
+
+
+    if (Object.keys(payload).length > 0) {
+        const success = await updateStory(selectedStory.id, payload);
+        if (success) {
+            handleSetSelectedStory(null);
+        } else {
+            toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
+        }
     } else {
-        toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
+       handleSetSelectedStory(null);
     }
     setIsEditStorySubmitting(false);
 };
@@ -1581,7 +1588,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -2139,7 +2146,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {filteredAssignees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                            {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                         </SelectContent>
                                                         </Select>
                                                         <FormMessage/>
@@ -2296,6 +2303,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
