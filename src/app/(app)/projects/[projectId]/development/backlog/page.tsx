@@ -658,9 +658,6 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
-        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
     });
     if (success) {
         handleSetSelectedStory(null);
@@ -673,13 +670,9 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
 const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
-
+    
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
-        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
     });
@@ -2099,7 +2092,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                         <FormItem><FormLabel>Impacted System</FormLabel>
                                                             <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                                <SelectContent><SelectItem value="unassigned">None</SelectItem>{users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}</SelectContent>
+                                                                <SelectContent>
+                                                                    <SelectItem value="unassigned">None</SelectItem>
+                                                                    {impactedSystems.map(s => (
+                                                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
                                                             </Select>
                                                         <FormMessage/></FormItem>
                                                     )}/>
