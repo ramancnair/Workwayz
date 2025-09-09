@@ -781,23 +781,12 @@ export default function GroomingPage() {
         if (!selectedStory) return;
         setIsEditStorySubmitting(true);
         
-        const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
+        const payload: Partial<Story> = { ...values };
+        if (values.assigneeId === 'unassigned') payload.assigneeId = undefined;
+        if (values.epicId === 'unassigned') payload.epicId = undefined;
+        if (values.sprintId === 'backlog') payload.sprintId = null;
 
-        const success = await updateStory(selectedStory.id, {
-            title: values.title,
-            description: values.description,
-            acceptanceCriteria: values.acceptanceCriteria,
-            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-            epicId: !isSubItem ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
-            parentStoryId: isSubItem ? (values.parentStoryId || undefined) : undefined,
-            estimatedHours: values.estimatedHours,
-            priority: values.priority,
-            environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-            impactedSystemIds: values.impactedSystemIds,
-            releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
-            attachments: values.attachments,
-            sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        });
+        const success = await updateStory(selectedStory.id, payload);
 
         if (success) {
           handleSetSelectedStory(null);
@@ -812,17 +801,15 @@ export default function GroomingPage() {
         if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
         setIsEditStorySubmitting(true);
         
+        const payload = { ...values };
+        if (values.assigneeId === 'unassigned') payload.assigneeId = undefined;
+        if (values.impactedSystemId === 'unassigned') payload.impactedSystemId = undefined;
+        if (values.sprintId === 'backlog') payload.sprintId = null;
+
         const success = await updateStory(selectedStory.id, {
-            title: values.title,
-            description: values.description,
-            impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
-            estimatedHours: values.estimatedHours,
-            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-            status: values.status,
+            ...payload,
             startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
             endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
-            sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-            releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         });
 
         if (success) {

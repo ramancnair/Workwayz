@@ -670,28 +670,16 @@ export default function BacklogPage() {
     if (!selectedStory) return;
     setIsEditStorySubmitting(true);
     
-    const payload: Partial<Story> = {
-        title: values.title,
-        description: values.description,
-        acceptanceCriteria: values.acceptanceCriteria,
-        reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        estimatedHours: values.estimatedHours,
-        priority: values.priority,
-        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
-        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-        impactedSystemIds: values.impactedSystemIds,
-        attachments: values.attachments,
-    };
+    const payload: Partial<Story> = { ...values };
     
-    if (['Task', 'Requirement/Story'].includes(selectedStory.itemType)) {
-        payload.epicId = values.epicId === 'unassigned' ? undefined : values.epicId;
+    if (values.assigneeId === 'unassigned') {
+        payload.assigneeId = undefined;
     }
-    
-    if (['Bug', 'Feature Change'].includes(selectedStory.itemType)) {
-        payload.parentStoryId = values.parentStoryId || undefined;
-        payload.epicId = undefined; // Sub-items don't have direct epic link in this model
+    if (values.epicId === 'unassigned') {
+        payload.epicId = undefined;
+    }
+    if (values.sprintId === 'backlog') {
+        payload.sprintId = null;
     }
     
     const success = await updateStory(selectedStory.id, payload);
@@ -708,17 +696,21 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
     
+    const payload = { ...values };
+    if (values.assigneeId === 'unassigned') {
+        payload.assigneeId = undefined;
+    }
+    if (values.impactedSystemId === 'unassigned') {
+        payload.impactedSystemId = undefined;
+    }
+    if (values.sprintId === 'backlog') {
+        payload.sprintId = null;
+    }
+    
     const success = await updateStory(selectedStory.id, {
-        title: values.title,
-        description: values.description,
-        impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
-        estimatedHours: values.estimatedHours,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        status: values.status,
+        ...payload,
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
-        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     });
 
     if (success) {
@@ -2304,6 +2296,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 

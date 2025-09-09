@@ -490,32 +490,11 @@ export default function KanbanPage() {
     if (!selectedStory) return;
     setIsEditStorySubmitting(true);
     
-    const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
+    const payload: Partial<Story> = { ...values };
+    if (values.assigneeId === 'unassigned') payload.assigneeId = undefined;
+    if (values.epicId === 'unassigned') payload.epicId = undefined;
+    if (values.sprintId === 'backlog') payload.sprintId = null;
 
-    const payload: Partial<Story> = {
-        title: values.title,
-        description: values.description,
-        acceptanceCriteria: values.acceptanceCriteria,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        estimatedHours: values.estimatedHours,
-        priority: values.priority,
-        status: values.status,
-        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
-        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
-        impactedSystemIds: values.impactedSystemIds,
-        attachments: values.attachments,
-    };
-    
-    if (['Task', 'Requirement/Story'].includes(selectedStory.itemType)) {
-        payload.epicId = values.epicId === 'unassigned' ? undefined : values.epicId;
-    }
-    
-    if (['Bug', 'Feature Change'].includes(selectedStory.itemType)) {
-        payload.parentStoryId = values.parentStoryId || undefined;
-        payload.epicId = undefined; // Sub-items don't have direct epic link in this model
-    }
-    
     const success = await updateStory(selectedStory.id, payload);
 
     if (success) {
@@ -530,16 +509,13 @@ export default function KanbanPage() {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
     
-    const success = await updateStory(selectedStory.id, {
-        title: values.title,
-        description: values.description,
-        impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
-        estimatedHours: values.estimatedHours,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        status: values.status,
-        sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
-    });
+    const payload = { ...values };
+    if (values.assigneeId === 'unassigned') payload.assigneeId = undefined;
+    if (values.impactedSystemId === 'unassigned') payload.impactedSystemId = undefined;
+    if (values.sprintId === 'backlog') payload.sprintId = null;
+
+    const success = await updateStory(selectedStory.id, payload);
+
     if (success) {
       handleSetSelectedStory(null);
     } else {
