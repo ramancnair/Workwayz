@@ -596,8 +596,6 @@ export default function GroomingPage() {
           estimatedHours: 0,
           assigneeId: 'unassigned',
           status: 'To Do',
-          startDate: '',
-          endDate: '',
           sprintId: 'backlog',
           releaseId: 'unassigned',
         }
@@ -811,7 +809,16 @@ export default function GroomingPage() {
             const originalValue = originalStory ? originalStory[formKey as keyof Story] : undefined;
             let formValue = values[formKey];
 
-            if (formKey === 'assigneeId' && formValue === 'unassigned') formValue = undefined;
+            if (formKey === 'assigneeId' && formValue === 'unassigned') {
+              formValue = undefined;
+            } else if (formKey === 'assigneeId') {
+              const selectedUser = employees.find(emp => emp.id === formValue);
+              if (!selectedUser) {
+                toast({ variant: "destructive", title: "Error", description: "Invalid assignee selected." });
+                setIsEditStorySubmitting(false);
+                return;
+              }
+            }
             if (formKey === 'impactedSystemId' && formValue === 'unassigned') formValue = undefined;
             if (formKey === 'sprintId' && formValue === 'backlog') formValue = null;
 
@@ -1617,7 +1624,7 @@ export default function GroomingPage() {
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                            {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                         </SelectContent>
                                                         </Select>
                                                         <FormMessage/>
@@ -1720,49 +1727,6 @@ export default function GroomingPage() {
           )}
         </DialogContent>
       </Dialog>
-      
-      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Epic</DialogTitle>
-          </DialogHeader>
-          <Form {...editEpicForm}>
-            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
-              <FormField
-                control={editEpicForm.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Epic title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editEpicForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe the epic..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" disabled={isEditEpicSubmitting}>
-                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
@@ -1771,6 +1735,7 @@ export default function GroomingPage() {
     
 
     
+
 
 
 
