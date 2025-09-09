@@ -491,7 +491,9 @@ export default function KanbanPage() {
     setIsEditStorySubmitting(true);
     
     const payload: Partial<Story> = { ...values };
-    if (values.assigneeId === 'unassigned') payload.assigneeId = undefined;
+    if (values.assigneeId === 'unassigned') {
+        payload.assigneeId = null;
+    }
     if (values.epicId === 'unassigned') payload.epicId = undefined;
     if (values.sprintId === 'backlog') payload.sprintId = null;
 
@@ -509,8 +511,10 @@ export default function KanbanPage() {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
     
-    const payload = { ...values };
-    if (values.assigneeId === 'unassigned') payload.assigneeId = undefined;
+    const payload: Partial<Story> = { ...values };
+    if (values.assigneeId === 'unassigned') {
+        payload.assigneeId = null;
+    }
     if (values.impactedSystemId === 'unassigned') payload.impactedSystemId = undefined;
     if (values.sprintId === 'backlog') payload.sprintId = null;
 
@@ -1320,3 +1324,4 @@ export default function KanbanPage() {
     </>
     );
 }
+

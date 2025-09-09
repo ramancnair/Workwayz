@@ -673,7 +673,7 @@ export default function BacklogPage() {
     const payload: Partial<Story> = { ...values };
     
     if (values.assigneeId === 'unassigned') {
-        payload.assigneeId = undefined;
+        payload.assigneeId = null;
     }
     if (values.epicId === 'unassigned') {
         payload.epicId = undefined;
@@ -696,9 +696,9 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
     
-    const payload = { ...values };
+    const payload: Partial<Story> = { ...values };
     if (values.assigneeId === 'unassigned') {
-        payload.assigneeId = undefined;
+        payload.assigneeId = null;
     }
     if (values.impactedSystemId === 'unassigned') {
         payload.impactedSystemId = undefined;
@@ -2296,6 +2296,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     
 
     
+
 
 
 
