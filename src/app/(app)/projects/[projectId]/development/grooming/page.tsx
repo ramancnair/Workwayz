@@ -369,24 +369,16 @@ function SprintColumn({
 
         if (viewBy === 'bug') {
             itemsToConsider = allSubItemsInSprint.filter(i => i.itemType === 'Bug');
-            const totalBugEffort = itemsToConsider.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
-            if (totalBugEffort > 0) {
-                 utilizationMap['bugs'] = { utilizedHours: totalBugEffort, totalCapacityHours: 0, systemName: 'Bugs' };
-            }
         } else {
-            if (viewBy === 'story') {
-                itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Task', 'Bug'].includes(i.itemType));
-            } else if (viewBy === 'sub-task') {
-                itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Task'].includes(i.itemType));
-            }
-            
-            itemsToConsider.forEach(task => {
-                const systemId = task.impactedSystemId;
-                if (systemId && utilizationMap[systemId]) {
-                    utilizationMap[systemId].utilizedHours += task.estimatedHours || 0;
-                }
-            });
+            itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Task'].includes(i.itemType));
         }
+            
+        itemsToConsider.forEach(task => {
+            const systemId = task.impactedSystemId;
+            if (systemId && utilizationMap[systemId]) {
+                utilizationMap[systemId].utilizedHours += task.estimatedHours || 0;
+            }
+        });
         
         const result = Object.entries(utilizationMap).map(([systemId, data]) => {
              return {
@@ -542,7 +534,7 @@ export default function GroomingPage() {
 
             if (selectedAssigneeId !== 'all') {
                 if (selectedAssigneeId === 'unassigned') {
-                    items = items.filter(story => !story.assigneeId);
+                    items = items.filter(story => story.assigneeId === null || story.assigneeId === undefined);
                 } else {
                     items = items.filter(story => story.assigneeId === selectedAssigneeId);
                 }
@@ -552,12 +544,7 @@ export default function GroomingPage() {
                 stories: items,
             }
         });
-
-        // if an assignee filter is on, only show sprints that have matching items
-        if(selectedAssigneeId !== 'all') {
-            return sprintStories.filter(s => s.stories.length > 0).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
-        }
-
+        
         return sprintStories.sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
 
     }, [sprints, stories, viewBy, selectedAssigneeId]);
@@ -694,7 +681,7 @@ export default function GroomingPage() {
       return interval.filter(day => {
         const dayOfWeek = day.getDay();
         const isWeekend = weeklyOffDays.includes(dayOfWeek);
-        const isHoliday = holidayDates.some(h => isSameDay(day, h));
+        const isHoliday = holidays.some(h => isSameDay(day, parseISO(h.date)));
         return !isWeekend && !isHoliday;
       }).length;
     }, [holidays, weeklyOffDays]);
