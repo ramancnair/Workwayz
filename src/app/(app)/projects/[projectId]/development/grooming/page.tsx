@@ -535,48 +535,38 @@ export default function GroomingPage() {
       }, {} as Record<string, Story[]>), [stories]);
 
     const sprintsWithStories = useMemo(() => {
-        const getItemsForSprint = (sprintId: string) => {
+        const sprintStories = sprints.map(sprint => {
             let items: Story[];
-             if (viewBy === 'story') {
-                items = stories.filter(story => story.sprintId === sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
+            if (viewBy === 'story') {
+                items = stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
             } else if (viewBy === 'sub-task') {
-                items = stories.filter(story => story.sprintId === sprintId && story.itemType === 'Sub Task');
+                items = stories.filter(story => story.sprintId === sprint.id && story.itemType === 'Sub Task');
             } else if (viewBy === 'bug') {
-                items = stories.filter(story => story.sprintId === sprintId && story.itemType === 'Bug');
+                items = stories.filter(story => story.sprintId === sprint.id && story.itemType === 'Bug');
             } else {
                 items = [];
             }
-            return items;
-        };
-        
-        let sprintPool = [...sprints];
-        
-        if (selectedAssigneeId !== 'all') {
-            sprintPool = sprints.filter(sprint => {
-                const itemsInSprint = getItemsForSprint(sprint.id);
+
+            if (selectedAssigneeId !== 'all') {
                 if (selectedAssigneeId === 'unassigned') {
-                    return itemsInSprint.some(item => !item.assigneeId);
+                    items = items.filter(story => !story.assigneeId);
+                } else {
+                    items = items.filter(story => story.assigneeId === selectedAssigneeId);
                 }
-                return itemsInSprint.some(item => item.assigneeId === selectedAssigneeId);
-            });
-        }
-        
-        return sprintPool.map(sprint => {
-            const itemsInSprint = getItemsForSprint(sprint.id);
-            let filteredByAssignee;
-            if (selectedAssigneeId === 'all') {
-                filteredByAssignee = itemsInSprint;
-            } else if (selectedAssigneeId === 'unassigned') {
-                filteredByAssignee = itemsInSprint.filter(story => !story.assigneeId);
-            } else {
-                filteredByAssignee = itemsInSprint.filter(story => story.assigneeId === selectedAssigneeId);
             }
-            
             return {
                 ...sprint,
-                stories: filteredByAssignee,
+                stories: items,
             }
-        }).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+        });
+
+        // if an assignee filter is on, only show sprints that have matching items
+        if(selectedAssigneeId !== 'all') {
+            return sprintStories.filter(s => s.stories.length > 0).sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+        }
+
+        return sprintStories.sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+
     }, [sprints, stories, viewBy, selectedAssigneeId]);
     
     useEffect(() => {
@@ -780,6 +770,7 @@ export default function GroomingPage() {
         setIsEditStorySubmitting(true);
         const success = await updateStory(selectedStory.id, {
             ...values,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId
         });
         if (success) {
             handleSetSelectedStory(null);
@@ -798,6 +789,7 @@ export default function GroomingPage() {
             ...values,
             startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
             endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId
         });
 
         if (success) {
@@ -1097,7 +1089,7 @@ export default function GroomingPage() {
                                             <FormItem><FormLabel>Impacted System</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}</SelectContent>
+                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             <FormMessage/></FormItem>
                                         )}/>
@@ -1695,3 +1687,4 @@ export default function GroomingPage() {
     </>
   );
 }
+
