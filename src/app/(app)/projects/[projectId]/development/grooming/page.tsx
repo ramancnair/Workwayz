@@ -936,7 +936,7 @@ export default function GroomingPage() {
 
                     {/* Sprint Column */}
                     <div className="h-full flex flex-col">
-                    {sprintsWithStories.length > 0 ? (
+                    {sprintsWithStories.length > 0 && visibleSprintIndex < sprintsWithStories.length ? (
                         <SprintColumn 
                             key={sprintsWithStories[visibleSprintIndex].id} 
                             sprint={sprintsWithStories[visibleSprintIndex]} 
@@ -1687,4 +1687,3 @@ export default function GroomingPage() {
     </>
   );
 }
-
