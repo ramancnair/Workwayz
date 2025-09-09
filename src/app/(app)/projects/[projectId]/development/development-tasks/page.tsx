@@ -136,21 +136,6 @@ export default function DevelopmentTasksPage() {
   const bulkAssignForm = useForm<z.infer<typeof bulkAssignSchema>>({
     resolver: zodResolver(bulkAssignSchema),
   });
-  
-  const watchedImpactedSystem = useWatch({ control: form.control, name: 'impactedSystemId' });
-
-  const filteredAssignees = useMemo(() => {
-    if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
-      return employees;
-    }
-    const system = impactedSystems.find(s => s.id === watchedImpactedSystem);
-    if (!system) return employees;
-    return employees.filter(user => 
-      user.role === 'Lead' || 
-      user.capabilities?.includes(watchedImpactedSystem)
-    );
-  }, [watchedImpactedSystem, employees, impactedSystems]);
-
 
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
@@ -743,7 +728,7 @@ export default function DevelopmentTasksPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {filteredAssignees.map(emp => (
+                            {employees.map(emp => (
                               <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                             ))}
                           </SelectContent>
@@ -938,7 +923,3 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
-
-
-
-
