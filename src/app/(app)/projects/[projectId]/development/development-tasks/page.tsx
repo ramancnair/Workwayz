@@ -90,16 +90,16 @@ type ColumnId = 'storyId' | 'title' | 'parentStoryId' | 'status' | 'assigneeId' 
 
 const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean, filterable?: boolean }> = {
     storyId: { label: 'ID', defaultVisible: true },
-    title: { label: 'Title', defaultVisible: false },
-    parentStoryId: { label: 'Parent Story', defaultVisible: false, filterable: true },
-    status: { label: 'Status', defaultVisible: false, filterable: true },
+    title: { label: 'Title', defaultVisible: true },
+    parentStoryId: { label: 'Parent Story', defaultVisible: true, filterable: true },
+    status: { label: 'Status', defaultVisible: true, filterable: true },
     assigneeId: { label: 'Assignee', defaultVisible: true, filterable: true },
     impactedSystemId: { label: 'Impacted System', defaultVisible: true, filterable: true },
     estimatedHours: { label: 'Effort', defaultVisible: true },
-    startDate: { label: 'Start Date', defaultVisible: true },
-    endDate: { label: 'End Date', defaultVisible: true },
-    sprintId: { label: 'Sprint', defaultVisible: true, filterable: true },
-    releaseId: { label: 'Release', defaultVisible: true, filterable: true },
+    startDate: { label: 'Start Date', defaultVisible: false },
+    endDate: { label: 'End Date', defaultVisible: false },
+    sprintId: { label: 'Sprint', defaultVisible: false, filterable: true },
+    releaseId: { label: 'Release', defaultVisible: false, filterable: true },
 };
 
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
@@ -121,7 +121,7 @@ export default function DevelopmentTasksPage() {
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const [filters, setFilters] = useState<Record<string, string[]>>({ search: [] });
-  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'storyId', desc: false });
   const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() =>
     Object.entries(columnConfig).reduce((acc, [key, { defaultVisible }]) => {
       acc[key as ColumnId] = defaultVisible;
@@ -143,11 +143,13 @@ export default function DevelopmentTasksPage() {
     if (!watchedImpactedSystem || watchedImpactedSystem === 'unassigned') {
       return employees;
     }
+    const system = impactedSystems.find(s => s.id === watchedImpactedSystem);
+    if (!system) return employees;
     return employees.filter(user => 
       user.role === 'Lead' || 
       user.capabilities?.includes(watchedImpactedSystem)
     );
-  }, [watchedImpactedSystem, employees]);
+  }, [watchedImpactedSystem, employees, impactedSystems]);
 
 
   const handleSort = (columnId: string) => {
@@ -936,6 +938,7 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
 
 
 
