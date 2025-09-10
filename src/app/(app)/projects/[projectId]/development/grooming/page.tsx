@@ -520,7 +520,7 @@ export default function GroomingPage() {
       }, {} as Record<string, Story[]>), [stories]);
 
     const sprintsWithStories = useMemo(() => {
-        const sprintStories = sprints.map(sprint => {
+        return sprints.map(sprint => {
             let items: Story[];
             if (viewBy === 'story') {
                 items = stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
@@ -531,24 +531,20 @@ export default function GroomingPage() {
             } else {
                 items = [];
             }
-            return { ...sprint, stories: items }
-        });
-        
-        let filteredSprints = sprintStories;
-        
-        if (selectedAssigneeId !== 'all') {
-            filteredSprints = sprintStories.map(sprint => ({
-                ...sprint,
-                stories: sprint.stories.filter(story => {
-                    if (selectedAssigneeId === 'unassigned') {
-                        return !story.assigneeId || story.assigneeId === '';
-                    }
-                    return story.assigneeId === selectedAssigneeId;
-                })
-            })).filter(sprint => sprint.stories.length > 0);
-        }
+            
+            if (selectedAssigneeId === 'all') {
+                return { ...sprint, stories: items };
+            }
+            const filteredStories = items.filter(story => {
+                if (selectedAssigneeId === 'unassigned') {
+                    return !story.assigneeId || story.assigneeId === '';
+                }
+                return story.assigneeId === selectedAssigneeId;
+            });
 
-        return filteredSprints.sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+            return { ...sprint, stories: filteredStories };
+        }).filter(sprint => sprint.stories.length > 0)
+        .sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
 
     }, [sprints, stories, viewBy, selectedAssigneeId]);
     
@@ -936,7 +932,7 @@ export default function GroomingPage() {
                         />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
-                            <p className="text-muted-foreground">No sprints found matching the current filters.</p>
+                            <p className="text-lg text-muted-foreground">No sprints found matching the current filters.</p>
                         </div>
                     )}
                     </div>
@@ -1665,49 +1661,6 @@ export default function GroomingPage() {
               )}
             </>
           )}
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Epic</DialogTitle>
-          </DialogHeader>
-          <Form {...editEpicForm}>
-            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
-              <FormField
-                control={editEpicForm.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Epic title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editEpicForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe the epic..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" disabled={isEditEpicSubmitting}>
-                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
         </DialogContent>
       </Dialog>
     </>
