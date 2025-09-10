@@ -418,10 +418,10 @@ export default function ProjectDashboardPage() {
           </CardHeader>
           <CardContent>
              <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
-                <BarChart data={workloadData} layout="horizontal" margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} width={120} />
-                    <YAxis type="number" tickFormatter={(value) => `${value}h`} />
+                <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                    <CartesianGrid horizontal={false} />
+                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} width={120} />
+                    <XAxis type="number" tickFormatter={(value) => `${value}h`} />
                     <Tooltip content={<ChartTooltipContent indicator="dot" />} />
                     <Legend content={<ChartLegendContent />} />
                     <Bar dataKey="subTaskEffort" stackId="a" fill="var(--color-subTaskEffort)" radius={[0, 4, 4, 0]} />
@@ -537,3 +537,4 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
+
