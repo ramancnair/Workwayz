@@ -288,10 +288,10 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/settings/board': ['kanbanColumns'],
     '/settings/sprint': ['projectSettings'],
     '/settings/effort': ['projectSettings'],
-    '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
     '/pmo/documents': ['documents'],
     '/pmo/billing': ['paymentMilestones'],
     '/pmo/business-continuity': ['environments', 'codeRepositories', 'employees'],
+    '/pmo/resource-billing': ['employees'],
 };
 
 

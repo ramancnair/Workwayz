@@ -259,7 +259,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
-  const isPmoPath = pathname.startsWith(`${basePath}/pmo`);
+  const isPmoPath = ['/pmo/documents', '/pmo/billing', '/pmo/business-continuity', '/pmo/resource-billing'].some(p => pathname.startsWith(basePath + p));
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
 
