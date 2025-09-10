@@ -13,16 +13,29 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { type User } from '@/types';
+import { type User, type FixedCost } from '@/types';
 import { differenceInDays, eachDayOfInterval, format, isSameDay, parseISO } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Trash2 } from 'lucide-react';
 
 export default function ResourceBillingPage() {
-  const { employees, updateProjectUser, holidays, weeklyOffDays } = useProject();
+  const { 
+    employees, 
+    updateProjectUser, 
+    holidays, 
+    weeklyOffDays, 
+    fixedCosts, 
+    addFixedCost, 
+    updateFixedCost, 
+    deleteFixedCost 
+  } = useProject();
   const { toast } = useToast();
   const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: number; costRate?: number }>>({});
+  const [newCostName, setNewCostName] = useState('');
+  const [newCostValue, setNewCostValue] = useState(0);
 
   const handleRateChange = (userId: string, field: 'billedRate' | 'costRate', value: string) => {
     const numericValue = value === '' ? undefined : parseFloat(value);
@@ -50,7 +63,6 @@ export default function ResourceBillingPage() {
     }
 
     if (Object.keys(payload).length === 0) {
-        // No changes to save
         return;
     }
 
@@ -59,6 +71,26 @@ export default function ResourceBillingPage() {
       toast({ title: 'Success', description: 'Rates updated successfully.' });
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update rates.' });
+    }
+  };
+
+  const handleFixedCostChange = (id: string, cost: string) => {
+    const numericValue = parseFloat(cost) || 0;
+    updateFixedCost(id, { cost: numericValue });
+  };
+
+  const handleAddNewFixedCost = async () => {
+    if (!newCostName.trim() || newCostValue < 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and cost.' });
+      return;
+    }
+    const success = await addFixedCost({ name: newCostName, cost: newCostValue });
+    if (success) {
+      setNewCostName('');
+      setNewCostValue(0);
+      toast({ title: 'Success', description: 'Fixed cost item added.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not add fixed cost item.' });
     }
   };
 
@@ -92,20 +124,21 @@ export default function ResourceBillingPage() {
 
   const revenueData = useMemo(() => {
     let totalRevenue = 0;
-    let totalCost = 0;
+    let totalResourceCost = 0;
 
     employees.forEach(user => {
       const workingDays = calculateBusinessDays(user.onboardingDate, user.offloadingDate);
       if (workingDays > 0) {
         totalRevenue += workingDays * (user.billedRate || 0);
-        totalCost += workingDays * (user.costRate || 0);
+        totalResourceCost += workingDays * (user.costRate || 0);
       }
     });
     
-    const profit = totalRevenue - totalCost;
+    const totalFixedCost = fixedCosts.reduce((acc, fc) => acc + (fc.cost || 0), 0);
+    const profit = totalRevenue - totalResourceCost - totalFixedCost;
 
-    return { totalRevenue, totalCost, profit };
-  }, [employees, holidays, weeklyOffDays]);
+    return { totalRevenue, totalResourceCost, totalFixedCost, profit };
+  }, [employees, fixedCosts, holidays, weeklyOffDays]);
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -154,6 +187,66 @@ export default function ResourceBillingPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Fixed Costs</CardTitle>
+            <CardDescription>Manage other project costs like licenses, hardware, and margins.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-2/3">Item</TableHead>
+                        <TableHead>Cost (USD)</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {fixedCosts.map(item => (
+                        <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>
+                                <Input
+                                    type="number"
+                                    defaultValue={item.cost}
+                                    onBlur={(e) => handleFixedCostChange(item.id, e.target.value)}
+                                    className="w-32"
+                                />
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => deleteFixedCost(item.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                    <TableRow>
+                        <TableCell>
+                            <Input
+                                placeholder="New cost item name"
+                                value={newCostName}
+                                onChange={(e) => setNewCostName(e.target.value)}
+                            />
+                        </TableCell>
+                        <TableCell>
+                             <Input
+                                type="number"
+                                placeholder="0"
+                                value={newCostValue}
+                                onChange={(e) => setNewCostValue(parseFloat(e.target.value) || 0)}
+                            />
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <Button onClick={handleAddNewFixedCost}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Add
+                            </Button>
+                        </TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
+        </CardContent>
+      </Card>
       
       <Card className="mt-6">
         <CardHeader>
@@ -165,7 +258,8 @@ export default function ResourceBillingPage() {
               <TableRow>
                 <TableHead>Description</TableHead>
                 <TableHead>Revenue (USD)</TableHead>
-                <TableHead>Cost (USD)</TableHead>
+                <TableHead>Resource Cost (USD)</TableHead>
+                <TableHead>Fixed Costs (USD)</TableHead>
                 <TableHead>Profit (USD)</TableHead>
               </TableRow>
             </TableHeader>
@@ -173,7 +267,8 @@ export default function ResourceBillingPage() {
               <TableRow>
                 <TableCell className="font-semibold">Planned Overall</TableCell>
                 <TableCell>${revenueData.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                <TableCell>${revenueData.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                <TableCell>${revenueData.totalResourceCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                <TableCell>${revenueData.totalFixedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                 <TableCell>${revenueData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
               </TableRow>
             </TableBody>
