@@ -239,6 +239,7 @@ export default function ResourceBillingPage() {
                                 placeholder="0"
                                 value={newCostValue}
                                 onChange={(e) => setNewCostValue(parseFloat(e.target.value) || 0)}
+                                className="w-32"
                             />
                         </TableCell>
                         <TableCell className="text-right">
