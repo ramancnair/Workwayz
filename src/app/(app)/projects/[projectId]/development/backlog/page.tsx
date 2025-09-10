@@ -498,50 +498,53 @@ export default function BacklogPage() {
     }
   }, [editingEpic, editEpicForm]);
   
-    useEffect(() => {
-    if (!selectedStory) {
-        setIsEditStorySubmitting(false);
-        setShowAddSubTask(false);
-        subTaskForm.reset();
-    } else if (selectedStory.itemType === 'Sub Task') {
-        subTaskForm.reset({
-            title: selectedStory.title,
-            description: selectedStory.description || '',
-            impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
-            estimatedHours: selectedStory.estimatedHours,
-            assigneeId: selectedStory.assigneeId || 'unassigned',
-            status: selectedStory.status || 'To Do',
-            startDate: selectedStory.startDate ? format(new Date(selectedStory.startDate), 'yyyy-MM-dd') : '',
-            endDate: selectedStory.endDate ? format(new Date(selectedStory.endDate), 'yyyy-MM-dd') : '',
-            sprintId: selectedStory.sprintId || 'backlog',
-            releaseId: selectedStory.releaseId || 'unassigned',
-        });
-    } else {
-        const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
-        editStoryForm.reset({
-            itemType: selectedStory.itemType,
-            title: selectedStory.title,
-            description: selectedStory.description || '',
-            acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-            epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
-            parentStoryId: isSubItem ? selectedStory.parentStoryId || undefined : undefined,
-            reporterId: selectedStory.reporterId || 'unassigned',
-            assigneeId: selectedStory.assigneeId || 'unassigned',
-            estimatedHours: selectedStory.estimatedHours,
-            priority: selectedStory.priority || 'Medium',
-            releaseId: selectedStory.releaseId || 'unassigned',
-            sprintId: selectedStory.sprintId || 'backlog',
-            environmentId: selectedStory.environmentId || 'unassigned',
-            impactedSystemIds: selectedStory.impactedSystemIds || [],
-            attachments: selectedStory.attachments || '',
-        });
-        if (isSubItem && selectedStory.parentStoryId) {
-            const parent = parentStoryOptions.find(p => p.value === selectedStory.parentStoryId);
-            setEditParentStoryText(parent?.label || '');
-        } else {
-            setEditParentStoryText('');
-        }
-    }
+  useEffect(() => {
+      if (!selectedStory) {
+          setIsEditStorySubmitting(false);
+          setShowAddSubTask(false);
+          subTaskForm.reset();
+          return;
+      }
+  
+      if (selectedStory.itemType === 'Sub Task') {
+          subTaskForm.reset({
+              title: selectedStory.title,
+              description: selectedStory.description || '',
+              impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
+              estimatedHours: selectedStory.estimatedHours,
+              assigneeId: selectedStory.assigneeId || 'unassigned',
+              status: selectedStory.status || 'To Do',
+              startDate: selectedStory.startDate ? format(new Date(selectedStory.startDate), 'yyyy-MM-dd') : '',
+              endDate: selectedStory.endDate ? format(new Date(selectedStory.endDate), 'yyyy-MM-dd') : '',
+              sprintId: selectedStory.sprintId || 'backlog',
+              releaseId: selectedStory.releaseId || 'unassigned',
+          });
+      } else {
+          const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
+          editStoryForm.reset({
+              itemType: selectedStory.itemType,
+              title: selectedStory.title,
+              description: selectedStory.description || '',
+              acceptanceCriteria: selectedStory.acceptanceCriteria || '',
+              epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
+              parentStoryId: isSubItem ? selectedStory.parentStoryId || undefined : undefined,
+              reporterId: selectedStory.reporterId || 'unassigned',
+              assigneeId: selectedStory.assigneeId || 'unassigned',
+              estimatedHours: selectedStory.estimatedHours,
+              priority: selectedStory.priority || 'Medium',
+              releaseId: selectedStory.releaseId || 'unassigned',
+              sprintId: selectedStory.sprintId || 'backlog',
+              environmentId: selectedStory.environmentId || 'unassigned',
+              impactedSystemIds: selectedStory.impactedSystemIds || [],
+              attachments: selectedStory.attachments || '',
+          });
+          if (isSubItem && selectedStory.parentStoryId) {
+              const parent = parentStoryOptions.find(p => p.value === selectedStory.parentStoryId);
+              setEditParentStoryText(parent?.label || '');
+          } else {
+              setEditParentStoryText('');
+          }
+      }
   }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
   
   useEffect(() => {

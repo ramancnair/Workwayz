@@ -633,7 +633,9 @@ export default function GroomingPage() {
         if (!selectedStory) {
           setShowAddSubTask(false);
           subTaskForm.reset();
-        } else if (selectedStory.itemType === 'Sub Task') {
+          return;
+        }
+        if (selectedStory.itemType === 'Sub Task') {
             subTaskForm.reset({
                 title: selectedStory.title,
                 description: selectedStory.description || '',
@@ -647,7 +649,7 @@ export default function GroomingPage() {
                 releaseId: selectedStory.releaseId || 'unassigned',
             });
         } else {
-            const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
+            const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
              editStoryForm.reset({
                 title: selectedStory.title,
                 description: selectedStory.description || '',
@@ -672,7 +674,7 @@ export default function GroomingPage() {
         }
     }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
 
-    const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
+  const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
       if(!start || !end) return 0;
       const holidayDates = holidays.map(h => parseISO(h.date));
       const interval = eachDayOfInterval({ start, end });
@@ -915,7 +917,7 @@ export default function GroomingPage() {
 
                     {/* Sprint Column */}
                     <div className="h-full flex flex-col">
-                    {sprintsWithStories.length > 0 && visibleSprintIndex < sprintsWithStories.length ? (
+                    {sprintsWithStories.length > 0 && sprintsWithStories[visibleSprintIndex] ? (
                         <SprintColumn 
                             key={sprintsWithStories[visibleSprintIndex].id} 
                             sprint={sprintsWithStories[visibleSprintIndex]} 
@@ -1597,10 +1599,10 @@ export default function GroomingPage() {
                                     <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Sub-Task</Button>
                                 )}
                             </div>
-                          </div>
-                        </TabsContent>
-                        <TabsContent value="bugs">
-                           <div className="space-y-4 pt-4">
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="bugs">
+                       <div className="space-y-4 pt-4">
                                   {selectedStorySubItems.bugs.length > 0 ? (
                                       <div className="space-y-2 rounded-md border p-2">
                                       {selectedStorySubItems.bugs.map(item => {

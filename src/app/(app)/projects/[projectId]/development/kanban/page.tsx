@@ -434,8 +434,10 @@ export default function KanbanPage() {
 
   useEffect(() => {
     if (!selectedStory) {
-      setIsEditStorySubmitting(false);
-    } else if (selectedStory.itemType === 'Sub Task') {
+        setIsEditStorySubmitting(false);
+        return;
+    }
+    if (selectedStory.itemType === 'Sub Task') {
        subTaskForm.reset({
             title: selectedStory.title,
             description: selectedStory.description || '',
@@ -447,7 +449,7 @@ export default function KanbanPage() {
             releaseId: selectedStory.releaseId || 'unassigned',
         });
     } else {
-      const isSubItem = ['Bug', 'Feature Change'].includes(selectedStory.itemType);
+      const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
       editStoryForm.reset({
         title: selectedStory.title,
         description: selectedStory.description || '',
