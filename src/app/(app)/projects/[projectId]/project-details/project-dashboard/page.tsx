@@ -38,7 +38,7 @@ const taskChartConfig = {
 
 const workloadChartConfig = {
   subTaskEffort: { label: 'Sub-Task Effort', color: 'hsl(var(--chart-2))' },
-  bugEffort: { label: 'Bug Effort', color: 'hsl(var(--chart-4))' },
+  bugEffort: { label: 'Bug Effort', color: 'hsl(var(--chart-5))' },
 } satisfies ChartConfig;
 
 
@@ -537,4 +537,6 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
+
+
 
