@@ -44,10 +44,9 @@ export default function ResourceBillingPage() {
     if (rates.billedRate !== user.billedRate) {
         payload.billedRate = rates.billedRate;
     }
-    
-    // The 'costRate' field is not on the User type, so we cannot save it.
-    // I will assume 'cost' maps to 'billedRate' for now.
-    // If you add a costRate field to the User type, I can update this.
+    if (rates.costRate !== user.costRate) {
+        payload.costRate = rates.costRate;
+    }
 
     if (Object.keys(payload).length === 0) {
         toast({ title: 'No Changes', description: 'There were no new values to save.' });
@@ -97,11 +96,10 @@ export default function ResourceBillingPage() {
                      <Input
                       type="number"
                       placeholder="Enter rate"
-                      value={editingRates[user.id]?.costRate ?? 'N/A' }
+                      value={editingRates[user.id]?.costRate ?? user.costRate ?? ''}
                       onChange={(e) => handleRateChange(user.id, 'costRate', e.target.value)}
-                      // onBlur={() => handleSaveChanges(user.id)} // Cannot save cost rate
+                      onBlur={() => handleSaveChanges(user.id)}
                       className="w-32"
-                      readOnly // Cannot save this field yet.
                     />
                   </TableCell>
                 </TableRow>
