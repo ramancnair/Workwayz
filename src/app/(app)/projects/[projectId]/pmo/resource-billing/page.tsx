@@ -123,6 +123,10 @@ export default function ResourceBillingPage() {
   };
 
   const revenueData = useMemo(() => {
+    if (!employees || !fixedCosts) {
+      return { totalRevenue: 0, totalResourceCost: 0, totalFixedCost: 0, profit: 0 };
+    }
+    
     let totalRevenue = 0;
     let totalResourceCost = 0;
 
@@ -203,7 +207,7 @@ export default function ResourceBillingPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {fixedCosts.map(item => (
+                    {fixedCosts && fixedCosts.map(item => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>
