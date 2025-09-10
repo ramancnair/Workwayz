@@ -658,6 +658,7 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
+        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
     });
     if (success) {
         handleSetSelectedStory(null);
@@ -2065,18 +2066,18 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     {selectedStorySubItems.subTasks.map(item => {
                                         const ItemIcon = workItemIcons[item.itemType];
                                         return (
-                                            <div key={item.id} className="flex items-center justify-between text-sm">
-                                                <div className='flex items-center gap-2'>
-                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
-                                                </div>
-                                                <Badge variant="outline">{item.status}</Badge>
+                                            <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
+                                                <ItemIcon className="h-4 w-4 text-muted-foreground" />
+                                                <span className="font-medium cursor-pointer hover:underline truncate" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
+                                                <Badge variant="outline" className="w-24 justify-center truncate">{impactedSystems.find(s => s.id === item.impactedSystemId)?.name || 'N/A'}</Badge>
+                                                <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
+                                                <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
                                             </div>
                                         )
                                     })}
-                                    </div>
+                                  </div>
                                 ) : (
-                                  <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
+                                  <p className="text-sm text-muted-foreground italic px-2 py-4 text-center">No sub-tasks linked.</p>
                                 )}
                                 {showAddSubTask ? (
                                     <div className='border p-4 mt-2 rounded-md'>
@@ -2093,12 +2094,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                         <FormItem><FormLabel>Impacted System</FormLabel>
                                                             <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                                <SelectContent>
-                                                                    <SelectItem value="unassigned">None</SelectItem>
-                                                                    {impactedSystems.map(s => (
-                                                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
+                                                                <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                                             </Select>
                                                         <FormMessage/></FormItem>
                                                     )}/>
@@ -2150,56 +2146,53 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     </TabsContent>
                     <TabsContent value="bugs">
                        <div className="space-y-4 pt-4">
-                            <div>
-                                <h4 className="text-sm font-medium mb-2">Bugs</h4>
-                                 {selectedStorySubItems.bugs.length > 0 ? (
-                                    <div className="space-y-2 rounded-md border p-2">
-                                    {selectedStorySubItems.bugs.map(item => {
-                                        const ItemIcon = workItemIcons[item.itemType];
-                                        return (
-                                            <div key={item.id} className="flex items-center justify-between text-sm">
-                                                <div className='flex items-center gap-2'>
-                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
-                                                </div>
-                                                <Badge variant="outline">{item.status}</Badge>
-                                            </div>
-                                        )
-                                    })}
-                                    </div>
+                                  {selectedStorySubItems.bugs.length > 0 ? (
+                                      <div className="space-y-2 rounded-md border p-2">
+                                      {selectedStorySubItems.bugs.map(item => {
+                                          const ItemIcon = workItemIcons[item.itemType];
+                                          return (
+                                              <div key={item.id} className="flex items-center justify-between text-sm">
+                                                  <div className='flex items-center gap-2'>
+                                                      {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                      <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
+                                                  </div>
+                                                  <Badge variant="outline">{item.status}</Badge>
+                                              </div>
+                                          )
+                                      })}
+                                      </div>
+                                  ) : (
+                                      <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
+                                  )}
+                              </div>
+                          </TabsContent>
+                        <TabsContent value="logs">
+                            <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
+                                {selectedStorySubItems.logs.length > 0 ? (
+                                    selectedStorySubItems.logs.map((log, index) => (
+                                        <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
+                                            <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
+                                            <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
+                                        </div>
+                                    ))
                                 ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
+                                    <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
+                                )}
+                                {selectedStory?.estimatedHours && (
+                                    <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                        <span>Planned Effort:</span>
+                                        <span>{selectedStory.estimatedHours} {selectedStory.estimatedHours === 1 ? 'hour' : 'hours'}</span>
+                                    </div>
+                                )}
+                                {actualEffortInHours !== null && (
+                                    <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
+                                        <span>Actual Effort:</span>
+                                        <span>{actualEffortInHours.toFixed(2)} hours</span>
+                                    </div>
                                 )}
                             </div>
-                        </div>
-                    </TabsContent>
-                    <TabsContent value="logs">
-                        <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
-                            {selectedStorySubItems.logs.length > 0 ? (
-                                selectedStorySubItems.logs.map((log, index) => (
-                                    <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
-                                        <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
-                                        <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
-                            )}
-                            {selectedStory?.estimatedHours && (
-                                <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
-                                    <span>Planned Effort:</span>
-                                    <span>{selectedStory.estimatedHours} {selectedStory.estimatedHours === 1 ? 'hour' : 'hours'}</span>
-                                </div>
-                            )}
-                            {actualEffortInHours !== null && (
-                                <div className="flex items-center justify-between text-sm p-2 border-t font-semibold">
-                                    <span>Actual Effort:</span>
-                                    <span>{actualEffortInHours.toFixed(2)} hours</span>
-                                </div>
-                            )}
-                        </div>
-                    </TabsContent>
-                  </Tabs>
+                          </TabsContent>
+                    </Tabs>
                   <DialogFooter className="flex justify-end items-center pt-4">
                     <div className="flex items-center gap-2">
                       <Button type="submit" disabled={isEditStorySubmitting}>
@@ -2213,49 +2206,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
               )}
             </>
           )}
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Epic</DialogTitle>
-          </DialogHeader>
-          <Form {...editEpicForm}>
-            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
-              <FormField
-                control={editEpicForm.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Epic title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editEpicForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe the epic..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" disabled={isEditEpicSubmitting}>
-                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
         </DialogContent>
       </Dialog>
     </>
