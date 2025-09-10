@@ -246,7 +246,7 @@ const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
 const defaultFixedCosts: Omit<FixedCost, 'id'>[] = [
     { name: 'Software (Licenses etc)', cost: 0 },
     { name: 'Hardware (Hosting/GIT etc)', cost: 0 },
-    { name: 'Company margin', cost: 0 },
+    { name: 'Miscellaneous', cost: 0 },
 ];
 
 const defaultEnvironments: Omit<Environment, 'id'>[] = [
