@@ -217,8 +217,13 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: DocumentsIcon,
     },
     {
+      href: `${basePath}/pmo/resource-billing`,
+      label: "Resource Billing",
+      icon: DollarSign,
+    },
+    {
       href: `${basePath}/pmo/billing`,
-      label: "Billing",
+      label: "Payment Milestones",
       icon: BillingIcon,
     },
     {

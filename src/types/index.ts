@@ -6,6 +6,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -127,6 +128,7 @@ export type User = {
   employmentEndDate?: string; // ISO String - Global
   accessLevel?: AccessLevel;
   billedRate?: number;
+  costRate?: number; // Add costRate
   availability?: number;
   leavePeriods?: LeavePeriod[];
   isDeleted?: boolean;
