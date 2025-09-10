@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -289,7 +288,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/settings/sprint': ['projectSettings'],
     '/settings/effort': ['projectSettings'],
     '/pmo/documents': ['documents'],
-    '/pmo/billing': ['paymentMilestones'],
+    '/pmo/payment-milestones': ['paymentMilestones'],
     '/pmo/business-continuity': ['environments', 'codeRepositories', 'employees'],
     '/pmo/resource-billing': ['employees'],
 };

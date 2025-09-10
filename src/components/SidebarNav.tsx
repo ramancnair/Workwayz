@@ -222,7 +222,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: DollarSign,
     },
     {
-      href: `${basePath}/pmo/billing`,
+      href: `${basePath}/pmo/payment-milestones`,
       label: "Payment Milestones",
       icon: BillingIcon,
     },
@@ -259,7 +259,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
-  const isPmoPath = ['/pmo/documents', '/pmo/billing', '/pmo/business-continuity', '/pmo/resource-billing'].some(p => pathname.startsWith(basePath + p));
+  const isPmoPath = ['/pmo/documents', '/pmo/payment-milestones', '/pmo/business-continuity', '/pmo/resource-billing'].some(p => pathname.startsWith(basePath + p));
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
 
