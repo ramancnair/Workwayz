@@ -20,7 +20,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -66,6 +66,7 @@ interface ProjectContextType {
   horizontals: Horizontal[];
   initialImpactedSystems: ImpactedSystem[];
   initialHorizontals: Horizontal[];
+  fixedCosts: FixedCost[];
   environments: Environment[];
   codeRepositories: CodeRepository[];
   testDate: Date | null;
@@ -201,6 +202,12 @@ interface ProjectContextType {
   addCodeRepository: (repo: Omit<CodeRepository, 'id'>) => Promise<boolean>;
   updateCodeRepository: (repoId: string, data: Partial<Omit<CodeRepository, 'id'>>) => Promise<boolean>;
   deleteCodeRepository: (repoId: string) => Promise<boolean>;
+  
+  // Fixed Cost actions
+  addFixedCost: (cost: Omit<FixedCost, 'id'>) => Promise<boolean>;
+  updateFixedCost: (id: string, data: Partial<Omit<FixedCost, 'id'>>) => Promise<boolean>;
+  deleteFixedCost: (id: string) => Promise<boolean>;
+
 
   // Trash actions
   restoreItem: (id: string, collection: string) => Promise<boolean>;
@@ -236,6 +243,12 @@ const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
     { name: 'Dev Ops', weightage: 5, isEnabled: false },
 ];
 
+const defaultFixedCosts: Omit<FixedCost, 'id'>[] = [
+    { name: 'Software (Licenses etc)', cost: 0 },
+    { name: 'Hardware (Hosting/GIT etc)', cost: 0 },
+    { name: 'Company margin', cost: 0 },
+];
+
 const defaultEnvironments: Omit<Environment, 'id'>[] = [
     { name: 'Dev', order: 0 },
     { name: 'SIT', order: 1 },
@@ -257,7 +270,7 @@ const standardDocs = [
   'Closure',
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
@@ -290,7 +303,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/pmo/documents': ['documents'],
     '/pmo/payment-milestones': ['paymentMilestones'],
     '/pmo/business-continuity': ['environments', 'codeRepositories', 'employees'],
-    '/pmo/resource-billing': ['employees'],
+    '/pmo/resource-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts'],
 };
 
 
@@ -316,6 +329,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [horizontals, setHorizontals] = useState<Horizontal[]>([]);
   const [initialImpactedSystems, setInitialImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [initialHorizontals, setInitialHorizontals] = useState<Horizontal[]>([]);
+  const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
@@ -374,6 +388,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'horizontals', setState: setHorizontals, isDoc: false },
         { name: 'initialImpactedSystems', setState: setInitialImpactedSystems, isDoc: false },
         { name: 'initialHorizontals', setState: setInitialHorizontals, isDoc: false },
+        { name: 'fixedCosts', setState: setFixedCosts, isDoc: false },
         { name: 'environments', setState: setEnvironments, isDoc: false },
         { name: 'codeRepositories', setState: setCodeRepositories, isDoc: false },
         { name: 'worklogs', setState: setWorklogs, isDoc: false },
@@ -410,6 +425,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         batch.set(docRef, col);
                     });
                     batch.commit().catch(e => console.error("Failed to set default Kanban columns", e));
+                    return;
+                }
+                if (name === 'fixedCosts' && snapshot.empty) {
+                    const batch = writeBatch(db);
+                    defaultFixedCosts.forEach(cost => {
+                        const docRef = doc(collection(rootProjectDocRef, 'fixedCosts'));
+                        batch.set(docRef, cost);
+                    });
+                    batch.commit().catch(e => console.error("Failed to set default Fixed Costs", e));
                     return;
                 }
                  // ... other default data logic
@@ -1669,7 +1693,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
-  const updateKanbanColumn = async (columnId: string, data: Partial<Omit<KanbanColumn, 'id'>>): Promise<boolean> => {
+  const updateKanbanColumn = async (columnId: string, data: Partial<Omit<KanbanColumn, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
       const columnRef = doc(db, 'projects', projectId, 'kanbanColumns', columnId);
@@ -2066,7 +2090,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             return false;
         }
     };
-    const updatePaymentMilestone = async (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id' | 'milestoneId'>>): Promise<boolean> => {
+    const updatePaymentMilestone = async (milestoneId: string, data: Partial<Omit<PaymentMilestone, 'id' | 'milestoneId'>>) => {
         if (!db || !projectId) return false;
         try {
             await updateDoc(doc(db, 'projects', projectId, 'paymentMilestones', milestoneId), sanitizeForFirestore(data));
@@ -2126,6 +2150,38 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return false;
     }
   };
+  
+  // Fixed Cost Actions
+  const addFixedCost = async (cost: Omit<FixedCost, 'id'>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await addDoc(collection(db, 'projects', projectId, 'fixedCosts'), cost);
+      return true;
+    } catch (e) {
+      console.error("Firebase error adding fixed cost", e);
+      return false;
+    }
+  };
+  const updateFixedCost = async (id: string, data: Partial<Omit<FixedCost, 'id'>>) => {
+    if (!db || !projectId) return false;
+    try {
+      await updateDoc(doc(db, 'projects', projectId, 'fixedCosts', id), data);
+      return true;
+    } catch (e) {
+      console.error("Firebase error updating fixed cost", e);
+      return false;
+    }
+  };
+  const deleteFixedCost = async (id: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId, 'fixedCosts', id));
+      return true;
+    } catch (e) {
+      console.error("Firebase error deleting fixed cost", e);
+      return false;
+    }
+  };
 
   // Trash actions
   const restoreItem = async (id: string, collectionName: string): Promise<boolean> => {
@@ -2178,6 +2234,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     horizontals,
     initialImpactedSystems,
     initialHorizontals,
+    fixedCosts,
     environments,
     codeRepositories,
     testDate,
@@ -2270,6 +2327,9 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addCodeRepository,
     updateCodeRepository,
     deleteCodeRepository,
+    addFixedCost,
+    updateFixedCost,
+    deleteFixedCost,
     restoreItem,
     permanentlyDeleteItem,
   };
