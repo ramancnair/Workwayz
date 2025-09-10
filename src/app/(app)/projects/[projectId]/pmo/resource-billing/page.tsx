@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
 import {
@@ -11,14 +11,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { type User } from '@/types';
+import { differenceInDays, eachDayOfInterval, format, isSameDay, parseISO } from 'date-fns';
 
 export default function ResourceBillingPage() {
-  const { employees, updateProjectUser } = useProject();
+  const { employees, updateProjectUser, holidays, weeklyOffDays } = useProject();
   const { toast } = useToast();
   const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: number; costRate?: number }>>({});
 
@@ -39,17 +41,16 @@ export default function ResourceBillingPage() {
 
     if (!user || !rates) return;
 
-    // We only update if the value has actually changed to a valid number or undefined
     const payload: Partial<User> = {};
     if (rates.billedRate !== user.billedRate) {
         payload.billedRate = rates.billedRate;
     }
-    if (rates.costRate !== user.costRate) {
+     if (rates.costRate !== user.costRate) {
         payload.costRate = rates.costRate;
     }
 
     if (Object.keys(payload).length === 0) {
-        toast({ title: 'No Changes', description: 'There were no new values to save.' });
+        // No changes to save
         return;
     }
 
@@ -60,6 +61,51 @@ export default function ResourceBillingPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update rates.' });
     }
   };
+
+  const calculateBusinessDays = (startDateStr?: string, endDateStr?: string): number => {
+    if (!startDateStr || !endDateStr) return 0;
+    try {
+        const start = parseISO(startDateStr);
+        const end = parseISO(endDateStr);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+            return 0;
+        }
+
+        const holidayDates = holidays.map(h => new Date(h.date));
+
+        const interval = eachDayOfInterval({ start, end });
+        
+        const businessDays = interval.filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+            return !isWeekend && !isHoliday;
+        });
+
+        return businessDays.length;
+    } catch(e) {
+        console.error("Error calculating business days", e);
+        return 0;
+    }
+  };
+
+  const revenueData = useMemo(() => {
+    let totalRevenue = 0;
+    let totalCost = 0;
+
+    employees.forEach(user => {
+      const workingDays = calculateBusinessDays(user.onboardingDate, user.offloadingDate);
+      if (workingDays > 0) {
+        totalRevenue += workingDays * (user.billedRate || 0);
+        totalCost += workingDays * (user.costRate || 0);
+      }
+    });
+    
+    const profit = totalRevenue - totalCost;
+
+    return { totalRevenue, totalCost, profit };
+  }, [employees, holidays, weeklyOffDays]);
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -104,6 +150,32 @@ export default function ResourceBillingPage() {
                   </TableCell>
                 </TableRow>
               ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Revenue</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Description</TableHead>
+                <TableHead>Revenue (USD)</TableHead>
+                <TableHead>Cost (USD)</TableHead>
+                <TableHead>Profit (USD)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-semibold">Planned Overall</TableCell>
+                <TableCell>${revenueData.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                <TableCell>${revenueData.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                <TableCell>${revenueData.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </CardContent>
