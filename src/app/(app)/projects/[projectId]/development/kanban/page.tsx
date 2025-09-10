@@ -851,7 +851,7 @@ export default function KanbanPage() {
                           </TabsList>
                           <TabsContent value="details" className="pt-4">
                               <div className="space-y-4">
-                                  {['Requirement/Story', 'Feature Change'].includes(selectedStory.itemType) && (
+                                  {['Requirement/Story', 'Feature Change', 'Task', 'Bug'].includes(selectedStory.itemType) && (
                                     <FormField
                                         control={editStoryForm.control}
                                         name="impactedSystemIds"
@@ -1296,6 +1296,48 @@ export default function KanbanPage() {
         </DialogContent>
       </Dialog>
       
+      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Epic</DialogTitle>
+          </DialogHeader>
+          <Form {...editEpicForm}>
+            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
+              <FormField
+                control={editEpicForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Epic title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editEpicForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the epic..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={isEditEpicSubmitting}>
+                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
-    );
+  );
 }

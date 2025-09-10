@@ -1255,7 +1255,7 @@ export default function GroomingPage() {
                         </TabsList>
                         <TabsContent value="details" className="pt-4">
                         <div className="space-y-4">
-                            {['Requirement/Story', 'Feature Change', 'Bug'].includes(selectedStory.itemType) && (
+                            {['Requirement/Story', 'Feature Change', 'Bug', 'Task'].includes(selectedStory.itemType) && (
                                 <FormField
                                     control={editStoryForm.control}
                                     name="impactedSystemIds"
@@ -1534,7 +1534,7 @@ export default function GroomingPage() {
                                             </div>
                                         )
                                     })}
-                                    </div>
+                                  </div>
                                 ) : (
                                   <p className="text-sm text-muted-foreground italic px-2 py-4 text-center">No sub-tasks linked.</p>
                                 )}
@@ -1605,26 +1605,26 @@ export default function GroomingPage() {
                         </TabsContent>
                         <TabsContent value="bugs">
                            <div className="space-y-4 pt-4">
-                                {selectedStorySubItems.bugs.length > 0 ? (
-                                    <div className="space-y-2 rounded-md border p-2">
-                                    {selectedStorySubItems.bugs.map(item => {
-                                        const ItemIcon = workItemIcons[item.itemType];
-                                        return (
-                                            <div key={item.id} className="flex items-center justify-between text-sm">
-                                                <div className='flex items-center gap-2'>
-                                                    {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
-                                                    <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
-                                                </div>
-                                                <Badge variant="outline">{item.status}</Badge>
-                                            </div>
-                                        )
-                                    })}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
-                                )}
-                            </div>
-                        </TabsContent>
+                                  {selectedStorySubItems.bugs.length > 0 ? (
+                                      <div className="space-y-2 rounded-md border p-2">
+                                      {selectedStorySubItems.bugs.map(item => {
+                                          const ItemIcon = workItemIcons[item.itemType];
+                                          return (
+                                              <div key={item.id} className="flex items-center justify-between text-sm">
+                                                  <div className='flex items-center gap-2'>
+                                                      {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                      <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
+                                                  </div>
+                                                  <Badge variant="outline">{item.status}</Badge>
+                                              </div>
+                                          )
+                                      })}
+                                      </div>
+                                  ) : (
+                                      <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
+                                  )}
+                              </div>
+                          </TabsContent>
                         <TabsContent value="logs">
                             <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
                                 {selectedStorySubItems.logs.length > 0 ? (
@@ -1650,7 +1650,7 @@ export default function GroomingPage() {
                                     </div>
                                 )}
                             </div>
-                        </TabsContent>
+                          </TabsContent>
                     </Tabs>
                   <DialogFooter className="flex justify-end items-center pt-4">
                     <div className="flex items-center gap-2">
@@ -1665,6 +1665,49 @@ export default function GroomingPage() {
               )}
             </>
           )}
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={!!editingEpic} onOpenChange={setEditingEpic}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Epic</DialogTitle>
+          </DialogHeader>
+          <Form {...editEpicForm}>
+            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
+              <FormField
+                control={editEpicForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Epic title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editEpicForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the epic..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={isEditEpicSubmitting}>
+                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </>

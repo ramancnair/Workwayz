@@ -673,6 +673,7 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     
     const success = await updateStory(selectedStory.id, {
         ...values,
+        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
     });
@@ -1006,7 +1007,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </FormItem>
                             )}
                         />
-                        {['Requirement/Story', 'Feature Change', 'Bug'].includes(watchedItemType) && (
+                        {['Requirement/Story', 'Feature Change', 'Bug', 'Task'].includes(watchedItemType) && (
                         <FormField
                             control={addStoryForm.control}
                             name="impactedSystemIds"
@@ -1741,20 +1742,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         </TabsList>
                     <TabsContent value="details" className="pt-4">
                       <div className="space-y-4">
-                        <FormField
-                            control={editStoryForm.control}
-                            name="description"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Description</FormLabel>
-                                <FormControl>
-                                <Textarea placeholder="Describe the story..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        {['Requirement/Story', 'Feature Change', 'Bug'].includes(selectedStory.itemType) && (
+                        {['Requirement/Story', 'Feature Change', 'Bug', 'Task'].includes(selectedStory.itemType) && (
                           <FormField
                             control={editStoryForm.control}
                             name="impactedSystemIds"
@@ -1801,6 +1789,19 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                           />
                         )}
+                        <FormField
+                            control={editStoryForm.control}
+                            name="description"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <FormControl>
+                                <Textarea placeholder="Describe the story..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                         <FormField
                             control={editStoryForm.control}
                             name="acceptanceCriteria"
