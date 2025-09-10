@@ -61,10 +61,10 @@ const resourceCostsConfig = {
   actual: { label: 'Actual', color: 'hsl(var(--chart-1))' },
 } satisfies ChartConfig;
 
-const resourceCostsPieData = [
-  { name: 'Planned', value: 555000, fill: 'hsl(var(--chart-2))' },
-  { name: 'Actual', value: 289100, fill: 'hsl(var(--chart-1))' },
-];
+const costBurnupConfig = {
+  planned: { label: 'Planned Cost', color: 'hsl(var(--chart-2))' },
+  actual: { label: 'Actual Cost', color: 'hsl(var(--chart-1))' },
+} satisfies ChartConfig;
 
 
 const softwareCostsData = [
@@ -92,6 +92,7 @@ export default function ProjectDashboardPage() {
   
   const [timeFilterSprintId, setTimeFilterSprintId] = useState('all');
   const [timeFilterReleaseId, setTimeFilterReleaseId] = useState('all');
+  const [costBurnupSprintId, setCostBurnupSprintId] = useState('all');
 
 
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
@@ -100,8 +101,10 @@ export default function ProjectDashboardPage() {
     const currentSprint = sprints.find(s => s.isCurrent);
     if (currentSprint) {
       setWorkloadSprintId(currentSprint.id);
+      setCostBurnupSprintId(currentSprint.id);
     } else if (sprints.length > 0) {
       setWorkloadSprintId(sprints[0].id);
+      setCostBurnupSprintId(sprints[0].id);
     }
   }, [sprints]);
 
@@ -233,6 +236,60 @@ export default function ProjectDashboardPage() {
       const relevantStories = timeFilterReleaseId === 'all' ? stories : stories.filter(s => s.releaseId === timeFilterReleaseId);
       return calculateEffort(relevantStories);
   }, [timeFilterReleaseId, stories, calculateEffort]);
+  
+  const costBurnupData = useMemo(() => {
+    const sprint = sprints.find(s => s.id === costBurnupSprintId);
+    if (!sprint || !sprint.startDate || !sprint.endDate) return [];
+  
+    const sprintStart = parseISO(sprint.startDate);
+    const sprintEnd = parseISO(sprint.endDate);
+    const sprintDates = eachDayOfInterval({ start: sprintStart, end: sprintEnd });
+  
+    const sprintEmployees = employees.filter(emp => {
+      if (!emp.onboardingDate || !emp.offloadingDate) return false;
+      const onboarding = parseISO(emp.onboardingDate);
+      const offloading = parseISO(emp.offloadingDate);
+      return isWithinInterval(sprintStart, { start: onboarding, end: offloading }) || isWithinInterval(sprintEnd, { start: onboarding, end: offloading });
+    });
+  
+    let cumulativePlannedCost = 0;
+    let cumulativeActualCost = 0;
+  
+    return sprintDates.map(day => {
+      // Calculate daily planned cost
+      let dailyPlannedCost = 0;
+      sprintEmployees.forEach(emp => {
+        const onboarding = emp.onboardingDate ? parseISO(emp.onboardingDate) : new Date(0);
+        const offloading = emp.offloadingDate ? parseISO(emp.offloadingDate) : new Date(8640000000000000);
+        if (isWithinInterval(day, { start: onboarding, end: offloading })) {
+            const isWorkingDay = !weeklyOffDays.includes(day.getDay()) && !holidays.some(h => isSameDay(day, parseISO(h.date)));
+            if (isWorkingDay) {
+                dailyPlannedCost += (emp.billedRate || 0) * ((emp.availability || 100) / 100);
+            }
+        }
+      });
+      cumulativePlannedCost += dailyPlannedCost;
+  
+      // Calculate daily actual cost
+      const dateKey = format(day, 'yyyy-MM-dd');
+      let dailyActualCost = 0;
+      const dailyLogs = worklogs.filter(log => format(parseISO(log.date), 'yyyy-MM-dd') === dateKey);
+
+      dailyLogs.forEach(log => {
+        const employee = employees.find(e => e.id === log.employeeId);
+        if (employee) {
+            dailyActualCost += (log.totalHours / (projectSettings?.manDayToHours || 8)) * (employee.billedRate || 0);
+        }
+      });
+      cumulativeActualCost += dailyActualCost;
+  
+      return {
+        date: format(day, 'dd/MM'),
+        planned: cumulativePlannedCost,
+        actual: cumulativeActualCost,
+      };
+    });
+  }, [costBurnupSprintId, sprints, employees, worklogs, weeklyOffDays, holidays, projectSettings]);
 
 
   return (
@@ -434,7 +491,19 @@ export default function ProjectDashboardPage() {
 
        <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Resource Costs</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Resource Costs</CardTitle>
+            <div className="w-[180px]">
+              <Select value={costBurnupSprintId} onValueChange={setCostBurnupSprintId}>
+                <SelectTrigger id="cost-sprint-filter" className="h-8">
+                    <SelectValue placeholder="Select a sprint" />
+                </SelectTrigger>
+                <SelectContent>
+                    {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2">
@@ -451,32 +520,16 @@ export default function ProjectDashboardPage() {
             </ChartContainer>
           </div>
           <div className="flex items-center justify-center">
-            <ChartContainer config={resourceCostsConfig} className="h-[250px] w-full">
-              <PieChart>
-                <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="name" />} />
-                <Pie data={resourceCostsPieData} dataKey="value" nameKey="name" innerRadius={50}>
-                  {resourceCostsPieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                   <Label
-                      content={({ viewBox }) => {
-                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                          return (
-                            <>
-                              <text x={viewBox.cx} y={viewBox.cy! - 15} textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-sm font-semibold">
-                                Total
-                              </text>
-                               <text x={viewBox.cx} y={viewBox.cy! + 15} textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-lg font-bold">
-                                {'$'}{(resourceCostsPieData.reduce((acc, curr) => acc + curr.value, 0) / 1000).toFixed(0)}K
-                              </text>
-                            </>
-                          );
-                        }
-                      }}
-                    />
-                </Pie>
-                 <ChartLegend content={<ChartLegendContent />} />
-              </PieChart>
+             <ChartContainer config={costBurnupConfig} className="h-[250px] w-full">
+                <AreaChart data={costBurnupData} margin={{ left: -20, right: 20 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                    <YAxis tickFormatter={(value) => `$${value/1000}k`} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Area dataKey="planned" type="monotone" fill="var(--color-planned)" fillOpacity={0.4} stroke="var(--color-planned)" />
+                    <Area dataKey="actual" type="monotone" fill="var(--color-actual)" fillOpacity={0.4} stroke="var(--color-actual)" />
+                </AreaChart>
             </ChartContainer>
           </div>
         </CardContent>
@@ -537,6 +590,7 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
+
 
 
 
