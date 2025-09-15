@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -193,8 +194,8 @@ export default function TestPlanPage() {
         planType: editingPlan.planType,
         sprintId: editingPlan.sprintId,
         releaseId: editingPlan.releaseId,
-        startDate: format(parseISO(editingPlan.startDate), 'yyyy-MM-dd'),
-        endDate: format(parseISO(editingPlan.endDate), 'yyyy-MM-dd'),
+        startDate: editingPlan.startDate ? format(parseISO(editingPlan.startDate), 'yyyy-MM-dd') : '',
+        endDate: editingPlan.endDate ? format(parseISO(editingPlan.endDate), 'yyyy-MM-dd') : '',
       });
     } else if (isDialogOpen && !editingPlan) {
       form.reset({
@@ -314,7 +315,6 @@ export default function TestPlanPage() {
       });
     }
     
-    let scheduledTestCaseIds = new Set<string>();
     const dayCols: Record<string, TestCase[]> = {};
 
     if (selectedPlan && selectedPlan.startDate && selectedPlan.endDate) {
@@ -328,10 +328,9 @@ export default function TestPlanPage() {
             dayCols[dateStr] = [];
         });
 
-        testCases.forEach(tc => {
+        filteredTCs.forEach(tc => {
             if (tc.testPlanId === selectedPlan.id && tc.executionDate && dayCols[tc.executionDate]) {
                 dayCols[tc.executionDate].push(tc);
-                scheduledTestCaseIds.add(tc.id);
             }
         });
     }
@@ -624,7 +623,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} readOnly={!!(watchedSprintId || watchedReleaseId)} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -635,7 +634,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} readOnly={!!(watchedSprintId || watchedReleaseId)}/></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
