@@ -15,6 +15,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -93,6 +94,7 @@ export type TestCaseType = 'Functional' | 'Non-functional';
 
 export type TestPlan = {
   id: string;
+  testPlanId: string;
   name: string;
   startDate: string; // ISO String
   endDate: string; // ISO String

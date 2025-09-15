@@ -113,8 +113,8 @@ interface ProjectContextType {
   updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>) => Promise<boolean>;
   autoGenerateTestCases: (counts: Record<string, number>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
-  addTestPlan: (plan: Omit<TestPlan, 'id'>) => Promise<boolean>;
-  updateTestPlan: (id: string, data: Partial<Omit<TestPlan, 'id'>>) => Promise<boolean>;
+  addTestPlan: (plan: Omit<TestPlan, 'id' | 'testPlanId'>) => Promise<boolean>;
+  updateTestPlan: (id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId'>>) => Promise<boolean>;
   deleteTestPlan: (id: string) => Promise<boolean>;
   
   // Bug actions
@@ -1261,23 +1261,33 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const addTestPlan = async (plan: Omit<TestPlan, 'id'>): Promise<boolean> => {
+  const addTestPlan = async (plan: Omit<TestPlan, 'id' | 'testPlanId'>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const payload = {
-        ...plan,
-        startDate: new Date(plan.startDate).toISOString(),
-        endDate: new Date(plan.endDate).toISOString(),
-      };
-      await addDoc(collection(db, 'projects', projectId, 'testPlans'), sanitizeForFirestore(payload));
-      return true;
+        const testPlansSnapshot = await getDocs(collection(db, 'projects', projectId, 'testPlans'));
+        const newIdNumber = testPlansSnapshot.size > 0
+            ? Math.max(0, ...testPlansSnapshot.docs
+                .map(doc => doc.data().testPlanId)
+                .filter((id: string | undefined) => id && typeof id === 'string')
+                .map((id: string) => parseInt(id.replace('TP-', ''), 10) || 0)
+            ) + 1
+            : 1;
+
+        const payload = {
+            ...plan,
+            testPlanId: `TP-${newIdNumber}`,
+            startDate: new Date(plan.startDate).toISOString(),
+            endDate: new Date(plan.endDate).toISOString(),
+        };
+        await addDoc(collection(db, 'projects', projectId, 'testPlans'), sanitizeForFirestore(payload));
+        return true;
     } catch (e) {
       console.error("Firebase Error: Failed to add test plan.", e);
       return false;
     }
   };
   
-  const updateTestPlan = async (id: string, data: Partial<Omit<TestPlan, 'id'>>): Promise<boolean> => {
+  const updateTestPlan = async (id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId'>>) => {
     if (!db || !projectId) return false;
     try {
       const payload = { ...data };

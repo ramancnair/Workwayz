@@ -326,7 +326,7 @@ export default function TestPlanPage() {
                    <div className="flex items-center gap-4">
                       {selectedPlan ? (
                         <>
-                          <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.id})</h3>
+                          <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
                           <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeletingPlan(selectedPlan)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </>
