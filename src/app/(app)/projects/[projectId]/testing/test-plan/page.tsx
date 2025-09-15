@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -46,6 +45,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const testPlanSchemaBase = z.object({
@@ -74,7 +74,22 @@ const refinedTestPlanSchema = testPlanSchemaBase.superRefine((data, ctx) => {
   }
 });
 
+const testCaseFormSchema = z.object({
+  title: z.string().min(1, 'Title is required.'),
+  type: z.enum(['Functional', 'Non-functional']),
+  description: z.string().min(1, 'Description is required.'),
+  expectedResult: z.string().min(1, 'Expected result is required.'),
+  status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
+  assigneeId: z.string().optional(),
+  storyId: z.string().optional(),
+  releaseId: z.string().optional(),
+  sprintId: z.string().optional(),
+  environmentIds: z.array(z.string()).optional(),
+});
+
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
+const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
+
 
 const statusStyles: Record<TestCaseStatus, string> = {
   'Passed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -125,8 +140,10 @@ export default function TestPlanPage() {
     deleteTestPlan,
   } = useProject();
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [isTestCaseDialogOpen, setIsTestCaseDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<TestPlan | null>(null);
+  const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<TestPlan | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedTCs, setSelectedTCs] = useState<string[]>([]);
@@ -134,16 +151,18 @@ export default function TestPlanPage() {
   
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
-  const form = useForm<z.infer<typeof refinedTestPlanSchema>>({
+  const testPlanForm = useForm<z.infer<typeof refinedTestPlanSchema>>({
     resolver: zodResolver(refinedTestPlanSchema),
     defaultValues: {
       planType: 'Sprint',
     }
   });
   
-  const watchedPlanType = useWatch({ control: form.control, name: 'planType' });
-  const watchedSprintId = useWatch({ control: form.control, name: 'sprintId' });
-  const watchedReleaseId = useWatch({ control: form.control, name: 'releaseId' });
+  const testCaseForm = useForm<z.infer<typeof testCaseFormSchema>>({});
+
+  const watchedPlanType = useWatch({ control: testPlanForm.control, name: 'planType' });
+  const watchedSprintId = useWatch({ control: testPlanForm.control, name: 'sprintId' });
+  const watchedReleaseId = useWatch({ control: testPlanForm.control, name: 'releaseId' });
   
   const [filters, setFilters] = useState<Record<string, string[]>>({
     sprintId: [],
@@ -156,17 +175,17 @@ export default function TestPlanPage() {
     if (watchedPlanType === 'Sprint' && watchedSprintId) {
         const sprint = sprints.find(s => s.id === watchedSprintId);
         if (sprint && sprint.startDate && sprint.endDate) {
-            form.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
-            form.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
+            testPlanForm.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
+            testPlanForm.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
         }
     } else if (watchedPlanType === 'Release' && watchedReleaseId) {
         const release = releases.find(r => r.id === watchedReleaseId);
         if (release && release.startDate && release.endDate) {
-            form.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
-            form.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
+            testPlanForm.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
+            testPlanForm.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
         }
     }
-  }, [watchedPlanType, watchedSprintId, watchedReleaseId, sprints, releases, form]);
+  }, [watchedPlanType, watchedSprintId, watchedReleaseId, sprints, releases, testPlanForm]);
 
 
   const selectedPlan = useMemo(() => {
@@ -188,8 +207,8 @@ export default function TestPlanPage() {
   }, [testPlans, selectedPlanId]);
   
   useEffect(() => {
-    if(isDialogOpen && editingPlan) {
-        form.reset({
+    if(isPlanDialogOpen && editingPlan) {
+        testPlanForm.reset({
             name: editingPlan.name,
             planType: editingPlan.planType,
             sprintId: editingPlan.sprintId,
@@ -197,8 +216,8 @@ export default function TestPlanPage() {
             startDate: editingPlan.startDate ? format(parseISO(editingPlan.startDate), 'yyyy-MM-dd') : '',
             endDate: editingPlan.endDate ? format(parseISO(editingPlan.endDate), 'yyyy-MM-dd') : '',
         });
-    } else if (isDialogOpen && !editingPlan) {
-      form.reset({
+    } else if (isPlanDialogOpen && !editingPlan) {
+      testPlanForm.reset({
         name: '',
         planType: 'Sprint',
         sprintId: undefined,
@@ -207,19 +226,32 @@ export default function TestPlanPage() {
         endDate: '',
       })
     }
-  }, [isDialogOpen, editingPlan, form]);
+  }, [isPlanDialogOpen, editingPlan, testPlanForm]);
+
+  useEffect(() => {
+    if (isTestCaseDialogOpen && editingTestCase) {
+        testCaseForm.reset({
+            ...editingTestCase,
+            storyId: editingTestCase.storyId || undefined,
+            releaseId: editingTestCase.releaseId || undefined,
+            sprintId: editingTestCase.sprintId || undefined,
+            assigneeId: editingTestCase.assigneeId || undefined,
+            environmentIds: editingTestCase.environmentIds || [],
+        });
+    }
+  }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
 
 
-  const onSubmit = async (values: z.infer<typeof refinedTestPlanSchema>) => {
+  const onTestPlanSubmit = async (values: z.infer<typeof refinedTestPlanSchema>) => {
     const success = editingPlan 
       ? await updateTestPlan(editingPlan.id, values)
       : await addTestPlan(values);
       
     if (success) {
       toast({ title: 'Success', description: `Test plan ${editingPlan ? 'updated' : 'created'}.` });
-      setIsDialogOpen(false);
+      setIsPlanDialogOpen(false);
       setEditingPlan(null);
-      form.reset();
+      testPlanForm.reset();
     } else {
       toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingPlan ? 'update' : 'create'} test plan.` });
     }
@@ -279,17 +311,23 @@ export default function TestPlanPage() {
         });
     }
 
+    let allPlanTCs: TestCase[] = [];
     let backlogTCs: TestCase[] = [];
 
     testCases.forEach(tc => {
         if (tc.testPlanId === selectedPlan?.id && tc.executionDate && dayCols[tc.executionDate]) {
-            dayCols[tc.executionDate].push(tc);
+            allPlanTCs.push(tc);
         } else {
             backlogTCs.push(tc);
         }
     });
     
-    // Apply filters
+    allPlanTCs.forEach(tc => {
+        if(dayCols[tc.executionDate!]) {
+            dayCols[tc.executionDate!].push(tc);
+        }
+    });
+
     const filterTCs = (tc: TestCase) => {
         const sprintMatch = !filters.sprintId?.length || filters.sprintId.includes(sprints.find(s => s.id === tc.sprintId)?.title || 'Backlog');
         const releaseMatch = !filters.releaseId?.length || filters.releaseId.includes(releases.find(r => r.id === tc.releaseId)?.name || 'Unassigned');
@@ -353,6 +391,11 @@ export default function TestPlanPage() {
     })
   };
   
+  const handleDialogOpen = (testCase: TestCase) => {
+    setEditingTestCase(testCase);
+    setIsTestCaseDialogOpen(true);
+  };
+  
   const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => (
     <TableHead>
       <Button variant="ghost" onClick={() => handleSort(columnId)}>
@@ -398,10 +441,6 @@ export default function TestPlanPage() {
     )
   };
   
-  const handleDialogOpen = (testCase: TestCase) => {
-    // This is a placeholder for where the actual dialog-opening logic would go
-    console.log("Opening edit dialog for", testCase.testCaseId);
-  }
 
   return (
     <DndContext onDragEnd={handleDrop}>
@@ -417,7 +456,7 @@ export default function TestPlanPage() {
                   ))}
               </SelectContent>
           </Select>
-          <Button onClick={() => { setEditingPlan(null); setIsDialogOpen(true); }}>
+          <Button onClick={() => { setEditingPlan(null); setIsPlanDialogOpen(true); }}>
             <PlusCircle className="mr-2 h-4 w-4" /> Create Test Plan
           </Button>
         </PageHeader>
@@ -436,7 +475,7 @@ export default function TestPlanPage() {
                           onCheckedChange={(checked) => setSelectedTCs(checked ? backlog.map(tc => tc.id) : [])}
                         />
                       </TableHead>
-                      <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                       <SortableHeader columnId="testCaseId">ID</SortableHeader>
                       <SortableHeader columnId="title">Title</SortableHeader>
                       <FilterableHeader columnId="status" filterOptions={testCaseStatuses.map(s => ({value: s, label: s}))}>Status</FilterableHeader>
                       <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
@@ -459,7 +498,7 @@ export default function TestPlanPage() {
                               onCheckedChange={(checked) => setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
                             />
                           </TableCell>
-                           <TableCell>
+                          <TableCell>
                             <span className="flex items-center gap-2">
                               <DraggableTestCase testCase={tc} />
                               <button onClick={() => handleDialogOpen(tc)} className="hover:underline">
@@ -468,12 +507,12 @@ export default function TestPlanPage() {
                             </span>
                           </TableCell>
                           <TableCell>
-                             <button onClick={() => handleDialogOpen(tc)} className="text-left hover:underline">
-                                {tc.title}
-                              </button>
+                            <button onClick={() => handleDialogOpen(tc)} className="text-left hover:underline">
+                              {tc.title}
+                            </button>
                           </TableCell>
-                           <TableCell>
-                             <Badge className={cn('font-semibold', statusStyles[tc.status])}>
+                          <TableCell>
+                            <Badge className={cn('font-semibold', statusStyles[tc.status])}>
                                 {tc.status}
                             </Badge>
                           </TableCell>
@@ -494,7 +533,7 @@ export default function TestPlanPage() {
                 {selectedPlan ? (
                   <>
                     <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
-                    <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeletingPlan(selectedPlan)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </>
                 ) : (
@@ -535,15 +574,15 @@ export default function TestPlanPage() {
         </div>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) setEditingPlan(null); }}>
+      <Dialog open={isPlanDialogOpen} onOpenChange={(open) => { setIsPlanDialogOpen(open); if(!open) setEditingPlan(null); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingPlan ? 'Edit Test Plan' : 'Create New Test Plan'}</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Form {...testPlanForm}>
+            <form onSubmit={testPlanForm.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
-                control={form.control}
+                control={testPlanForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
@@ -554,7 +593,7 @@ export default function TestPlanPage() {
                 )}
               />
               <FormField
-                  control={form.control}
+                  control={testPlanForm.control}
                   name="planType"
                   render={({ field }) => (
                   <FormItem>
@@ -572,7 +611,7 @@ export default function TestPlanPage() {
               />
               {watchedPlanType === 'Sprint' && (
                 <FormField
-                    control={form.control}
+                    control={testPlanForm.control}
                     name="sprintId"
                     render={({ field }) => (
                     <FormItem>
@@ -590,7 +629,7 @@ export default function TestPlanPage() {
               )}
               {watchedPlanType === 'Release' && (
                   <FormField
-                      control={form.control}
+                      control={testPlanForm.control}
                       name="releaseId"
                       render={({ field }) => (
                       <FormItem>
@@ -607,7 +646,7 @@ export default function TestPlanPage() {
                   />
               )}
               <FormField
-                control={form.control}
+                control={testPlanForm.control}
                 name="startDate"
                 render={({ field }) => (
                   <FormItem>
@@ -618,7 +657,7 @@ export default function TestPlanPage() {
                 )}
               />
               <FormField
-                control={form.control}
+                control={testPlanForm.control}
                 name="endDate"
                 render={({ field }) => (
                   <FormItem>
@@ -633,6 +672,16 @@ export default function TestPlanPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
+        {/* The full Test Case dialog form from test-cases/page.tsx would go here */}
+        <DialogContent>
+            <DialogHeader><DialogTitle>Edit Test Case</DialogTitle></DialogHeader>
+            <p>Editing test case: {editingTestCase?.title}</p>
+             {/* A simplified version for now */}
+            <Button onClick={() => setIsTestCaseDialogOpen(false)}>Close</Button>
         </DialogContent>
       </Dialog>
       
@@ -658,4 +707,3 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
-
