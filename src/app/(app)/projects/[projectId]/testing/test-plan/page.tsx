@@ -158,13 +158,15 @@ export default function TestPlanPage() {
   
   useEffect(() => {
     if(isDialogOpen && editingPlan) {
+        const startDate = new Date(editingPlan.startDate);
+        const endDate = new Date(editingPlan.endDate);
       form.reset({
         name: editingPlan.name,
         planType: editingPlan.planType,
         sprintId: editingPlan.sprintId,
         releaseId: editingPlan.releaseId,
-        startDate: format(parseISO(editingPlan.startDate), 'yyyy-MM-dd'),
-        endDate: format(parseISO(editingPlan.endDate), 'yyyy-MM-dd'),
+        startDate: format(new Date(startDate.valueOf() + startDate.getTimezoneOffset() * 60 * 1000), 'yyyy-MM-dd'),
+        endDate: format(new Date(endDate.valueOf() + endDate.getTimezoneOffset() * 60 * 1000), 'yyyy-MM-dd'),
       });
     } else if (isDialogOpen && !editingPlan) {
       form.reset({
