@@ -270,27 +270,42 @@ export default function TestPlanPage() {
   }
 
  const { dayColumns, backlog } = useMemo(() => {
-    if (!testCases || !testPlans) return { dayColumns: {}, backlog: [] };
-
-    let filteredTCs = [...testCases];
-    if (filters.sprintId?.length > 0) {
-      filteredTCs = filteredTCs.filter(tc => {
-        const sprint = sprints.find(s => s.id === tc.sprintId);
-        return filters.sprintId.includes(sprint?.title || 'Backlog');
-      });
-    }
-    if (filters.releaseId?.length > 0) {
-        filteredTCs = filteredTCs.filter(tc => {
-            const release = releases.find(r => r.id === tc.releaseId);
-            return filters.releaseId.includes(release?.name || 'Unassigned');
+    const dayCols: Record<string, TestCase[]> = {};
+    if (selectedPlan && selectedPlan.startDate && selectedPlan.endDate) {
+        const days = eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) });
+        days.forEach(day => {
+            const dateStr = format(day, 'yyyy-MM-dd');
+            dayCols[dateStr] = [];
         });
     }
-    if (filters.status?.length > 0) {
-        filteredTCs = filteredTCs.filter(tc => filters.status.includes(tc.status));
-    }
+
+    let backlogTCs: TestCase[] = [];
+    const planTCs: TestCase[] = [];
+
+    testCases.forEach(tc => {
+        if (tc.testPlanId === selectedPlan?.id && tc.executionDate) {
+            if (dayCols[tc.executionDate]) {
+                dayCols[tc.executionDate].push(tc);
+            } else {
+                planTCs.push(tc); // Should not happen if dates are aligned
+            }
+        } else {
+            backlogTCs.push(tc);
+        }
+    });
     
+    // Apply filters
+    const filterTCs = (tc: TestCase) => {
+        const sprintMatch = !filters.sprintId?.length || filters.sprintId.includes(sprints.find(s => s.id === tc.sprintId)?.title || 'Backlog');
+        const releaseMatch = !filters.releaseId?.length || filters.releaseId.includes(releases.find(r => r.id === tc.releaseId)?.name || 'Unassigned');
+        const statusMatch = !filters.status?.length || filters.status.includes(tc.status);
+        return sprintMatch && releaseMatch && statusMatch;
+    };
+    
+    backlogTCs = backlogTCs.filter(filterTCs);
+
     if (sorting) {
-      filteredTCs.sort((a, b) => {
+      backlogTCs.sort((a, b) => {
         let valA: any = (a as any)[sorting.id] || '';
         let valB: any = (b as any)[sorting.id] || '';
         if (sorting.id === 'sprintId') {
@@ -310,17 +325,6 @@ export default function TestPlanPage() {
         return sorting.desc ? -comparison : comparison;
       });
     }
-    
-    const dayCols: Record<string, TestCase[]> = {};
-    if (selectedPlan && selectedPlan.startDate && selectedPlan.endDate) {
-        const days = eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) });
-        days.forEach(day => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            dayCols[dateStr] = testCases.filter(tc => tc.testPlanId === selectedPlan.id && tc.executionDate === dateStr);
-        });
-    }
-    
-    const backlogTCs = filteredTCs.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan?.id);
     
     return { dayColumns: dayCols, backlog: backlogTCs };
 }, [selectedPlan, testCases, filters, sprints, releases, testPlans, sorting]);
@@ -419,7 +423,7 @@ export default function TestPlanPage() {
         </PageHeader>
         
         <div className="flex flex-col flex-1 gap-4 min-h-0">
-          <div className="h-1/2 flex flex-col">
+          <div className="flex flex-col h-1/2">
             <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
             <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
               <div className="overflow-y-auto">
@@ -458,13 +462,13 @@ export default function TestPlanPage() {
                            <TableCell>
                             <span className="flex items-center gap-2">
                               <DraggableTestCase testCase={tc} />
-                              <button onClick={() => { /* Open edit dialog */ }} className="hover:underline">
+                              <button onClick={() => {}} className="hover:underline">
                                 {tc.testCaseId}
                               </button>
                             </span>
                           </TableCell>
                           <TableCell>
-                             <button onClick={() => { /* Open edit dialog */ }} className="text-left hover:underline">
+                             <button onClick={() => {}} className="text-left hover:underline">
                                 {tc.title}
                               </button>
                           </TableCell>
@@ -484,7 +488,7 @@ export default function TestPlanPage() {
             </Droppable>
           </div>
           
-          <div className="h-1/2 flex flex-col">
+          <div className="flex flex-col h-1/2">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-4">
                 {selectedPlan ? (
@@ -654,3 +658,4 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
+
