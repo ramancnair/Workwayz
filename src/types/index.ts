@@ -12,6 +12,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -88,6 +89,14 @@ export type Sprint = {
 export type TestCaseStatus = 'Not Run' | 'Passed' | 'Failed' | 'Blocked' | 'Skipped';
 export type TestCaseType = 'Functional' | 'Non-functional';
 
+export type TestPlan = {
+  id: string;
+  name: string;
+  startDate: string; // ISO String
+  endDate: string; // ISO String;
+  tcsPerDay: number;
+};
+
 export type TestCase = {
   id: string;
   testCaseId: string;
@@ -103,6 +112,8 @@ export type TestCase = {
   environmentIds?: string[];
   isDeleted?: boolean;
   deletedAt?: string;
+  testPlanId?: string;
+  executionDate?: string; // ISO string for the date part
 };
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';
