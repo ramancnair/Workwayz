@@ -27,7 +27,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label as UiLabel } from '@/components/ui/label';
 import { format, parseISO, isSameDay, eachDayOfInterval, differenceInDays, isWithinInterval } from 'date-fns';
-import type { Story, WorklogItem } from '@/types';
+import type { Story, WorklogItem, UserRole } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
 const taskChartConfig = {
@@ -48,22 +48,9 @@ const costChartData = [
     { name: 'Budget', value: 350, fill: 'hsl(var(--destructive))' },
 ]
 
-const resourceCostsData = [
-  { name: 'Developer', planned: 150000, actual: 90000 },
-  { name: 'Analyst', planned: 300000, actual: 150000 },
-  { name: 'Project Manager', planned: 10000, actual: 5000 },
-  { name: 'QA', planned: 50000, actual: 25000 },
-  { name: 'Support', planned: 40000, actual: 10000 },
-];
-
 const resourceCostsConfig = {
-  planned: { label: 'Planned', color: 'hsl(var(--chart-2))' },
-  actual: { label: 'Actual', color: 'hsl(var(--chart-1))' },
-} satisfies ChartConfig;
-
-const costBurnupConfig = {
-  planned: { label: 'Planned Cost', color: 'hsl(var(--chart-2))' },
-  actual: { label: 'Actual Cost', color: 'hsl(var(--chart-1))' },
+  revenue: { label: 'Revenue', color: 'hsl(var(--chart-2))' },
+  cost: { label: 'Cost', color: 'hsl(var(--chart-5))' },
 } satisfies ChartConfig;
 
 
@@ -85,14 +72,15 @@ const otherCostsConfig = {
 
 
 export default function ProjectDashboardPage() {
-  const { stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings, employees, worklogs } = useProject();
+  const { project, stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings, employees, worklogs } = useProject();
   const [selectedReleaseId, setSelectedReleaseId] = useState('all');
   const [selectedSprintId, setSelectedSprintId] = useState('all');
   const [workloadSprintId, setWorkloadSprintId] = useState('all');
   
   const [timeFilterSprintId, setTimeFilterSprintId] = useState('all');
   const [timeFilterReleaseId, setTimeFilterReleaseId] = useState('all');
-  const [costBurnupSprintId, setCostBurnupSprintId] = useState('all');
+  const [costDurationType, setCostDurationType] = useState<'overall' | 'release' | 'sprint'>('overall');
+  const [costDurationId, setCostDurationId] = useState<string>('all');
 
 
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
@@ -101,10 +89,8 @@ export default function ProjectDashboardPage() {
     const currentSprint = sprints.find(s => s.isCurrent);
     if (currentSprint) {
       setWorkloadSprintId(currentSprint.id);
-      setCostBurnupSprintId(currentSprint.id);
     } else if (sprints.length > 0) {
       setWorkloadSprintId(sprints[0].id);
-      setCostBurnupSprintId(sprints[0].id);
     }
   }, [sprints]);
 
@@ -167,17 +153,32 @@ export default function ProjectDashboardPage() {
     });
   }, [epics, stories]);
   
-  const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
-    if(!start || !end) return 0;
-    const holidayDates = holidays.map(h => parseISO(h.date));
-    const interval = eachDayOfInterval({ start, end });
-    
-    return interval.filter(day => {
-      const dayOfWeek = day.getDay();
-      const isWeekend = weeklyOffDays.includes(dayOfWeek);
-      const isHoliday = holidayDates.some(h => isSameDay(day, h));
-      return !isWeekend && !isHoliday;
-    }).length;
+  const calculateBusinessDays = useCallback((startStr?: string, endStr?: string): number => {
+    if(!startStr || !endStr) return 0;
+    try {
+        const start = parseISO(startStr);
+        const end = parseISO(endStr);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+            return 0;
+        }
+
+        const holidayDates = holidays.map(h => new Date(h.date));
+
+        const interval = eachDayOfInterval({ start, end });
+        
+        const businessDays = interval.filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+            return !isWeekend && !isHoliday;
+        });
+
+        return businessDays.length;
+    } catch(e) {
+        console.error("Error calculating business days", e);
+        return 0;
+    }
   }, [holidays, weeklyOffDays]);
   
   const workloadData = useMemo(() => {
@@ -216,7 +217,7 @@ export default function ProjectDashboardPage() {
         if (!story.developmentStartDate || !story.completionDate) return total;
         const start = parseISO(story.developmentStartDate);
         const end = parseISO(story.completionDate);
-        const days = calculateBusinessDays(start, end);
+        const days = calculateBusinessDays(start.toISOString(), end.toISOString());
         const hoursPerDay = projectSettings?.manDayToHours || 8;
         return total + (days * hoursPerDay);
     }, 0);
@@ -237,59 +238,64 @@ export default function ProjectDashboardPage() {
       return calculateEffort(relevantStories);
   }, [timeFilterReleaseId, stories, calculateEffort]);
   
-  const costBurnupData = useMemo(() => {
-    const sprint = sprints.find(s => s.id === costBurnupSprintId);
-    if (!sprint || !sprint.startDate || !sprint.endDate) return [];
-  
-    const sprintStart = parseISO(sprint.startDate);
-    const sprintEnd = parseISO(sprint.endDate);
-    const sprintDates = eachDayOfInterval({ start: sprintStart, end: sprintEnd });
-  
-    const sprintEmployees = employees.filter(emp => {
-      if (!emp.onboardingDate || !emp.offloadingDate) return false;
-      const onboarding = parseISO(emp.onboardingDate);
-      const offloading = parseISO(emp.offloadingDate);
-      return isWithinInterval(sprintStart, { start: onboarding, end: offloading }) || isWithinInterval(sprintEnd, { start: onboarding, end: offloading });
-    });
-  
-    let cumulativePlannedCost = 0;
-    let cumulativeActualCost = 0;
-  
-    return sprintDates.map(day => {
-      // Calculate daily planned cost
-      let dailyPlannedCost = 0;
-      sprintEmployees.forEach(emp => {
-        const onboarding = emp.onboardingDate ? parseISO(emp.onboardingDate) : new Date(0);
-        const offloading = emp.offloadingDate ? parseISO(emp.offloadingDate) : new Date(8640000000000000);
-        if (isWithinInterval(day, { start: onboarding, end: offloading })) {
-            const isWorkingDay = !weeklyOffDays.includes(day.getDay()) && !holidays.some(h => isSameDay(day, parseISO(h.date)));
-            if (isWorkingDay) {
-                dailyPlannedCost += (emp.billedRate || 0) * ((emp.availability || 100) / 100);
-            }
-        }
-      });
-      cumulativePlannedCost += dailyPlannedCost;
-  
-      // Calculate daily actual cost
-      const dateKey = format(day, 'yyyy-MM-dd');
-      let dailyActualCost = 0;
-      const dailyLogs = worklogs.filter(log => format(parseISO(log.date), 'yyyy-MM-dd') === dateKey);
+  const resourceCostsData = useMemo(() => {
+    let startDate: string | undefined, endDate: string | undefined;
 
-      dailyLogs.forEach(log => {
-        const employee = employees.find(e => e.id === log.employeeId);
-        if (employee) {
-            dailyActualCost += (log.totalHours / (projectSettings?.manDayToHours || 8)) * (employee.billedRate || 0);
-        }
-      });
-      cumulativeActualCost += dailyActualCost;
-  
-      return {
-        date: format(day, 'dd/MM'),
-        planned: cumulativePlannedCost,
-        actual: cumulativeActualCost,
-      };
+    if (costDurationType === 'overall') {
+      startDate = project?.startDate;
+      endDate = project?.endDate;
+    } else if (costDurationType === 'release') {
+      const release = releases.find(r => r.id === costDurationId);
+      startDate = release?.startDate;
+      endDate = release?.endDate;
+    } else if (costDurationType === 'sprint') {
+      const sprint = sprints.find(s => s.id === costDurationId);
+      startDate = sprint?.startDate;
+      endDate = sprint?.endDate;
+    }
+
+    if (!startDate || !endDate) return [];
+    
+    const workingDays = calculateBusinessDays(startDate, endDate);
+
+    const costsByRole: Record<string, { role: UserRole, revenue: number; cost: number }> = {};
+    
+    const roles = Array.from(new Set(employees.map(e => e.role).filter(Boolean)));
+    
+    roles.forEach(role => {
+        costsByRole[role!] = { role: role!, revenue: 0, cost: 0 };
     });
-  }, [costBurnupSprintId, sprints, employees, worklogs, weeklyOffDays, holidays, projectSettings]);
+
+    employees.forEach(emp => {
+      if (emp.role && costsByRole[emp.role]) {
+        const billedRate = emp.billedRate || 0;
+        const costRate = emp.costRate || 0;
+        const availability = (emp.availability || 100) / 100;
+        
+        costsByRole[emp.role].revenue += billedRate * workingDays * availability;
+        costsByRole[emp.role].cost += costRate * workingDays * availability;
+      }
+    });
+
+    return Object.values(costsByRole).filter(roleData => roleData.revenue > 0 || roleData.cost > 0);
+  }, [project, costDurationType, costDurationId, employees, sprints, releases, calculateBusinessDays]);
+
+  const costDurationOptions = useMemo(() => {
+    if (costDurationType === 'release') return releases.map(r => ({ value: r.id, label: `[${r.releaseId}] ${r.name}` }));
+    if (costDurationType === 'sprint') return sprints.map(s => ({ value: s.id, label: s.title }));
+    return [];
+  }, [costDurationType, releases, sprints]);
+
+  useEffect(() => {
+      if (costDurationType === 'release' && releases.length > 0) {
+        setCostDurationId(releases[0].id);
+      } else if (costDurationType === 'sprint' && sprints.length > 0) {
+          const current = sprints.find(s => s.isCurrent) || sprints[0];
+          setCostDurationId(current.id);
+      } else {
+        setCostDurationId('all');
+      }
+  }, [costDurationType, releases, sprints]);
 
 
   return (
@@ -475,10 +481,10 @@ export default function ProjectDashboardPage() {
           </CardHeader>
           <CardContent>
              <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
-                <BarChart data={workloadData} layout="horizontal" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-                    <CartesianGrid vertical={false} />
-                    <YAxis type="number" tickFormatter={(value) => `${value}h`} />
-                    <XAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} width={120} />
+                <BarChart data={workloadData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" tickFormatter={(value) => `${value}h`} />
+                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={8} width={120} />
                     <Tooltip content={<ChartTooltipContent indicator="dot" />} />
                     <Legend content={<ChartLegendContent />} />
                     <Bar dataKey="subTaskEffort" stackId="a" fill="var(--color-subTaskEffort)" radius={[0, 4, 4, 0]} />
@@ -493,45 +499,42 @@ export default function ProjectDashboardPage() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Resource Costs</CardTitle>
-            <div className="w-[180px]">
-              <Select value={costBurnupSprintId} onValueChange={setCostBurnupSprintId}>
-                <SelectTrigger id="cost-sprint-filter" className="h-8">
-                    <SelectValue placeholder="Select a sprint" />
-                </SelectTrigger>
-                <SelectContent>
-                    {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-2">
+                <Select value={costDurationType} onValueChange={(v) => setCostDurationType(v as any)}>
+                  <SelectTrigger className="w-[120px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="overall">Overall</SelectItem>
+                    <SelectItem value="release">Release</SelectItem>
+                    <SelectItem value="sprint">Sprint</SelectItem>
+                  </SelectContent>
+                </Select>
+                {costDurationType !== 'overall' && (
+                  <Select value={costDurationId} onValueChange={setCostDurationId}>
+                    <SelectTrigger className="w-[180px] h-8">
+                      <SelectValue placeholder={`Select ${costDurationType}...`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {costDurationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
             </div>
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
+        <CardContent>
             <ChartContainer config={resourceCostsConfig} className="h-[300px] w-full">
               <BarChart data={resourceCostsData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
                 <CartesianGrid vertical={false} />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+                <XAxis dataKey="role" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis tickFormatter={(value) => `$${Number(value) / 1000}K`} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="planned" stackId="a" fill="var(--color-planned)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="actual" stackId="a" fill="var(--color-actual)" />
+                <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="cost" fill="var(--color-cost)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
-          </div>
-          <div className="flex items-center justify-center">
-             <ChartContainer config={costBurnupConfig} className="h-[250px] w-full">
-                <AreaChart data={costBurnupData} margin={{ left: -20, right: 20 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis tickFormatter={(value) => `$${value/1000}k`} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Area dataKey="planned" type="monotone" fill="var(--color-planned)" fillOpacity={0.4} stroke="var(--color-planned)" />
-                    <Area dataKey="actual" type="monotone" fill="var(--color-actual)" fillOpacity={0.4} stroke="var(--color-actual)" />
-                </AreaChart>
-            </ChartContainer>
-          </div>
         </CardContent>
       </Card>
       
@@ -590,6 +593,7 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
+
 
 
 
