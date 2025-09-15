@@ -11,6 +11,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -374,7 +375,5 @@ export type BugCriticality = 'Low' | 'Medium' | 'High' | 'Critical';
 export type FixedCost = {
   id: string;
   name: string;
-  cost: number; // Actual Cost
-  plannedCost?: number;
-  ongoingCost?: number;
+  cost: number;
 };

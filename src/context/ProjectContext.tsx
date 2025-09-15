@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -282,7 +283,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
     '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments', 'releases'],
-    '/project-details/project-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics'],
+    '/project-details/project-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
     '/project-details/architecture': ['environments', 'impactedSystems', 'horizontals'],
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
@@ -938,7 +939,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>): Promise<boolean> => {
+  const updateEpic = async (epicId: string, data: Partial<Omit<Epic, 'id'>>) => {
     if (!db || !projectId) return false;
     if (data.title && epics.some(e => e.id !== epicId && e.title.toLowerCase() === data.title!.toLowerCase())) {
         return false; // Name must be unique
@@ -1320,7 +1321,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const updateRisk = async (riskId: string, data: Partial<Omit<Risk, 'id' | 'riskId'>>): Promise<boolean> => {
+  const updateRisk = async (riskId: string, data: Partial<Omit<Risk, 'id' | 'riskId'>>) => {
     if (!db || !projectId) return false;
     try {
       await updateDoc(doc(db, 'projects', projectId, 'risks', riskId), sanitizeForFirestore(data));
@@ -1477,7 +1478,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const updateIssue = async (id: string, data: Partial<Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { resolvedDate?: Date }>): Promise<boolean> => {
+  const updateIssue = async (id: string, data: Partial<Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { resolvedDate?: Date }>) => {
     if (!db || !projectId) return false;
     try {
       const { resolvedDate, ...rest } = data;
@@ -1557,7 +1558,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
-  const updateDependency = async (id: string, data: Partial<Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate?: Date }>): Promise<boolean> => {
+  const updateDependency = async (id: string, data: Partial<Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate?: Date }>) => {
     if (!db || !projectId) return false;
     try {
       const { expectedByDate, ...rest } = data;
