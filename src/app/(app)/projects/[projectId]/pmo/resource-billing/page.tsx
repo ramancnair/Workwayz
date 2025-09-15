@@ -75,9 +75,9 @@ export default function ResourceBillingPage() {
     }
   };
 
-  const handleFixedCostChange = (id: string, value: string) => {
-    const numericValue = parseFloat(value) || 0;
-    updateFixedCost(id, { cost: numericValue });
+  const handleFixedCostChange = (id: string, field: 'name' | 'cost', value: string | number) => {
+    const updateData: Partial<FixedCost> = { [field]: value };
+    updateFixedCost(id, updateData);
   };
 
   const handleAddNewFixedCost = async () => {
@@ -210,12 +210,18 @@ export default function ResourceBillingPage() {
                 <TableBody>
                     {fixedCosts && fixedCosts.map(item => (
                         <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="font-medium">
+                                <Input
+                                    defaultValue={item.name}
+                                    onBlur={(e) => handleFixedCostChange(item.id, 'name', e.target.value)}
+                                    className="border-none bg-transparent -ml-2 focus-visible:ring-1"
+                                />
+                            </TableCell>
                             <TableCell>
                                 <Input
                                     type="number"
                                     defaultValue={item.cost}
-                                    onBlur={(e) => handleFixedCostChange(item.id, e.target.value)}
+                                    onBlur={(e) => handleFixedCostChange(item.id, 'cost', parseFloat(e.target.value) || 0)}
                                     className="w-32"
                                 />
                             </TableCell>
@@ -284,3 +290,4 @@ export default function ResourceBillingPage() {
     </div>
   );
 }
+
