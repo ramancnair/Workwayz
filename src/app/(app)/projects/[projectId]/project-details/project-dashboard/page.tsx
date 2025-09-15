@@ -115,16 +115,18 @@ export default function ProjectDashboardPage() {
   const epicProgressData = useMemo(() => {
     if (!epics || epics.length === 0) return [];
 
-    return epics.map(epic => {
-      const epicStories = stories.filter(story => story.epicId === epic.id && !story.parentStoryId);
-      const totalStories = epicStories.length;
-      if (totalStories === 0) {
-        return { name: epic.title, progress: 0 };
-      }
-      const doneStories = epicStories.filter(story => story.status === 'Done').length;
-      const progress = Math.round((doneStories / totalStories) * 100);
-      return { name: epic.title, progress };
-    });
+    return [...epics]
+      .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true }))
+      .map(epic => {
+        const epicStories = stories.filter(story => story.epicId === epic.id && !story.parentStoryId);
+        const totalStories = epicStories.length;
+        if (totalStories === 0) {
+          return { name: epic.title, progress: 0 };
+        }
+        const doneStories = epicStories.filter(story => story.status === 'Done').length;
+        const progress = Math.round((doneStories / totalStories) * 100);
+        return { name: epic.title, progress };
+      });
   }, [epics, stories]);
   
   const calculateBusinessDays = useCallback((startStr?: string, endStr?: string): number => {
