@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -19,7 +18,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
 import type { TestPlan, TestCase, Employee, Release } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +38,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const testPlanSchemaBase = z.object({
   name: z.string().min(1, 'Plan name is required.'),
@@ -105,6 +105,8 @@ export default function TestPlanPage() {
     releasesAndMilestones,
     updateTestPlan,
     deleteTestPlan,
+    environments,
+    employees,
   } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -126,6 +128,12 @@ export default function TestPlanPage() {
   const watchedPlanType = useWatch({ control: form.control, name: 'planType' });
   const watchedSprintId = useWatch({ control: form.control, name: 'sprintId' });
   const watchedReleaseId = useWatch({ control: form.control, name: 'releaseId' });
+  
+  const [filters, setFilters] = useState({
+    sprintId: 'all',
+    releaseId: 'all',
+  });
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
 
   useEffect(() => {
     if (watchedPlanType === 'Sprint' && watchedSprintId) {
@@ -243,6 +251,14 @@ export default function TestPlanPage() {
   const { dayColumns, backlog } = useMemo(() => {
     if (!testCases) return { dayColumns: {}, backlog: [] };
     
+    let filteredTCs = [...testCases];
+    if (filters.sprintId !== 'all') {
+      filteredTCs = filteredTCs.filter(tc => (tc.sprintId || 'backlog') === filters.sprintId);
+    }
+    if (filters.releaseId !== 'all') {
+      filteredTCs = filteredTCs.filter(tc => (tc.releaseId || 'unassigned') === filters.releaseId);
+    }
+    
     let scheduledTestCaseIds = new Set<string>();
     const dayCols: Record<string, TestCase[]> = {};
 
@@ -265,10 +281,10 @@ export default function TestPlanPage() {
         });
     }
 
-    const backlogTCs = testCases.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan?.id);
+    const backlogTCs = filteredTCs.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan?.id);
     
     return { dayColumns: dayCols, backlog: backlogTCs };
-  }, [selectedPlan, testCases]);
+  }, [selectedPlan, testCases, filters]);
 
 
   const days = selectedPlan && selectedPlan.startDate && selectedPlan.endDate 
@@ -277,6 +293,31 @@ export default function TestPlanPage() {
   const itemsPerPage = 5;
   const totalPages = Math.ceil(days.length / itemsPerPage);
   const visibleDays = days.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  
+  const handleSort = (columnId: string) => {
+    if (sorting?.id === columnId) {
+      setSorting({ ...sorting, desc: !sorting.desc });
+    } else {
+      setSorting({ id: columnId, desc: false });
+    }
+  };
+
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ sprintId: 'all', releaseId: 'all' });
+  };
+  
+  const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => (
+    <TableHead>
+      <Button variant="ghost" onClick={() => handleSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
 
   return (
     <DndContext onDragEnd={handleDrop}>
@@ -301,25 +342,65 @@ export default function TestPlanPage() {
           <CardContent className="p-4 flex-1 flex flex-col">
             <Droppable id="backlog" className="h-1/2 border rounded-lg p-4 overflow-auto">
               <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
-              <div className="flex items-center gap-2 mb-2">
-                 <Button size="sm" variant="outline" onClick={() => handleBulkMove('backlog')} disabled={selectedTCs.length === 0}>
-                    Move to Backlog
-                 </Button>
+                <div className="flex items-center gap-4 flex-wrap pb-4">
+                    <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
+                        <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="all">All Sprints</SelectItem>
+                        <SelectItem value="backlog">Backlog</SelectItem>
+                        {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select value={filters.releaseId} onValueChange={(v) => handleFilterChange('releaseId', v)}>
+                        <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by release..."/></SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="all">All Releases</SelectItem>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Button variant="ghost" onClick={clearFilters}>
+                        <X className="mr-2 h-4 w-4" /> Clear Filters
+                    </Button>
               </div>
-              <div className="space-y-2">
-                {backlog.map(tc => (
-                  <div key={tc.id} className="flex items-center gap-2">
-                    <Checkbox
-                      checked={selectedTCs.includes(tc.id)}
-                      onCheckedChange={(checked) => {
-                        setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id));
-                      }}
-                    />
-                    <DraggableTestCase testCase={tc} />
-                    <span>{tc.title}</span>
-                  </div>
-                ))}
-              </div>
+
+                <div className="border rounded-md overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-10">
+                                    <Checkbox
+                                        checked={backlog.length > 0 && selectedTCs.length === backlog.length}
+                                        onCheckedChange={(checked) => setSelectedTCs(checked ? backlog.map(tc => tc.id) : [])}
+                                    />
+                                </TableHead>
+                                <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                                <SortableHeader columnId="title">Title</SortableHeader>
+                                <SortableHeader columnId="sprintId">Sprint</SortableHeader>
+                                <SortableHeader columnId="releaseId">Release</SortableHeader>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {backlog.map(tc => {
+                                const sprint = sprints.find(s => s.id === tc.sprintId);
+                                const release = releases.find(r => r.id === tc.releaseId);
+                                return (
+                                <TableRow key={tc.id}>
+                                    <TableCell>
+                                        <Checkbox
+                                            checked={selectedTCs.includes(tc.id)}
+                                            onCheckedChange={(checked) => setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                                        />
+                                    </TableCell>
+                                    <TableCell><DraggableTestCase testCase={tc} /></TableCell>
+                                    <TableCell>{tc.title}</TableCell>
+                                    <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                                    <TableCell>{release?.releaseId || 'N/A'}</TableCell>
+                                </TableRow>
+                            )})}
+                        </TableBody>
+                    </Table>
+                </div>
             </Droppable>
 
             <div className="h-1/2 mt-4 flex flex-col">
@@ -447,7 +528,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -458,7 +539,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
