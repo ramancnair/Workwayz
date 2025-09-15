@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -134,7 +135,7 @@ export default function TestPlanPage() {
   const watchedSprintId = useWatch({ control: form.control, name: 'sprintId' });
   const watchedReleaseId = useWatch({ control: form.control, name: 'releaseId' });
   
- const [filters, setFilters] = useState<Record<string, string[]>>({
+  const [filters, setFilters] = useState<Record<string, string[]>>({
     sprintId: [],
     releaseId: [],
   });
@@ -161,7 +162,10 @@ export default function TestPlanPage() {
     if (!testPlans || testPlans.length === 0) return null;
     const currentPlan = testPlans.find(p => p.id === selectedPlanId);
     if(currentPlan) return currentPlan;
-    if (testPlans.length > 0) return testPlans[0];
+    if (testPlans.length > 0) {
+      setSelectedPlanId(testPlans[0].id)
+      return testPlans[0];
+    }
     return null;
   }, [selectedPlanId, testPlans]);
   
@@ -401,10 +405,11 @@ export default function TestPlanPage() {
         
         <Card className="flex-1 flex flex-col min-h-0">
             <CardContent className="p-4 flex-1 flex flex-col gap-4">
-                <div className="flex-[1_1_50%] relative">
-                    <Droppable id="backlog" className="h-full border rounded-lg p-4 overflow-auto">
-                        <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
-                        <div className="border rounded-md overflow-hidden">
+              <div className="flex flex-col h-full">
+                  <div className="h-[45%] flex flex-col relative">
+                      <Droppable id="backlog" className="h-full border rounded-lg p-4 overflow-auto">
+                          <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
+                          <div className="border rounded-md overflow-hidden">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -445,10 +450,10 @@ export default function TestPlanPage() {
                                 </TableBody>
                             </Table>
                         </div>
-                    </Droppable>
-                </div>
-                
-                <div className="flex-[1_1_50%] flex flex-col">
+                      </Droppable>
+                  </div>
+                  
+                  <div className="h-[55%] flex flex-col pt-4">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-4">
                         {selectedPlan ? (
@@ -472,10 +477,10 @@ export default function TestPlanPage() {
                         </div>
                     </div>
                     <div className="flex-1 grid grid-cols-5 gap-4">
-                    {visibleDays.map(day => {
+                      {visibleDays.map(day => {
                         const dateStr = format(day, 'yyyy-MM-dd');
                         return (
-                        <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 overflow-auto">
+                          <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 overflow-auto">
                             <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
                             <div className="text-center mb-2">
                                 <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`)} disabled={selectedTCs.length === 0}>
@@ -487,11 +492,12 @@ export default function TestPlanPage() {
                                 <DraggableTestCase key={tc.id} testCase={tc} />
                             ))}
                             </div>
-                        </Droppable>
+                          </Droppable>
                         );
-                    })}
+                      })}
                     </div>
-                </div>
+                  </div>
+              </div>
             </CardContent>
         </Card>
       </div>
@@ -619,3 +625,4 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
+
