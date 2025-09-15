@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -113,8 +112,6 @@ export default function TestPlanPage() {
     releasesAndMilestones,
     updateTestPlan,
     deleteTestPlan,
-    environments,
-    employees,
   } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -123,6 +120,8 @@ export default function TestPlanPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedTCs, setSelectedTCs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
+  const [isResizing, setIsResizing] = useState(false);
+  const [backlogHeight, setBacklogHeight] = useState(50); // Initial height in percentage
   
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -142,6 +141,39 @@ export default function TestPlanPage() {
     releaseId: [],
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
+  
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+  };
+  
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+      // Using clientY and window.innerHeight to calculate percentage
+      const newHeight = (e.clientY / window.innerHeight) * 100;
+      // Clamping the value between reasonable limits, e.g., 20% and 80%
+      const clampedHeight = Math.max(20, Math.min(80, newHeight));
+      setBacklogHeight(clampedHeight);
+    }
+  }, [isResizing]);
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, handleMouseMove]);
 
   useEffect(() => {
     if (watchedPlanType === 'Sprint' && watchedSprintId) {
@@ -404,53 +436,59 @@ export default function TestPlanPage() {
         
         <Card className="flex-1 flex flex-col">
           <CardContent className="p-4 flex-1 flex flex-col">
-            <Droppable id="backlog" className="h-1/2 border rounded-lg p-4 overflow-auto">
-              <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
+            <div style={{ height: `${backlogHeight}%` }} className="relative">
+              <Droppable id="backlog" className="h-full border rounded-lg p-4 overflow-auto">
+                <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
 
-                <div className="border rounded-md overflow-hidden">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-10">
-                                    <Checkbox
-                                        checked={backlog.length > 0 && selectedTCs.length === backlog.length}
-                                        onCheckedChange={(checked) => setSelectedTCs(checked ? backlog.map(tc => tc.id) : [])}
-                                    />
-                                </TableHead>
-                                <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                                <SortableHeader columnId="title">Title</SortableHeader>
-                                 <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
-                                  Sprint
-                                </FilterableHeader>
-                                <FilterableHeader columnId="releaseId" filterOptions={[{value: 'Unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.name, label: r.name}))]}>
-                                  Release
-                                </FilterableHeader>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {backlog.map(tc => {
-                                const sprint = sprints.find(s => s.id === tc.sprintId);
-                                const release = releases.find(r => r.id === tc.releaseId);
-                                return (
-                                <TableRow key={tc.id}>
-                                    <TableCell>
-                                        <Checkbox
-                                            checked={selectedTCs.includes(tc.id)}
-                                            onCheckedChange={(checked) => setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                                        />
-                                    </TableCell>
-                                    <TableCell><DraggableTestCase testCase={tc} /></TableCell>
-                                    <TableCell>{tc.title}</TableCell>
-                                    <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                                    <TableCell>{release?.name || 'N/A'}</TableCell>
-                                </TableRow>
-                            )})}
-                        </TableBody>
-                    </Table>
-                </div>
-            </Droppable>
+                  <div className="border rounded-md overflow-hidden">
+                      <Table>
+                          <TableHeader>
+                              <TableRow>
+                                  <TableHead className="w-10">
+                                      <Checkbox
+                                          checked={backlog.length > 0 && selectedTCs.length === backlog.length}
+                                          onCheckedChange={(checked) => setSelectedTCs(checked ? backlog.map(tc => tc.id) : [])}
+                                      />
+                                  </TableHead>
+                                  <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                                  <SortableHeader columnId="title">Title</SortableHeader>
+                                  <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
+                                    Sprint
+                                  </FilterableHeader>
+                                  <FilterableHeader columnId="releaseId" filterOptions={[{value: 'Unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.name, label: r.name}))]}>
+                                    Release
+                                  </FilterableHeader>
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {backlog.map(tc => {
+                                  const sprint = sprints.find(s => s.id === tc.sprintId);
+                                  const release = releases.find(r => r.id === tc.releaseId);
+                                  return (
+                                  <TableRow key={tc.id}>
+                                      <TableCell>
+                                          <Checkbox
+                                              checked={selectedTCs.includes(tc.id)}
+                                              onCheckedChange={(checked) => setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                                          />
+                                      </TableCell>
+                                      <TableCell><DraggableTestCase testCase={tc} /></TableCell>
+                                      <TableCell>{tc.title}</TableCell>
+                                      <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                                      <TableCell>{release?.name || 'N/A'}</TableCell>
+                                  </TableRow>
+                              )})}
+                          </TableBody>
+                      </Table>
+                  </div>
+              </Droppable>
+            </div>
+            
+            <div onMouseDown={handleMouseDown} className="w-full h-2 cursor-row-resize flex items-center justify-center group">
+              <div className="h-1 w-16 rounded-full bg-border group-hover:bg-primary transition-colors" />
+            </div>
 
-            <div className="h-1/2 mt-4 flex flex-col">
+            <div className="flex-1 mt-4 flex flex-col" style={{ height: `calc(${100 - backlogHeight}% - 0.5rem)` }}>
                 <div className="flex items-center justify-between mb-2">
                    <div className="flex items-center gap-4">
                       {selectedPlan ? (
@@ -621,3 +659,4 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
+
