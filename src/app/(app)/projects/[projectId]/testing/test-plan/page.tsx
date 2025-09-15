@@ -152,6 +152,7 @@ export default function TestPlanPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedTCs, setSelectedTCs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
+  const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -232,18 +233,29 @@ export default function TestPlanPage() {
     }
   }, [isPlanDialogOpen, editingPlan, testPlanForm]);
 
+  const storyOptions = useMemo(() => stories
+    .filter(s => s.itemType === 'Requirement/Story')
+    .map(story => ({
+      value: story.id,
+      label: `[${story.storyId}] ${story.title}`,
+    })), [stories]);
+  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
+
+
   useEffect(() => {
     if (isTestCaseDialogOpen && editingTestCase) {
+        const relatedStory = storyOptions.find(opt => opt.value === editingTestCase.storyId);
+        setRelatedStoryInputText(relatedStory?.label || '');
         testCaseForm.reset({
             ...editingTestCase,
-            storyId: editingTestCase.storyId || undefined,
-            releaseId: editingTestCase.releaseId || undefined,
-            sprintId: editingTestCase.sprintId || undefined,
-            assigneeId: editingTestCase.assigneeId || undefined,
+            storyId: editingTestCase.storyId || '',
+            releaseId: editingTestCase.releaseId || 'unassigned',
+            sprintId: editingTestCase.sprintId || 'backlog',
+            assigneeId: editingTestCase.assigneeId || 'unassigned',
             environmentIds: editingTestCase.environmentIds || [],
         });
     }
-  }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
+  }, [isTestCaseDialogOpen, editingTestCase, testCaseForm, storyOptions]);
 
 
   const onTestPlanSubmit = async (values: z.infer<typeof refinedTestPlanSchema>) => {
@@ -263,7 +275,19 @@ export default function TestPlanPage() {
 
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     if (!editingTestCase) return;
-    const success = await updateTestCase(editingTestCase.id, values);
+    const testCaseData = {
+        title: values.title,
+        type: values.type,
+        description: values.description,
+        expectedResult: values.expectedResult,
+        status: values.status,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+        storyId: values.storyId === '' ? undefined : values.storyId,
+        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+        sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
+        environmentIds: values.environmentIds,
+    };
+    const success = await updateTestCase(editingTestCase.id, testCaseData);
     if (success) {
       toast({ title: 'Success', description: 'Test Case updated.' });
       setIsTestCaseDialogOpen(false);
@@ -331,7 +355,7 @@ export default function TestPlanPage() {
     testCases.forEach(tc => {
         if (tc.testPlanId === selectedPlan?.id && tc.executionDate && dayCols[tc.executionDate]) {
             dayCols[tc.executionDate].push(tc);
-        } else {
+        } else if (tc.testPlanId !== selectedPlan?.id || !tc.executionDate) {
             backlogTCs.push(tc);
         }
     });
@@ -483,7 +507,7 @@ export default function TestPlanPage() {
                           onCheckedChange={(checked) => setSelectedTCs(checked ? backlog.map(tc => tc.id) : [])}
                         />
                       </TableHead>
-                       <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                      <SortableHeader columnId="testCaseId">ID</SortableHeader>
                       <SortableHeader columnId="title">Title</SortableHeader>
                       <FilterableHeader columnId="status" filterOptions={testCaseStatuses.map(s => ({value: s, label: s}))}>Status</FilterableHeader>
                       <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
@@ -519,7 +543,7 @@ export default function TestPlanPage() {
                               {tc.title}
                             </button>
                           </TableCell>
-                          <TableCell>
+                           <TableCell>
                             <Badge className={cn('font-semibold', statusStyles[tc.status])}>
                                 {tc.status}
                             </Badge>
@@ -659,7 +683,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} readOnly={!!(watchedSprintId || watchedReleaseId)} /></FormControl>
+                    <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!!(watchedSprintId || watchedReleaseId)} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -670,7 +694,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} readOnly={!!(watchedSprintId || watchedReleaseId)}/></FormControl>
+                    <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!!(watchedSprintId || watchedReleaseId)}/></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -685,34 +709,216 @@ export default function TestPlanPage() {
       
       <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Edit Test Case</DialogTitle></DialogHeader>
-            <Form {...testCaseForm}>
-              <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="space-y-4 py-4">
-                {/* Simplified form for brevity. Full form from test-cases/page.tsx would be here */}
-                <FormField control={testCaseForm.control} name="title" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl><Input placeholder="Test case title" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                )} />
-                 <FormField control={testCaseForm.control} name="status" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                              {testCaseStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                )} />
-                <DialogFooter>
-                  <Button type="submit">Save Changes</Button>
-                </DialogFooter>
-              </form>
-            </Form>
+          <DialogHeader>
+            <DialogTitle>{editingTestCase ? 'Edit Test Case' : 'Add New Test Case'}</DialogTitle>
+            <DialogDescription>
+              {editingTestCase ? 'Update the details for this test case.' : 'Fill in the details for the new test case.'}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...testCaseForm}>
+            <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="space-y-4">
+              <FormField control={testCaseForm.control} name="title" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl><Input placeholder="E.g., Verify user login with valid credentials" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+              )} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={testCaseForm.control} name="type" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Test Case Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                {testCaseTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                  )} />
+                  <FormField control={testCaseForm.control} name="status" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                {testCaseStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                  )} />
+              </div>
+               <FormField control={testCaseForm.control} name="description" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Steps)</FormLabel>
+                    <FormControl><Textarea placeholder="1. Navigate to login page..." {...field} rows={4} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+              )} />
+               <FormField control={testCaseForm.control} name="expectedResult" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expected Result</FormLabel>
+                    <FormControl><Textarea placeholder="User should be successfully logged in and redirected to the dashboard." {...field} rows={3} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+              )} />
+               <FormField
+                control={testCaseForm.control}
+                name="environmentIds"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Environments to Run</FormLabel>
+                    <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
+                      {sortedEnvironments.map((env) => (
+                        <FormField
+                          key={env.id}
+                          control={testCaseForm.control}
+                          name="environmentIds"
+                          render={({ field }) => {
+                            return (
+                              <FormItem
+                                key={env.id}
+                                className="flex flex-row items-start space-x-3 space-y-0"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(env.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...(field.value || []), env.id])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== env.id
+                                            )
+                                          )
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {env.name}
+                                </FormLabel>
+                              </FormItem>
+                            )
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={testCaseForm.control} name="assigneeId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assignee</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a resource" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                  )} />
+                   <FormField control={testCaseForm.control} name="storyId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Related Story (Optional)</FormLabel>
+                          <FormControl>
+                            <Input 
+                                list="story-options-tc" 
+                                placeholder="Select a story..." 
+                                value={relatedStoryInputText}
+                                onChange={(e) => {
+                                    const inputText = e.target.value;
+                                    setRelatedStoryInputText(inputText);
+                                    
+                                    const matchingOption = storyOptions.find(opt => opt.label === inputText);
+                                    if (matchingOption) {
+                                        field.onChange(matchingOption.value);
+                                    } else {
+                                        field.onChange('');
+                                    }
+                                }}
+                                onBlur={() => {
+                                    const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
+                                    if (!matchingOption) {
+                                        setRelatedStoryInputText('');
+                                        field.onChange('');
+                                    }
+                                }}
+                            />
+                          </FormControl>
+                          <datalist id="story-options-tc">
+                            {storyOptions.map(option => (
+                              <option key={option.value} value={option.label}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </datalist>
+                        <FormMessage />
+                      </FormItem>
+                  )} />
+              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={testCaseForm.control}
+                      name="sprintId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Sprint</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || 'backlog'}
+                            disabled={!!testCaseForm.getValues('storyId')}
+                          >
+                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                              <SelectContent>
+                              <SelectItem value="backlog">Backlog</SelectItem>
+                              {sprints.map(sprint => (
+                                  <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={testCaseForm.control}
+                      name="releaseId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Release</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Assign to a release" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {releases.map((release) => (
+                                <SelectItem key={release.id} value={release.id}>
+                                  [{release.releaseId}] {release.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+              <DialogFooter>
+                <Button type="submit">
+                    {editingTestCase ? 'Save Changes' : 'Create Test Case'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
       
@@ -738,3 +944,4 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
+
