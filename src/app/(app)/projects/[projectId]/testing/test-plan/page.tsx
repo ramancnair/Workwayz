@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -355,7 +356,7 @@ export default function TestPlanPage() {
     testCases.forEach(tc => {
         if (tc.testPlanId === selectedPlan?.id && tc.executionDate && dayCols[tc.executionDate]) {
             dayCols[tc.executionDate].push(tc);
-        } else if (tc.testPlanId !== selectedPlan?.id || !tc.executionDate) {
+        } else {
             backlogTCs.push(tc);
         }
     });
@@ -710,10 +711,7 @@ export default function TestPlanPage() {
       <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingTestCase ? 'Edit Test Case' : 'Add New Test Case'}</DialogTitle>
-            <DialogDescription>
-              {editingTestCase ? 'Update the details for this test case.' : 'Fill in the details for the new test case.'}
-            </DialogDescription>
+            <DialogTitle>Edit Test Case</DialogTitle>
           </DialogHeader>
           <Form {...testCaseForm}>
             <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="space-y-4">
@@ -764,7 +762,7 @@ export default function TestPlanPage() {
                     <FormMessage />
                   </FormItem>
               )} />
-               <FormField
+              <FormField
                 control={testCaseForm.control}
                 name="environmentIds"
                 render={() => (
@@ -776,12 +774,8 @@ export default function TestPlanPage() {
                           key={env.id}
                           control={testCaseForm.control}
                           name="environmentIds"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={env.id}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
+                          render={({ field }) => (
+                              <FormItem key={env.id} className="flex flex-row items-start space-x-3 space-y-0">
                                 <FormControl>
                                   <Checkbox
                                     checked={field.value?.includes(env.id)}
@@ -796,12 +790,9 @@ export default function TestPlanPage() {
                                     }}
                                   />
                                 </FormControl>
-                                <FormLabel className="font-normal">
-                                  {env.name}
-                                </FormLabel>
+                                <FormLabel className="font-normal">{env.name}</FormLabel>
                               </FormItem>
-                            )
-                          }}
+                          )}
                         />
                       ))}
                     </div>
@@ -914,7 +905,7 @@ export default function TestPlanPage() {
                 </div>
               <DialogFooter>
                 <Button type="submit">
-                    {editingTestCase ? 'Save Changes' : 'Create Test Case'}
+                    Save Changes
                 </Button>
               </DialogFooter>
             </form>
@@ -945,3 +936,6 @@ export default function TestPlanPage() {
   );
 }
 
+
+
+    
