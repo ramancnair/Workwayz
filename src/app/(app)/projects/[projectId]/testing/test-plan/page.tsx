@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -410,11 +409,10 @@ export default function TestPlanPage() {
         </PageHeader>
         
         <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* Top Pane: Backlog */}
           <div className="flex flex-col h-1/2">
             <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
-            <Droppable id="backlog" className="border rounded-lg p-4 flex-1 flex flex-col min-h-0">
-              <div className="flex-1 overflow-auto border rounded-md">
+            <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
+              <div className="overflow-y-auto">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10">
                     <TableRow>
@@ -476,7 +474,6 @@ export default function TestPlanPage() {
             </Droppable>
           </div>
           
-          {/* Bottom Pane: Execution Plan */}
           <div className="flex flex-col h-1/2">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-4">
