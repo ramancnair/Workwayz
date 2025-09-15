@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -260,13 +261,13 @@ export default function TestPlanPage() {
     
     let filteredTCs = [...testCases];
 
-    if (filters.sprintId.length > 0) {
+    if (filters.sprintId?.length > 0) {
       filteredTCs = filteredTCs.filter(tc => {
         const sprint = sprints.find(s => s.id === tc.sprintId);
         return filters.sprintId.includes(sprint?.title || 'Backlog');
       });
     }
-    if (filters.releaseId.length > 0) {
+    if (filters.releaseId?.length > 0) {
         filteredTCs = filteredTCs.filter(tc => {
             const release = releases.find(r => r.id === tc.releaseId);
             return filters.releaseId.includes(release?.name || 'Unassigned');
@@ -305,8 +306,8 @@ export default function TestPlanPage() {
     ? eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) }) 
     : [];
   const itemsPerPage = 5;
-  const totalPages = Math.ceil(days.length / itemsPerPage);
-  const visibleDays = days.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const totalPages = days ? Math.ceil(days.length / itemsPerPage) : 0;
+  const visibleDays = days ? days.slice(page * itemsPerPage, (page + 1) * itemsPerPage) : [];
   
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
@@ -324,9 +325,6 @@ export default function TestPlanPage() {
             newFilters[columnId] = currentFilter.filter(v => v !== value);
         } else {
             newFilters[columnId] = [...currentFilter, value];
-        }
-        if (newFilters[columnId].length === 0) {
-            delete newFilters[columnId];
         }
         return newFilters;
     })
@@ -377,6 +375,14 @@ export default function TestPlanPage() {
     )
   }
 
+  if (!testPlans) {
+    return (
+      <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full items-center justify-center">
+        <p>Loading test plans...</p>
+      </div>
+    );
+  }
+
   return (
     <DndContext onDragEnd={handleDrop}>
       <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full">
@@ -386,7 +392,7 @@ export default function TestPlanPage() {
                   <SelectValue placeholder="Select a Test Plan" />
               </SelectTrigger>
               <SelectContent>
-                  {testPlans?.map(plan => (
+                  {testPlans.map(plan => (
                       <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
                   ))}
               </SelectContent>
@@ -413,10 +419,10 @@ export default function TestPlanPage() {
                                 </TableHead>
                                 <SortableHeader columnId="testCaseId">ID</SortableHeader>
                                 <SortableHeader columnId="title">Title</SortableHeader>
-                                 <FilterableHeader columnId="sprintId" filterOptions={[{value: 'backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
+                                 <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
                                   Sprint
                                 </FilterableHeader>
-                                <FilterableHeader columnId="releaseId" filterOptions={[{value: 'unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.name, label: r.name}))]}>
+                                <FilterableHeader columnId="releaseId" filterOptions={[{value: 'Unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.name, label: r.name}))]}>
                                   Release
                                 </FilterableHeader>
                             </TableRow>
