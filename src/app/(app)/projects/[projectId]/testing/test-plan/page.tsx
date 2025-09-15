@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -162,7 +161,7 @@ export default function TestPlanPage() {
 
   const selectedPlan = useMemo(() => {
     if (!testPlans || testPlans.length === 0) return null;
-    if (!selectedPlanId) return testPlans[0];
+    if (!selectedPlanId && testPlans.length > 0) return testPlans[0];
     return testPlans.find(p => p.id === selectedPlanId) || null;
   }, [selectedPlanId, testPlans]);
   
@@ -257,15 +256,21 @@ export default function TestPlanPage() {
   }
 
   const { dayColumns, backlog } = useMemo(() => {
-    if (!testCases) return { dayColumns: {}, backlog: [] };
+    if (!testCases || !testPlans) return { dayColumns: {}, backlog: [] };
     
     let filteredTCs = [...testCases];
 
     if (filters.sprintId.length > 0) {
-      filteredTCs = filteredTCs.filter(tc => filters.sprintId.includes(tc.sprintId || 'backlog'));
+      filteredTCs = filteredTCs.filter(tc => {
+        const sprint = sprints.find(s => s.id === tc.sprintId);
+        return filters.sprintId.includes(sprint?.title || 'Backlog');
+      });
     }
     if (filters.releaseId.length > 0) {
-        filteredTCs = filteredTCs.filter(tc => filters.releaseId.includes(tc.releaseId || 'unassigned'));
+        filteredTCs = filteredTCs.filter(tc => {
+            const release = releases.find(r => r.id === tc.releaseId);
+            return filters.releaseId.includes(release?.name || 'Unassigned');
+        });
     }
     
     let scheduledTestCaseIds = new Set<string>();
@@ -293,7 +298,7 @@ export default function TestPlanPage() {
     const backlogTCs = filteredTCs.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan?.id);
     
     return { dayColumns: dayCols, backlog: backlogTCs };
-  }, [selectedPlan, testCases, filters]);
+  }, [selectedPlan, testCases, filters, sprints, releases, testPlans]);
 
 
   const days = selectedPlan && selectedPlan.startDate && selectedPlan.endDate 
@@ -408,10 +413,10 @@ export default function TestPlanPage() {
                                 </TableHead>
                                 <SortableHeader columnId="testCaseId">ID</SortableHeader>
                                 <SortableHeader columnId="title">Title</SortableHeader>
-                                 <FilterableHeader columnId="sprintId" filterOptions={[{value: 'backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.id, label: s.title}))]}>
+                                 <FilterableHeader columnId="sprintId" filterOptions={[{value: 'backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
                                   Sprint
                                 </FilterableHeader>
-                                <FilterableHeader columnId="releaseId" filterOptions={[{value: 'unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.id, label: `[${r.releaseId}] ${r.name}`}))]}>
+                                <FilterableHeader columnId="releaseId" filterOptions={[{value: 'unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.name, label: r.name}))]}>
                                   Release
                                 </FilterableHeader>
                             </TableRow>
@@ -431,7 +436,7 @@ export default function TestPlanPage() {
                                     <TableCell><DraggableTestCase testCase={tc} /></TableCell>
                                     <TableCell>{tc.title}</TableCell>
                                     <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                                    <TableCell>{release?.releaseId || 'N/A'}</TableCell>
+                                    <TableCell>{release?.name || 'N/A'}</TableCell>
                                 </TableRow>
                             )})}
                         </TableBody>
@@ -564,7 +569,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormControl><Input type="date" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -575,7 +580,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormControl><Input type="date" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
