@@ -189,14 +189,14 @@ export default function TestPlanPage() {
   
   useEffect(() => {
     if(isDialogOpen && editingPlan) {
-      form.reset({
-        name: editingPlan.name,
-        planType: editingPlan.planType,
-        sprintId: editingPlan.sprintId,
-        releaseId: editingPlan.releaseId,
-        startDate: editingPlan.startDate ? format(parseISO(editingPlan.startDate), 'yyyy-MM-dd') : '',
-        endDate: editingPlan.endDate ? format(parseISO(editingPlan.endDate), 'yyyy-MM-dd') : '',
-      });
+        form.reset({
+            name: editingPlan.name,
+            planType: editingPlan.planType,
+            sprintId: editingPlan.sprintId,
+            releaseId: editingPlan.releaseId,
+            startDate: editingPlan.startDate ? format(parseISO(editingPlan.startDate), 'yyyy-MM-dd') : '',
+            endDate: editingPlan.endDate ? format(parseISO(editingPlan.endDate), 'yyyy-MM-dd') : '',
+        });
     } else if (isDialogOpen && !editingPlan) {
       form.reset({
         name: '',
@@ -269,9 +269,9 @@ export default function TestPlanPage() {
     });
   }
 
-  const { dayColumns, backlog } = useMemo(() => {
+ const { dayColumns, backlog } = useMemo(() => {
     if (!testCases || !testPlans) return { dayColumns: {}, backlog: [] };
-    
+
     let filteredTCs = [...testCases];
     if (filters.sprintId?.length > 0) {
       filteredTCs = filteredTCs.filter(tc => {
@@ -288,20 +288,17 @@ export default function TestPlanPage() {
     if (filters.status?.length > 0) {
         filteredTCs = filteredTCs.filter(tc => filters.status.includes(tc.status));
     }
-
+    
     if (sorting) {
       filteredTCs.sort((a, b) => {
         let valA: any = (a as any)[sorting.id] || '';
         let valB: any = (b as any)[sorting.id] || '';
-        
         if (sorting.id === 'sprintId') {
             valA = sprints.find(s => s.id === a.sprintId)?.title || 'Backlog';
             valB = sprints.find(s => s.id === b.sprintId)?.title || 'Backlog';
         }
-        
         if (valA === null || valA === undefined) return 1;
         if (valB === null || valB === undefined) return -1;
-        
         let comparison = 0;
         if (typeof valA === 'string' && typeof valB === 'string') {
           comparison = valA.localeCompare(valB, undefined, { numeric: true });
@@ -310,35 +307,23 @@ export default function TestPlanPage() {
         } else if (valA < valB) {
           comparison = -1;
         }
-
         return sorting.desc ? -comparison : comparison;
       });
     }
     
     const dayCols: Record<string, TestCase[]> = {};
-
     if (selectedPlan && selectedPlan.startDate && selectedPlan.endDate) {
-        const days = eachDayOfInterval({
-            start: parseISO(selectedPlan.startDate),
-            end: parseISO(selectedPlan.endDate),
-        });
-        
+        const days = eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) });
         days.forEach(day => {
             const dateStr = format(day, 'yyyy-MM-dd');
-            dayCols[dateStr] = [];
-        });
-
-        filteredTCs.forEach(tc => {
-            if (tc.testPlanId === selectedPlan.id && tc.executionDate && dayCols[tc.executionDate]) {
-                dayCols[tc.executionDate].push(tc);
-            }
+            dayCols[dateStr] = testCases.filter(tc => tc.testPlanId === selectedPlan.id && tc.executionDate === dateStr);
         });
     }
-
+    
     const backlogTCs = filteredTCs.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan?.id);
     
     return { dayColumns: dayCols, backlog: backlogTCs };
-  }, [selectedPlan, testCases, filters, sprints, releases, testPlans, sorting]);
+}, [selectedPlan, testCases, filters, sprints, releases, testPlans, sorting]);
 
 
   const days = (selectedPlan && selectedPlan.startDate && selectedPlan.endDate)
@@ -434,7 +419,7 @@ export default function TestPlanPage() {
         </PageHeader>
         
         <div className="flex flex-col flex-1 gap-4 min-h-0">
-          <div className="flex flex-col h-1/2">
+          <div className="h-1/2 flex flex-col">
             <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
             <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
               <div className="overflow-y-auto">
@@ -473,13 +458,13 @@ export default function TestPlanPage() {
                            <TableCell>
                             <span className="flex items-center gap-2">
                               <DraggableTestCase testCase={tc} />
-                              <button onClick={() => { setIsDialogOpen(true); setEditingPlan(null) }} className="hover:underline">
+                              <button onClick={() => { /* Open edit dialog */ }} className="hover:underline">
                                 {tc.testCaseId}
                               </button>
                             </span>
                           </TableCell>
                           <TableCell>
-                             <button onClick={() => { setIsDialogOpen(true); setEditingPlan(null) }} className="text-left hover:underline">
+                             <button onClick={() => { /* Open edit dialog */ }} className="text-left hover:underline">
                                 {tc.title}
                               </button>
                           </TableCell>
@@ -499,7 +484,7 @@ export default function TestPlanPage() {
             </Droppable>
           </div>
           
-          <div className="flex flex-col h-1/2">
+          <div className="h-1/2 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-4">
                 {selectedPlan ? (
