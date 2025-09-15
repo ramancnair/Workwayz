@@ -469,67 +469,69 @@ export default function ProjectDashboardPage() {
         </Card>
       </div>
 
-       <Card className="mt-6">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Resource Costs</CardTitle>
-            <div className="flex items-center gap-2">
-                <Select value={costDurationType} onValueChange={(v) => setCostDurationType(v as any)}>
-                  <SelectTrigger className="w-[120px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="overall">Overall</SelectItem>
-                    <SelectItem value="release">Release</SelectItem>
-                    <SelectItem value="sprint">Sprint</SelectItem>
-                  </SelectContent>
-                </Select>
-                {costDurationType !== 'overall' && (
-                  <Select value={costDurationId} onValueChange={setCostDurationId}>
-                    <SelectTrigger className="w-[180px] h-8">
-                      <SelectValue placeholder={`Select ${costDurationType}...`} />
+       <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 mt-6">
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Resource Costs</CardTitle>
+              <div className="flex items-center gap-2">
+                  <Select value={costDurationType} onValueChange={(v) => setCostDurationType(v as any)}>
+                    <SelectTrigger className="w-[120px] h-8">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {costDurationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                      <SelectItem value="overall">Overall</SelectItem>
+                      <SelectItem value="release">Release</SelectItem>
+                      <SelectItem value="sprint">Sprint</SelectItem>
                     </SelectContent>
                   </Select>
-                )}
+                  {costDurationType !== 'overall' && (
+                    <Select value={costDurationId} onValueChange={setCostDurationId}>
+                      <SelectTrigger className="w-[180px] h-8">
+                        <SelectValue placeholder={`Select ${costDurationType}...`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {costDurationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-            <ChartContainer config={resourceCostsConfig} className="h-[300px] w-full">
-              <BarChart data={resourceCostsData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="role" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis tickFormatter={(value) => `$${Number(value) / 1000}K`} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="cost" fill="var(--color-cost)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Fixed Cost</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <ChartContainer config={{}} className="h-[300px] w-full">
-                <BarChart data={fixedCosts} margin={{ left: 10, right: 10, top: 20, bottom: 10 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="cost" fill="hsl(var(--chart-1))" radius={4}>
-                         <LabelList dataKey="cost" position="top" formatter={(value: number) => `$${value.toLocaleString()}`} />
-                    </Bar>
+          </CardHeader>
+          <CardContent>
+              <ChartContainer config={resourceCostsConfig} className="h-[300px] w-full">
+                <BarChart data={resourceCostsData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis dataKey="role" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis tickFormatter={(value) => `$${Number(value) / 1000}K`} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="cost" fill="var(--color-cost)" radius={[4, 4, 0, 0]} />
                 </BarChart>
-            </ChartContainer>
-        </CardContent>
-      </Card>
+              </ChartContainer>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Fixed Cost</CardTitle>
+          </CardHeader>
+          <CardContent>
+              <ChartContainer config={{}} className="h-[300px] w-full">
+                  <BarChart data={fixedCosts} margin={{ left: 10, right: 10, top: 20, bottom: 10 }}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="cost" fill="hsl(var(--chart-1))" radius={4}>
+                           <LabelList dataKey="cost" position="top" formatter={(value: number) => `$${value.toLocaleString()}`} />
+                      </Bar>
+                  </BarChart>
+              </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
 
     </div>
   );
