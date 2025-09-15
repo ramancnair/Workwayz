@@ -13,6 +13,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -94,7 +95,9 @@ export type TestPlan = {
   name: string;
   startDate: string; // ISO String
   endDate: string; // ISO String;
-  tcsPerDay: number;
+  planType: 'Sprint' | 'Release';
+  sprintId?: string;
+  releaseId?: string;
 };
 
 export type TestCase = {

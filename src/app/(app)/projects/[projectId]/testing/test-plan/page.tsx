@@ -2,8 +2,8 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useMemo, useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProject } from '@/context/ProjectContext';
@@ -20,21 +20,41 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { TestPlan, TestCase, Employee } from '@/types';
+import type { TestPlan, TestCase, Employee, Release } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import { format, eachDayOfInterval, parseISO, addDays, subDays } from 'date-fns';
-import { DndContext, useDroppable, useDraggable } from '@dnd-kit/core';
+import { DndContext, useDroppable, useDraggable, DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 
-const testPlanSchema = z.object({
+const testPlanSchemaBase = z.object({
   name: z.string().min(1, 'Plan name is required.'),
-  startDate: z.string().min(1, 'Start date is required.'),
-  endDate: z.string().min(1, 'End date is required.'),
-  tcsPerDay: z.coerce.number().min(1, 'Please enter a valid number.'),
+  planType: z.enum(['Sprint', 'Release']),
+  sprintId: z.string().optional(),
+  releaseId: z.string().optional(),
+  startDate: z.string(),
+  endDate: z.string(),
 });
+
+const refinedTestPlanSchema = testPlanSchemaBase.superRefine((data, ctx) => {
+  if (data.planType === 'Sprint' && !data.sprintId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'A sprint must be selected.',
+      path: ['sprintId'],
+    });
+  }
+  if (data.planType === 'Release' && !data.releaseId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'A release must be selected.',
+      path: ['releaseId'],
+    });
+  }
+});
+
 
 const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -70,17 +90,44 @@ export default function TestPlanPage() {
     addTestPlan,
     updateTestCase,
     testPlans,
-    employees,
+    sprints,
+    releasesAndMilestones,
   } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedTCs, setSelectedTCs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
+  
+  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
-  const form = useForm<z.infer<typeof testPlanSchema>>({
-    resolver: zodResolver(testPlanSchema),
+  const form = useForm<z.infer<typeof refinedTestPlanSchema>>({
+    resolver: zodResolver(refinedTestPlanSchema),
+    defaultValues: {
+      planType: 'Sprint',
+    }
   });
+  
+  const watchedPlanType = useWatch({ control: form.control, name: 'planType' });
+  const watchedSprintId = useWatch({ control: form.control, name: 'sprintId' });
+  const watchedReleaseId = useWatch({ control: form.control, name: 'releaseId' });
+
+  useEffect(() => {
+    if (watchedPlanType === 'Sprint' && watchedSprintId) {
+        const sprint = sprints.find(s => s.id === watchedSprintId);
+        if (sprint && sprint.startDate && sprint.endDate) {
+            form.setValue('startDate', sprint.startDate);
+            form.setValue('endDate', sprint.endDate);
+        }
+    } else if (watchedPlanType === 'Release' && watchedReleaseId) {
+        const release = releases.find(r => r.id === watchedReleaseId);
+        if (release && release.startDate && release.endDate) {
+            form.setValue('startDate', release.startDate);
+            form.setValue('endDate', release.endDate);
+        }
+    }
+  }, [watchedPlanType, watchedSprintId, watchedReleaseId, sprints, releases, form]);
+
 
   const selectedPlan = useMemo(() => {
     if (!testPlans) return null;
@@ -88,7 +135,7 @@ export default function TestPlanPage() {
     return testPlans.find(p => p.id === selectedPlanId) || null;
   }, [selectedPlanId, testPlans]);
 
-  const onSubmit = async (values: z.infer<typeof testPlanSchema>) => {
+  const onSubmit = async (values: z.infer<typeof refinedTestPlanSchema>) => {
     const success = await addTestPlan(values);
     if (success) {
       toast({ title: 'Success', description: 'Test plan created.' });
@@ -99,10 +146,10 @@ export default function TestPlanPage() {
     }
   };
 
-  const handleDrop = (event: any) => {
+  const handleDrop = (event: DragEndEvent) => {
     const { over, active } = event;
-    const testCaseId = active.id;
-    const dropTargetId = over?.id;
+    const testCaseId = active.id as string;
+    const dropTargetId = over?.id as string;
 
     if (!dropTargetId) return;
 
@@ -132,35 +179,39 @@ export default function TestPlanPage() {
   }
 
   const { dayColumns, backlog } = useMemo(() => {
-    if (!testCases || !selectedPlan) return { dayColumns: {}, backlog: [] };
-
-    const scheduledTestCaseIds = new Set<string>();
+    if (!testCases) return { dayColumns: {}, backlog: [] };
+    
+    let scheduledTestCaseIds = new Set<string>();
     const dayCols: Record<string, TestCase[]> = {};
 
-    const days = eachDayOfInterval({
-        start: parseISO(selectedPlan.startDate),
-        end: parseISO(selectedPlan.endDate),
-    });
+    if (selectedPlan && selectedPlan.startDate && selectedPlan.endDate) {
+        const days = eachDayOfInterval({
+            start: parseISO(selectedPlan.startDate),
+            end: parseISO(selectedPlan.endDate),
+        });
+        
+        days.forEach(day => {
+            const dateStr = format(day, 'yyyy-MM-dd');
+            dayCols[dateStr] = [];
+        });
 
-    days.forEach(day => {
-        const dateStr = format(day, 'yyyy-MM-dd');
-        dayCols[dateStr] = [];
-    });
-
-    testCases.forEach(tc => {
-        if (tc.testPlanId === selectedPlan.id && tc.executionDate && dayCols[tc.executionDate]) {
-            dayCols[tc.executionDate].push(tc);
-            scheduledTestCaseIds.add(tc.id);
-        }
-    });
+        testCases.forEach(tc => {
+            if (tc.testPlanId === selectedPlan.id && tc.executionDate && dayCols[tc.executionDate]) {
+                dayCols[tc.executionDate].push(tc);
+                scheduledTestCaseIds.add(tc.id);
+            }
+        });
+    }
 
     const backlogTCs = testCases.filter(tc => !scheduledTestCaseIds.has(tc.id));
     
     return { dayColumns: dayCols, backlog: backlogTCs };
-}, [selectedPlan, testCases]);
+  }, [selectedPlan, testCases]);
 
 
-  const days = selectedPlan ? eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) }) : [];
+  const days = selectedPlan && selectedPlan.startDate && selectedPlan.endDate 
+    ? eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) }) 
+    : [];
   const itemsPerPage = 5;
   const totalPages = Math.ceil(days.length / itemsPerPage);
   const visibleDays = days.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
@@ -266,12 +317,65 @@ export default function TestPlanPage() {
                 )}
               />
               <FormField
+                  control={form.control}
+                  name="planType"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Plan Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                              <SelectItem value="Sprint">Sprint</SelectItem>
+                              <SelectItem value="Release">Release</SelectItem>
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+              />
+              {watchedPlanType === 'Sprint' && (
+                <FormField
+                    control={form.control}
+                    name="sprintId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Sprint</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select a sprint..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              )}
+              {watchedPlanType === 'Release' && (
+                  <FormField
+                      control={form.control}
+                      name="releaseId"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Release</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Select a release..." /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                  {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+              )}
+              <FormField
                 control={form.control}
                 name="startDate"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} readOnly /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -282,18 +386,7 @@ export default function TestPlanPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="tcsPerDay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>TCs to run per day</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormControl><Input type="date" {...field} readOnly /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -308,4 +401,3 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
-
