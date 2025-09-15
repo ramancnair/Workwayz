@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -120,9 +121,6 @@ export default function TestPlanPage() {
   const [selectedTCs, setSelectedTCs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   
-  const isResizing = useRef(false);
-  const [backlogHeight, setBacklogHeight] = useState(50); // Initial height in percentage
-  
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const form = useForm<z.infer<typeof refinedTestPlanSchema>>({
@@ -136,36 +134,12 @@ export default function TestPlanPage() {
   const watchedSprintId = useWatch({ control: form.control, name: 'sprintId' });
   const watchedReleaseId = useWatch({ control: form.control, name: 'releaseId' });
   
-  const [filters, setFilters] = useState<Record<string, string[]>>({
+ const [filters, setFilters] = useState<Record<string, string[]>>({
     sprintId: [],
     releaseId: [],
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
   
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    isResizing.current = true;
-  }, []);
-  
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing.current) return;
-    const newHeight = (e.clientY / window.innerHeight) * 100;
-    const clampedHeight = Math.max(20, Math.min(80, newHeight));
-    setBacklogHeight(clampedHeight);
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isResizing.current = false;
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
-
   useEffect(() => {
     if (watchedPlanType === 'Sprint' && watchedSprintId) {
         const sprint = sprints.find(s => s.id === watchedSprintId);
@@ -427,7 +401,7 @@ export default function TestPlanPage() {
         
         <Card className="flex-1 flex flex-col">
           <CardContent className="p-4 flex-1 flex flex-col">
-            <div style={{ height: `${backlogHeight}%` }} className="relative">
+            <div className="h-1/2 relative">
               <Droppable id="backlog" className="h-full border rounded-lg p-4 overflow-auto">
                 <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
 
@@ -475,11 +449,7 @@ export default function TestPlanPage() {
               </Droppable>
             </div>
             
-            <div onMouseDown={handleMouseDown} className="w-full h-2 cursor-row-resize flex items-center justify-center group">
-              <div className="h-1 w-16 rounded-full bg-border group-hover:bg-primary transition-colors" />
-            </div>
-
-            <div className="flex-1 mt-4 flex flex-col" style={{ height: `calc(${100 - backlogHeight}% - 0.5rem)` }}>
+            <div className="h-1/2 mt-4 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
                    <div className="flex items-center gap-4">
                       {selectedPlan ? (
@@ -650,3 +620,4 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
+
