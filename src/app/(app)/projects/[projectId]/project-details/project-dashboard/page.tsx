@@ -55,9 +55,7 @@ const resourceCostsConfig = {
 
 
 const otherCostsConfig = {
-  plannedCost: { label: 'Planned', color: 'hsl(var(--chart-1))' },
-  cost: { label: 'Actual', color: 'hsl(var(--chart-5))' },
-  ongoingCost: { label: 'Ongoing', color: 'hsl(var(--muted-foreground))' },
+  cost: { label: "Fixed Cost", color: "hsl(var(--chart-1))" },
 } satisfies ChartConfig;
 
 
@@ -530,7 +528,7 @@ export default function ProjectDashboardPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Software, Hardware and Other Costs</CardTitle>
+          <CardTitle>Fixed Cost</CardTitle>
         </CardHeader>
         <CardContent>
             <ChartContainer config={otherCostsConfig} className="h-[300px] w-full">
@@ -540,14 +538,8 @@ export default function ProjectDashboardPage() {
                     <YAxis hide />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="plannedCost" fill="var(--color-plannedCost)" radius={4}>
-                         <LabelList dataKey="plannedCost" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
-                    </Bar>
                     <Bar dataKey="cost" fill="var(--color-cost)" radius={4}>
                          <LabelList dataKey="cost" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
-                    </Bar>
-                    <Bar dataKey="ongoingCost" fill="var(--color-ongoingCost)" radius={4}>
-                         <LabelList dataKey="ongoingCost" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
                     </Bar>
                 </BarChart>
             </ChartContainer>
@@ -557,6 +549,7 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
+
 
 
 
