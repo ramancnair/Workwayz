@@ -271,7 +271,7 @@ export default function TestPlanPage() {
 
  const { dayColumns, backlog } = useMemo(() => {
     const dayCols: Record<string, TestCase[]> = {};
-    if (selectedPlan && selectedPlan.startDate && selectedPlan.endDate) {
+    if (selectedPlan?.startDate && selectedPlan.endDate) {
         const days = eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) });
         days.forEach(day => {
             const dateStr = format(day, 'yyyy-MM-dd');
@@ -280,15 +280,10 @@ export default function TestPlanPage() {
     }
 
     let backlogTCs: TestCase[] = [];
-    const planTCs: TestCase[] = [];
 
     testCases.forEach(tc => {
-        if (tc.testPlanId === selectedPlan?.id && tc.executionDate) {
-            if (dayCols[tc.executionDate]) {
-                dayCols[tc.executionDate].push(tc);
-            } else {
-                planTCs.push(tc); // Should not happen if dates are aligned
-            }
+        if (tc.testPlanId === selectedPlan?.id && tc.executionDate && dayCols[tc.executionDate]) {
+            dayCols[tc.executionDate].push(tc);
         } else {
             backlogTCs.push(tc);
         }
@@ -327,7 +322,7 @@ export default function TestPlanPage() {
     }
     
     return { dayColumns: dayCols, backlog: backlogTCs };
-}, [selectedPlan, testCases, filters, sprints, releases, testPlans, sorting]);
+}, [selectedPlan, testCases, filters, sprints, releases, sorting]);
 
 
   const days = (selectedPlan && selectedPlan.startDate && selectedPlan.endDate)
@@ -401,6 +396,11 @@ export default function TestPlanPage() {
         </div>
       </TableHead>
     )
+  };
+  
+  const handleDialogOpen = (testCase: TestCase) => {
+    // This is a placeholder for where the actual dialog-opening logic would go
+    console.log("Opening edit dialog for", testCase.testCaseId);
   }
 
   return (
@@ -462,13 +462,13 @@ export default function TestPlanPage() {
                            <TableCell>
                             <span className="flex items-center gap-2">
                               <DraggableTestCase testCase={tc} />
-                              <button onClick={() => {}} className="hover:underline">
+                              <button onClick={() => handleDialogOpen(tc)} className="hover:underline">
                                 {tc.testCaseId}
                               </button>
                             </span>
                           </TableCell>
                           <TableCell>
-                             <button onClick={() => {}} className="text-left hover:underline">
+                             <button onClick={() => handleDialogOpen(tc)} className="text-left hover:underline">
                                 {tc.title}
                               </button>
                           </TableCell>
