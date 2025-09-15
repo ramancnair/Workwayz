@@ -142,9 +142,9 @@ export default function TestPlanPage() {
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
   
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     isResizing.current = true;
-  };
+  }, []);
   
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing.current) return;
@@ -199,15 +199,13 @@ export default function TestPlanPage() {
   
   useEffect(() => {
     if(isDialogOpen && editingPlan) {
-        const startDate = new Date(editingPlan.startDate);
-        const endDate = new Date(editingPlan.endDate);
       form.reset({
         name: editingPlan.name,
         planType: editingPlan.planType,
         sprintId: editingPlan.sprintId,
         releaseId: editingPlan.releaseId,
-        startDate: format(new Date(startDate.valueOf() + startDate.getTimezoneOffset() * 60 * 1000), 'yyyy-MM-dd'),
-        endDate: format(new Date(endDate.valueOf() + endDate.getTimezoneOffset() * 60 * 1000), 'yyyy-MM-dd'),
+        startDate: format(new Date(editingPlan.startDate.replace(/-/g, '/')), 'yyyy-MM-dd'),
+        endDate: format(new Date(editingPlan.endDate.replace(/-/g, '/')), 'yyyy-MM-dd'),
       });
     } else if (isDialogOpen && !editingPlan) {
       form.reset({
@@ -344,8 +342,8 @@ export default function TestPlanPage() {
 
   const handleFilterChange = (columnId: string, value: string) => {
     setFilters(prev => {
+        const currentFilter = prev[columnId] || [];
         const newFilters = { ...prev };
-        const currentFilter = newFilters[columnId] || [];
         if (currentFilter.includes(value)) {
             newFilters[columnId] = currentFilter.filter(v => v !== value);
         } else {
