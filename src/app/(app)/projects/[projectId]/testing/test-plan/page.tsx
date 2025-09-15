@@ -287,6 +287,32 @@ export default function TestPlanPage() {
     if (filters.status?.length > 0) {
         filteredTCs = filteredTCs.filter(tc => filters.status.includes(tc.status));
     }
+
+    if (sorting) {
+      filteredTCs.sort((a, b) => {
+        let valA: any = (a as any)[sorting.id] || '';
+        let valB: any = (b as any)[sorting.id] || '';
+        
+        if (sorting.id === 'sprintId') {
+            valA = sprints.find(s => s.id === a.sprintId)?.title || 'Backlog';
+            valB = sprints.find(s => s.id === b.sprintId)?.title || 'Backlog';
+        }
+        
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+        
+        let comparison = 0;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB, undefined, { numeric: true });
+        } else if (valA > valB) {
+          comparison = 1;
+        } else if (valA < valB) {
+          comparison = -1;
+        }
+
+        return sorting.desc ? -comparison : comparison;
+      });
+    }
     
     let scheduledTestCaseIds = new Set<string>();
     const dayCols: Record<string, TestCase[]> = {};
@@ -313,7 +339,7 @@ export default function TestPlanPage() {
     const backlogTCs = filteredTCs.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan?.id);
     
     return { dayColumns: dayCols, backlog: backlogTCs };
-  }, [selectedPlan, testCases, filters, sprints, releases, testPlans]);
+  }, [selectedPlan, testCases, filters, sprints, releases, testPlans, sorting]);
 
 
   const days = (selectedPlan && selectedPlan.startDate && selectedPlan.endDate)
@@ -391,7 +417,7 @@ export default function TestPlanPage() {
 
   return (
     <DndContext onDragEnd={handleDrop}>
-      <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full">
+      <div className="flex flex-col h-full space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Test Plan" description="Create and manage test execution plans.">
           <Select onValueChange={setSelectedPlanId} value={selectedPlanId || ''}>
               <SelectTrigger className="w-[280px]">
@@ -408,7 +434,7 @@ export default function TestPlanPage() {
           </Button>
         </PageHeader>
         
-        <div className="flex-1 flex flex-col gap-4 min-h-0">
+        <div className="flex flex-col flex-1 gap-4 min-h-0">
           <div className="flex flex-col h-1/2">
             <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
             <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
@@ -448,13 +474,13 @@ export default function TestPlanPage() {
                            <TableCell>
                             <span className="flex items-center gap-2">
                               <DraggableTestCase testCase={tc} />
-                              <button onClick={() => { setEditingPlan(null); setIsDialogOpen(true);}} className="hover:underline">
+                              <button onClick={() => { setIsDialogOpen(true); setEditingPlan(null) }} className="hover:underline">
                                 {tc.testCaseId}
                               </button>
                             </span>
                           </TableCell>
                           <TableCell>
-                             <button onClick={() => { setEditingPlan(null); setIsDialogOpen(true);}} className="text-left hover:underline">
+                             <button onClick={() => { setIsDialogOpen(true); setEditingPlan(null) }} className="text-left hover:underline">
                                 {tc.title}
                               </button>
                           </TableCell>
