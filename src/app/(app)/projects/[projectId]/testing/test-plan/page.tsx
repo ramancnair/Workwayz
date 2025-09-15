@@ -406,97 +406,100 @@ export default function TestPlanPage() {
         <Card className="flex-1 flex flex-col min-h-0">
             <CardContent className="p-4 flex-1 flex flex-col gap-4">
               <div className="flex flex-col h-full">
-                  <div className="h-[45%] flex flex-col relative">
-                      <Droppable id="backlog" className="h-full border rounded-lg p-4 overflow-auto">
-                          <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
-                          <div className="border rounded-md overflow-hidden">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-10">
-                                            <Checkbox
-                                                checked={backlog.length > 0 && selectedTCs.length === backlog.length}
-                                                onCheckedChange={(checked) => setSelectedTCs(checked ? backlog.map(tc => tc.id) : [])}
-                                            />
-                                        </TableHead>
-                                        <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                                        <SortableHeader columnId="title">Title</SortableHeader>
-                                        <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
-                                        Sprint
-                                        </FilterableHeader>
-                                        <FilterableHeader columnId="releaseId" filterOptions={[{value: 'Unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.name, label: r.name}))]}>
-                                        Release
-                                        </FilterableHeader>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {backlog.map(tc => {
-                                        const sprint = sprints.find(s => s.id === tc.sprintId);
-                                        const release = releases.find(r => r.id === tc.releaseId);
-                                        return (
-                                        <TableRow key={tc.id}>
-                                            <TableCell>
-                                                <Checkbox
-                                                    checked={selectedTCs.includes(tc.id)}
-                                                    onCheckedChange={(checked) => setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                                                />
-                                            </TableCell>
-                                            <TableCell><DraggableTestCase testCase={tc} /></TableCell>
-                                            <TableCell>{tc.title}</TableCell>
-                                            <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                                            <TableCell>{release?.name || 'N/A'}</TableCell>
-                                        </TableRow>
-                                    )})}
-                                </TableBody>
-                            </Table>
-                        </div>
-                      </Droppable>
-                  </div>
-                  
-                  <div className="h-[55%] flex flex-col pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-4">
-                        {selectedPlan ? (
-                            <>
-                            <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
-                            <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => setDeletingPlan(selectedPlan)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </>
-                        ) : (
-                            <h3 className="font-bold text-lg">Execution Plan</h3>
-                        )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <span>Page {page + 1} of {totalPages > 0 ? totalPages : 1}</span>
-                            <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
+                {/* Backlog Section */}
+                <div className="flex-1 flex flex-col min-h-0">
+                  <Droppable id="backlog" className="border rounded-lg p-4 flex flex-col h-full">
+                    <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
+                    <div className="flex-1 overflow-auto border rounded-md">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-background z-10">
+                          <TableRow>
+                            <TableHead className="w-10">
+                              <Checkbox
+                                checked={backlog.length > 0 && selectedTCs.length === backlog.length}
+                                onCheckedChange={(checked) => setSelectedTCs(checked ? backlog.map(tc => tc.id) : [])}
+                              />
+                            </TableHead>
+                            <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                            <SortableHeader columnId="title">Title</SortableHeader>
+                            <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
+                              Sprint
+                            </FilterableHeader>
+                            <FilterableHeader columnId="releaseId" filterOptions={[{value: 'Unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.name, label: r.name}))]}>
+                              Release
+                            </FilterableHeader>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {backlog.map(tc => {
+                            const sprint = sprints.find(s => s.id === tc.sprintId);
+                            const release = releases.find(r => r.id === tc.releaseId);
+                            return (
+                              <TableRow key={tc.id}>
+                                <TableCell>
+                                  <Checkbox
+                                    checked={selectedTCs.includes(tc.id)}
+                                    onCheckedChange={(checked) => setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                                  />
+                                </TableCell>
+                                <TableCell><DraggableTestCase testCase={tc} /></TableCell>
+                                <TableCell>{tc.title}</TableCell>
+                                <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                                <TableCell>{release?.name || 'N/A'}</TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
                     </div>
-                    <div className="flex-1 grid grid-cols-5 gap-4">
-                      {visibleDays.map(day => {
-                        const dateStr = format(day, 'yyyy-MM-dd');
-                        return (
-                          <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 overflow-auto">
-                            <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
-                            <div className="text-center mb-2">
-                                <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`)} disabled={selectedTCs.length === 0}>
-                                    Move Here
-                                </Button>
-                            </div>
-                            <div className="space-y-1 text-center">
+                  </Droppable>
+                </div>
+
+                {/* Execution Plan Section */}
+                <div className="flex-1 flex flex-col pt-4 min-h-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-4">
+                      {selectedPlan ? (
+                        <>
+                          <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
+                          <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingPlan(selectedPlan)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </>
+                      ) : (
+                        <h3 className="font-bold text-lg">Execution Plan</h3>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span>Page {page + 1} of {totalPages > 0 ? totalPages : 1}</span>
+                      <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex-1 grid grid-cols-5 gap-4">
+                    {visibleDays.map(day => {
+                      const dateStr = format(day, 'yyyy-MM-dd');
+                      return (
+                        <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 flex flex-col">
+                          <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
+                          <div className="text-center mb-2">
+                            <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`)} disabled={selectedTCs.length === 0}>
+                              Move Here
+                            </Button>
+                          </div>
+                          <div className="space-y-1 text-center flex-1 overflow-y-auto">
                             {(dayColumns[dateStr] || []).map(tc => (
-                                <DraggableTestCase key={tc.id} testCase={tc} />
+                              <DraggableTestCase key={tc.id} testCase={tc} />
                             ))}
-                            </div>
-                          </Droppable>
-                        );
-                      })}
-                    </div>
+                          </div>
+                        </Droppable>
+                      );
+                    })}
                   </div>
+                </div>
               </div>
             </CardContent>
         </Card>
@@ -625,4 +628,3 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
-
