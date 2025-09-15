@@ -392,7 +392,7 @@ export default function TestPlanPage() {
 
   return (
     <DndContext onDragEnd={handleDrop}>
-      <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-[calc(100vh-100px)]">
+      <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full">
         <PageHeader title="Test Plan" description="Create and manage test execution plans.">
           <Select onValueChange={setSelectedPlanId} value={selectedPlanId || ''}>
               <SelectTrigger className="w-[280px]">
@@ -409,10 +409,11 @@ export default function TestPlanPage() {
           </Button>
         </PageHeader>
         
-        <div className="flex-1 grid grid-cols-1 gap-4 min-h-0">
-          <div className="flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          {/* Top Pane: Backlog */}
+          <div className="flex flex-col h-1/2">
             <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
-            <Droppable id="backlog" className="border rounded-lg p-4 flex flex-col flex-1 min-h-0">
+            <Droppable id="backlog" className="border rounded-lg p-4 flex-1 flex flex-col min-h-0">
               <div className="flex-1 overflow-auto border rounded-md">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10">
@@ -475,7 +476,8 @@ export default function TestPlanPage() {
             </Droppable>
           </div>
           
-          <div className="flex flex-col min-h-0">
+          {/* Bottom Pane: Execution Plan */}
+          <div className="flex flex-col h-1/2">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-4">
                 {selectedPlan ? (
@@ -645,4 +647,3 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
-
