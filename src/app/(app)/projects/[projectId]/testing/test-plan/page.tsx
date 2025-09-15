@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -132,28 +133,32 @@ export default function TestPlanPage() {
 
   const { dayColumns, backlog } = useMemo(() => {
     if (!testCases || !selectedPlan) return { dayColumns: {}, backlog: [] };
-    const planTCs = testCases.filter(tc => tc.testPlanId === selectedPlan.id);
+
+    const scheduledTestCaseIds = new Set<string>();
     const dayCols: Record<string, TestCase[]> = {};
 
-    if (selectedPlan) {
-      const days = eachDayOfInterval({
+    const days = eachDayOfInterval({
         start: parseISO(selectedPlan.startDate),
         end: parseISO(selectedPlan.endDate),
-      });
-      days.forEach(day => {
+    });
+
+    days.forEach(day => {
         const dateStr = format(day, 'yyyy-MM-dd');
         dayCols[dateStr] = [];
-      });
-      planTCs.forEach(tc => {
-        if (tc.executionDate && dayCols[tc.executionDate]) {
-          dayCols[tc.executionDate].push(tc);
-        }
-      });
-    }
-    const backlogTCs = testCases.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan.id);
+    });
 
+    testCases.forEach(tc => {
+        if (tc.testPlanId === selectedPlan.id && tc.executionDate && dayCols[tc.executionDate]) {
+            dayCols[tc.executionDate].push(tc);
+            scheduledTestCaseIds.add(tc.id);
+        }
+    });
+
+    const backlogTCs = testCases.filter(tc => !scheduledTestCaseIds.has(tc.id));
+    
     return { dayColumns: dayCols, backlog: backlogTCs };
-  }, [selectedPlan, testCases]);
+}, [selectedPlan, testCases]);
+
 
   const days = selectedPlan ? eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) }) : [];
   const itemsPerPage = 5;
@@ -303,3 +308,4 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
+
