@@ -114,6 +114,8 @@ interface ProjectContextType {
   autoGenerateTestCases: (counts: Record<string, number>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
   addTestPlan: (plan: Omit<TestPlan, 'id'>) => Promise<boolean>;
+  updateTestPlan: (id: string, data: Partial<Omit<TestPlan, 'id'>>) => Promise<boolean>;
+  deleteTestPlan: (id: string) => Promise<boolean>;
   
   // Bug actions
   autoGenerateBugs: (counts: Record<string, number>) => Promise<boolean>;
@@ -1274,6 +1276,40 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return false;
     }
   };
+  
+  const updateTestPlan = async (id: string, data: Partial<Omit<TestPlan, 'id'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const payload = { ...data };
+      if (data.startDate) payload.startDate = new Date(data.startDate).toISOString();
+      if (data.endDate) payload.endDate = new Date(data.endDate).toISOString();
+      await updateDoc(doc(db, 'projects', projectId, 'testPlans', id), sanitizeForFirestore(payload));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to update test plan.", e);
+      return false;
+    }
+  };
+
+  const deleteTestPlan = async (id: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const batch = writeBatch(db);
+      // Delete the plan
+      batch.delete(doc(db, 'projects', projectId, 'testPlans', id));
+      // Unset testPlanId and executionDate for related test cases
+      const q = query(collection(db, 'projects', projectId, 'testCases'), where('testPlanId', '==', id));
+      const testCasesSnapshot = await getDocs(q);
+      testCasesSnapshot.forEach(tcDoc => {
+        batch.update(tcDoc.ref, { testPlanId: null, executionDate: null });
+      });
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to delete test plan.", e);
+      return false;
+    }
+  };
 
   const autoGenerateBugs = async (counts: Record<string, number>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -2300,6 +2336,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     autoGenerateTestCases,
     deleteTestCase,
     addTestPlan,
+    updateTestPlan,
+    deleteTestPlan,
     autoGenerateBugs,
     addRisk,
     updateRisk,

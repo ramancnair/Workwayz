@@ -19,7 +19,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
 import type { TestPlan, TestCase, Employee, Release } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +28,18 @@ import { DndContext, useDroppable, useDraggable, DragEndEvent } from '@dnd-kit/c
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
 
 const testPlanSchemaBase = z.object({
   name: z.string().min(1, 'Plan name is required.'),
@@ -92,9 +104,13 @@ export default function TestPlanPage() {
     testPlans,
     sprints,
     releasesAndMilestones,
+    updateTestPlan,
+    deleteTestPlan,
   } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<TestPlan | null>(null);
+  const [deletingPlan, setDeletingPlan] = useState<TestPlan | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedTCs, setSelectedTCs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
@@ -116,34 +132,79 @@ export default function TestPlanPage() {
     if (watchedPlanType === 'Sprint' && watchedSprintId) {
         const sprint = sprints.find(s => s.id === watchedSprintId);
         if (sprint && sprint.startDate && sprint.endDate) {
-            form.setValue('startDate', sprint.startDate);
-            form.setValue('endDate', sprint.endDate);
+            form.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
+            form.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
         }
     } else if (watchedPlanType === 'Release' && watchedReleaseId) {
         const release = releases.find(r => r.id === watchedReleaseId);
         if (release && release.startDate && release.endDate) {
-            form.setValue('startDate', release.startDate);
-            form.setValue('endDate', release.endDate);
+            form.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
+            form.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
         }
     }
   }, [watchedPlanType, watchedSprintId, watchedReleaseId, sprints, releases, form]);
 
 
   const selectedPlan = useMemo(() => {
-    if (!testPlans) return null;
-    if (!selectedPlanId) return testPlans.length > 0 ? testPlans[0] : null;
+    if (!testPlans || testPlans.length === 0) return null;
+    if (!selectedPlanId) return testPlans[0];
     return testPlans.find(p => p.id === selectedPlanId) || null;
   }, [selectedPlanId, testPlans]);
+  
+  useEffect(() => {
+    if (selectedPlan && !selectedPlanId) {
+      setSelectedPlanId(selectedPlan.id);
+    }
+  }, [selectedPlan, selectedPlanId]);
+  
+  useEffect(() => {
+    if(isDialogOpen && editingPlan) {
+      form.reset({
+        name: editingPlan.name,
+        planType: editingPlan.planType,
+        sprintId: editingPlan.sprintId,
+        releaseId: editingPlan.releaseId,
+        startDate: format(parseISO(editingPlan.startDate), 'yyyy-MM-dd'),
+        endDate: format(parseISO(editingPlan.endDate), 'yyyy-MM-dd'),
+      });
+    } else if (isDialogOpen && !editingPlan) {
+      form.reset({
+        name: '',
+        planType: 'Sprint',
+        sprintId: undefined,
+        releaseId: undefined,
+        startDate: '',
+        endDate: '',
+      })
+    }
+  }, [isDialogOpen, editingPlan, form]);
+
 
   const onSubmit = async (values: z.infer<typeof refinedTestPlanSchema>) => {
-    const success = await addTestPlan(values);
+    const success = editingPlan 
+      ? await updateTestPlan(editingPlan.id, values)
+      : await addTestPlan(values);
+      
     if (success) {
-      toast({ title: 'Success', description: 'Test plan created.' });
+      toast({ title: 'Success', description: `Test plan ${editingPlan ? 'updated' : 'created'}.` });
       setIsDialogOpen(false);
+      setEditingPlan(null);
       form.reset();
     } else {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not create test plan.' });
+      toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingPlan ? 'update' : 'create'} test plan.` });
     }
+  };
+  
+  const handleDeletePlan = async () => {
+    if (!deletingPlan) return;
+    const success = await deleteTestPlan(deletingPlan.id);
+    if(success) {
+      toast({title: "Success", description: "Test plan deleted."});
+      setSelectedPlanId(null);
+    } else {
+      toast({variant: "destructive", title: "Error", description: "Could not delete test plan."})
+    }
+    setDeletingPlan(null);
   };
 
   const handleDrop = (event: DragEndEvent) => {
@@ -203,7 +264,7 @@ export default function TestPlanPage() {
         });
     }
 
-    const backlogTCs = testCases.filter(tc => !scheduledTestCaseIds.has(tc.id));
+    const backlogTCs = testCases.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan?.id);
     
     return { dayColumns: dayCols, backlog: backlogTCs };
   }, [selectedPlan, testCases]);
@@ -230,7 +291,7 @@ export default function TestPlanPage() {
                   ))}
               </SelectContent>
           </Select>
-          <Button onClick={() => setIsDialogOpen(true)}>
+          <Button onClick={() => { setEditingPlan(null); setIsDialogOpen(true); }}>
             <PlusCircle className="mr-2 h-4 w-4" /> Create Test Plan
           </Button>
         </PageHeader>
@@ -262,7 +323,17 @@ export default function TestPlanPage() {
 
             <div className="h-1/2 mt-4 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-lg">Execution Plan</h3>
+                   <div className="flex items-center gap-4">
+                      {selectedPlan ? (
+                        <>
+                          <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.id})</h3>
+                          <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingPlan(selectedPlan)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </>
+                      ) : (
+                        <h3 className="font-bold text-lg">Execution Plan</h3>
+                      )}
+                    </div>
                   <div className="flex items-center gap-2">
                       <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
                           <ChevronLeft className="h-4 w-4" />
@@ -298,10 +369,10 @@ export default function TestPlanPage() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) setEditingPlan(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Test Plan</DialogTitle>
+            <DialogTitle>{editingPlan ? 'Edit Test Plan' : 'Create New Test Plan'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -392,12 +463,32 @@ export default function TestPlanPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Create Plan</Button>
+                <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Plan'}</Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => !isOpen && setDeletingPlan(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the test plan "{deletingPlan?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePlan}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DndContext>
   );
 }
