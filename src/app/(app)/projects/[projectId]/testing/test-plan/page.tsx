@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -20,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter } from 'lucide-react';
-import type { TestPlan, TestCase, Employee, Release } from '@/types';
+import type { TestPlan, TestCase, Employee, Release, TestCaseStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import { format, eachDayOfInterval, parseISO, addDays, subDays } from 'date-fns';
@@ -73,6 +72,16 @@ const refinedTestPlanSchema = testPlanSchemaBase.superRefine((data, ctx) => {
     });
   }
 });
+
+const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
+
+const statusStyles: Record<TestCaseStatus, string> = {
+  'Passed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  'Failed': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  'Blocked': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  'Skipped': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  'Not Run': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+};
 
 
 const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
@@ -163,7 +172,8 @@ export default function TestPlanPage() {
     const currentPlan = testPlans.find(p => p.id === selectedPlanId);
     if(currentPlan) return currentPlan;
     if (testPlans.length > 0) {
-      setSelectedPlanId(testPlans[0].id)
+      const firstPlanId = testPlans[0].id;
+      setSelectedPlanId(firstPlanId);
       return testPlans[0];
     }
     return null;
@@ -405,7 +415,7 @@ export default function TestPlanPage() {
         
         <div className="flex-1 flex flex-col min-h-0">
           {/* Top Pane: Backlog */}
-          <div className="h-1/2 flex flex-col">
+          <div className="flex flex-col h-1/2">
             <Droppable id="backlog" className="border rounded-lg p-4 flex flex-col h-full">
               <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
               <div className="flex-1 overflow-auto border rounded-md">
@@ -420,6 +430,7 @@ export default function TestPlanPage() {
                       </TableHead>
                       <SortableHeader columnId="testCaseId">ID</SortableHeader>
                       <SortableHeader columnId="title">Title</SortableHeader>
+                      <SortableHeader columnId="status">Status</SortableHeader>
                       <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
                         Sprint
                       </FilterableHeader>
@@ -440,8 +451,24 @@ export default function TestPlanPage() {
                               onCheckedChange={(checked) => setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
                             />
                           </TableCell>
-                          <TableCell><DraggableTestCase testCase={tc} /></TableCell>
-                          <TableCell>{tc.title}</TableCell>
+                           <TableCell>
+                            <span className="flex items-center gap-2">
+                              <DraggableTestCase testCase={tc} />
+                              <button onClick={() => { setEditingPlan(null); setIsDialogOpen(true);}} className="hover:underline">
+                                {tc.testCaseId}
+                              </button>
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                             <button onClick={() => { setEditingPlan(null); setIsDialogOpen(true);}} className="text-left hover:underline">
+                                {tc.title}
+                              </button>
+                          </TableCell>
+                          <TableCell>
+                             <Badge className={cn('font-semibold', statusStyles[tc.status])}>
+                                {tc.status}
+                            </Badge>
+                          </TableCell>
                           <TableCell>{sprint?.title || 'Backlog'}</TableCell>
                           <TableCell>{release?.name || 'N/A'}</TableCell>
                         </TableRow>
