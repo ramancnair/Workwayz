@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -120,7 +119,8 @@ export default function TestPlanPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedTCs, setSelectedTCs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
-  const [isResizing, setIsResizing] = useState(false);
+  
+  const isResizing = useRef(false);
   const [backlogHeight, setBacklogHeight] = useState(50); // Initial height in percentage
   
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
@@ -143,37 +143,28 @@ export default function TestPlanPage() {
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
   
   const handleMouseDown = (e: React.MouseEvent) => {
-    setIsResizing(true);
+    isResizing.current = true;
   };
   
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isResizing) {
-      // Using clientY and window.innerHeight to calculate percentage
-      const newHeight = (e.clientY / window.innerHeight) * 100;
-      // Clamping the value between reasonable limits, e.g., 20% and 80%
-      const clampedHeight = Math.max(20, Math.min(80, newHeight));
-      setBacklogHeight(clampedHeight);
-    }
-  }, [isResizing]);
+    if (!isResizing.current) return;
+    const newHeight = (e.clientY / window.innerHeight) * 100;
+    const clampedHeight = Math.max(20, Math.min(80, newHeight));
+    setBacklogHeight(clampedHeight);
+  }, []);
 
-  const handleMouseUp = () => {
-    setIsResizing(false);
-  };
+  const handleMouseUp = useCallback(() => {
+    isResizing.current = false;
+  }, []);
 
   useEffect(() => {
-    if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    } else {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    }
-
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, handleMouseMove]);
+  }, [handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
     if (watchedPlanType === 'Sprint' && watchedSprintId) {
@@ -194,8 +185,10 @@ export default function TestPlanPage() {
 
   const selectedPlan = useMemo(() => {
     if (!testPlans || testPlans.length === 0) return null;
-    if (!selectedPlanId && testPlans.length > 0) return testPlans[0];
-    return testPlans.find(p => p.id === selectedPlanId) || null;
+    const currentPlan = testPlans.find(p => p.id === selectedPlanId);
+    if(currentPlan) return currentPlan;
+    if (testPlans.length > 0) return testPlans[0];
+    return null;
   }, [selectedPlanId, testPlans]);
   
   useEffect(() => {
@@ -659,4 +652,3 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
-
