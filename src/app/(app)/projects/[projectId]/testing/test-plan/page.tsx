@@ -82,6 +82,7 @@ export default function TestPlanPage() {
   });
 
   const selectedPlan = useMemo(() => {
+    if (!testPlans) return null;
     if (!selectedPlanId) return testPlans.length > 0 ? testPlans[0] : null;
     return testPlans.find(p => p.id === selectedPlanId) || null;
   }, [selectedPlanId, testPlans]);
@@ -130,7 +131,8 @@ export default function TestPlanPage() {
   }
 
   const { dayColumns, backlog } = useMemo(() => {
-    const planTCs = testCases.filter(tc => tc.testPlanId === selectedPlan?.id);
+    if (!testCases || !selectedPlan) return { dayColumns: {}, backlog: [] };
+    const planTCs = testCases.filter(tc => tc.testPlanId === selectedPlan.id);
     const dayCols: Record<string, TestCase[]> = {};
 
     if (selectedPlan) {
@@ -148,7 +150,7 @@ export default function TestPlanPage() {
         }
       });
     }
-    const backlogTCs = testCases.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan?.id);
+    const backlogTCs = testCases.filter(tc => !tc.testPlanId || tc.testPlanId !== selectedPlan.id);
 
     return { dayColumns: dayCols, backlog: backlogTCs };
   }, [selectedPlan, testCases]);
@@ -167,7 +169,7 @@ export default function TestPlanPage() {
                   <SelectValue placeholder="Select a Test Plan" />
               </SelectTrigger>
               <SelectContent>
-                  {testPlans.map(plan => (
+                  {testPlans?.map(plan => (
                       <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
                   ))}
               </SelectContent>
@@ -209,7 +211,7 @@ export default function TestPlanPage() {
                       <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
                           <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <span>Page {page + 1} of {totalPages}</span>
+                      <span>Page {page + 1} of {totalPages > 0 ? totalPages : 1}</span>
                       <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
                           <ChevronRight className="h-4 w-4" />
                       </Button>

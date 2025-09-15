@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -70,6 +70,7 @@ interface ProjectContextType {
   fixedCosts: FixedCost[];
   environments: Environment[];
   codeRepositories: CodeRepository[];
+  testPlans: TestPlan[];
   testDate: Date | null;
   setTestDate: (date: Date | null) => void;
   
@@ -112,6 +113,7 @@ interface ProjectContextType {
   updateTestCase: (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>) => Promise<boolean>;
   autoGenerateTestCases: (counts: Record<string, number>) => Promise<boolean>;
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
+  addTestPlan: (plan: Omit<TestPlan, 'id'>) => Promise<boolean>;
   
   // Bug actions
   autoGenerateBugs: (counts: Record<string, number>) => Promise<boolean>;
@@ -271,7 +273,7 @@ const standardDocs = [
   'Closure',
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
@@ -280,7 +282,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
-    '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories'],
+    '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
     '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments', 'releases'],
     '/project-details/project-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
@@ -333,6 +335,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
+  const [testPlans, setTestPlans] = useState<TestPlan[]>([]);
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [worklogSubmissions, setWorklogSubmissions] = useState<WorklogSubmission[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
@@ -392,6 +395,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         { name: 'fixedCosts', setState: setFixedCosts, isDoc: false },
         { name: 'environments', setState: setEnvironments, isDoc: false },
         { name: 'codeRepositories', setState: setCodeRepositories, isDoc: false },
+        { name: 'testPlans', setState: setTestPlans, isDoc: false },
         { name: 'worklogs', setState: setWorklogs, isDoc: false },
         { name: 'worklogSubmissions', setState: setWorklogSubmissions, isDoc: false },
         { name: 'settings', setState: setProjectSettings, isDoc: true },
@@ -446,7 +450,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                 const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
                 const dateFields: Record<string, string[]> = {
                     stories: ['startDate', 'endDate', 'deletedAt', 'updatedAt', 'developmentStartDate', 'completionDate'],
-                    testCases: ['deletedAt'],
+                    testCases: ['deletedAt', 'executionDate'],
+                    testPlans: ['startDate', 'endDate'],
                     risks: ['deletedAt'],
                     assumptions: ['validationDate', 'deletedAt'],
                     issues: ['reportedDate', 'resolvedDate', 'deletedAt'],
@@ -1226,7 +1231,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'projects', projectId, 'testCases', testCaseId), sanitizeForFirestore(data));
+      const payload: any = { ...data };
+      if (data.executionDate) {
+        payload.executionDate = new Date(data.executionDate).toISOString();
+      }
+      if (data.hasOwnProperty('executionDate') && data.executionDate === undefined) {
+        payload.executionDate = null;
+      }
+      
+      await updateDoc(doc(db, 'projects', projectId, 'testCases', testCaseId), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
@@ -1242,6 +1255,22 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to soft-delete test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
+      return false;
+    }
+  };
+
+  const addTestPlan = async (plan: Omit<TestPlan, 'id'>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const payload = {
+        ...plan,
+        startDate: new Date(plan.startDate).toISOString(),
+        endDate: new Date(plan.endDate).toISOString(),
+      };
+      await addDoc(collection(db, 'projects', projectId, 'testPlans'), sanitizeForFirestore(payload));
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to add test plan.", e);
       return false;
     }
   };
@@ -2238,6 +2267,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     fixedCosts,
     environments,
     codeRepositories,
+    testPlans,
     testDate,
     setTestDate,
     isLoading,
@@ -2269,6 +2299,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     updateTestCase,
     autoGenerateTestCases,
     deleteTestCase,
+    addTestPlan,
     autoGenerateBugs,
     addRisk,
     updateRisk,
