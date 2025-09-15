@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -74,9 +75,9 @@ export default function ResourceBillingPage() {
     }
   };
 
-  const handleFixedCostChange = (id: string, cost: string) => {
-    const numericValue = parseFloat(cost) || 0;
-    updateFixedCost(id, { cost: numericValue });
+  const handleFixedCostChange = (id: string, field: 'cost' | 'plannedCost' | 'ongoingCost', value: string) => {
+    const numericValue = parseFloat(value) || 0;
+    updateFixedCost(id, { [field]: numericValue });
   };
 
   const handleAddNewFixedCost = async () => {
@@ -201,8 +202,10 @@ export default function ResourceBillingPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-2/3">Item</TableHead>
-                        <TableHead>Cost (USD)</TableHead>
+                        <TableHead className="w-1/3">Item</TableHead>
+                        <TableHead>Planned Cost (USD)</TableHead>
+                        <TableHead>Actual Cost (USD)</TableHead>
+                        <TableHead>Ongoing Cost (USD)</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -210,11 +213,27 @@ export default function ResourceBillingPage() {
                     {fixedCosts && fixedCosts.map(item => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
+                             <TableCell>
+                                <Input
+                                    type="number"
+                                    defaultValue={item.plannedCost}
+                                    onBlur={(e) => handleFixedCostChange(item.id, 'plannedCost', e.target.value)}
+                                    className="w-32"
+                                />
+                            </TableCell>
                             <TableCell>
                                 <Input
                                     type="number"
                                     defaultValue={item.cost}
-                                    onBlur={(e) => handleFixedCostChange(item.id, e.target.value)}
+                                    onBlur={(e) => handleFixedCostChange(item.id, 'cost', e.target.value)}
+                                    className="w-32"
+                                />
+                            </TableCell>
+                             <TableCell>
+                                <Input
+                                    type="number"
+                                    defaultValue={item.ongoingCost}
+                                    onBlur={(e) => handleFixedCostChange(item.id, 'ongoingCost', e.target.value)}
                                     className="w-32"
                                 />
                             </TableCell>
@@ -242,6 +261,7 @@ export default function ResourceBillingPage() {
                                 className="w-32"
                             />
                         </TableCell>
+                        <TableCell colSpan={2}></TableCell>
                         <TableCell className="text-right">
                             <Button onClick={handleAddNewFixedCost}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Add

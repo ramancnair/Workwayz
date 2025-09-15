@@ -54,25 +54,15 @@ const resourceCostsConfig = {
 } satisfies ChartConfig;
 
 
-const softwareCostsData = [
-    { name: 'Software', planned: 215000, actual: 250000, ongoing: 50000 },
-];
-const hardwareCostsData = [
-    { name: 'Hardware', planned: 33600, actual: 4340, ongoing: 0 },
-];
-const otherCostsData = [
-    { name: 'Others', planned: 100000, actual: 80000 },
-];
-
 const otherCostsConfig = {
-  planned: { label: 'Planned', color: 'hsl(var(--chart-1))' },
-  actual: { label: 'Actual', color: 'hsl(var(--chart-5))' },
-  ongoing: { label: 'Ongoing', color: 'hsl(var(--muted-foreground))' },
+  plannedCost: { label: 'Planned', color: 'hsl(var(--chart-1))' },
+  cost: { label: 'Actual', color: 'hsl(var(--chart-5))' },
+  ongoingCost: { label: 'Ongoing', color: 'hsl(var(--muted-foreground))' },
 } satisfies ChartConfig;
 
 
 export default function ProjectDashboardPage() {
-  const { project, stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings, employees, worklogs } = useProject();
+  const { project, stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings, employees, worklogs, fixedCosts } = useProject();
   const [selectedReleaseId, setSelectedReleaseId] = useState('all');
   const [selectedSprintId, setSelectedSprintId] = useState('all');
   const [workloadSprintId, setWorkloadSprintId] = useState('all');
@@ -542,49 +532,23 @@ export default function ProjectDashboardPage() {
         <CardHeader>
           <CardTitle>Software, Hardware and Other Costs</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <CardContent>
             <ChartContainer config={otherCostsConfig} className="h-[300px] w-full">
-                <BarChart data={softwareCostsData} margin={{ left: 10, right: 10, top: 20, bottom: 10 }}>
+                <BarChart data={fixedCosts} margin={{ left: 10, right: 10, top: 20, bottom: 10 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="name" tickLine={false} axisLine={false} />
                     <YAxis hide />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="planned" fill="var(--color-planned)" radius={4}>
-                         <LabelList dataKey="planned" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
+                    <Bar dataKey="plannedCost" fill="var(--color-plannedCost)" radius={4}>
+                         <LabelList dataKey="plannedCost" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
                     </Bar>
-                    <Bar dataKey="actual" fill="var(--color-actual)" radius={4}>
-                         <LabelList dataKey="actual" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
+                    <Bar dataKey="cost" fill="var(--color-cost)" radius={4}>
+                         <LabelList dataKey="cost" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
                     </Bar>
-                    <Bar dataKey="ongoing" fill="var(--color-ongoing)" radius={4}>
-                         <LabelList dataKey="ongoing" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
+                    <Bar dataKey="ongoingCost" fill="var(--color-ongoingCost)" radius={4}>
+                         <LabelList dataKey="ongoingCost" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
                     </Bar>
-                </BarChart>
-            </ChartContainer>
-             <ChartContainer config={otherCostsConfig} className="h-[300px] w-full">
-                <BarChart data={hardwareCostsData} margin={{ left: 10, right: 10, top: 20, bottom: 10 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                    <YAxis hide />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="planned" fill="var(--color-planned)" radius={4}>
-                        <LabelList dataKey="planned" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(1)}K`} />
-                    </Bar>
-                    <Bar dataKey="actual" fill="var(--color-actual)" radius={4}>
-                        <LabelList dataKey="actual" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(1)}K`} />
-                    </Bar>
-                </BarChart>
-            </ChartContainer>
-             <ChartContainer config={otherCostsConfig} className="h-[300px] w-full">
-                <BarChart data={otherCostsData} margin={{ left: 10, right: 10, top: 20, bottom: 10 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                    <YAxis hide />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="planned" fill="var(--color-planned)" radius={4} />
-                    <Bar dataKey="actual" fill="var(--color-actual)" radius={4} />
                 </BarChart>
             </ChartContainer>
         </CardContent>
@@ -593,6 +557,7 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
+
 
 
 
