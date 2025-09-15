@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -147,6 +148,7 @@ export default function TestPlanPage() {
   const [filters, setFilters] = useState<Record<string, string[]>>({
     sprintId: [],
     releaseId: [],
+    status: [],
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
   
@@ -180,10 +182,10 @@ export default function TestPlanPage() {
   }, [selectedPlanId, testPlans]);
   
   useEffect(() => {
-    if (selectedPlan && !selectedPlanId) {
-      setSelectedPlanId(selectedPlan.id);
+    if (testPlans && testPlans.length > 0 && !selectedPlanId) {
+      setSelectedPlanId(testPlans[0].id);
     }
-  }, [selectedPlan, selectedPlanId]);
+  }, [testPlans, selectedPlanId]);
   
   useEffect(() => {
     if(isDialogOpen && editingPlan) {
@@ -192,8 +194,8 @@ export default function TestPlanPage() {
         planType: editingPlan.planType,
         sprintId: editingPlan.sprintId,
         releaseId: editingPlan.releaseId,
-        startDate: format(new Date(editingPlan.startDate.replace(/-/g, '/')), 'yyyy-MM-dd'),
-        endDate: format(new Date(editingPlan.endDate.replace(/-/g, '/')), 'yyyy-MM-dd'),
+        startDate: format(parseISO(editingPlan.startDate), 'yyyy-MM-dd'),
+        endDate: format(parseISO(editingPlan.endDate), 'yyyy-MM-dd'),
       });
     } else if (isDialogOpen && !editingPlan) {
       form.reset({
@@ -271,7 +273,6 @@ export default function TestPlanPage() {
     if (!testCases || !testPlans) return { dayColumns: {}, backlog: [] };
     
     let filteredTCs = [...testCases];
-
     if (filters.sprintId?.length > 0) {
       filteredTCs = filteredTCs.filter(tc => {
         const sprint = sprints.find(s => s.id === tc.sprintId);
@@ -283,6 +284,9 @@ export default function TestPlanPage() {
             const release = releases.find(r => r.id === tc.releaseId);
             return filters.releaseId.includes(release?.name || 'Unassigned');
         });
+    }
+    if (filters.status?.length > 0) {
+        filteredTCs = filteredTCs.filter(tc => filters.status.includes(tc.status));
     }
     
     let scheduledTestCaseIds = new Set<string>();
@@ -386,24 +390,16 @@ export default function TestPlanPage() {
     )
   }
 
-  if (!testPlans) {
-    return (
-      <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full items-center justify-center">
-        <p>Loading test plans...</p>
-      </div>
-    );
-  }
-
   return (
     <DndContext onDragEnd={handleDrop}>
-      <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-full">
+      <div className="flex-1 flex flex-col space-y-4 p-4 md:p-8 pt-6 h-[calc(100vh-100px)]">
         <PageHeader title="Test Plan" description="Create and manage test execution plans.">
           <Select onValueChange={setSelectedPlanId} value={selectedPlanId || ''}>
               <SelectTrigger className="w-[280px]">
                   <SelectValue placeholder="Select a Test Plan" />
               </SelectTrigger>
               <SelectContent>
-                  {testPlans.map(plan => (
+                  {testPlans?.map(plan => (
                       <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
                   ))}
               </SelectContent>
@@ -413,11 +409,10 @@ export default function TestPlanPage() {
           </Button>
         </PageHeader>
         
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Top Pane: Backlog */}
-          <div className="flex flex-col h-1/2">
-            <Droppable id="backlog" className="border rounded-lg p-4 flex flex-col h-full">
-              <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
+        <div className="flex-1 grid grid-cols-1 gap-4 min-h-0">
+          <div className="flex flex-col min-h-0">
+            <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
+            <Droppable id="backlog" className="border rounded-lg p-4 flex flex-col flex-1 min-h-0">
               <div className="flex-1 overflow-auto border rounded-md">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10">
@@ -430,7 +425,7 @@ export default function TestPlanPage() {
                       </TableHead>
                       <SortableHeader columnId="testCaseId">ID</SortableHeader>
                       <SortableHeader columnId="title">Title</SortableHeader>
-                      <SortableHeader columnId="status">Status</SortableHeader>
+                      <FilterableHeader columnId="status" filterOptions={testCaseStatuses.map(s => ({value: s, label: s}))}>Status</FilterableHeader>
                       <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
                         Sprint
                       </FilterableHeader>
@@ -464,7 +459,7 @@ export default function TestPlanPage() {
                                 {tc.title}
                               </button>
                           </TableCell>
-                          <TableCell>
+                           <TableCell>
                              <Badge className={cn('font-semibold', statusStyles[tc.status])}>
                                 {tc.status}
                             </Badge>
@@ -479,9 +474,8 @@ export default function TestPlanPage() {
               </div>
             </Droppable>
           </div>
-
-          {/* Bottom Pane: Execution Plan */}
-          <div className="h-1/2 flex flex-col pt-4">
+          
+          <div className="flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-4">
                 {selectedPlan ? (
@@ -651,3 +645,4 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
+
