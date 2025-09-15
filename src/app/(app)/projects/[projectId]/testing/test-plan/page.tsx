@@ -14,12 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter } from 'lucide-react';
-import type { TestPlan, TestCase, Employee, Release, TestCaseStatus } from '@/types';
+import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import { format, eachDayOfInterval, parseISO, addDays, subDays } from 'date-fns';
@@ -136,6 +137,9 @@ export default function TestPlanPage() {
     testPlans,
     sprints,
     releasesAndMilestones,
+    employees,
+    stories,
+    environments,
     updateTestPlan,
     deleteTestPlan,
   } = useProject();
@@ -256,6 +260,17 @@ export default function TestPlanPage() {
       toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingPlan ? 'update' : 'create'} test plan.` });
     }
   };
+
+  const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
+    if (!editingTestCase) return;
+    const success = await updateTestCase(editingTestCase.id, values);
+    if (success) {
+      toast({ title: 'Success', description: 'Test Case updated.' });
+      setIsTestCaseDialogOpen(false);
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update Test Case.' });
+    }
+  };
   
   const handleDeletePlan = async () => {
     if (!deletingPlan) return;
@@ -311,20 +326,13 @@ export default function TestPlanPage() {
         });
     }
 
-    let allPlanTCs: TestCase[] = [];
     let backlogTCs: TestCase[] = [];
 
     testCases.forEach(tc => {
         if (tc.testPlanId === selectedPlan?.id && tc.executionDate && dayCols[tc.executionDate]) {
-            allPlanTCs.push(tc);
+            dayCols[tc.executionDate].push(tc);
         } else {
             backlogTCs.push(tc);
-        }
-    });
-    
-    allPlanTCs.forEach(tc => {
-        if(dayCols[tc.executionDate!]) {
-            dayCols[tc.executionDate!].push(tc);
         }
     });
 
@@ -580,7 +588,7 @@ export default function TestPlanPage() {
             <DialogTitle>{editingPlan ? 'Edit Test Plan' : 'Create New Test Plan'}</DialogTitle>
           </DialogHeader>
           <Form {...testPlanForm}>
-            <form onSubmit={testPlanForm.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={testPlanForm.handleSubmit(onTestPlanSubmit)} className="space-y-4">
               <FormField
                 control={testPlanForm.control}
                 name="name"
@@ -676,12 +684,35 @@ export default function TestPlanPage() {
       </Dialog>
       
       <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
-        {/* The full Test Case dialog form from test-cases/page.tsx would go here */}
-        <DialogContent>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Edit Test Case</DialogTitle></DialogHeader>
-            <p>Editing test case: {editingTestCase?.title}</p>
-             {/* A simplified version for now */}
-            <Button onClick={() => setIsTestCaseDialogOpen(false)}>Close</Button>
+            <Form {...testCaseForm}>
+              <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="space-y-4 py-4">
+                {/* Simplified form for brevity. Full form from test-cases/page.tsx would be here */}
+                <FormField control={testCaseForm.control} name="title" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl><Input placeholder="Test case title" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                )} />
+                 <FormField control={testCaseForm.control} name="status" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                              {testCaseStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                )} />
+                <DialogFooter>
+                  <Button type="submit">Save Changes</Button>
+                </DialogFooter>
+              </form>
+            </Form>
         </DialogContent>
       </Dialog>
       
