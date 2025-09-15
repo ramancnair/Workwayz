@@ -354,8 +354,10 @@ export default function TestPlanPage() {
     let backlogTCs: TestCase[] = [];
 
     testCases.forEach(tc => {
-        if (tc.testPlanId === selectedPlan?.id && tc.executionDate && dayCols[tc.executionDate]) {
-            dayCols[tc.executionDate].push(tc);
+        const isScheduledInCurrentPlan = tc.testPlanId === selectedPlan?.id && tc.executionDate && dayCols[tc.executionDate];
+        
+        if (isScheduledInCurrentPlan) {
+            dayCols[tc.executionDate!].push(tc);
         } else {
             backlogTCs.push(tc);
         }
@@ -495,7 +497,7 @@ export default function TestPlanPage() {
         </PageHeader>
         
         <div className="flex flex-col flex-1 gap-4 min-h-0">
-          <div className="flex flex-col h-1/2">
+          <div className="h-1/2 flex flex-col">
             <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
             <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
               <div className="overflow-y-auto">
@@ -560,7 +562,7 @@ export default function TestPlanPage() {
             </Droppable>
           </div>
           
-          <div className="flex flex-col h-1/2">
+          <div className="h-1/2 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-4">
                 {selectedPlan ? (
@@ -713,7 +715,7 @@ export default function TestPlanPage() {
           <DialogHeader>
             <DialogTitle>Edit Test Case</DialogTitle>
           </DialogHeader>
-          <Form {...testCaseForm}>
+           <Form {...testCaseForm}>
             <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="space-y-4">
               <FormField control={testCaseForm.control} name="title" render={({ field }) => (
                   <FormItem>
@@ -774,8 +776,12 @@ export default function TestPlanPage() {
                           key={env.id}
                           control={testCaseForm.control}
                           name="environmentIds"
-                          render={({ field }) => (
-                              <FormItem key={env.id} className="flex flex-row items-start space-x-3 space-y-0">
+                          render={({ field }) => {
+                            return (
+                              <FormItem
+                                key={env.id}
+                                className="flex flex-row items-start space-x-3 space-y-0"
+                              >
                                 <FormControl>
                                   <Checkbox
                                     checked={field.value?.includes(env.id)}
@@ -790,9 +796,12 @@ export default function TestPlanPage() {
                                     }}
                                   />
                                 </FormControl>
-                                <FormLabel className="font-normal">{env.name}</FormLabel>
+                                <FormLabel className="font-normal">
+                                  {env.name}
+                                </FormLabel>
                               </FormItem>
-                          )}
+                            )
+                          }}
                         />
                       ))}
                     </div>
