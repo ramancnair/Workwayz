@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -18,7 +19,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter } from 'lucide-react';
 import type { TestPlan, TestCase, Employee, Release } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Label } from '@/components/ui/label';
+
 
 const testPlanSchemaBase = z.object({
   name: z.string().min(1, 'Plan name is required.'),
@@ -129,9 +137,9 @@ export default function TestPlanPage() {
   const watchedSprintId = useWatch({ control: form.control, name: 'sprintId' });
   const watchedReleaseId = useWatch({ control: form.control, name: 'releaseId' });
   
-  const [filters, setFilters] = useState({
-    sprintId: 'all',
-    releaseId: 'all',
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    sprintId: [],
+    releaseId: [],
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
 
@@ -252,11 +260,12 @@ export default function TestPlanPage() {
     if (!testCases) return { dayColumns: {}, backlog: [] };
     
     let filteredTCs = [...testCases];
-    if (filters.sprintId !== 'all') {
-      filteredTCs = filteredTCs.filter(tc => (tc.sprintId || 'backlog') === filters.sprintId);
+
+    if (filters.sprintId.length > 0) {
+      filteredTCs = filteredTCs.filter(tc => filters.sprintId.includes(tc.sprintId || 'backlog'));
     }
-    if (filters.releaseId !== 'all') {
-      filteredTCs = filteredTCs.filter(tc => (tc.releaseId || 'unassigned') === filters.releaseId);
+    if (filters.releaseId.length > 0) {
+        filteredTCs = filteredTCs.filter(tc => filters.releaseId.includes(tc.releaseId || 'unassigned'));
     }
     
     let scheduledTestCaseIds = new Set<string>();
@@ -302,12 +311,20 @@ export default function TestPlanPage() {
     }
   };
 
-  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({ sprintId: 'all', releaseId: 'all' });
+  const handleFilterChange = (columnId: string, value: string) => {
+    setFilters(prev => {
+        const newFilters = { ...prev };
+        const currentFilter = newFilters[columnId] || [];
+        if (currentFilter.includes(value)) {
+            newFilters[columnId] = currentFilter.filter(v => v !== value);
+        } else {
+            newFilters[columnId] = [...currentFilter, value];
+        }
+        if (newFilters[columnId].length === 0) {
+            delete newFilters[columnId];
+        }
+        return newFilters;
+    })
   };
   
   const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => (
@@ -318,6 +335,42 @@ export default function TestPlanPage() {
       </Button>
     </TableHead>
   );
+  
+  const FilterableHeader = ({ columnId, children, filterOptions }: { columnId: string, children: React.ReactNode, filterOptions: {value: string, label: string}[] }) => {
+    const activeFilters = filters[columnId] || [];
+    return (
+      <TableHead>
+        <div className="flex items-center gap-1">
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className={cn("h-6 w-6", activeFilters.length > 0 && "text-blue-500")}>
+                        <Filter className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-64">
+                    <div className="p-2 space-y-2">
+                        <Label className="px-2 font-semibold">Filter by {children}</Label>
+                        {filterOptions.map(opt => (
+                            <div key={opt.value} className="flex items-center space-x-2 px-2">
+                                <Checkbox
+                                    id={`${columnId}-${opt.value}`}
+                                    checked={activeFilters.includes(opt.value)}
+                                    onCheckedChange={() => handleFilterChange(columnId, opt.value)}
+                                />
+                                <Label htmlFor={`${columnId}-${opt.value}`} className="font-normal w-full">{opt.label}</Label>
+                            </div>
+                        ))}
+                    </div>
+                </PopoverContent>
+            </Popover>
+             <Button variant="ghost" size="sm" onClick={() => handleSort(columnId)}>
+                {children}
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+        </div>
+      </TableHead>
+    )
+  }
 
   return (
     <DndContext onDragEnd={handleDrop}>
@@ -342,27 +395,6 @@ export default function TestPlanPage() {
           <CardContent className="p-4 flex-1 flex flex-col">
             <Droppable id="backlog" className="h-1/2 border rounded-lg p-4 overflow-auto">
               <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
-                <div className="flex items-center gap-4 flex-wrap pb-4">
-                    <Select value={filters.sprintId} onValueChange={(v) => handleFilterChange('sprintId', v)}>
-                        <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by sprint..."/></SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="all">All Sprints</SelectItem>
-                        <SelectItem value="backlog">Backlog</SelectItem>
-                        {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select value={filters.releaseId} onValueChange={(v) => handleFilterChange('releaseId', v)}>
-                        <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by release..."/></SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="all">All Releases</SelectItem>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Button variant="ghost" onClick={clearFilters}>
-                        <X className="mr-2 h-4 w-4" /> Clear Filters
-                    </Button>
-              </div>
 
                 <div className="border rounded-md overflow-hidden">
                     <Table>
@@ -376,8 +408,12 @@ export default function TestPlanPage() {
                                 </TableHead>
                                 <SortableHeader columnId="testCaseId">ID</SortableHeader>
                                 <SortableHeader columnId="title">Title</SortableHeader>
-                                <SortableHeader columnId="sprintId">Sprint</SortableHeader>
-                                <SortableHeader columnId="releaseId">Release</SortableHeader>
+                                 <FilterableHeader columnId="sprintId" filterOptions={[{value: 'backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.id, label: s.title}))]}>
+                                  Sprint
+                                </FilterableHeader>
+                                <FilterableHeader columnId="releaseId" filterOptions={[{value: 'unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.id, label: `[${r.releaseId}] ${r.name}`}))]}>
+                                  Release
+                                </FilterableHeader>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
