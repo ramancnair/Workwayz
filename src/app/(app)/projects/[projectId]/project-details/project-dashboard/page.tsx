@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -41,23 +40,10 @@ const workloadChartConfig = {
   bugEffort: { label: 'Bug Effort', color: 'hsl(var(--chart-5))' },
 } satisfies ChartConfig;
 
-
-const costChartData = [
-    { name: 'Actual', value: 380, fill: 'hsl(var(--chart-1))' },
-    { name: 'Planned', value: 320, fill: 'hsl(var(--primary))' },
-    { name: 'Budget', value: 350, fill: 'hsl(var(--destructive))' },
-]
-
 const resourceCostsConfig = {
   revenue: { label: 'Revenue', color: 'hsl(var(--chart-2))' },
   cost: { label: 'Cost', color: 'hsl(var(--chart-5))' },
 } satisfies ChartConfig;
-
-
-const otherCostsConfig = {
-  cost: { label: "Fixed Cost", color: "hsl(var(--chart-1))" },
-} satisfies ChartConfig;
-
 
 export default function ProjectDashboardPage() {
   const { project, stories, releasesAndMilestones, sprints, epics, holidays, weeklyOffDays, projectSettings, employees, worklogs, fixedCosts } = useProject();
@@ -531,15 +517,14 @@ export default function ProjectDashboardPage() {
           <CardTitle>Fixed Cost</CardTitle>
         </CardHeader>
         <CardContent>
-            <ChartContainer config={otherCostsConfig} className="h-[300px] w-full">
+            <ChartContainer config={{}} className="h-[300px] w-full">
                 <BarChart data={fixedCosts} margin={{ left: 10, right: 10, top: 20, bottom: 10 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                    <YAxis hide />
+                    <YAxis />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="cost" fill="var(--color-cost)" radius={4}>
-                         <LabelList dataKey="cost" position="top" formatter={(value: number) => `$${(value / 1000).toFixed(0)}K`} />
+                    <Bar dataKey="cost" fill="hsl(var(--chart-1))" radius={4}>
+                         <LabelList dataKey="cost" position="top" formatter={(value: number) => `$${value.toLocaleString()}`} />
                     </Bar>
                 </BarChart>
             </ChartContainer>
@@ -549,11 +534,3 @@ export default function ProjectDashboardPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
