@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -20,7 +19,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter, Move } from 'lucide-react';
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -104,7 +103,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 };
 
 
-const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
+const DraggableTestCase = ({ testCase, isSelected, onSelect }: { testCase: TestCase, isSelected: boolean, onSelect: (checked: boolean) => void }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: testCase.id,
     data: { type: 'test-case', testCase },
@@ -115,8 +114,9 @@ const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
   } : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <Badge variant="secondary" className="cursor-grab">
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="flex items-center gap-2 cursor-grab" >
+       <Checkbox checked={isSelected} onCheckedChange={onSelect} />
+      <Badge variant="secondary" className="w-full">
         {testCase.testCaseId}
       </Badge>
     </div>
@@ -153,7 +153,8 @@ export default function TestPlanPage() {
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<TestPlan | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedTCs, setSelectedTCs] = useState<string[]>([]);
+  const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
+  const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   
@@ -328,18 +329,24 @@ export default function TestPlanPage() {
     }
   };
 
-  const handleBulkMove = (targetId: string) => {
-    if (selectedTCs.length === 0) return;
+  const handleBulkMove = (targetId: string, selection: 'backlog' | 'scheduled') => {
+    const tcsToMove = selection === 'backlog' ? selectedBacklogTCs : selectedScheduledTCs;
+    if (tcsToMove.length === 0) return;
+    
     const [type, dateStr] = targetId.split('_');
-    const updates = selectedTCs.map(tcId => 
+    const isMovingToBacklog = type === 'backlog';
+    
+    const updates = tcsToMove.map(tcId => 
       updateTestCase(tcId, {
-        executionDate: type === 'day' ? dateStr : undefined,
-        testPlanId: type === 'day' ? selectedPlan?.id : undefined
+        executionDate: isMovingToBacklog ? undefined : dateStr,
+        testPlanId: isMovingToBacklog ? undefined : selectedPlan?.id
       })
     );
+    
     Promise.all(updates).then(() => {
-        toast({ title: "Success", description: `${selectedTCs.length} test cases moved.`});
-        setSelectedTCs([]);
+        toast({ title: "Success", description: `${tcsToMove.length} test cases moved.`});
+        if(selection === 'backlog') setSelectedBacklogTCs([]);
+        else setSelectedScheduledTCs([]);
     });
   }
 
@@ -505,7 +512,14 @@ export default function TestPlanPage() {
         </PageHeader>
         
         <div className="h-1/2 flex flex-col mt-4">
-          <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-lg">Test Case Backlog ({backlog.length})</h3>
+                {selectedBacklogTCs.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{selectedBacklogTCs.length} selected</span>
+                    </div>
+                )}
+            </div>
           <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
             <div className="overflow-y-auto">
               <Table>
@@ -513,8 +527,8 @@ export default function TestPlanPage() {
                   <TableRow>
                     <TableHead className="w-10">
                       <Checkbox
-                        checked={backlog.length > 0 && selectedTCs.length === backlog.length}
-                        onCheckedChange={(checked) => setSelectedTCs(checked ? backlog.map(tc => tc.id) : [])}
+                        checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
+                        onCheckedChange={(checked) => setSelectedBacklogTCs(checked ? backlog.map(tc => tc.id) : [])}
                       />
                     </TableHead>
                     <SortableHeader columnId="testCaseId">ID</SortableHeader>
@@ -536,13 +550,13 @@ export default function TestPlanPage() {
                       <TableRow key={tc.id}>
                         <TableCell>
                           <Checkbox
-                            checked={selectedTCs.includes(tc.id)}
-                            onCheckedChange={(checked) => setSelectedTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                            checked={selectedBacklogTCs.includes(tc.id)}
+                            onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
                           />
                         </TableCell>
                         <TableCell>
                           <span className="flex items-center gap-2">
-                            <DraggableTestCase testCase={tc} />
+                            <DraggableTestCase testCase={tc} isSelected={selectedBacklogTCs.includes(tc.id)} onSelect={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))} />
                             <button onClick={() => handleDialogOpen(tc)} className="hover:underline">
                               {tc.testCaseId}
                             </button>
@@ -581,6 +595,24 @@ export default function TestPlanPage() {
               ) : (
                 <h3 className="font-bold text-lg">Execution Plan</h3>
               )}
+               {selectedScheduledTCs.length > 0 && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline">Move Selected ({selectedScheduledTCs.length})</Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <div className="flex flex-col">
+                        <Button variant="ghost" className="justify-start" onClick={() => handleBulkMove('backlog', 'scheduled')}>Move to Backlog</Button>
+                        <Label className="p-2 text-xs font-semibold text-muted-foreground">Move to Date:</Label>
+                        {days.map(day => (
+                            <Button key={day.toString()} variant="ghost" className="justify-start" onClick={() => handleBulkMove(`day_${format(day, 'yyyy-MM-dd')}`, 'scheduled')}>
+                                {format(day, 'EEE, MMM d')}
+                            </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
@@ -595,17 +627,23 @@ export default function TestPlanPage() {
           <div className="flex-1 grid grid-cols-5 gap-4">
             {visibleDays.map(day => {
               const dateStr = format(day, 'yyyy-MM-dd');
+              const tcsForDay = dayColumns[dateStr] || [];
               return (
                 <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 flex flex-col">
                   <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
                   <div className="text-center mb-2">
-                    <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`)} disabled={selectedTCs.length === 0}>
+                    <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`, 'backlog')} disabled={selectedBacklogTCs.length === 0}>
                       Move Here
                     </Button>
                   </div>
                   <div className="space-y-1 text-center flex-1 overflow-y-auto">
-                    {(dayColumns[dateStr] || []).map(tc => (
-                      <DraggableTestCase key={tc.id} testCase={tc} />
+                    {tcsForDay.map(tc => (
+                      <DraggableTestCase 
+                        key={tc.id} 
+                        testCase={tc} 
+                        isSelected={selectedScheduledTCs.includes(tc.id)}
+                        onSelect={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                      />
                     ))}
                   </div>
                 </Droppable>
@@ -623,7 +661,7 @@ export default function TestPlanPage() {
            <Tabs defaultValue="details" className="w-full">
             <TabsList>
               <TabsTrigger value="details">Details</TabsTrigger>
-              {editingPlan && <TabsTrigger value="tc-list">TC List</TabsTrigger>}
+              {editingPlan && <TabsTrigger value="tc-list">Test Cases ({scheduledTestCases.length})</TabsTrigger>}
             </TabsList>
             <TabsContent value="details">
               <Form {...testPlanForm}>
@@ -926,9 +964,7 @@ export default function TestPlanPage() {
                     />
                 </div>
               <DialogFooter>
-                <Button type="submit">
-                    Save Changes
-                </Button>
+                <Button type="submit">Save Changes</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -966,3 +1002,6 @@ export default function TestPlanPage() {
 
 
 
+
+
+    
