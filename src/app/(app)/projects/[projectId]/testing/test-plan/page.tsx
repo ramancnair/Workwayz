@@ -87,6 +87,8 @@ const testCaseFormSchema = z.object({
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
+  testPlanId: z.string().optional(),
+  executionDate: z.string().optional(),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -251,6 +253,8 @@ export default function TestPlanPage() {
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
             assigneeId: editingTestCase.assigneeId || 'unassigned',
+            testPlanId: editingTestCase.testPlanId || 'none',
+            executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
         });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm, storyOptions]);
@@ -283,6 +287,8 @@ export default function TestPlanPage() {
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
+        testPlanId: values.testPlanId === 'none' ? undefined : values.testPlanId,
+        executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
     };
     const success = await updateTestCase(editingTestCase.id, testCaseData);
     if (success) {
@@ -910,6 +916,46 @@ export default function TestPlanPage() {
                       )}
                     />
                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={testCaseForm.control}
+                      name="testPlanId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Test Plan</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Assign to a Test Plan" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">TC Backlog</SelectItem>
+                              {testPlans.map((plan) => (
+                                <SelectItem key={plan.id} value={plan.id}>
+                                  [{plan.testPlanId}] {plan.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={testCaseForm.control}
+                      name="executionDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Execution Date</FormLabel>
+                           <FormControl>
+                            <Input type="date" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
               <DialogFooter>
                 <Button type="submit">
                     Save Changes
@@ -946,3 +992,4 @@ export default function TestPlanPage() {
 
 
     
+
