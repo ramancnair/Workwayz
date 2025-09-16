@@ -104,7 +104,6 @@ export default function TestCasesPage() {
   const [filters, setFilters] = useState({
     sprintId: 'all',
     releaseId: 'all',
-    environmentId: 'all',
   });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() =>
@@ -170,7 +169,7 @@ export default function TestCasesPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ sprintId: 'all', releaseId: 'all', environmentId: 'all' });
+    setFilters({ sprintId: 'all', releaseId: 'all' });
   };
   
   const handleSort = (columnId: string) => {
@@ -205,10 +204,6 @@ export default function TestCasesPage() {
             filtered = filtered.filter(tc => tc.releaseId === filters.releaseId);
         }
     }
-    if (filters.environmentId !== 'all') {
-      filtered = filtered.filter(tc => tc.environmentIds?.includes(filters.environmentId));
-    }
-
 
     if (sorting) {
       filtered.sort((a, b) => {
@@ -430,13 +425,6 @@ export default function TestCasesPage() {
                   <SelectItem value="all">All Releases</SelectItem>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {releases.map(r => <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.environmentId} onValueChange={(v) => handleFilterChange('environmentId', v)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by environment..."/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Environments</SelectItem>
-                  {sortedEnvironments.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
                 </SelectContent>
               </Select>
                <DropdownMenu>

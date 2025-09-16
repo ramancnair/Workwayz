@@ -21,7 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter } from 'lucide-react';
-import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee } from '@/types';
+import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import { format, eachDayOfInterval, parseISO, addDays, subDays } from 'date-fns';
@@ -86,7 +86,6 @@ const testCaseFormSchema = z.object({
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
-  environmentIds: z.array(z.string()).optional(),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -240,8 +239,6 @@ export default function TestPlanPage() {
       value: story.id,
       label: `[${story.storyId}] ${story.title}`,
     })), [stories]);
-  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
-
 
   useEffect(() => {
     if (isTestCaseDialogOpen && editingTestCase) {
@@ -253,7 +250,6 @@ export default function TestPlanPage() {
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
             assigneeId: editingTestCase.assigneeId || 'unassigned',
-            environmentIds: editingTestCase.environmentIds || [],
         });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm, storyOptions]);
@@ -286,7 +282,6 @@ export default function TestPlanPage() {
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
-        environmentIds: values.environmentIds,
     };
     const success = await updateTestCase(editingTestCase.id, testCaseData);
     if (success) {
@@ -764,51 +759,6 @@ export default function TestPlanPage() {
                     <FormMessage />
                   </FormItem>
               )} />
-              <FormField
-                control={testCaseForm.control}
-                name="environmentIds"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Environments to Run</FormLabel>
-                    <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
-                      {sortedEnvironments.map((env) => (
-                        <FormField
-                          key={env.id}
-                          control={testCaseForm.control}
-                          name="environmentIds"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={env.id}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(env.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), env.id])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== env.id
-                                            )
-                                          )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {env.name}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={testCaseForm.control} name="assigneeId" render={({ field }) => (
                       <FormItem>
