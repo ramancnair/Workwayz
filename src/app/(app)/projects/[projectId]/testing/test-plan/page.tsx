@@ -115,8 +115,11 @@ const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
   } : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="flex items-center gap-2 cursor-grab">
-      <Badge variant="secondary">{testCase.testCaseId}</Badge>
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="p-1 flex items-center gap-2 cursor-grab">
+      <Badge variant="secondary" className="font-semibold">{testCase.testCaseId}</Badge>
+       <Badge className={cn('font-semibold', statusStyles[testCase.status])}>
+            {testCase.status}
+        </Badge>
     </div>
   );
 };
@@ -151,7 +154,8 @@ export default function TestPlanPage() {
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<TestPlan | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
+  const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
+  const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   
@@ -327,13 +331,14 @@ export default function TestPlanPage() {
   };
   
   const handleBulkMove = (targetId: string) => {
-    if (selectedTestCases.length === 0) return;
+    const itemsToMove = selectedBacklogTCs.length > 0 ? selectedBacklogTCs : selectedScheduledTCs;
+    if (itemsToMove.length === 0) return;
     
     const isMovingToBacklog = targetId === 'backlog';
     const executionDate = isMovingToBacklog ? undefined : new Date(targetId.split('_')[1]).toISOString();
     const testPlanId = isMovingToBacklog ? undefined : selectedPlan?.id;
 
-    const updates = selectedTestCases.map(tcId => 
+    const updates = itemsToMove.map(tcId => 
       updateTestCase(tcId, {
         executionDate,
         testPlanId
@@ -341,8 +346,9 @@ export default function TestPlanPage() {
     );
     
     Promise.all(updates).then(() => {
-        toast({ title: "Success", description: `${selectedTestCases.length} test cases moved.`});
-        setSelectedTestCases([]);
+        toast({ title: "Success", description: `${itemsToMove.length} test cases moved.`});
+        setSelectedBacklogTCs([]);
+        setSelectedScheduledTCs([]);
     });
   }
 
@@ -432,7 +438,7 @@ export default function TestPlanPage() {
     })
   };
   
-  const handleDialogOpen = (testCase: TestCase) => {
+  const handleTestCaseDialogOpen = (testCase: TestCase) => {
     setEditingTestCase(testCase);
     setIsTestCaseDialogOpen(true);
   };
@@ -507,93 +513,127 @@ export default function TestPlanPage() {
           </Button>
         </PageHeader>
         
-        <div className="h-1/2 flex flex-col mt-4">
-          <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
-          <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
-            <div className="overflow-y-auto">
-              <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
-                  <TableRow>
-                    <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                    <SortableHeader columnId="title">Title</SortableHeader>
-                    <FilterableHeader columnId="status" filterOptions={testCaseStatuses.map(s => ({value: s, label: s}))}>Status</FilterableHeader>
-                    <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
-                      Sprint
-                    </FilterableHeader>
-                    <FilterableHeader columnId="releaseId" filterOptions={[{value: 'Unassigned', label: 'Unassigned'},...releases.map(r => ({ value: r.name, label: r.name}))]}>
-                      Release
-                    </FilterableHeader>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {backlog.map(tc => {
-                    const sprint = sprints.find(s => s.id === tc.sprintId);
-                    const release = releases.find(r => r.id === tc.releaseId);
-                    return (
-                      <TableRow key={tc.id}>
-                        <TableCell>
-                          <span className="flex items-center gap-2">
-                            <DraggableTestCase testCase={tc} />
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <button onClick={() => handleDialogOpen(tc)} className="text-left hover:underline">
-                            {tc.title}
-                          </button>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={cn('font-semibold', statusStyles[tc.status])}>
-                              {tc.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                        <TableCell>{release?.name || 'N/A'}</TableCell>
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
+            {/* Left Column: Backlog */}
+            <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-bold text-lg">Test Case Backlog ({backlog.length})</h3>
+                <Button 
+                  size="sm" 
+                  onClick={() => handleBulkMove(visibleDays[0] ? `day_${format(visibleDays[0], 'yyyy-MM-dd')}` : '')}
+                  disabled={selectedBacklogTCs.length === 0 || !visibleDays[0]}
+                >
+                  Move to Plan
+                </Button>
+              </div>
+              <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
+                <div className="overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                      <TableRow>
+                        <TableHead>
+                            <Checkbox 
+                                onCheckedChange={(checked) => setSelectedBacklogTCs(checked ? backlog.map(tc => tc.id) : [])}
+                                checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
+                            />
+                        </TableHead>
+                        <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                        <SortableHeader columnId="title">Title</SortableHeader>
+                        <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
+                          Sprint
+                        </FilterableHeader>
                       </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {backlog.map(tc => {
+                        const sprint = sprints.find(s => s.id === tc.sprintId);
+                        return (
+                          <TableRow key={tc.id}>
+                            <TableCell>
+                                <Checkbox
+                                    checked={selectedBacklogTCs.includes(tc.id)}
+                                    onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                                />
+                            </TableCell>
+                            <TableCell className="py-1">
+                                <DraggableTestCase testCase={tc} />
+                            </TableCell>
+                            <TableCell>
+                              <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left hover:underline">
+                                {tc.title}
+                              </button>
+                            </TableCell>
+                            <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Droppable>
             </div>
-          </Droppable>
-        </div>
-        
-        <div className="h-1/2 flex flex-col mt-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-4">
-              {selectedPlan ? (
-                <>
-                  <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
-                  <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDeletingPlan(selectedPlan)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                </>
-              ) : (
-                <h3 className="font-bold text-lg">Execution Plan</h3>
-              )}
+            
+            {/* Right Column: Execution Plan */}
+            <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-4">
+                  {selectedPlan ? (
+                    <>
+                      <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
+                      <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeletingPlan(selectedPlan)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </>
+                  ) : (
+                    <h3 className="font-bold text-lg">Execution Plan</h3>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleBulkMove('backlog')} disabled={selectedScheduledTCs.length === 0}>
+                    Move to Backlog
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span>Page {page + 1} of {totalPages > 0 ? totalPages : 1}</span>
+                  <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 grid grid-cols-5 gap-4">
+                {visibleDays.map(day => {
+                  const dateStr = format(day, 'yyyy-MM-dd');
+                  const tcsForDay = dayColumns[dateStr] || [];
+                  return (
+                    <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 flex flex-col">
+                        <div className="flex justify-between items-center">
+                            <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
+                            <Button 
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0"
+                              onClick={() => handleBulkMove(`day_${dateStr}`)}
+                              disabled={selectedBacklogTCs.length === 0 && selectedScheduledTCs.length === 0}
+                            >
+                              Move Here
+                            </Button>
+                        </div>
+                        <div className="space-y-1 text-center flex-1 overflow-y-auto pt-2">
+                          {tcsForDay.map(tc => (
+                            <div key={tc.id} className="flex items-center gap-1">
+                                <Checkbox
+                                    checked={selectedScheduledTCs.includes(tc.id)}
+                                    onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                                />
+                                <DraggableTestCase testCase={tc} />
+                            </div>
+                           ))}
+                        </div>
+                    </Droppable>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span>Page {page + 1} of {totalPages > 0 ? totalPages : 1}</span>
-              <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="flex-1 grid grid-cols-5 gap-4">
-            {visibleDays.map(day => {
-              const dateStr = format(day, 'yyyy-MM-dd');
-              const tcsForDay = dayColumns[dateStr] || [];
-              return (
-                <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 flex flex-col">
-                  <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
-                  <div className="space-y-1 text-center flex-1 overflow-y-auto">
-                    {tcsForDay.map(tc => <DraggableTestCase key={tc.id} testCase={tc} />)}
-                  </div>
-                </Droppable>
-              );
-            })}
-          </div>
         </div>
       </div>
 
@@ -696,7 +736,11 @@ export default function TestPlanPage() {
                                 <TableBody>
                                     {testCases.filter(tc => tc.testPlanId === editingPlan.id).map(tc => (
                                         <TableRow key={tc.id}>
-                                            <TableCell>{tc.testCaseId}</TableCell>
+                                            <TableCell>
+                                                <button onClick={() => { setIsPlanDialogOpen(false); handleTestCaseDialogOpen(tc); }} className="text-left font-medium text-primary hover:underline">
+                                                    {tc.testCaseId}
+                                                </button>
+                                            </TableCell>
                                             <TableCell>{tc.title}</TableCell>
                                             <TableCell>{tc.executionDate ? format(parseISO(tc.executionDate), 'PPP') : 'Not Scheduled'}</TableCell>
                                             <TableCell>
