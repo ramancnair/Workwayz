@@ -103,7 +103,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 };
 
 
-const DraggableTestCase = ({ testCase, isSelected, onSelect }: { testCase: TestCase, isSelected: boolean, onSelect: (checked: boolean) => void }) => {
+const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: testCase.id,
     data: { type: 'test-case', testCase },
@@ -114,8 +114,7 @@ const DraggableTestCase = ({ testCase, isSelected, onSelect }: { testCase: TestC
   } : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="flex items-center gap-2 cursor-grab" >
-       <Checkbox checked={isSelected} onCheckedChange={onSelect} />
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="cursor-grab" >
       <Badge variant="secondary" className="w-full">
         {testCase.testCaseId}
       </Badge>
@@ -525,12 +524,6 @@ export default function TestPlanPage() {
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
-                        onCheckedChange={(checked) => setSelectedBacklogTCs(checked ? backlog.map(tc => tc.id) : [])}
-                      />
-                    </TableHead>
                     <SortableHeader columnId="testCaseId">ID</SortableHeader>
                     <SortableHeader columnId="title">Title</SortableHeader>
                     <FilterableHeader columnId="status" filterOptions={testCaseStatuses.map(s => ({value: s, label: s}))}>Status</FilterableHeader>
@@ -549,17 +542,8 @@ export default function TestPlanPage() {
                     return (
                       <TableRow key={tc.id}>
                         <TableCell>
-                          <Checkbox
-                            checked={selectedBacklogTCs.includes(tc.id)}
-                            onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                          />
-                        </TableCell>
-                        <TableCell>
                           <span className="flex items-center gap-2">
-                            <DraggableTestCase testCase={tc} isSelected={selectedBacklogTCs.includes(tc.id)} onSelect={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))} />
-                            <button onClick={() => handleDialogOpen(tc)} className="hover:underline">
-                              {tc.testCaseId}
-                            </button>
+                            <DraggableTestCase testCase={tc} />
                           </span>
                         </TableCell>
                         <TableCell>
@@ -638,12 +622,15 @@ export default function TestPlanPage() {
                   </div>
                   <div className="space-y-1 text-center flex-1 overflow-y-auto">
                     {tcsForDay.map(tc => (
-                      <DraggableTestCase 
-                        key={tc.id} 
-                        testCase={tc} 
-                        isSelected={selectedScheduledTCs.includes(tc.id)}
-                        onSelect={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                      />
+                       <div key={tc.id} className="flex items-center gap-2 cursor-grab">
+                          <Checkbox
+                            checked={selectedScheduledTCs.includes(tc.id)}
+                            onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                          />
+                          <DraggableTestCase 
+                            testCase={tc}
+                          />
+                       </div>
                     ))}
                   </div>
                 </Droppable>
@@ -746,6 +733,7 @@ export default function TestPlanPage() {
                                     <TableHead>ID</TableHead>
                                     <TableHead>Title</TableHead>
                                     <TableHead>Execution Date</TableHead>
+                                    <TableHead>Status</TableHead>
                                 </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -754,6 +742,11 @@ export default function TestPlanPage() {
                                             <TableCell>{tc.testCaseId}</TableCell>
                                             <TableCell>{tc.title}</TableCell>
                                             <TableCell>{tc.executionDate ? format(parseISO(tc.executionDate), 'PPP') : 'Not Scheduled'}</TableCell>
+                                            <TableCell>
+                                              <Badge className={cn('font-semibold', statusStyles[tc.status])}>
+                                                {tc.status}
+                                              </Badge>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
