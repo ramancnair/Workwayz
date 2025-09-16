@@ -20,7 +20,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter, Move } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter } from 'lucide-react';
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -104,7 +104,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 };
 
 
-const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
+const DraggableTestCase = ({ testCase, isSelected, onSelectionChange }: { testCase: TestCase, isSelected?: boolean, onSelectionChange?: (checked: boolean) => void }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: testCase.id,
     data: { type: 'test-case', testCase },
@@ -115,7 +115,15 @@ const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
   } : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="cursor-grab" >
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="flex items-center gap-2 cursor-grab w-full">
+      {onSelectionChange && (
+        <Checkbox
+            checked={isSelected}
+            onCheckedChange={onSelectionChange}
+            onClick={(e) => e.stopPropagation()}
+            className="mr-2"
+        />
+      )}
       <Badge variant="secondary" className="w-full">
         {testCase.testCaseId}
       </Badge>
@@ -324,17 +332,17 @@ export default function TestPlanPage() {
     } else {
       const [type, dateStr] = dropTargetId.split('_');
       if (type === 'day' && dateStr) {
-        updateTestCase(testCaseId, { executionDate: dateStr, testPlanId: selectedPlan?.id });
+        updateTestCase(testCaseId, { executionDate: new Date(dateStr).toISOString(), testPlanId: selectedPlan?.id });
       }
     }
   };
-
+  
   const handleBulkMove = (targetId: string, selectionType: 'backlog' | 'scheduled') => {
     const tcsToMove = selectionType === 'backlog' ? selectedBacklogTCs : selectedScheduledTCs;
     if (tcsToMove.length === 0) return;
     
     const isMovingToBacklog = targetId === 'backlog';
-    const executionDate = isMovingToBacklog ? undefined : targetId.split('_')[1];
+    const executionDate = isMovingToBacklog ? undefined : new Date(targetId.split('_')[1]).toISOString();
     const testPlanId = isMovingToBacklog ? undefined : selectedPlan?.id;
 
     const updates = tcsToMove.map(tcId => 
@@ -610,21 +618,21 @@ export default function TestPlanPage() {
                 <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 flex flex-col">
                   <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
                   <div className="text-center mb-2">
-                    <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`, 'backlog')} disabled={selectedBacklogTCs.length === 0}>
-                      Move Here ({selectedBacklogTCs.length})
+                     <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`, 'backlog')} disabled={selectedBacklogTCs.length === 0}>
+                        Move Here ({selectedBacklogTCs.length})
+                    </Button>
+                    <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`, 'scheduled')} disabled={selectedScheduledTCs.length === 0} className="ml-1">
+                        Move Scheduled ({selectedScheduledTCs.length})
                     </Button>
                   </div>
                   <div className="space-y-1 text-center flex-1 overflow-y-auto">
                     {tcsForDay.map(tc => (
-                       <div key={tc.id} className="flex items-center gap-2 cursor-grab">
-                          <Checkbox
-                            checked={selectedScheduledTCs.includes(tc.id)}
-                            onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                          />
-                          <DraggableTestCase 
+                       <DraggableTestCase 
+                            key={tc.id}
                             testCase={tc}
-                          />
-                       </div>
+                            isSelected={selectedScheduledTCs.includes(tc.id)}
+                            onSelectionChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                        />
                     ))}
                   </div>
                 </Droppable>
@@ -992,5 +1000,6 @@ export default function TestPlanPage() {
 
 
     
+
 
 
