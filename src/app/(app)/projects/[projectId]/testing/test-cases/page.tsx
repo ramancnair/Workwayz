@@ -62,7 +62,6 @@ const testCaseFormSchema = z.object({
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
-  environmentIds: z.array(z.string()).optional(),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -76,7 +75,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
 const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
-type ColumnId = 'testCaseId' | 'title' | 'status' | 'type' | 'assigneeId' | 'storyId' | 'sprintId' | 'releaseId' | 'environments';
+type ColumnId = 'testCaseId' | 'title' | 'status' | 'type' | 'assigneeId' | 'storyId' | 'sprintId' | 'releaseId';
 
 const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
     testCaseId: { label: 'ID', defaultVisible: true },
@@ -84,7 +83,6 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     status: { label: 'Status', defaultVisible: true },
     type: { label: 'Type', defaultVisible: false },
     assigneeId: { label: 'Assignee', defaultVisible: true },
-    environments: { label: 'Environments', defaultVisible: true },
     storyId: { label: 'Related Story', defaultVisible: false },
     sprintId: { label: 'Sprint', defaultVisible: false },
     releaseId: { label: 'Release', defaultVisible: false },
@@ -265,7 +263,6 @@ export default function TestCasesPage() {
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
-            environmentIds: editingTestCase.environmentIds || [],
           });
         } else {
           setRelatedStoryInputText('');
@@ -279,7 +276,6 @@ export default function TestCasesPage() {
             storyId: '',
             releaseId: 'unassigned',
             sprintId: 'backlog',
-            environmentIds: [],
           });
         }
     }
@@ -331,7 +327,6 @@ export default function TestCasesPage() {
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
-        environmentIds: values.environmentIds,
     };
 
     let success = false;
@@ -493,7 +488,6 @@ export default function TestCasesPage() {
                 {columnVisibility.status && <SortableHeader columnId="status">Status</SortableHeader>}
                 {columnVisibility.type && <SortableHeader columnId="type">Type</SortableHeader>}
                 {columnVisibility.assigneeId && <SortableHeader columnId="assigneeId">Assignee</SortableHeader>}
-                {columnVisibility.environments && <TableHead>Environments</TableHead>}
                 {columnVisibility.storyId && <SortableHeader columnId="storyId">Story</SortableHeader>}
                 {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
                 {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
@@ -506,7 +500,6 @@ export default function TestCasesPage() {
                 const relatedStory = stories.find(s => s.id === tc.storyId);
                 const sprint = sprints.find(s => s.id === tc.sprintId);
                 const release = releases.find(r => r.id === tc.releaseId);
-                const tcEnvironments = tc.environmentIds?.map(envId => environments.find(e => e.id === envId)?.name).filter(Boolean).join(', ');
                 return (
                     <TableRow key={tc.id} data-state={selectedTestCases.includes(tc.id) && "selected"}>
                         <TableCell>
@@ -541,7 +534,6 @@ export default function TestCasesPage() {
                                 </div>
                             ) : "Unassigned"}
                         </TableCell>}
-                        {columnVisibility.environments && <TableCell>{tcEnvironments || 'N/A'}</TableCell>}
                         {columnVisibility.storyId && <TableCell>
                             {relatedStory ? <Badge variant="secondary">{relatedStory.storyId}</Badge> : 'N/A'}
                         </TableCell>}
@@ -620,51 +612,6 @@ export default function TestCasesPage() {
                     <FormMessage />
                   </FormItem>
               )} />
-               <FormField
-                control={form.control}
-                name="environmentIds"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Environments to Run</FormLabel>
-                    <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
-                      {sortedEnvironments.map((env) => (
-                        <FormField
-                          key={env.id}
-                          control={form.control}
-                          name="environmentIds"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={env.id}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(env.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), env.id])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== env.id
-                                            )
-                                          )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {env.name}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="assigneeId" render={({ field }) => (
                       <FormItem>
@@ -820,4 +767,3 @@ export default function TestCasesPage() {
     </>
   );
 }
-
