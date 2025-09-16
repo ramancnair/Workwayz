@@ -104,7 +104,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 };
 
 
-const DraggableTestCase = ({ testCase, isSelected, onSelectionChange }: { testCase: TestCase, isSelected?: boolean, onSelectionChange?: (checked: boolean) => void }) => {
+const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: testCase.id,
     data: { type: 'test-case', testCase },
@@ -115,18 +115,8 @@ const DraggableTestCase = ({ testCase, isSelected, onSelectionChange }: { testCa
   } : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="flex items-center gap-2 cursor-grab w-full">
-      {onSelectionChange && (
-        <Checkbox
-            checked={isSelected}
-            onCheckedChange={onSelectionChange}
-            onClick={(e) => e.stopPropagation()}
-            className="mr-2"
-        />
-      )}
-      <Badge variant="secondary" className="w-full">
-        {testCase.testCaseId}
-      </Badge>
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="flex items-center gap-2 cursor-grab">
+      <Badge variant="secondary">{testCase.testCaseId}</Badge>
     </div>
   );
 };
@@ -161,8 +151,7 @@ export default function TestPlanPage() {
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<TestPlan | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
-  const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
+  const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   
@@ -337,15 +326,14 @@ export default function TestPlanPage() {
     }
   };
   
-  const handleBulkMove = (targetId: string, selectionType: 'backlog' | 'scheduled') => {
-    const tcsToMove = selectionType === 'backlog' ? selectedBacklogTCs : selectedScheduledTCs;
-    if (tcsToMove.length === 0) return;
+  const handleBulkMove = (targetId: string) => {
+    if (selectedTestCases.length === 0) return;
     
     const isMovingToBacklog = targetId === 'backlog';
     const executionDate = isMovingToBacklog ? undefined : new Date(targetId.split('_')[1]).toISOString();
     const testPlanId = isMovingToBacklog ? undefined : selectedPlan?.id;
 
-    const updates = tcsToMove.map(tcId => 
+    const updates = selectedTestCases.map(tcId => 
       updateTestCase(tcId, {
         executionDate,
         testPlanId
@@ -353,9 +341,8 @@ export default function TestPlanPage() {
     );
     
     Promise.all(updates).then(() => {
-        toast({ title: "Success", description: `${tcsToMove.length} test cases moved.`});
-        if(selectionType === 'backlog') setSelectedBacklogTCs([]);
-        else setSelectedScheduledTCs([]);
+        toast({ title: "Success", description: `${selectedTestCases.length} test cases moved.`});
+        setSelectedTestCases([]);
     });
   }
 
@@ -521,23 +508,12 @@ export default function TestPlanPage() {
         </PageHeader>
         
         <div className="h-1/2 flex flex-col mt-4">
-            <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-lg">Test Case Backlog ({backlog.length})</h3>
-                <Button size="xs" variant="outline" onClick={() => handleBulkMove('backlog', 'scheduled')} disabled={selectedScheduledTCs.length === 0}>
-                    Move Here ({selectedScheduledTCs.length})
-                </Button>
-            </div>
+          <h3 className="font-bold text-lg mb-2">Test Case Backlog ({backlog.length})</h3>
           <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
             <div className="overflow-y-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox 
-                        checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
-                        onCheckedChange={(checked) => setSelectedBacklogTCs(checked ? backlog.map(tc => tc.id) : [])}
-                      />
-                    </TableHead>
                     <SortableHeader columnId="testCaseId">ID</SortableHeader>
                     <SortableHeader columnId="title">Title</SortableHeader>
                     <FilterableHeader columnId="status" filterOptions={testCaseStatuses.map(s => ({value: s, label: s}))}>Status</FilterableHeader>
@@ -555,12 +531,6 @@ export default function TestPlanPage() {
                     const release = releases.find(r => r.id === tc.releaseId);
                     return (
                       <TableRow key={tc.id}>
-                        <TableCell>
-                           <Checkbox
-                            checked={selectedBacklogTCs.includes(tc.id)}
-                            onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                          />
-                        </TableCell>
                         <TableCell>
                           <span className="flex items-center gap-2">
                             <DraggableTestCase testCase={tc} />
@@ -617,23 +587,8 @@ export default function TestPlanPage() {
               return (
                 <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 flex flex-col">
                   <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
-                  <div className="text-center mb-2">
-                     <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`, 'backlog')} disabled={selectedBacklogTCs.length === 0}>
-                        Move Here ({selectedBacklogTCs.length})
-                    </Button>
-                    <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`, 'scheduled')} disabled={selectedScheduledTCs.length === 0} className="ml-1">
-                        Move Scheduled ({selectedScheduledTCs.length})
-                    </Button>
-                  </div>
                   <div className="space-y-1 text-center flex-1 overflow-y-auto">
-                    {tcsForDay.map(tc => (
-                       <DraggableTestCase 
-                            key={tc.id}
-                            testCase={tc}
-                            isSelected={selectedScheduledTCs.includes(tc.id)}
-                            onSelectionChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                        />
-                    ))}
+                    {tcsForDay.map(tc => <DraggableTestCase key={tc.id} testCase={tc} />)}
                   </div>
                 </Droppable>
               );
@@ -1003,3 +958,6 @@ export default function TestPlanPage() {
 
 
 
+
+
+    
