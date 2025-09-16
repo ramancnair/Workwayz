@@ -329,8 +329,8 @@ export default function TestPlanPage() {
     }
   };
 
-  const handleBulkMove = (targetId: string, selection: 'backlog' | 'scheduled') => {
-    const tcsToMove = selection === 'backlog' ? selectedBacklogTCs : selectedScheduledTCs;
+  const handleBulkMove = (targetId: string, selectionType: 'backlog' | 'scheduled') => {
+    const tcsToMove = selectionType === 'backlog' ? selectedBacklogTCs : selectedScheduledTCs;
     if (tcsToMove.length === 0) return;
     
     const isMovingToBacklog = targetId === 'backlog';
@@ -346,7 +346,7 @@ export default function TestPlanPage() {
     
     Promise.all(updates).then(() => {
         toast({ title: "Success", description: `${tcsToMove.length} test cases moved.`});
-        if(selection === 'backlog') setSelectedBacklogTCs([]);
+        if(selectionType === 'backlog') setSelectedBacklogTCs([]);
         else setSelectedScheduledTCs([]);
     });
   }
@@ -515,11 +515,9 @@ export default function TestPlanPage() {
         <div className="h-1/2 flex flex-col mt-4">
             <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-lg">Test Case Backlog ({backlog.length})</h3>
-                {selectedBacklogTCs.length > 0 && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{selectedBacklogTCs.length} selected</span>
-                    </div>
-                )}
+                <Button size="xs" variant="outline" onClick={() => handleBulkMove('backlog', 'scheduled')} disabled={selectedScheduledTCs.length === 0}>
+                    Move Here ({selectedScheduledTCs.length})
+                </Button>
             </div>
           <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
             <div className="overflow-y-auto">
@@ -593,24 +591,6 @@ export default function TestPlanPage() {
               ) : (
                 <h3 className="font-bold text-lg">Execution Plan</h3>
               )}
-               {selectedScheduledTCs.length > 0 && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline">Move Selected ({selectedScheduledTCs.length})</Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <div className="flex flex-col">
-                        <Button variant="ghost" className="justify-start" onClick={() => handleBulkMove('backlog', 'scheduled')}>Move to Backlog</Button>
-                        <Label className="p-2 text-xs font-semibold text-muted-foreground">Move to Date:</Label>
-                        {days.map(day => (
-                            <Button key={day.toString()} variant="ghost" className="justify-start" onClick={() => handleBulkMove(`day_${format(day, 'yyyy-MM-dd')}`, 'scheduled')}>
-                                {format(day, 'EEE, MMM d')}
-                            </Button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-              )}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
@@ -631,7 +611,7 @@ export default function TestPlanPage() {
                   <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
                   <div className="text-center mb-2">
                     <Button size="xs" variant="outline" onClick={() => handleBulkMove(`day_${dateStr}`, 'backlog')} disabled={selectedBacklogTCs.length === 0}>
-                      Move Here
+                      Move Here ({selectedBacklogTCs.length})
                     </Button>
                   </div>
                   <div className="space-y-1 text-center flex-1 overflow-y-auto">
@@ -1012,4 +992,5 @@ export default function TestPlanPage() {
 
 
     
+
 
