@@ -62,6 +62,8 @@ const testCaseFormSchema = z.object({
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
+  testPlanId: z.string().optional(),
+  executionDate: z.string().optional(),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -75,7 +77,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
 const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
-type ColumnId = 'testCaseId' | 'title' | 'status' | 'type' | 'assigneeId' | 'storyId' | 'sprintId' | 'releaseId';
+type ColumnId = 'testCaseId' | 'title' | 'status' | 'type' | 'assigneeId' | 'storyId' | 'sprintId' | 'releaseId' | 'testPlanId' | 'executionDate';
 
 const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
     testCaseId: { label: 'ID', defaultVisible: true },
@@ -86,11 +88,13 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     storyId: { label: 'Related Story', defaultVisible: false },
     sprintId: { label: 'Sprint', defaultVisible: false },
     releaseId: { label: 'Release', defaultVisible: false },
+    testPlanId: { label: 'Test Plan', defaultVisible: true },
+    executionDate: { label: 'Execution Date', defaultVisible: true },
 };
 
 
 export default function TestCasesPage() {
-  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases } = useProject();
+  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases, testPlans } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
@@ -258,6 +262,8 @@ export default function TestCasesPage() {
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
+            testPlanId: editingTestCase.testPlanId || undefined,
+            executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
           });
         } else {
           setRelatedStoryInputText('');
@@ -271,6 +277,8 @@ export default function TestCasesPage() {
             storyId: '',
             releaseId: 'unassigned',
             sprintId: 'backlog',
+            testPlanId: undefined,
+            executionDate: '',
           });
         }
     }
@@ -322,6 +330,8 @@ export default function TestCasesPage() {
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
+        testPlanId: values.testPlanId === 'none' ? undefined : values.testPlanId,
+        executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
     };
 
     let success = false;
@@ -479,6 +489,8 @@ export default function TestCasesPage() {
                 {columnVisibility.storyId && <SortableHeader columnId="storyId">Story</SortableHeader>}
                 {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
                 {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
+                {columnVisibility.testPlanId && <SortableHeader columnId="testPlanId">Test Plan</SortableHeader>}
+                {columnVisibility.executionDate && <SortableHeader columnId="executionDate">Execution Date</SortableHeader>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -488,6 +500,7 @@ export default function TestCasesPage() {
                 const relatedStory = stories.find(s => s.id === tc.storyId);
                 const sprint = sprints.find(s => s.id === tc.sprintId);
                 const release = releases.find(r => r.id === tc.releaseId);
+                const testPlan = testPlans.find(tp => tp.id === tc.testPlanId);
                 return (
                     <TableRow key={tc.id} data-state={selectedTestCases.includes(tc.id) && "selected"}>
                         <TableCell>
@@ -527,6 +540,8 @@ export default function TestCasesPage() {
                         </TableCell>}
                         {columnVisibility.sprintId && <TableCell>{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>}
                         {columnVisibility.releaseId && <TableCell>{release?.releaseId || 'N/A'}</TableCell>}
+                        {columnVisibility.testPlanId && <TableCell>{testPlan?.name || 'TC Backlog'}</TableCell>}
+                        {columnVisibility.executionDate && <TableCell>{tc.executionDate ? format(parseISO(tc.executionDate), 'PPP') : 'N/A'}</TableCell>}
                         <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
                             <Edit className="h-4 w-4" />
@@ -698,6 +713,46 @@ export default function TestCasesPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="testPlanId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Test Plan</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Assign to a Test Plan" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">TC Backlog</SelectItem>
+                              {testPlans.map((plan) => (
+                                <SelectItem key={plan.id} value={plan.id}>
+                                  [{plan.testPlanId}] {plan.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="executionDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Execution Date</FormLabel>
+                           <FormControl>
+                            <Input type="date" {...field} value={field.value || ''} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
