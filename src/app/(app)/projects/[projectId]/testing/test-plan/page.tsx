@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -332,13 +333,14 @@ export default function TestPlanPage() {
     const tcsToMove = selection === 'backlog' ? selectedBacklogTCs : selectedScheduledTCs;
     if (tcsToMove.length === 0) return;
     
-    const [type, dateStr] = targetId.split('_');
-    const isMovingToBacklog = type === 'backlog';
-    
+    const isMovingToBacklog = targetId === 'backlog';
+    const executionDate = isMovingToBacklog ? undefined : targetId.split('_')[1];
+    const testPlanId = isMovingToBacklog ? undefined : selectedPlan?.id;
+
     const updates = tcsToMove.map(tcId => 
       updateTestCase(tcId, {
-        executionDate: isMovingToBacklog ? undefined : dateStr,
-        testPlanId: isMovingToBacklog ? undefined : selectedPlan?.id
+        executionDate,
+        testPlanId
       })
     );
     
@@ -524,6 +526,12 @@ export default function TestPlanPage() {
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox 
+                        checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
+                        onCheckedChange={(checked) => setSelectedBacklogTCs(checked ? backlog.map(tc => tc.id) : [])}
+                      />
+                    </TableHead>
                     <SortableHeader columnId="testCaseId">ID</SortableHeader>
                     <SortableHeader columnId="title">Title</SortableHeader>
                     <FilterableHeader columnId="status" filterOptions={testCaseStatuses.map(s => ({value: s, label: s}))}>Status</FilterableHeader>
@@ -541,6 +549,12 @@ export default function TestPlanPage() {
                     const release = releases.find(r => r.id === tc.releaseId);
                     return (
                       <TableRow key={tc.id}>
+                        <TableCell>
+                           <Checkbox
+                            checked={selectedBacklogTCs.includes(tc.id)}
+                            onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                          />
+                        </TableCell>
                         <TableCell>
                           <span className="flex items-center gap-2">
                             <DraggableTestCase testCase={tc} />
@@ -998,3 +1012,4 @@ export default function TestPlanPage() {
 
 
     
+
