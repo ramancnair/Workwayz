@@ -356,10 +356,11 @@ export default function TestPlanPage() {
     let backlogTCs: TestCase[] = [];
 
     testCases.forEach(tc => {
-        const isScheduledInCurrentPlan = tc.testPlanId === selectedPlan?.id && tc.executionDate && dayCols[tc.executionDate];
+        const executionDateStr = tc.executionDate ? format(parseISO(tc.executionDate), 'yyyy-MM-dd') : undefined;
+        const isScheduledInCurrentPlan = tc.testPlanId === selectedPlan?.id && executionDateStr && dayCols[executionDateStr];
         
         if (isScheduledInCurrentPlan) {
-            dayCols[tc.executionDate!].push(tc);
+            dayCols[executionDateStr!].push(tc);
         } else {
             backlogTCs.push(tc);
         }
@@ -659,103 +660,115 @@ export default function TestPlanPage() {
       </div>
 
       <Dialog open={isPlanDialogOpen} onOpenChange={(open) => { setIsPlanDialogOpen(open); if(!open) setEditingPlan(null); }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingPlan ? 'Edit Test Plan' : 'Create New Test Plan'}</DialogTitle>
           </DialogHeader>
-          <Form {...testPlanForm}>
-            <form onSubmit={testPlanForm.handleSubmit(onTestPlanSubmit)} className="space-y-4">
-              <FormField
-                control={testPlanForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Plan Name</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                  control={testPlanForm.control}
-                  name="planType"
-                  render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Plan Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                              <SelectItem value="Sprint">Sprint</SelectItem>
-                              <SelectItem value="Release">Release</SelectItem>
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                  </FormItem>
-                  )}
-              />
-              {watchedPlanType === 'Sprint' && (
-                <FormField
-                    control={testPlanForm.control}
-                    name="sprintId"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Sprint</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select a sprint..." /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              )}
-              {watchedPlanType === 'Release' && (
-                  <FormField
-                      control={testPlanForm.control}
-                      name="releaseId"
-                      render={({ field }) => (
+           <Tabs defaultValue="details" className="w-full">
+            <TabsList>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              {editingPlan && <TabsTrigger value="tc-list">TC List</TabsTrigger>}
+            </TabsList>
+            <TabsContent value="details">
+              <Form {...testPlanForm}>
+                <form onSubmit={testPlanForm.handleSubmit(onTestPlanSubmit)} className="space-y-4 pt-4">
+                  <FormField control={testPlanForm.control} name="name" render={({ field }) => (
                       <FormItem>
-                          <FormLabel>Release</FormLabel>
+                        <FormLabel>Plan Name</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                  )}/>
+                  <FormField control={testPlanForm.control} name="planType" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Plan Type</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Select a release..." /></SelectTrigger></FormControl>
+                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                               <SelectContent>
-                                  {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                                  <SelectItem value="Sprint">Sprint</SelectItem>
+                                  <SelectItem value="Release">Release</SelectItem>
                               </SelectContent>
                           </Select>
                           <FormMessage />
                       </FormItem>
-                      )}
-                  />
-              )}
-              <FormField
-                control={testPlanForm.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!!(watchedSprintId || watchedReleaseId)} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={testPlanForm.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!!(watchedSprintId || watchedReleaseId)}/></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Plan'}</Button>
-              </DialogFooter>
-            </form>
-          </Form>
+                  )}/>
+                  {watchedPlanType === 'Sprint' && (
+                    <FormField control={testPlanForm.control} name="sprintId" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Sprint</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select a sprint..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                  )}
+                  {watchedPlanType === 'Release' && (
+                      <FormField control={testPlanForm.control} name="releaseId" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Release</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl><SelectTrigger><SelectValue placeholder="Select a release..." /></SelectTrigger></FormControl>
+                                  <SelectContent>
+                                      {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                                  </SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                      )}/>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={testPlanForm.control} name="startDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date</FormLabel>
+                        <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!!(watchedSprintId || watchedReleaseId)} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}/>
+                    <FormField control={testPlanForm.control} name="endDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date</FormLabel>
+                        <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!!(watchedSprintId || watchedReleaseId)}/></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}/>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Plan'}</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </TabsContent>
+            {editingPlan && (
+                <TabsContent value="tc-list">
+                    <Card className="mt-4">
+                        <CardContent className="p-4 max-h-96 overflow-y-auto">
+                            <Table>
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Title</TableHead>
+                                    <TableHead>Execution Date</TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {testCases.filter(tc => tc.testPlanId === editingPlan.id).map(tc => (
+                                        <TableRow key={tc.id}>
+                                            <TableCell>{tc.testCaseId}</TableCell>
+                                            <TableCell>{tc.title}</TableCell>
+                                            <TableCell>{tc.executionDate ? format(parseISO(tc.executionDate), 'PPP') : 'Not Scheduled'}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            )}
+           </Tabs>
         </DialogContent>
       </Dialog>
       
@@ -992,5 +1005,6 @@ export default function TestPlanPage() {
 
 
     
+
 
 
