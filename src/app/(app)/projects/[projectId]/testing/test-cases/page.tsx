@@ -121,7 +121,7 @@ export default function TestCasesPage() {
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
   
-  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
+  const sortedEnvironments = useMemo(() => [...environments].sort((a,b) => a.order - b.order), [environments]);
 
   const autoGenFormSchema = useMemo(() => {
     const shape: Record<string, z.ZodNumber> = {};
