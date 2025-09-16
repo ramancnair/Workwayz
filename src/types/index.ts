@@ -17,6 +17,7 @@
 
 
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -116,7 +117,6 @@ export type TestCase = {
   storyId?: string;
   releaseId?: string;
   sprintId?: string;
-  environmentIds?: string[];
   isDeleted?: boolean;
   deletedAt?: string;
   testPlanId?: string;

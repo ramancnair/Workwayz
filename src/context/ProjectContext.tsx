@@ -285,7 +285,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints'],
-    '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments'],
+    '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testPlans'],
     '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments', 'releases'],
     '/project-details/project-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
     '/project-details/architecture': ['environments', 'impactedSystems', 'horizontals'],
@@ -1211,7 +1211,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             sprintId: relatedStory?.sprintId,
             releaseId: getRandomItem(projectReleases)?.id,
             assigneeId: getRandomItem(employees)?.id,
-            environmentIds: [environmentId],
             isDeleted: false,
             deletedAt: null,
           };

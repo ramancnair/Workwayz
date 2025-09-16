@@ -50,6 +50,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { format, parseISO } from 'date-fns';
 
 
 const testCaseFormSchema = z.object({
@@ -119,6 +120,7 @@ export default function TestCasesPage() {
 
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  
   const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
   const autoGenFormSchema = useMemo(() => {
@@ -262,7 +264,7 @@ export default function TestCasesPage() {
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
-            testPlanId: editingTestCase.testPlanId || undefined,
+            testPlanId: editingTestCase.testPlanId || 'none',
             executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
           });
         } else {
@@ -277,7 +279,7 @@ export default function TestCasesPage() {
             storyId: '',
             releaseId: 'unassigned',
             sprintId: 'backlog',
-            testPlanId: undefined,
+            testPlanId: 'none',
             executionDate: '',
           });
         }
