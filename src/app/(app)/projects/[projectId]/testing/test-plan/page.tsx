@@ -341,7 +341,8 @@ export default function TestPlanPage() {
   };
   
   const handleBulkMove = (targetId: string) => {
-    const itemsToMove = selectedBacklogTCs.length > 0 ? selectedBacklogTCs : selectedScheduledTCs;
+    const isMovingFromBacklog = selectedBacklogTCs.length > 0;
+    const itemsToMove = isMovingFromBacklog ? selectedBacklogTCs : selectedScheduledTCs;
     if (itemsToMove.length === 0) return;
     
     const isMovingToBacklog = targetId === 'backlog';
@@ -537,7 +538,7 @@ export default function TestPlanPage() {
                   onClick={() => handleBulkMove(currentExecutionDay ? `day_${format(currentExecutionDay, 'yyyy-MM-dd')}` : '')}
                   disabled={selectedBacklogTCs.length === 0 || !currentExecutionDay}
                 >
-                  Move to Plan
+                  Move Here
                 </Button>
               </div>
               <Droppable id="backlog" className="border rounded-lg flex-1 flex flex-col min-h-0">
@@ -552,15 +553,15 @@ export default function TestPlanPage() {
                             />
                         </TableHead>
                         <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                        <SortableHeader columnId="title">Title</SortableHeader>
-                        <FilterableHeader columnId="sprintId" filterOptions={[{value: 'Backlog', label: 'Backlog'},...sprints.map(s => ({ value: s.title, label: s.title}))]}>
-                          Sprint
-                        </FilterableHeader>
+                        <SortableHeader columnId="sprintId">Sprint</SortableHeader>
+                        <SortableHeader columnId="releaseId">Release</SortableHeader>
+                        <SortableHeader columnId="status">Status</SortableHeader>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {backlog.map(tc => {
                         const sprint = sprints.find(s => s.id === tc.sprintId);
+                        const release = releases.find(r => r.id === tc.releaseId);
                         return (
                           <TableRow key={tc.id}>
                             <TableCell>
@@ -572,12 +573,9 @@ export default function TestPlanPage() {
                             <TableCell className="py-1">
                                 <DraggableTestCaseID testCase={tc} onClick={() => handleTestCaseDialogOpen(tc)} />
                             </TableCell>
-                            <TableCell>
-                              <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left hover:underline">
-                                {tc.title}
-                              </button>
-                            </TableCell>
                             <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                            <TableCell>{release?.name || 'N/A'}</TableCell>
+                            <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
                           </TableRow>
                         )
                       })}
@@ -640,28 +638,32 @@ export default function TestPlanPage() {
                                         />
                                     </TableHead>
                                     <TableHead>ID</TableHead>
-                                    <TableHead>Title</TableHead>
+                                    <TableHead>Sprint</TableHead>
+                                    <TableHead>Release</TableHead>
+                                    <TableHead>Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {tcsForCurrentDay.map(tc => (
-                                    <TableRow key={tc.id}>
-                                        <TableCell>
-                                             <Checkbox
-                                                checked={selectedScheduledTCs.includes(tc.id)}
-                                                onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                                            />
-                                        </TableCell>
-                                        <TableCell className="py-1">
-                                            <DraggableTestCaseID testCase={tc} onClick={() => handleTestCaseDialogOpen(tc)} />
-                                        </TableCell>
-                                        <TableCell>
-                                          <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left hover:underline">
-                                            {tc.title}
-                                          </button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {tcsForCurrentDay.map(tc => {
+                                    const sprint = sprints.find(s => s.id === tc.sprintId);
+                                    const release = releases.find(r => r.id === tc.releaseId);
+                                    return (
+                                        <TableRow key={tc.id}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedScheduledTCs.includes(tc.id)}
+                                                    onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="py-1">
+                                                <DraggableTestCaseID testCase={tc} onClick={() => handleTestCaseDialogOpen(tc)} />
+                                            </TableCell>
+                                            <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                                            <TableCell>{release?.name || 'N/A'}</TableCell>
+                                            <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </div>
@@ -1020,4 +1022,5 @@ export default function TestPlanPage() {
     </DndContext>
   );
 }
+
 
