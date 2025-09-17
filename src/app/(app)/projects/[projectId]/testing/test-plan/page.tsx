@@ -24,7 +24,7 @@ import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Fi
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import { format, eachDayOfInterval, parseISO, addDays, subDays } from 'date-fns';
+import { format, eachDayOfInterval, parseISO, addDays, subDays, isSameDay } from 'date-fns';
 import { DndContext, useDroppable, useDraggable, DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
@@ -104,7 +104,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 };
 
 
-const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
+const DraggableTestCaseID = ({ testCase, onClick }: { testCase: TestCase, onClick: () => void }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: testCase.id,
     data: { type: 'test-case', testCase },
@@ -115,11 +115,13 @@ const DraggableTestCase = ({ testCase }: { testCase: TestCase }) => {
   } : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="p-1 flex items-center gap-2 cursor-grab">
-      <Badge variant="secondary" className="font-semibold">{testCase.testCaseId}</Badge>
-       <Badge className={cn('font-semibold', statusStyles[testCase.status])}>
-            {testCase.status}
-        </Badge>
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="inline-block">
+       <button
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className="text-left font-medium text-primary hover:underline"
+      >
+        <Badge variant="secondary" className="font-semibold cursor-grab active:cursor-grabbing">{testCase.testCaseId}</Badge>
+      </button>
     </div>
   );
 };
@@ -156,8 +158,8 @@ export default function TestPlanPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
   const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
-  const [page, setPage] = useState(0);
   const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
+  const [currentExecutionDay, setCurrentExecutionDay] = useState<Date | null>(null);
   
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -215,6 +217,14 @@ export default function TestPlanPage() {
       setSelectedPlanId(testPlans[0].id);
     }
   }, [testPlans, selectedPlanId]);
+
+   useEffect(() => {
+    if (selectedPlan && selectedPlan.startDate) {
+      setCurrentExecutionDay(parseISO(selectedPlan.startDate));
+    } else {
+      setCurrentExecutionDay(null);
+    }
+  }, [selectedPlan]);
   
   useEffect(() => {
     if(isPlanDialogOpen && editingPlan) {
@@ -352,25 +362,18 @@ export default function TestPlanPage() {
     });
   }
 
- const { dayColumns, backlog } = useMemo(() => {
-    const dayCols: Record<string, TestCase[]> = {};
-    if (selectedPlan?.startDate && selectedPlan.endDate) {
-        const days = eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) });
-        days.forEach(day => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            dayCols[dateStr] = [];
-        });
-    }
+ const { tcsForCurrentDay, backlog } = useMemo(() => {
+    const dateStr = currentExecutionDay ? format(currentExecutionDay, 'yyyy-MM-dd') : null;
 
     let backlogTCs: TestCase[] = [];
+    let dayTCs: TestCase[] = [];
 
     testCases.forEach(tc => {
         const executionDateStr = tc.executionDate ? format(parseISO(tc.executionDate), 'yyyy-MM-dd') : undefined;
-        const isScheduledInCurrentPlan = tc.testPlanId === selectedPlan?.id && executionDateStr && dayCols[executionDateStr];
         
-        if (isScheduledInCurrentPlan) {
-            dayCols[executionDateStr!].push(tc);
-        } else {
+        if (tc.testPlanId === selectedPlan?.id && executionDateStr === dateStr) {
+            dayTCs.push(tc);
+        } else if (!tc.testPlanId || tc.testPlanId !== selectedPlan?.id || !tc.executionDate) {
             backlogTCs.push(tc);
         }
     });
@@ -406,16 +409,27 @@ export default function TestPlanPage() {
       });
     }
     
-    return { dayColumns: dayCols, backlog: backlogTCs };
-}, [selectedPlan, testCases, filters, sprints, releases, sorting]);
+    return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
+}, [selectedPlan, testCases, filters, sprints, releases, sorting, currentExecutionDay]);
 
 
-  const days = (selectedPlan && selectedPlan.startDate && selectedPlan.endDate)
-    ? eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) }) 
-    : [];
-  const itemsPerPage = 5;
-  const totalPages = days ? Math.ceil(days.length / itemsPerPage) : 0;
-  const visibleDays = days ? days.slice(page * itemsPerPage, (page + 1) * itemsPerPage) : [];
+  const planDays = useMemo(() => {
+    if (!selectedPlan?.startDate || !selectedPlan.endDate) return [];
+    return eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) });
+  }, [selectedPlan]);
+
+
+  const handleDayChange = (direction: 'next' | 'prev') => {
+    if (!currentExecutionDay || !selectedPlan || planDays.length === 0) return;
+    const currentIndex = planDays.findIndex(day => isSameDay(day, currentExecutionDay));
+    if (direction === 'next') {
+        const nextIndex = Math.min(planDays.length - 1, currentIndex + 1);
+        setCurrentExecutionDay(planDays[nextIndex]);
+    } else {
+        const prevIndex = Math.max(0, currentIndex - 1);
+        setCurrentExecutionDay(planDays[prevIndex]);
+    }
+  };
   
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
@@ -520,8 +534,8 @@ export default function TestPlanPage() {
                 <h3 className="font-bold text-lg">Test Case Backlog ({backlog.length})</h3>
                 <Button 
                   size="sm" 
-                  onClick={() => handleBulkMove(visibleDays[0] ? `day_${format(visibleDays[0], 'yyyy-MM-dd')}` : '')}
-                  disabled={selectedBacklogTCs.length === 0 || !visibleDays[0]}
+                  onClick={() => handleBulkMove(currentExecutionDay ? `day_${format(currentExecutionDay, 'yyyy-MM-dd')}` : '')}
+                  disabled={selectedBacklogTCs.length === 0 || !currentExecutionDay}
                 >
                   Move to Plan
                 </Button>
@@ -556,7 +570,7 @@ export default function TestPlanPage() {
                                 />
                             </TableCell>
                             <TableCell className="py-1">
-                                <DraggableTestCase testCase={tc} />
+                                <DraggableTestCaseID testCase={tc} onClick={() => handleTestCaseDialogOpen(tc)} />
                             </TableCell>
                             <TableCell>
                               <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left hover:underline">
@@ -591,48 +605,67 @@ export default function TestPlanPage() {
                   <Button variant="outline" size="sm" onClick={() => handleBulkMove('backlog')} disabled={selectedScheduledTCs.length === 0}>
                     Move to Backlog
                   </Button>
-                  <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+                   <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span>Page {page + 1} of {totalPages > 0 ? totalPages : 1}</span>
-                  <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+                  <Button variant="outline" size="icon" onClick={() => handleDayChange('next')}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-              <div className="flex-1 grid grid-cols-5 gap-4">
-                {visibleDays.map(day => {
-                  const dateStr = format(day, 'yyyy-MM-dd');
-                  const tcsForDay = dayColumns[dateStr] || [];
-                  return (
-                    <Droppable key={dateStr} id={`day_${dateStr}`} className="border rounded-lg p-2 flex flex-col">
-                        <div className="flex justify-between items-center">
-                            <h4 className="font-semibold text-center">{format(day, 'EEE, MMM d')}</h4>
-                            <Button 
-                              variant="link"
-                              size="sm"
-                              className="h-auto p-0"
-                              onClick={() => handleBulkMove(`day_${dateStr}`)}
-                              disabled={selectedBacklogTCs.length === 0 && selectedScheduledTCs.length === 0}
-                            >
-                              Move Here
-                            </Button>
-                        </div>
-                        <div className="space-y-1 text-center flex-1 overflow-y-auto pt-2">
-                          {tcsForDay.map(tc => (
-                            <div key={tc.id} className="flex items-center gap-1">
-                                <Checkbox
-                                    checked={selectedScheduledTCs.includes(tc.id)}
-                                    onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                                />
-                                <DraggableTestCase testCase={tc} />
-                            </div>
-                           ))}
-                        </div>
-                    </Droppable>
-                  );
-                })}
-              </div>
+                <Droppable
+                    id={currentExecutionDay ? `day_${format(currentExecutionDay, 'yyyy-MM-dd')}` : 'droppable-day'}
+                    className="border rounded-lg flex-1 flex flex-col min-h-0"
+                  >
+                    <div className="p-2 border-b bg-background flex justify-between items-center">
+                        <h4 className="font-semibold">{currentExecutionDay ? format(currentExecutionDay, 'EEE, MMM d') : 'No Date Selected'}</h4>
+                        <Button 
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0"
+                            onClick={() => handleBulkMove(currentExecutionDay ? `day_${format(currentExecutionDay, 'yyyy-MM-dd')}` : '')}
+                            disabled={selectedBacklogTCs.length === 0 || !currentExecutionDay}
+                        >
+                            Move Here
+                        </Button>
+                    </div>
+                    <div className="overflow-y-auto flex-1">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>
+                                        <Checkbox 
+                                            onCheckedChange={(checked) => setSelectedScheduledTCs(checked ? tcsForCurrentDay.map(tc => tc.id) : [])}
+                                            checked={tcsForCurrentDay.length > 0 && selectedScheduledTCs.length === tcsForCurrentDay.length}
+                                        />
+                                    </TableHead>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Title</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {tcsForCurrentDay.map(tc => (
+                                    <TableRow key={tc.id}>
+                                        <TableCell>
+                                             <Checkbox
+                                                checked={selectedScheduledTCs.includes(tc.id)}
+                                                onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="py-1">
+                                            <DraggableTestCaseID testCase={tc} onClick={() => handleTestCaseDialogOpen(tc)} />
+                                        </TableCell>
+                                        <TableCell>
+                                          <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left hover:underline">
+                                            {tc.title}
+                                          </button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </Droppable>
             </div>
         </div>
       </div>
@@ -988,20 +1021,3 @@ export default function TestPlanPage() {
   );
 }
 
-
-
-    
-
-
-
-
-
-
-
-    
-
-
-
-
-
-    
