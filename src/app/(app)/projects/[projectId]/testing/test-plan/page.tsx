@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -19,7 +20,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown } from 'lucide-react';
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -144,7 +145,7 @@ export default function TestPlanPage() {
     releaseId: [],
     status: [],
   });
-  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
   
   useEffect(() => {
     if (watchedPlanType === 'Sprint' && watchedSprintId) {
@@ -337,9 +338,20 @@ export default function TestPlanPage() {
             backlogTCs.push(tc);
         }
     });
+
+    if (sorting) {
+        const sortKey = sorting.id as keyof TestCase;
+        backlogTCs.sort((a,b) => {
+            const valA = (a as any)[sortKey];
+            const valB = (b as any)[sortKey];
+            if (valA < valB) return sorting.desc ? 1 : -1;
+            if (valA > valB) return sorting.desc ? -1 : 1;
+            return 0;
+        });
+    }
     
     return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
-}, [selectedPlan, testCases, currentExecutionDay]);
+}, [selectedPlan, testCases, currentExecutionDay, sorting]);
 
 
   const planDays = useMemo(() => {
@@ -361,24 +373,14 @@ export default function TestPlanPage() {
   };
   
   const handleSort = (columnId: string) => {
-    if (sorting?.id === columnId) {
-      setSorting({ ...sorting, desc: !sorting.desc });
-    } else {
-      setSorting({ id: columnId, desc: false });
-    }
-  };
-
-  const handleFilterChange = (columnId: string, value: string) => {
-    setFilters(prev => {
-        const currentFilter = prev[columnId] || [];
-        const newFilters = { ...prev };
-        if (currentFilter.includes(value)) {
-            newFilters[columnId] = currentFilter.filter(v => v !== value);
-        } else {
-            newFilters[columnId] = [...currentFilter, value];
-        }
-        return newFilters;
-    })
+    setSorting(current => {
+      if (current?.id === columnId) {
+        if (current.desc === false) return { id: columnId, desc: true };
+        if (current.desc === true) return { id: columnId, desc: null };
+        return null;
+      }
+      return { id: columnId, desc: false };
+    });
   };
   
   const handleTestCaseDialogOpen = (testCase: TestCase) => {
@@ -386,14 +388,24 @@ export default function TestPlanPage() {
     setIsTestCaseDialogOpen(true);
   };
   
-  const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => (
-    <TableHead>
-      <Button variant="ghost" onClick={() => handleSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  );
+  const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => {
+    const isSorting = sorting?.id === columnId;
+    const isDesc = sorting?.desc === true;
+    const isAsc = sorting?.desc === false;
+
+    return (
+      <TableHead>
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleSort(columnId)}>
+            <span>{children}</span>
+            {isSorting ? (
+                isDesc ? <ArrowUpDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4" />
+            ) : (
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+            )}
+        </div>
+      </TableHead>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full space-y-4 p-4 md:p-8 pt-6">
