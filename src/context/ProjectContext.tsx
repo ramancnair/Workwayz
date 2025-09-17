@@ -489,6 +489,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         date: convertTimestamp(sh.date),
                     }))
                 }
+                if(name === 'testCases' && docData.statusHistory) {
+                    docData.statusHistory = docData.statusHistory.map((sh: any) => ({
+                        ...sh,
+                        date: convertTimestamp(sh.date),
+                    }))
+                }
                 return { id: doc.id, ...docData };
             };
             
@@ -1168,8 +1174,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                 .map((id: string) => parseInt(id.replace('TC-', ''), 10) || 0)
             ) + 1
             : 1;
-
-        const payload = { ...testCase, testCaseId: `TC-${newIdNumber}`, isDeleted: false, deletedAt: null };
+        const now = (testDate || new Date()).toISOString();
+        const payload = { ...testCase, testCaseId: `TC-${newIdNumber}`, isDeleted: false, deletedAt: null, statusHistory: [{ fromStatus: null, toStatus: testCase.status, date: now }] };
         await addDoc(collection(db, 'projects', projectId, 'testCases'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
@@ -1232,15 +1238,33 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
+      const testCaseRef = doc(db, 'projects', projectId, 'testCases', testCaseId);
+      const testCaseToUpdate = testCases.find(tc => tc.id === testCaseId);
+      
+      if (!testCaseToUpdate) {
+        console.error("Test Case not found", testCaseId);
+        return false;
+      }
+      
       const { executionDate, closeDate, ...rest } = data;
       const payload: any = { ...rest };
+      
+      if (data.status && data.status !== testCaseToUpdate.status) {
+        const newHistoryEntry: StatusHistoryItem = {
+          fromStatus: testCaseToUpdate.status,
+          toStatus: data.status,
+          date: (testDate || new Date()).toISOString(),
+        };
+        payload.statusHistory = arrayUnion(sanitizeForFirestore(newHistoryEntry));
+      }
+
       if (data.hasOwnProperty('executionDate')) payload.executionDate = executionDate ? new Date(executionDate).toISOString() : null;
       if (data.hasOwnProperty('closeDate')) payload.closeDate = closeDate ? new Date(closeDate).toISOString() : null;
       if (data.hasOwnProperty('testPlanId') && data.testPlanId === undefined) {
           payload.testPlanId = null;
       }
       
-      await updateDoc(doc(db, 'projects', projectId, 'testCases', testCaseId), sanitizeForFirestore(payload));
+      await updateDoc(testCaseRef, sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });

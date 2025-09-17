@@ -41,7 +41,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns } from 'lucide-react';
-import { type TestCase, type TestCaseStatus, type TestCaseType } from '@/types';
+import { type TestCase, type TestCaseStatus, type TestCaseType, type StatusHistoryItem } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -51,6 +51,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { format, parseISO } from 'date-fns';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
 const testCaseFormSchema = z.object({
@@ -568,215 +569,236 @@ export default function TestCasesPage() {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTestCase ? 'Edit Test Case' : 'Add New Test Case'}</DialogTitle>
-            <DialogDescription>
-              {editingTestCase ? 'Update the details for this test case.' : 'Fill in the details for the new test case.'}
-            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField control={form.control} name="title" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl><Input placeholder="E.g., Verify user login with valid credentials" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-              )} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="type" render={({ field }) => (
+              <Tabs defaultValue="details">
+                <TabsList>
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="logs">Logs</TabsTrigger>
+                </TabsList>
+                <TabsContent value="details" className="pt-4 space-y-4">
+                  <FormField control={form.control} name="title" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Test Case Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {testCaseTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl><Input placeholder="E.g., Verify user login with valid credentials" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                   )} />
-                  <FormField control={form.control} name="status" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {testCaseStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                  )} />
-              </div>
-               <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Steps)</FormLabel>
-                    <FormControl><Textarea placeholder="1. Navigate to login page..." {...field} rows={4} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-              )} />
-               <FormField control={form.control} name="expectedResult" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Expected Result</FormLabel>
-                    <FormControl><Textarea placeholder="User should be successfully logged in and redirected to the dashboard." {...field} rows={3} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-              )} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="assigneeId" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assignee</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a resource" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                  )} />
-                   <FormField control={form.control} name="storyId" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Related Story (Optional)</FormLabel>
-                          <FormControl>
-                            <Input 
-                                list="story-options-tc" 
-                                placeholder="Select a story..." 
-                                value={relatedStoryInputText}
-                                onChange={(e) => {
-                                    const inputText = e.target.value;
-                                    setRelatedStoryInputText(inputText);
-                                    
-                                    const matchingOption = storyOptions.find(opt => opt.label === inputText);
-                                    if (matchingOption) {
-                                        field.onChange(matchingOption.value);
-                                    } else {
-                                        field.onChange('');
-                                    }
-                                }}
-                                onBlur={() => {
-                                    const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
-                                    if (!matchingOption) {
-                                        setRelatedStoryInputText('');
-                                        field.onChange('');
-                                    }
-                                }}
-                            />
-                          </FormControl>
-                          <datalist id="story-options-tc">
-                            {storyOptions.map(option => (
-                              <option key={option.value} value={option.label}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </datalist>
-                        <FormMessage />
-                      </FormItem>
-                  )} />
-              </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="sprintId"
-                      render={({ field }) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="type" render={({ field }) => (
                           <FormItem>
-                          <FormLabel>Sprint</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || 'backlog'}
-                            disabled={!!watchedStoryId}
-                          >
-                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                              <SelectContent>
-                              <SelectItem value="backlog">Backlog</SelectItem>
-                              {sprints.map(sprint => (
-                                  <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                              ))}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
+                            <FormLabel>Test Case Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {testCaseTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
                           </FormItem>
-                      )}
-                    />
-                     <FormField
-                      control={form.control}
-                      name="releaseId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Release</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Assign to a release" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {releases.map((release) => (
-                                <SelectItem key={release.id} value={release.id}>
-                                  [{release.releaseId}] {release.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      )} />
+                      <FormField control={form.control} name="status" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {testCaseStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                      )} />
+                  </div>
+                  <FormField control={form.control} name="description" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description (Steps)</FormLabel>
+                        <FormControl><Textarea placeholder="1. Navigate to login page..." {...field} rows={4} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                  )} />
+                  <FormField control={form.control} name="expectedResult" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Expected Result</FormLabel>
+                        <FormControl><Textarea placeholder="User should be successfully logged in and redirected to the dashboard." {...field} rows={3} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                  )} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="assigneeId" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Assignee</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign to a resource" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="storyId" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Related Story (Optional)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                    list="story-options-tc" 
+                                    placeholder="Select a story..." 
+                                    value={relatedStoryInputText}
+                                    onChange={(e) => {
+                                        const inputText = e.target.value;
+                                        setRelatedStoryInputText(inputText);
+                                        
+                                        const matchingOption = storyOptions.find(opt => opt.label === inputText);
+                                        if (matchingOption) {
+                                            field.onChange(matchingOption.value);
+                                        } else {
+                                            field.onChange('');
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
+                                        if (!matchingOption) {
+                                            setRelatedStoryInputText('');
+                                            field.onChange('');
+                                        }
+                                    }}
+                                />
+                              </FormControl>
+                              <datalist id="story-options-tc">
+                                {storyOptions.map(option => (
+                                  <option key={option.value} value={option.label}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </datalist>
+                            <FormMessage />
+                          </FormItem>
+                      )} />
+                  </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="sprintId"
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Sprint</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value || 'backlog'}
+                                disabled={!!watchedStoryId}
+                              >
+                                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                  <SelectContent>
+                                  <SelectItem value="backlog">Backlog</SelectItem>
+                                  {sprints.map(sprint => (
+                                      <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                  ))}
+                                  </SelectContent>
+                              </Select>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="releaseId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Release</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Assign to a release" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  {releases.map((release) => (
+                                    <SelectItem key={release.id} value={release.id}>
+                                      [{release.releaseId}] {release.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="testPlanId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Test Plan</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Assign to a Test Plan" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">TC Backlog</SelectItem>
+                                  {testPlans.map((plan) => (
+                                    <SelectItem key={plan.id} value={plan.id}>
+                                      [{plan.testPlanId}] {plan.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="executionDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Execution Date</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} value={field.value || ''} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                    </div>
                     <FormField
                       control={form.control}
-                      name="testPlanId"
+                      name="closeDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Test Plan</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || 'none'}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Assign to a Test Plan" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">TC Backlog</SelectItem>
-                              {testPlans.map((plan) => (
-                                <SelectItem key={plan.id} value={plan.id}>
-                                  [{plan.testPlanId}] {plan.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="executionDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Execution Date</FormLabel>
-                           <FormControl>
+                          <FormLabel>Close Date</FormLabel>
+                          <FormControl>
                             <Input type="date" {...field} value={field.value || ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                </div>
-                 <FormField
-                  control={form.control}
-                  name="closeDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Close Date</FormLabel>
-                       <FormControl>
-                        <Input type="date" {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                </TabsContent>
+                <TabsContent value="logs">
+                   <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
+                    {editingTestCase?.statusHistory && editingTestCase.statusHistory.length > 0 ? (
+                      editingTestCase.statusHistory
+                        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((log, index) => (
+                          <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
+                            <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
+                            <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
+                          </div>
+                        ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingTestCase ? 'Saving...' : 'Creating...') : (editingTestCase ? 'Save Changes' : 'Create Test Case')}

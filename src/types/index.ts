@@ -1,4 +1,5 @@
 
+
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -96,6 +97,7 @@ export type TestCase = {
   description: string;
   expectedResult: string;
   status: TestCaseStatus;
+  statusHistory?: StatusHistoryItem[];
   assigneeId?: string;
   storyId?: string;
   releaseId?: string;
