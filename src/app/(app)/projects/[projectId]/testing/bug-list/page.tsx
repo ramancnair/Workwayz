@@ -94,6 +94,8 @@ export default function BugListPage() {
   const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
+  const [testCaseInputText, setTestCaseInputText] = useState('');
+
   const autoGenFormSchema = useMemo(() => {
     const shape: Record<string, z.ZodNumber> = {};
     sortedEnvironments.forEach(env => {
@@ -126,9 +128,17 @@ export default function BugListPage() {
     resolver: zodResolver(bugFormSchema),
   });
 
+  const testCaseOptions = useMemo(() => testCases.map(tc => ({
+    value: tc.id,
+    label: `[${tc.testCaseId}] ${tc.title}`,
+  })), [testCases]);
+
   useEffect(() => {
     if (isDialogOpen) {
       if (editingBug) {
+        const testCase = testCases.find(tc => tc.id === editingBug.relatedTestCaseId);
+        setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
+
         form.reset({
           title: editingBug.title,
           description: editingBug.description || '',
@@ -143,6 +153,7 @@ export default function BugListPage() {
           releaseId: editingBug.releaseId || 'unassigned',
         });
       } else {
+         setTestCaseInputText('');
          form.reset({
             title: '',
             description: '',
@@ -158,7 +169,7 @@ export default function BugListPage() {
         });
       }
     }
-  }, [isDialogOpen, editingBug, form]);
+  }, [isDialogOpen, editingBug, form, testCases]);
   
   const handleDialogOpen = (bug: Story | null) => {
     setEditingBug(bug);
@@ -460,25 +471,37 @@ export default function BugListPage() {
                 </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                    control={form.control}
-                    name="relatedTestCaseId"
-                    render={({ field }) => (
+                      control={form.control}
+                      name="relatedTestCaseId"
+                      render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Related Test Case</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Link to a test case" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="unassigned">None</SelectItem>
-                            {testCases.map(tc => (
-                                <SelectItem key={tc.id} value={tc.id}>[{tc.testCaseId}] {tc.title}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
+                          <FormLabel>Related Test Case</FormLabel>
+                          <FormControl>
+                            <Input
+                              list="testcase-options"
+                              placeholder="Search for a test case..."
+                              value={testCaseInputText}
+                              onChange={(e) => {
+                                const text = e.target.value;
+                                setTestCaseInputText(text);
+                                const matchingOption = testCaseOptions.find(opt => opt.label === text);
+                                field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                              }}
+                              onBlur={() => {
+                                const matchingOption = testCaseOptions.find(opt => opt.label === testCaseInputText);
+                                if (!matchingOption) {
+                                  setTestCaseInputText('');
+                                  field.onChange('unassigned');
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <datalist id="testcase-options">
+                            {testCaseOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                          </datalist>
+                          <FormMessage />
                         </FormItem>
-                    )}
+                      )}
                     />
                     <FormField
                     control={form.control}
