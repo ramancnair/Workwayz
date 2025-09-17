@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -325,7 +326,7 @@ export default function TestPlanPage() {
         
         if (tc.testPlanId === selectedPlan?.id && executionDateStr === dateStr) {
             dayTCs.push(tc);
-        } else if (!tc.testPlanId || tc.testPlanId !== selectedPlan?.id || !tc.executionDate) {
+        } else if (!tc.testPlanId) {
             backlogTCs.push(tc);
         }
     });
@@ -492,7 +493,7 @@ export default function TestPlanPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
+                <Button variant="default" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
                   Move to Backlog
                 </Button>
                  <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
@@ -636,14 +637,14 @@ export default function TestPlanPage() {
                   <FormField control={testPlanForm.control} name="startDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''}  /></FormControl>
+                      <FormControl><Input type="date" {...field} value={field.value || ''}  readOnly={watchedPlanType === 'Sprint' || watchedPlanType === 'Release'} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}/>
                   <FormField control={testPlanForm.control} name="endDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>End Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                      <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={watchedPlanType === 'Sprint' || watchedPlanType === 'Release'} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}/>
