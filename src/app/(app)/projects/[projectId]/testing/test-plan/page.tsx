@@ -116,6 +116,7 @@ export default function TestPlanPage() {
   const [editingPlan, setEditingPlan] = useState<TestPlan | null>(null);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<TestPlan | null>(null);
+  const [deleteTestCasesWithPlan, setDeleteTestCasesWithPlan] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
   const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
@@ -274,7 +275,7 @@ export default function TestPlanPage() {
   
   const handleDeletePlan = async () => {
     if (!deletingPlan) return;
-    const success = await deleteTestPlan(deletingPlan.id);
+    const success = await deleteTestPlan(deletingPlan.id, deleteTestCasesWithPlan);
     if(success) {
       toast({title: "Success", description: "Test plan deleted."});
       setSelectedPlanId(null);
@@ -474,7 +475,7 @@ export default function TestPlanPage() {
                   <>
                     <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
                     <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeletingPlan(selectedPlan)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { setDeleteTestCasesWithPlan(false); setDeletingPlan(selectedPlan); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </>
                 ) : (
                   <h3 className="font-bold text-lg">Execution Plan</h3>
@@ -840,13 +841,26 @@ export default function TestPlanPage() {
       </DialogContent>
     </Dialog>
     
-    <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => !isOpen && setDeletingPlan(null)}>
+    <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => { if (!isOpen) setDeletingPlan(null); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the test plan "{deletingPlan?.name}".
+            This action will delete the test plan "{deletingPlan?.name}". By default, test cases will be moved to the backlog.
           </AlertDialogDescription>
+          <div className="flex items-center space-x-2 pt-4">
+            <Checkbox
+              id="delete-test-cases"
+              checked={deleteTestCasesWithPlan}
+              onCheckedChange={(checked) => setDeleteTestCasesWithPlan(!!checked)}
+            />
+            <label
+              htmlFor="delete-test-cases"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Also permanently delete all test cases within this plan.
+            </label>
+          </div>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>

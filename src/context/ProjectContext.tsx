@@ -115,7 +115,7 @@ interface ProjectContextType {
   deleteTestCase: (testCaseId: string) => Promise<boolean>;
   addTestPlan: (plan: Omit<TestPlan, 'id' | 'testPlanId'>) => Promise<boolean>;
   updateTestPlan: (id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId'>>) => Promise<boolean>;
-  deleteTestPlan: (id: string) => Promise<boolean>;
+  deleteTestPlan: (id: string, deleteTestCases?: boolean) => Promise<boolean>;
   
   // Bug actions
   autoGenerateBugs: (counts: Record<string, number>) => Promise<boolean>;
@@ -1300,17 +1300,22 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const deleteTestPlan = async (id: string): Promise<boolean> => {
+  const deleteTestPlan = async (id: string, deleteTestCases: boolean = false): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
       // Delete the plan
       batch.delete(doc(db, 'projects', projectId, 'testPlans', id));
-      // Unset testPlanId and executionDate for related test cases
+      
       const q = query(collection(db, 'projects', projectId, 'testCases'), where('testPlanId', '==', id));
       const testCasesSnapshot = await getDocs(q);
+
       testCasesSnapshot.forEach(tcDoc => {
-        batch.update(tcDoc.ref, { testPlanId: null, executionDate: null });
+        if (deleteTestCases) {
+            batch.update(tcDoc.ref, { isDeleted: true, deletedAt: Timestamp.now() });
+        } else {
+            batch.update(tcDoc.ref, { testPlanId: null, executionDate: null });
+        }
       });
       await batch.commit();
       return true;
