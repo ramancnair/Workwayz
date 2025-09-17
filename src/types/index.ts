@@ -55,6 +55,7 @@ export type Story = {
   isDeleted?: boolean;
   deletedAt?: string;
   parentStoryId?: string;
+  relatedTestCaseId?: string; // For Bug
   attachments?: string;
   environmentId?: string;
   developmentStartDate?: string; // ISO String

@@ -286,7 +286,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testPlans'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints', 'environments'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testPlans'],
-    '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments', 'releases'],
+    '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments', 'releases', 'testCases'],
     '/project-details/project-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
     '/project-details/architecture': ['environments', 'impactedSystems', 'horizontals'],
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
@@ -1329,14 +1329,13 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     if (!db || !projectId) return false;
 
     const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
-    const criticalities: BugCriticality[] = ['Low', 'Medium', 'High', 'Critical'];
     
     try {
       const batch = writeBatch(db);
       const storiesSnapshot = await getDocs(collection(db, 'projects', projectId, 'stories'));
       let currentIdCounter = storiesSnapshot.size > 0 ? Math.max(0, ...storiesSnapshot.docs.map(doc => parseInt(doc.data().storyId.replace(/^[A-Z]+-/, ''), 10) || 0)) + 1 : 1;
 
-      const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story');
+      const testCasesToLink = testCases;
 
       for (const environmentId in counts) {
         const count = counts[environmentId];
@@ -1345,18 +1344,18 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
         for (let i = 0; i < count; i++) {
           const newBugRef = doc(collection(db, 'projects', projectId, 'stories'));
-          const relatedStory = getRandomItem(storiesToLink);
+          const relatedTestCase = getRandomItem(testCasesToLink);
           const now = (testDate || new Date()).toISOString();
 
           const newBug: Omit<Story, 'id'> = {
             storyId: `BUG-${currentIdCounter}`,
-            title: `Autogen bug in ${environmentName}: Login fails on ${relatedStory?.storyId || 'general function'}`,
-            description: `Auto-generated bug for ${environmentName}. Steps to reproduce: 1. Login. 2. Navigate to ${relatedStory?.title || 'a page'}. 3. Observe error.`,
+            title: `Autogen bug in ${environmentName}: Login fails on ${relatedTestCase?.testCaseId || 'general function'}`,
+            description: `Auto-generated bug for ${environmentName}. Steps to reproduce: 1. Login. 2. Navigate to a page. 3. Observe error.`,
             itemType: 'Bug',
             status: 'To Do',
             statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
-            parentStoryId: relatedStory?.id,
-            sprintId: relatedStory?.sprintId,
+            relatedTestCaseId: relatedTestCase?.id,
+            sprintId: relatedTestCase?.sprintId,
             assigneeId: getRandomItem(employees.filter(e => e.role === 'Developer'))?.id,
             priority: getRandomItem(['High', 'Critical', 'Medium']),
             environmentId: environmentId,

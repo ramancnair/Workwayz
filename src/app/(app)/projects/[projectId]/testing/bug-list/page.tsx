@@ -43,7 +43,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { Story, StoryStatus, Release } from '@/types';
+import type { Story, StoryStatus, Release, TestCase } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -68,7 +68,7 @@ const bugFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   description: z.string().optional(),
   acceptanceCriteria: z.string().optional(),
-  parentStoryId: z.string().optional(),
+  relatedTestCaseId: z.string().optional(),
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
@@ -80,7 +80,7 @@ const bugFormSchema = z.object({
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs, releasesAndMilestones } = useProject();
+  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs, releasesAndMilestones, testCases } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -133,7 +133,7 @@ export default function BugListPage() {
           title: editingBug.title,
           description: editingBug.description || '',
           acceptanceCriteria: editingBug.acceptanceCriteria || '',
-          parentStoryId: editingBug.parentStoryId || 'unassigned',
+          relatedTestCaseId: editingBug.relatedTestCaseId || 'unassigned',
           reporterId: editingBug.reporterId || 'unassigned',
           assigneeId: editingBug.assigneeId || 'unassigned',
           status: editingBug.status,
@@ -147,7 +147,7 @@ export default function BugListPage() {
             title: '',
             description: '',
             acceptanceCriteria: '',
-            parentStoryId: 'unassigned',
+            relatedTestCaseId: 'unassigned',
             reporterId: 'unassigned',
             assigneeId: 'unassigned',
             status: 'To Do',
@@ -175,7 +175,7 @@ export default function BugListPage() {
         acceptanceCriteria: values.acceptanceCriteria,
         reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-        parentStoryId: values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId,
+        relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         status: values.status,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
@@ -290,13 +290,13 @@ export default function BugListPage() {
               <TableHead>Status</TableHead>
               <TableHead>Environment</TableHead>
               <TableHead>Assignee</TableHead>
-              <TableHead>Related Story</TableHead>
+              <TableHead>Related Test Case</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bugs.map((bug) => {
               const assignee = employees.find(e => e.id === bug.assigneeId);
-              const relatedStory = stories.find(s => s.id === bug.parentStoryId);
+              const relatedTestCase = testCases.find(tc => tc.id === bug.relatedTestCaseId);
               const environment = environments.find(e => e.id === bug.environmentId);
               return (
                 <TableRow key={bug.id} data-state={selectedBugs.includes(bug.id) && "selected"}>
@@ -344,14 +344,14 @@ export default function BugListPage() {
                     ) : "Unassigned"}
                   </TableCell>
                    <TableCell>
-                    {relatedStory ? (
+                    {relatedTestCase ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                              <Badge variant="secondary">{relatedStory.storyId}</Badge>
+                              <Badge variant="secondary">{relatedTestCase.testCaseId}</Badge>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{relatedStory.title}</p>
+                            <p>{relatedTestCase.title}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -461,18 +461,18 @@ export default function BugListPage() {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                     control={form.control}
-                    name="parentStoryId"
+                    name="relatedTestCaseId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Related Story</FormLabel>
+                        <FormLabel>Related Test Case</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                             <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Link to a story" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Link to a test case" /></SelectTrigger>
                             </FormControl>
                             <SelectContent>
                             <SelectItem value="unassigned">None</SelectItem>
-                            {stories.filter(s => s.itemType === 'Requirement/Story').map(story => (
-                                <SelectItem key={story.id} value={story.id}>[{story.storyId}] {story.title}</SelectItem>
+                            {testCases.map(tc => (
+                                <SelectItem key={tc.id} value={tc.id}>[{tc.testCaseId}] {tc.title}</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
