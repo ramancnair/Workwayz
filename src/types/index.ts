@@ -1,24 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
@@ -104,6 +84,7 @@ export type TestPlan = {
   planType: 'Sprint' | 'Release';
   sprintId?: string;
   releaseId?: string;
+  environmentId?: string;
 };
 
 export type TestCase = {

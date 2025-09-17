@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -283,8 +282,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
-    '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases'],
-    '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints'],
+    '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testPlans'],
+    '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints', 'environments'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testPlans'],
     '/testing/bug-list': ['stories', 'employees', 'sprints', 'environments', 'releases'],
     '/project-details/project-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
@@ -332,8 +331,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [horizontals, setHorizontals] = useState<Horizontal[]>([]);
-  const [initialImpactedSystems, setInitialImpactedSystems] = useState<ImpactedSystem[]>([]);
-  const [initialHorizontals, setInitialHorizontals] = useState<Horizontal[]>([]);
+  const [initialImpactedSystems, setInitialImpactedSystems] = useState<InitialImpactedSystem[]>([]);
+  const [initialHorizontals, setInitialHorizontals] = useState<InitialHorizontal[]>([]);
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
@@ -1605,7 +1604,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           status: statuses[Math.floor(Math.random() * statuses.length)],
           assigneeId: employees[Math.floor(Math.random() * employees.length)]?.id,
           isDeleted: false,
-          deletedAt: null,
+          deletedAt: null
         };
         const payload = { ...newIssue, reportedDate: Timestamp.now() };
         batch.set(issueRef, payload);

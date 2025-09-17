@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -48,6 +47,7 @@ const testPlanSchemaBase = z.object({
   planType: z.enum(['Sprint', 'Release']),
   sprintId: z.string().optional(),
   releaseId: z.string().optional(),
+  environmentId: z.string().optional(),
   startDate: z.string(),
   endDate: z.string(),
 });
@@ -196,6 +196,7 @@ export default function TestPlanPage() {
             planType: editingPlan.planType,
             sprintId: editingPlan.sprintId,
             releaseId: editingPlan.releaseId,
+            environmentId: editingPlan.environmentId,
             startDate: editingPlan.startDate ? format(parseISO(editingPlan.startDate), 'yyyy-MM-dd') : '',
             endDate: editingPlan.endDate ? format(parseISO(editingPlan.endDate), 'yyyy-MM-dd') : '',
         });
@@ -205,6 +206,7 @@ export default function TestPlanPage() {
         planType: 'Sprint',
         sprintId: undefined,
         releaseId: undefined,
+        environmentId: undefined,
         startDate: '',
         endDate: '',
       })
@@ -613,6 +615,18 @@ export default function TestPlanPage() {
                         </FormItem>
                     )}/>
                 )}
+                <FormField control={testPlanForm.control} name="environmentId" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Environment</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select an environment..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                {environments.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}/>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={testPlanForm.control} name="startDate" render={({ field }) => (
                     <FormItem>
@@ -836,7 +850,7 @@ export default function TestPlanPage() {
                     )}
                   />
               </div>
-              <FormField
+               <FormField
                 control={testCaseForm.control}
                 name="closeDate"
                 render={({ field }) => (
@@ -892,4 +906,3 @@ export default function TestPlanPage() {
   </div>
   );
 }
-
