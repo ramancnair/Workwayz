@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
@@ -1235,6 +1236,9 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       const payload: any = { ...rest };
       if (data.hasOwnProperty('executionDate')) payload.executionDate = executionDate ? new Date(executionDate).toISOString() : null;
       if (data.hasOwnProperty('closeDate')) payload.closeDate = closeDate ? new Date(closeDate).toISOString() : null;
+      if (data.hasOwnProperty('testPlanId') && data.testPlanId === undefined) {
+          payload.testPlanId = null;
+      }
       
       await updateDoc(doc(db, 'projects', projectId, 'testCases', testCaseId), sanitizeForFirestore(payload));
       return true;

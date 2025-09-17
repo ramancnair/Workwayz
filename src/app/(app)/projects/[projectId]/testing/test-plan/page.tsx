@@ -258,12 +258,11 @@ export default function TestPlanPage() {
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
-        testPlanId: values.testPlanId === 'none' ? undefined : values.testPlanId,
+        testPlanId: values.testPlanId,
         executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
         closeDate: values.closeDate ? new Date(values.closeDate).toISOString() : undefined,
     };
     
-    // Explicitly handle un-setting test plan
     if (values.testPlanId === 'none') {
       testCaseData.testPlanId = undefined;
       testCaseData.executionDate = undefined;
