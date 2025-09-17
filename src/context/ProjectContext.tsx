@@ -452,7 +452,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                 const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
                 const dateFields: Record<string, string[]> = {
                     stories: ['startDate', 'endDate', 'deletedAt', 'updatedAt', 'developmentStartDate', 'completionDate'],
-                    testCases: ['deletedAt', 'executionDate'],
+                    testCases: ['deletedAt', 'executionDate', 'closeDate'],
                     testPlans: ['startDate', 'endDate'],
                     risks: ['deletedAt'],
                     assumptions: ['validationDate', 'deletedAt'],
@@ -1232,13 +1232,10 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateTestCase = async (testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const payload: any = { ...data };
-      if (data.executionDate) {
-        payload.executionDate = new Date(data.executionDate).toISOString();
-      }
-      if (data.hasOwnProperty('executionDate') && data.executionDate === undefined) {
-        payload.executionDate = null;
-      }
+      const { executionDate, closeDate, ...rest } = data;
+      const payload: any = { ...rest };
+      if (data.hasOwnProperty('executionDate')) payload.executionDate = executionDate ? new Date(executionDate).toISOString() : null;
+      if (data.hasOwnProperty('closeDate')) payload.closeDate = closeDate ? new Date(closeDate).toISOString() : null;
       
       await updateDoc(doc(db, 'projects', projectId, 'testCases', testCaseId), sanitizeForFirestore(payload));
       return true;

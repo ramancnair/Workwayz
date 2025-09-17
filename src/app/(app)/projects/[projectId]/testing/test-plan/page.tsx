@@ -81,6 +81,7 @@ const testCaseFormSchema = z.object({
   sprintId: z.string().optional(),
   testPlanId: z.string().optional(),
   executionDate: z.string().optional(),
+  closeDate: z.string().optional(),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -229,6 +230,7 @@ export default function TestPlanPage() {
             assigneeId: editingTestCase.assigneeId || 'unassigned',
             testPlanId: editingTestCase.testPlanId || 'none',
             executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
+            closeDate: editingTestCase.closeDate ? format(parseISO(editingTestCase.closeDate), 'yyyy-MM-dd') : '',
         });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm, storyOptions]);
@@ -263,6 +265,7 @@ export default function TestPlanPage() {
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
         testPlanId: values.testPlanId === 'none' ? undefined : values.testPlanId,
         executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
+        closeDate: values.closeDate ? new Date(values.closeDate).toISOString() : undefined,
     };
     const success = await updateTestCase(editingTestCase.id, testCaseData);
     if (success) {
@@ -833,6 +836,19 @@ export default function TestPlanPage() {
                     )}
                   />
               </div>
+              <FormField
+                control={testCaseForm.control}
+                name="closeDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Close Date</FormLabel>
+                     <FormControl>
+                      <Input type="date" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             <DialogFooter>
               <Button type="submit">Save Changes</Button>
             </DialogFooter>

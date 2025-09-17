@@ -65,6 +65,7 @@ const testCaseFormSchema = z.object({
   sprintId: z.string().optional(),
   testPlanId: z.string().optional(),
   executionDate: z.string().optional(),
+  closeDate: z.string().optional(),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -266,6 +267,7 @@ export default function TestCasesPage() {
             sprintId: editingTestCase.sprintId || 'backlog',
             testPlanId: editingTestCase.testPlanId || 'none',
             executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
+            closeDate: editingTestCase.closeDate ? format(parseISO(editingTestCase.closeDate), 'yyyy-MM-dd') : '',
           });
         } else {
           setRelatedStoryInputText('');
@@ -281,6 +283,7 @@ export default function TestCasesPage() {
             sprintId: 'backlog',
             testPlanId: 'none',
             executionDate: '',
+            closeDate: '',
           });
         }
     }
@@ -334,6 +337,7 @@ export default function TestCasesPage() {
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
         testPlanId: values.testPlanId === 'none' ? undefined : values.testPlanId,
         executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
+        closeDate: values.closeDate ? new Date(values.closeDate).toISOString() : undefined,
     };
 
     let success = false;
@@ -760,6 +764,19 @@ export default function TestCasesPage() {
                       )}
                     />
                 </div>
+                 <FormField
+                  control={form.control}
+                  name="closeDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Close Date</FormLabel>
+                       <FormControl>
+                        <Input type="date" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingTestCase ? 'Saving...' : 'Creating...') : (editingTestCase ? 'Save Changes' : 'Create Test Case')}
