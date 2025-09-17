@@ -120,12 +120,7 @@ export default function TestingDashboard() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Testing Dashboard" description="Overview of the project's testing status and issues." />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Test Cases" value={filteredData.totalTests.toString()} icon={ClipboardCheck} />
-        <StatsCard title="Passed" value={filteredData.passedTests.toString()} icon={ShieldCheck} />
-        <StatsCard title="Failed" value={filteredData.failedTests.toString()} icon={AlertTriangle} />
-        <StatsCard title="Blocked" value={filteredData.blockedTests.toString()} icon={Ban} />
-      </div>
+      
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
