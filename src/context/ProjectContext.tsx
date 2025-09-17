@@ -331,8 +331,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [releasesAndMilestones, setReleasesAndMilestones] = useState<Release[]>([]);
   const [impactedSystems, setImpactedSystems] = useState<ImpactedSystem[]>([]);
   const [horizontals, setHorizontals] = useState<Horizontal[]>([]);
-  const [initialImpactedSystems, setInitialImpactedSystems] = useState<InitialImpactedSystem[]>([]);
-  const [initialHorizontals, setInitialHorizontals] = useState<InitialHorizontal[]>([]);
+  const [initialImpactedSystems, setInitialImpactedSystems] = useState<ImpactedSystem[]>([]);
+  const [initialHorizontals, setInitialHorizontals] = useState<Horizontal[]>([]);
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
@@ -771,7 +771,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
         if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
 
-        batch.update(storyRef, payload);
+        batch.update(storyRef, sanitizeForFirestore(payload));
 
         if (data.hasOwnProperty('sprintId') || data.hasOwnProperty('releaseId')) {
             const subTasks = stories.filter(s => s.parentStoryId === storyId && s.itemType === 'Sub Task');

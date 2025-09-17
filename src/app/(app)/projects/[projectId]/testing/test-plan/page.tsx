@@ -248,7 +248,7 @@ export default function TestPlanPage() {
 
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     if (!editingTestCase) return;
-    const testCaseData = {
+    const testCaseData: Partial<TestCase> = {
         title: values.title,
         type: values.type,
         description: values.description,
@@ -262,6 +262,13 @@ export default function TestPlanPage() {
         executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
         closeDate: values.closeDate ? new Date(values.closeDate).toISOString() : undefined,
     };
+    
+    // Explicitly handle un-setting test plan
+    if (values.testPlanId === 'none') {
+      testCaseData.testPlanId = undefined;
+      testCaseData.executionDate = undefined;
+    }
+
     const success = await updateTestCase(editingTestCase.id, testCaseData);
     if (success) {
       toast({ title: 'Success', description: 'Test Case updated.' });
@@ -322,31 +329,24 @@ export default function TestPlanPage() {
     let dayTCs: TestCase[] = [];
 
     testCases.forEach(tc => {
-        const executionDateStr = tc.executionDate ? format(parseISO(tc.executionDate), 'yyyy-MM-dd') : undefined;
-        
-        if (tc.testPlanId === selectedPlan?.id && executionDateStr === dateStr) {
-            dayTCs.push(tc);
-        } else if (!tc.testPlanId) {
+        if (!tc.testPlanId) {
             backlogTCs.push(tc);
+        } else if (tc.testPlanId === selectedPlan?.id && tc.executionDate && format(parseISO(tc.executionDate), 'yyyy-MM-dd') === dateStr) {
+            dayTCs.push(tc);
         }
     });
 
     if (sorting) {
         const sortKey = sorting.id as keyof TestCase;
-        backlogTCs.sort((a,b) => {
+        const sortFn = (a: TestCase, b: TestCase) => {
             const valA = (a as any)[sortKey];
             const valB = (b as any)[sortKey];
             if (valA < valB) return sorting.desc ? 1 : -1;
             if (valA > valB) return sorting.desc ? -1 : 1;
             return 0;
-        });
-        dayTCs.sort((a,b) => {
-            const valA = (a as any)[sortKey];
-            const valB = (b as any)[sortKey];
-            if (valA < valB) return sorting.desc ? 1 : -1;
-            if (valA > valB) return sorting.desc ? -1 : 1;
-            return 0;
-        });
+        };
+        backlogTCs.sort(sortFn);
+        dayTCs.sort(sortFn);
     }
     
     return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
@@ -493,7 +493,7 @@ export default function TestPlanPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="default" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
+                <Button variant="outline" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
                   Move to Backlog
                 </Button>
                  <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
@@ -637,14 +637,14 @@ export default function TestPlanPage() {
                   <FormField control={testPlanForm.control} name="startDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''}  readOnly={watchedPlanType === 'Sprint' || watchedPlanType === 'Release'} /></FormControl>
+                      <FormControl><Input type="date" {...field} value={field.value || ''}  readOnly={!testPlanForm.formState.isDirty && (watchedPlanType === 'Sprint' || watchedPlanType === 'Release')} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}/>
                   <FormField control={testPlanForm.control} name="endDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>End Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={watchedPlanType === 'Sprint' || watchedPlanType === 'Release'} /></FormControl>
+                      <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!testPlanForm.formState.isDirty && (watchedPlanType === 'Sprint' || watchedPlanType === 'Release')} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}/>
