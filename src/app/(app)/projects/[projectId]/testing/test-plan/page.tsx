@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -140,21 +139,16 @@ export default function TestPlanPage() {
   const watchedSprintId = useWatch({ control: testPlanForm.control, name: 'sprintId' });
   const watchedReleaseId = useWatch({ control: testPlanForm.control, name: 'releaseId' });
   
-  const [filters, setFilters] = useState<Record<string, string[]>>({
-    sprintId: [],
-    releaseId: [],
-    status: [],
-  });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
   
   useEffect(() => {
     const sprint = sprints.find(s => s.id === watchedSprintId);
     const release = releases.find(r => r.id === watchedReleaseId);
     
-    if (watchedPlanType === 'Sprint' && sprint?.startDate && sprint?.endDate) {
+    if (watchedPlanType === 'Sprint' && sprint?.startDate && sprint?.endDate && !testPlanForm.formState.isDirty) {
         testPlanForm.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
         testPlanForm.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
-    } else if (watchedPlanType === 'Release' && release?.startDate && release?.endDate) {
+    } else if (watchedPlanType === 'Release' && release?.startDate && release?.endDate && !testPlanForm.formState.isDirty) {
         testPlanForm.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
         testPlanForm.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
     }
@@ -498,7 +492,7 @@ export default function TestPlanPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
+                <Button size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
                   Move to Backlog
                 </Button>
                  <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
