@@ -681,6 +681,7 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
         ...values,
         assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
+        createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
         closedAt: values.closedAt ? new Date(values.closedAt).toISOString() : undefined,
     });
     if (success) {
@@ -2103,7 +2104,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     <FormItem>
                                         <FormLabel>Created On</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} value={field.value || ''} readOnly />
+                                            <Input type="date" {...field} value={field.value || ''} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -2281,3 +2282,4 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     </>
   );
 }
+

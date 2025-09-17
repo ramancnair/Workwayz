@@ -199,6 +199,7 @@ export default function BugListPage() {
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
         attachments: values.attachments,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+        createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
         closedAt: values.closedAt ? new Date(values.closedAt).toISOString() : undefined,
     };
 
@@ -621,7 +622,7 @@ export default function BugListPage() {
                         <FormItem>
                             <FormLabel>Created On</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} value={field.value || ''} readOnly={!!editingBug} />
+                                <Input type="date" {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

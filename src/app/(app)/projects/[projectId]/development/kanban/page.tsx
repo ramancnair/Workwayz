@@ -95,6 +95,7 @@ const storyFormSchema = z.object({
   releaseId: z.string().optional(),
   createdAt: z.string().optional(),
   closedAt: z.string().optional(),
+  relatedTestCaseId: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -510,6 +511,8 @@ export default function KanbanPage() {
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
+        createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
+        closedAt: values.closedAt ? new Date(values.closedAt).toISOString() : undefined,
     });
     if (success) {
         handleSetSelectedStory(null);
@@ -1178,7 +1181,7 @@ export default function KanbanPage() {
                                                   <FormItem>
                                                       <FormLabel>Created On</FormLabel>
                                                       <FormControl>
-                                                          <Input type="date" {...field} value={field.value || ''} readOnly />
+                                                          <Input type="date" {...field} value={field.value || ''} />
                                                       </FormControl>
                                                       <FormMessage />
                                                   </FormItem>
