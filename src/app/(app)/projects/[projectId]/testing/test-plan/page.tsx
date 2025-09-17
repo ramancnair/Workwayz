@@ -148,17 +148,21 @@ export default function TestPlanPage() {
   const [sorting, setSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
   
   useEffect(() => {
-    if (watchedPlanType === 'Sprint' && watchedSprintId) {
-        const sprint = sprints.find(s => s.id === watchedSprintId);
-        if (sprint && sprint.startDate && sprint.endDate) {
-            testPlanForm.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
-            testPlanForm.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
-        }
-    } else if (watchedPlanType === 'Release' && watchedReleaseId) {
-        const release = releases.find(r => r.id === watchedReleaseId);
-        if (release && release.startDate && release.endDate) {
-            testPlanForm.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
-            testPlanForm.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
+    const shouldUpdateDates = !testPlanForm.getValues('startDate') && !testPlanForm.getValues('endDate');
+
+    if (shouldUpdateDates) {
+        if (watchedPlanType === 'Sprint' && watchedSprintId) {
+            const sprint = sprints.find(s => s.id === watchedSprintId);
+            if (sprint && sprint.startDate && sprint.endDate) {
+                testPlanForm.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
+                testPlanForm.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
+            }
+        } else if (watchedPlanType === 'Release' && watchedReleaseId) {
+            const release = releases.find(r => r.id === watchedReleaseId);
+            if (release && release.startDate && release.endDate) {
+                testPlanForm.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
+                testPlanForm.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
+            }
         }
     }
   }, [watchedPlanType, watchedSprintId, watchedReleaseId, sprints, releases, testPlanForm]);
@@ -391,7 +395,6 @@ export default function TestPlanPage() {
   const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => {
     const isSorting = sorting?.id === columnId;
     const isDesc = sorting?.desc === true;
-    const isAsc = sorting?.desc === false;
 
     return (
       <TableHead>
@@ -643,14 +646,14 @@ export default function TestPlanPage() {
                   <FormField control={testPlanForm.control} name="startDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!!(watchedSprintId || watchedReleaseId)} /></FormControl>
+                      <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}/>
                   <FormField control={testPlanForm.control} name="endDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>End Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!!(watchedSprintId || watchedReleaseId)}/></FormControl>
+                      <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}/>
