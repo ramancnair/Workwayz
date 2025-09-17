@@ -20,7 +20,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, Filter } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X } from 'lucide-react';
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -39,12 +39,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -337,40 +331,9 @@ export default function TestPlanPage() {
             backlogTCs.push(tc);
         }
     });
-
-    const filterTCs = (tc: TestCase) => {
-        const sprintMatch = !filters.sprintId?.length || filters.sprintId.includes(sprints.find(s => s.id === tc.sprintId)?.title || 'Backlog');
-        const releaseMatch = !filters.releaseId?.length || filters.releaseId.includes(releases.find(r => r.id === tc.releaseId)?.name || 'Unassigned');
-        const statusMatch = !filters.status?.length || filters.status.includes(tc.status);
-        return sprintMatch && releaseMatch && statusMatch;
-    };
-    
-    backlogTCs = backlogTCs.filter(filterTCs);
-
-    if (sorting) {
-      backlogTCs.sort((a, b) => {
-        let valA: any = (a as any)[sorting.id] || '';
-        let valB: any = (b as any)[sorting.id] || '';
-        if (sorting.id === 'sprintId') {
-            valA = sprints.find(s => s.id === a.sprintId)?.title || 'Backlog';
-            valB = sprints.find(s => s.id === b.sprintId)?.title || 'Backlog';
-        }
-        if (valA === null || valA === undefined) return 1;
-        if (valB === null || valB === undefined) return -1;
-        let comparison = 0;
-        if (typeof valA === 'string' && typeof valB === 'string') {
-          comparison = valA.localeCompare(valB, undefined, { numeric: true });
-        } else if (valA > valB) {
-          comparison = 1;
-        } else if (valA < valB) {
-          comparison = -1;
-        }
-        return sorting.desc ? -comparison : comparison;
-      });
-    }
     
     return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
-}, [selectedPlan, testCases, filters, sprints, releases, sorting, currentExecutionDay]);
+}, [selectedPlan, testCases, currentExecutionDay]);
 
 
   const planDays = useMemo(() => {
@@ -425,43 +388,6 @@ export default function TestPlanPage() {
       </Button>
     </TableHead>
   );
-  
-  const FilterableHeader = ({ columnId, children, filterOptions }: { columnId: string, children: React.ReactNode, filterOptions: {value: string, label: string}[] }) => {
-    const activeFilters = filters[columnId] || [];
-    return (
-      <TableHead>
-        <div className="flex items-center gap-1">
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className={cn("h-6 w-6", activeFilters.length > 0 && "text-blue-500")}>
-                        <Filter className="h-4 w-4" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 w-64">
-                    <div className="p-2 space-y-2">
-                        <Label className="px-2 font-semibold">Filter by {children}</Label>
-                        {filterOptions.map(opt => (
-                            <div key={opt.value} className="flex items-center space-x-2 px-2">
-                                <Checkbox
-                                    id={`${columnId}-${opt.value}`}
-                                    checked={activeFilters.includes(opt.value)}
-                                    onCheckedChange={() => handleFilterChange(columnId, opt.value)}
-                                />
-                                <Label htmlFor={`${columnId}-${opt.value}`} className="font-normal w-full">{opt.label}</Label>
-                            </div>
-                        ))}
-                    </div>
-                </PopoverContent>
-            </Popover>
-             <Button variant="ghost" size="sm" onClick={() => handleSort(columnId)}>
-                {children}
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-        </div>
-      </TableHead>
-    )
-  };
-
 
   return (
     <div className="flex flex-col h-full space-y-4 p-4 md:p-8 pt-6">
@@ -558,64 +484,70 @@ export default function TestPlanPage() {
                 <Button variant="outline" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
                   Move to Backlog
                 </Button>
-                 <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')}>
+                 <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" onClick={() => handleDayChange('next')}>
+                <Button variant="outline" size="icon" onClick={() => handleDayChange('next')} disabled={!selectedPlan}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <div className="border rounded-lg flex-1 flex flex-col min-h-0">
-                <div className="p-2 border-b bg-background flex justify-between items-center">
-                    <h4 className="font-semibold">{currentExecutionDay ? format(currentExecutionDay, 'EEE, MMM d') : 'No Date Selected'}</h4>
+            {selectedPlan ? (
+                <div className="border rounded-lg flex-1 flex flex-col min-h-0">
+                    <div className="p-2 border-b bg-background flex justify-between items-center">
+                        <h4 className="font-semibold">{currentExecutionDay ? format(currentExecutionDay, 'EEE, MMM d') : 'No Date Selected'}</h4>
+                    </div>
+                    <div className="overflow-y-auto flex-1">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>
+                                        <Checkbox 
+                                            onCheckedChange={(checked) => setSelectedScheduledTCs(checked ? tcsForCurrentDay.map(tc => tc.id) : [])}
+                                            checked={tcsForCurrentDay.length > 0 && selectedScheduledTCs.length === tcsForCurrentDay.length}
+                                        />
+                                    </TableHead>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Sprint</TableHead>
+                                    <TableHead>Release</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {tcsForCurrentDay.map(tc => {
+                                    const sprint = sprints.find(s => s.id === tc.sprintId);
+                                    const release = releases.find(r => r.id === tc.releaseId);
+                                    return (
+                                        <TableRow key={tc.id}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedScheduledTCs.includes(tc.id)}
+                                                    onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="py-1">
+                                                <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left font-medium text-primary hover:underline">
+                                                    <Badge variant="secondary">{tc.testCaseId}</Badge>
+                                                </button>
+                                            </TableCell>
+                                            <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                                            <TableCell>{release?.name || 'N/A'}</TableCell>
+                                            <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
-                <div className="overflow-y-auto flex-1">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>
-                                    <Checkbox 
-                                        onCheckedChange={(checked) => setSelectedScheduledTCs(checked ? tcsForCurrentDay.map(tc => tc.id) : [])}
-                                        checked={tcsForCurrentDay.length > 0 && selectedScheduledTCs.length === tcsForCurrentDay.length}
-                                    />
-                                </TableHead>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Sprint</TableHead>
-                                <TableHead>Release</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {tcsForCurrentDay.map(tc => {
-                                const sprint = sprints.find(s => s.id === tc.sprintId);
-                                const release = releases.find(r => r.id === tc.releaseId);
-                                return (
-                                    <TableRow key={tc.id}>
-                                        <TableCell>
-                                            <Checkbox
-                                                checked={selectedScheduledTCs.includes(tc.id)}
-                                                onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                                            />
-                                        </TableCell>
-                                        <TableCell className="py-1">
-                                            <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left font-medium text-primary hover:underline">
-                                                <Badge variant="secondary">{tc.testCaseId}</Badge>
-                                            </button>
-                                        </TableCell>
-                                        <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                                        <TableCell>{release?.name || 'N/A'}</TableCell>
-                                        <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
+              ) : (
+                <div className="border rounded-lg flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                    <p>No test plan selected.</p>
+                    <p className="text-sm">Please select a plan from the dropdown or create a new one.</p>
                 </div>
-            </div>
+              )}
           </div>
       </div>
-    </div>
 
     <Dialog open={isPlanDialogOpen} onOpenChange={(open) => { setIsPlanDialogOpen(open); if(!open) setEditingPlan(null); }}>
       <DialogContent className="sm:max-w-2xl">
