@@ -130,11 +130,6 @@ export default function TestingDashboard() {
         <StatsCard title="Failed" value={filteredData.failedTests.toString()} icon={AlertTriangle} />
         <StatsCard title="Blocked" value={filteredData.blockedTests.toString()} icon={Ban} />
       </div>
-       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Bugs" value={filteredData.totalBugs.toString()} icon={Bug} />
-        <StatsCard title="Open Bugs" value={filteredData.openBugs.toString()} icon={Clock} description={`${filteredData.closedBugs} closed`} />
-        <StatsCard title="Closed Bugs" value={filteredData.closedBugs.toString()} icon={CheckCircle} />
-      </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
