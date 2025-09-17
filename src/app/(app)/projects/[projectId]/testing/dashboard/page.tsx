@@ -64,25 +64,21 @@ const bugStatusConfig = {
 } satisfies ChartConfig;
 
 export default function TestingDashboard() {
-  const { testCases, stories, sprints, releasesAndMilestones } = useProject();
-  const [selectedSprintId, setSelectedSprintId] = useState('all');
-  const [selectedReleaseId, setSelectedReleaseId] = useState('all');
-  
-  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
+  const { testCases, stories, sprints, releasesAndMilestones, testPlans } = useProject();
+  const [selectedTestPlanId, setSelectedTestPlanId] = useState('all');
 
   const filteredData = useMemo(() => {
     let filteredTestCases = testCases;
     let filteredBugs = stories.filter(story => story.itemType === 'Bug');
 
-    if (selectedSprintId !== 'all') {
-      filteredTestCases = filteredTestCases.filter(tc => tc.sprintId === selectedSprintId);
-      filteredBugs = filteredBugs.filter(bug => bug.sprintId === selectedSprintId);
+    if (selectedTestPlanId !== 'all') {
+      if (selectedTestPlanId === 'none') {
+        filteredTestCases = filteredTestCases.filter(tc => !tc.testPlanId);
+      } else {
+        filteredTestCases = filteredTestCases.filter(tc => tc.testPlanId === selectedTestPlanId);
+      }
     }
-    if (selectedReleaseId !== 'all') {
-      filteredTestCases = filteredTestCases.filter(tc => tc.releaseId === selectedReleaseId);
-      filteredBugs = filteredBugs.filter(bug => bug.releaseId === selectedReleaseId);
-    }
-
+    
     // Test Case Metrics
     const totalTests = filteredTestCases.length;
     const passedTests = filteredTestCases.filter((tc) => tc.status === 'Passed').length;
@@ -118,7 +114,7 @@ export default function TestingDashboard() {
       closedBugs,
       bugStatusData,
     };
-  }, [testCases, stories, selectedSprintId, selectedReleaseId, sprints, releases]);
+  }, [testCases, stories, selectedTestPlanId, testPlans]);
 
 
   return (
@@ -136,22 +132,14 @@ export default function TestingDashboard() {
             <div className="flex justify-between items-center">
               <CardTitle>Test Cases by Status</CardTitle>
               <div className="flex items-center gap-2">
-                <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-                  <SelectTrigger className="w-[180px] h-8">
-                    <SelectValue placeholder="Select Sprint" />
+                <Select value={selectedTestPlanId} onValueChange={setSelectedTestPlanId}>
+                  <SelectTrigger className="w-[250px] h-8">
+                    <SelectValue placeholder="Select a Test Plan" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Sprints</SelectItem>
-                    {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedReleaseId} onValueChange={setSelectedReleaseId}>
-                  <SelectTrigger className="w-[180px] h-8">
-                    <SelectValue placeholder="Select Release" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Releases</SelectItem>
-                    {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                    <SelectItem value="all">All Test Plans</SelectItem>
+                    <SelectItem value="none">TC Backlog (Unassigned)</SelectItem>
+                    {testPlans.map(tp => <SelectItem key={tp.id} value={tp.id}>[{tp.testPlanId}] {tp.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
