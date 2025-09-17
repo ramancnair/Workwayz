@@ -49,6 +49,8 @@ export type Story = {
   startDate?: string; // ISO String
   endDate?: string; // ISO String
   updatedAt?: string; // ISO String for tracking completion date
+  createdAt?: string; // ISO String
+  closedAt?: string; // ISO String
   effortDays?: number;
   impactedSystemId?: string; // For Sub-Task
   impactedSystemIds?: string[]; // For Story/Feature Change/Bug

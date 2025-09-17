@@ -114,6 +114,9 @@ const storyFormSchema = z.object({
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
   sprintId: z.string().optional(),
+  relatedTestCaseId: z.string().optional(),
+  createdAt: z.string().optional(),
+  closedAt: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -337,7 +340,8 @@ export default function BacklogPage() {
     bulkMoveStoriesToEpic,
     holidays,
     weeklyOffDays,
-    projectSettings
+    projectSettings,
+    testCases,
   } = useProject();
   
   const { toast } = useToast();
@@ -367,6 +371,7 @@ export default function BacklogPage() {
 
   const [addParentStoryText, setAddParentStoryText] = useState('');
   const [editParentStoryText, setEditParentStoryText] = useState('');
+  const [testCaseInputText, setTestCaseInputText] = useState('');
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -421,7 +426,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -461,6 +466,12 @@ export default function BacklogPage() {
     value: s.id,
     label: `[${s.storyId}] ${s.title}`
   })), [parentStories]);
+
+  const testCaseOptions = useMemo(() => testCases.map(tc => ({
+    value: tc.id,
+    label: `[${tc.testCaseId}] ${tc.title}`,
+  })), [testCases]);
+
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -521,6 +532,8 @@ export default function BacklogPage() {
           });
       } else {
           const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
+          const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
+          setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
           editStoryForm.reset({
               itemType: selectedStory.itemType,
               title: selectedStory.title,
@@ -537,6 +550,9 @@ export default function BacklogPage() {
               environmentId: selectedStory.environmentId || 'unassigned',
               impactedSystemIds: selectedStory.impactedSystemIds || [],
               attachments: selectedStory.attachments || '',
+              relatedTestCaseId: selectedStory.relatedTestCaseId || 'unassigned',
+              createdAt: selectedStory.createdAt ? format(parseISO(selectedStory.createdAt), 'yyyy-MM-dd') : '',
+              closedAt: selectedStory.closedAt ? format(parseISO(selectedStory.closedAt), 'yyyy-MM-dd') : '',
           });
           if (isSubItem && selectedStory.parentStoryId) {
               const parent = parentStoryOptions.find(p => p.value === selectedStory.parentStoryId);
@@ -545,7 +561,7 @@ export default function BacklogPage() {
               setEditParentStoryText('');
           }
       }
-  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
+  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases]);
   
   useEffect(() => {
     if (!addRequirementOpen) {
@@ -631,6 +647,7 @@ export default function BacklogPage() {
           assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
           epicId: ['Task', 'Requirement/Story'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
           parentStoryId: ['Bug', 'Feature Change'].includes(values.itemType) ? (values.parentStoryId || undefined) : undefined,
+          relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
           status: 'To Do',
           estimatedHours: values.estimatedHours,
           priority: values.priority,
@@ -641,6 +658,7 @@ export default function BacklogPage() {
           attachments: values.attachments,
           isDeleted: false,
           deletedAt: null,
+          createdAt: new Date().toISOString(),
         };
 
         const success = await addStory(newStory);
@@ -662,6 +680,8 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     const success = await updateStory(selectedStory.id, {
         ...values,
         assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
+        closedAt: values.closedAt ? new Date(values.closedAt).toISOString() : undefined,
     });
     if (success) {
         handleSetSelectedStory(null);
@@ -1149,32 +1169,43 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         {['Feature Change', 'Bug'].includes(watchedItemType) ? (
                           <FormField
                           control={addStoryForm.control}
-                          name="parentStoryId" 
+                          name={watchedItemType === 'Bug' ? "relatedTestCaseId" : "parentStoryId"} 
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>{watchedItemType === 'Feature Change' ? 'Original Requirement' : 'Parent Item'}</FormLabel>
+                              <FormLabel>{watchedItemType === 'Feature Change' ? 'Original Requirement' : (watchedItemType === 'Bug' ? 'Related Test Case' : 'Parent Item')}</FormLabel>
                               <FormControl>
                                   <Input 
-                                      list="parent-story-options-add"
-                                      placeholder="Link to a story or feature change"
-                                      value={addParentStoryText}
+                                      list={watchedItemType === 'Bug' ? 'testcase-options' : 'parent-story-options-add'}
+                                      placeholder={watchedItemType === 'Bug' ? 'Link to a test case' : 'Link to a story or feature change'}
+                                      value={watchedItemType === 'Bug' ? testCaseInputText : addParentStoryText}
                                       onChange={(e) => {
                                           const text = e.target.value;
-                                          setAddParentStoryText(text);
-                                          const matchingOption = parentStoryOptions.find(opt => opt.label === text);
+                                          const options = watchedItemType === 'Bug' ? testCaseOptions : parentStoryOptions;
+                                          if (watchedItemType === 'Bug') {
+                                              setTestCaseInputText(text);
+                                          } else {
+                                              setAddParentStoryText(text);
+                                          }
+                                          const matchingOption = options.find(opt => opt.label === text);
                                           field.onChange(matchingOption ? matchingOption.value : undefined);
                                       }}
                                       onBlur={() => {
-                                          const matchingOption = parentStoryOptions.find(opt => opt.label === addParentStoryText);
+                                          const text = watchedItemType === 'Bug' ? testCaseInputText : addParentStoryText;
+                                          const options = watchedItemType === 'Bug' ? testCaseOptions : parentStoryOptions;
+                                          const matchingOption = options.find(opt => opt.label === text);
                                           if (!matchingOption) {
-                                              setAddParentStoryText('');
+                                              if (watchedItemType === 'Bug') {
+                                                  setTestCaseInputText('');
+                                              } else {
+                                                  setAddParentStoryText('');
+                                              }
                                               field.onChange(undefined);
                                           }
                                       }}
                                   />
                               </FormControl>
-                              <datalist id="parent-story-options-add">
-                                  {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                              <datalist id={watchedItemType === 'Bug' ? 'testcase-options' : 'parent-story-options-add'}>
+                                  {(watchedItemType === 'Bug' ? testCaseOptions : parentStoryOptions).map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
                               </FormItem>
@@ -1901,32 +1932,43 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         {['Feature Change', 'Bug'].includes(selectedStory.itemType) ? (
                           <FormField
                           control={editStoryForm.control}
-                          name="parentStoryId" 
+                          name={selectedStory.itemType === 'Bug' ? "relatedTestCaseId" : "parentStoryId"} 
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>{selectedStory.itemType === 'Feature Change' ? 'Original Requirement' : 'Parent Item'}</FormLabel>
+                              <FormLabel>{selectedStory.itemType === 'Feature Change' ? 'Original Requirement' : (selectedStory.itemType === 'Bug' ? 'Related Test Case' : 'Parent Item')}</FormLabel>
                               <FormControl>
                                   <Input 
-                                      list="parent-story-options-edit"
-                                      placeholder="Link to a story or feature change"
-                                      value={editParentStoryText}
+                                      list={selectedStory.itemType === 'Bug' ? 'testcase-options' : 'parent-story-options-edit'}
+                                      placeholder={selectedStory.itemType === 'Bug' ? 'Link to a test case' : 'Link to a story or feature change'}
+                                      value={selectedStory.itemType === 'Bug' ? testCaseInputText : editParentStoryText}
                                       onChange={(e) => {
                                           const text = e.target.value;
-                                          setEditParentStoryText(text);
-                                          const matchingOption = parentStoryOptions.find(opt => opt.label === text);
+                                          const options = selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions;
+                                          if (selectedStory.itemType === 'Bug') {
+                                              setTestCaseInputText(text);
+                                          } else {
+                                              setEditParentStoryText(text);
+                                          }
+                                          const matchingOption = options.find(opt => opt.label === text);
                                           field.onChange(matchingOption ? matchingOption.value : undefined);
                                       }}
                                       onBlur={() => {
-                                          const matchingOption = parentStoryOptions.find(opt => opt.label === editParentStoryText);
+                                          const text = selectedStory.itemType === 'Bug' ? testCaseInputText : editParentStoryText;
+                                          const options = selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions;
+                                          const matchingOption = options.find(opt => opt.label === text);
                                           if (!matchingOption) {
-                                              setEditParentStoryText('');
+                                              if (selectedStory.itemType === 'Bug') {
+                                                  setTestCaseInputText('');
+                                              } else {
+                                                  setEditParentStoryText('');
+                                              }
                                               field.onChange(undefined);
                                           }
                                       }}
                                   />
                               </FormControl>
-                              <datalist id="parent-story-options-edit">
-                                  {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                              <datalist id={selectedStory.itemType === 'Bug' ? 'testcase-options' : 'parent-story-options-edit'}>
+                                  {(selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions).map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
                               </FormItem>
@@ -2056,6 +2098,26 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 </FormItem>
                                 )}
                             />
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Created On</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} value={field.value || ''} readOnly />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Closed On</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} value={field.value || ''} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
                             </>
                         )}
                       </div>
@@ -2071,7 +2133,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                         return (
                                             <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
                                                 <ItemIcon className="h-4 w-4 text-muted-foreground" />
-                                                <span className="font-medium cursor-pointer hover:underline truncate" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
+                                                <span 
+                                                  className="font-medium cursor-pointer hover:underline truncate" 
+                                                  onClick={() => handleDrillDown(item)}
+                                                >
+                                                  [{item.storyId}] {item.title}
+                                                </span>
                                                 <Badge variant="outline" className="w-24 justify-center truncate">{impactedSystems.find(s => s.id === item.impactedSystemId)?.name || 'N/A'}</Badge>
                                                 <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
                                                 <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
@@ -2092,7 +2159,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                 <FormField control={subTaskForm.control} name="description" render={({field}) => (
                                                     <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
-                                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                                                     <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
                                                         <FormItem><FormLabel>Impacted System</FormLabel>
                                                             <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
@@ -2115,7 +2182,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                     </FormItem>
                                                     )}/>
                                                 </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
                                                         <FormItem>
                                                             <FormLabel>Start Date</FormLabel>

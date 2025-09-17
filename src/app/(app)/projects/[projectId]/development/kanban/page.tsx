@@ -93,6 +93,8 @@ const storyFormSchema = z.object({
   status: z.enum(statusOptions).optional(),
   sprintId: z.string().optional(),
   releaseId: z.string().optional(),
+  createdAt: z.string().optional(),
+  closedAt: z.string().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -323,7 +325,7 @@ function StoryCard({
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings, testCases } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -334,6 +336,7 @@ export default function KanbanPage() {
   const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
   const [editParentStoryText, setEditParentStoryText] = useState('');
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
+  const [testCaseInputText, setTestCaseInputText] = useState('');
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -354,17 +357,32 @@ export default function KanbanPage() {
   });
 
   
-  const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
-    if(!start || !end) return 0;
-    const holidayDates = holidays.map(h => parseISO(h.date));
-    const interval = eachDayOfInterval({ start, end });
-    
-    return interval.filter(day => {
-      const dayOfWeek = day.getDay();
-      const isWeekend = weeklyOffDays.includes(dayOfWeek);
-      const isHoliday = holidayDates.some(h => isSameDay(day, h));
-      return !isWeekend && !isHoliday;
-    }).length;
+  const calculateBusinessDays = useCallback((startStr?: string, endStr?: string): number => {
+    if(!startStr || !endStr) return 0;
+    try {
+        const start = parseISO(startStr);
+        const end = parseISO(endStr);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+            return 0;
+        }
+
+        const holidayDates = holidays.map(h => new Date(h.date));
+
+        const interval = eachDayOfInterval({ start, end });
+        
+        const businessDays = interval.filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+            return !isWeekend && !isHoliday;
+        });
+
+        return businessDays.length;
+    } catch(e) {
+        console.error("Error calculating business days", e);
+        return 0;
+    }
   }, [holidays, weeklyOffDays]);
   
   const actualEffortInHours = useMemo(() => {
@@ -378,7 +396,7 @@ export default function KanbanPage() {
             if (!task.developmentStartDate || !task.completionDate) return total;
             const start = parseISO(task.developmentStartDate);
             const end = parseISO(task.completionDate);
-            const days = calculateBusinessDays(start, end);
+            const days = calculateBusinessDays(start.toISOString(), end.toISOString());
             const hoursPerDay = projectSettings?.manDayToHours || 8;
             return total + (days * hoursPerDay);
         }, 0);
@@ -388,7 +406,7 @@ export default function KanbanPage() {
     if (!selectedStory?.developmentStartDate || !selectedStory?.completionDate) return null;
     const start = parseISO(selectedStory.developmentStartDate);
     const end = parseISO(selectedStory.completionDate);
-    const days = calculateBusinessDays(start, end);
+    const days = calculateBusinessDays(start.toISOString(), end.toISOString());
     const hoursPerDay = projectSettings?.manDayToHours || 8;
     return days * hoursPerDay;
 
@@ -432,6 +450,11 @@ export default function KanbanPage() {
     label: `[${s.storyId}] ${s.title}`
   })), [parentStories]);
 
+  const testCaseOptions = useMemo(() => testCases.map(tc => ({
+    value: tc.id,
+    label: `[${tc.testCaseId}] ${tc.title}`,
+  })), [testCases]);
+
   useEffect(() => {
     if (!selectedStory) {
         setIsEditStorySubmitting(false);
@@ -450,6 +473,10 @@ export default function KanbanPage() {
         });
     } else {
       const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
+      
+      const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
+      setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
+
       editStoryForm.reset({
         title: selectedStory.title,
         description: selectedStory.description || '',
@@ -465,6 +492,9 @@ export default function KanbanPage() {
         status: selectedStory.status,
         sprintId: selectedStory.sprintId || 'backlog',
         releaseId: selectedStory.releaseId || 'unassigned',
+        createdAt: selectedStory.createdAt ? format(parseISO(selectedStory.createdAt), 'yyyy-MM-dd') : '',
+        closedAt: selectedStory.closedAt ? format(parseISO(selectedStory.closedAt), 'yyyy-MM-dd') : '',
+        relatedTestCaseId: selectedStory.relatedTestCaseId,
       });
       if (isSubItem && selectedStory.parentStoryId) {
           const parent = parentStoryOptions.find(p => p.value === selectedStory.parentStoryId);
@@ -473,7 +503,7 @@ export default function KanbanPage() {
           setEditParentStoryText('');
       }
     }
-  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
+  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases]);
 
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
@@ -983,19 +1013,22 @@ export default function KanbanPage() {
                                   {['Feature Change', 'Bug'].includes(selectedStory.itemType) ? (
                                     <FormField
                                       control={editStoryForm.control}
-                                      name="parentStoryId"
+                                      name={selectedStory.itemType === 'Bug' ? 'relatedTestCaseId' : 'parentStoryId'}
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Parent Item</FormLabel>
+                                          <FormLabel>{selectedStory.itemType === 'Bug' ? 'Related Test Case' : 'Parent Item'}</FormLabel>
                                           <FormControl>
                                             <Input
-                                              list="parent-story-options-edit"
-                                              placeholder="Link to a story or feature change"
-                                              value={editParentStoryText}
+                                              list={selectedStory.itemType === 'Bug' ? "testcase-options" : "parent-story-options-edit"}
+                                              placeholder={selectedStory.itemType === 'Bug' ? "Link to a test case" : "Link to a story or feature change"}
+                                              value={selectedStory.itemType === 'Bug' ? testCaseInputText : editParentStoryText}
                                               onChange={(e) => {
                                                 const text = e.target.value;
-                                                setEditParentStoryText(text);
-                                                const matchingOption = parentStoryOptions.find(
+                                                const options = selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions;
+                                                if(selectedStory.itemType === 'Bug') setTestCaseInputText(text);
+                                                else setEditParentStoryText(text);
+
+                                                const matchingOption = options.find(
                                                   (opt) => opt.label === text
                                                 );
                                                 field.onChange(
@@ -1003,18 +1036,21 @@ export default function KanbanPage() {
                                                 );
                                               }}
                                               onBlur={() => {
-                                                const matchingOption = parentStoryOptions.find(
-                                                  (opt) => opt.label === editParentStoryText
+                                                 const options = selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions;
+                                                 const text = selectedStory.itemType === 'Bug' ? testCaseInputText : editParentStoryText;
+                                                const matchingOption = options.find(
+                                                  (opt) => opt.label === text
                                                 );
                                                 if (!matchingOption) {
-                                                  setEditParentStoryText('');
+                                                   if(selectedStory.itemType === 'Bug') setTestCaseInputText('');
+                                                   else setEditParentStoryText('');
                                                   field.onChange(undefined);
                                                 }
                                               }}
                                             />
                                           </FormControl>
-                                          <datalist id="parent-story-options-edit">
-                                            {parentStoryOptions.map((opt) => (
+                                          <datalist id={selectedStory.itemType === 'Bug' ? "testcase-options" : "parent-story-options-edit"}>
+                                            {(selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions).map((opt) => (
                                               <option key={opt.value} value={opt.label} />
                                             ))}
                                           </datalist>
@@ -1137,6 +1173,26 @@ export default function KanbanPage() {
                                               </FormItem>
                                               )}
                                           />
+                                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                              <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
+                                                  <FormItem>
+                                                      <FormLabel>Created On</FormLabel>
+                                                      <FormControl>
+                                                          <Input type="date" {...field} value={field.value || ''} readOnly />
+                                                      </FormControl>
+                                                      <FormMessage />
+                                                  </FormItem>
+                                              )} />
+                                              <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
+                                                  <FormItem>
+                                                      <FormLabel>Closed On</FormLabel>
+                                                      <FormControl>
+                                                          <Input type="date" {...field} value={field.value || ''} />
+                                                      </FormControl>
+                                                      <FormMessage />
+                                                  </FormItem>
+                                              )} />
+                                          </div>
                                       </>
                                   )}
                                   <FormField

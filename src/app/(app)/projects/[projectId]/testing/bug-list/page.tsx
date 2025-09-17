@@ -54,6 +54,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Bot, PlusCircle, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { format, parseISO } from 'date-fns';
 
 const statusStyles: Record<StoryStatus, string> = {
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
@@ -76,6 +77,8 @@ const bugFormSchema = z.object({
   environmentId: z.string().optional(),
   attachments: z.string().optional(),
   releaseId: z.string().optional(),
+  createdAt: z.string().optional(),
+  closedAt: z.string().optional(),
 });
 
 
@@ -151,6 +154,8 @@ export default function BugListPage() {
           environmentId: editingBug.environmentId || 'unassigned',
           attachments: editingBug.attachments || '',
           releaseId: editingBug.releaseId || 'unassigned',
+          createdAt: editingBug.createdAt ? format(parseISO(editingBug.createdAt), 'yyyy-MM-dd') : '',
+          closedAt: editingBug.closedAt ? format(parseISO(editingBug.closedAt), 'yyyy-MM-dd') : '',
         });
       } else {
          setTestCaseInputText('');
@@ -166,6 +171,8 @@ export default function BugListPage() {
             environmentId: 'unassigned',
             attachments: '',
             releaseId: 'unassigned',
+            createdAt: '',
+            closedAt: '',
         });
       }
     }
@@ -192,6 +199,7 @@ export default function BugListPage() {
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
         attachments: values.attachments,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+        closedAt: values.closedAt ? new Date(values.closedAt).toISOString() : undefined,
     };
 
     if (editingBug) {
@@ -608,6 +616,26 @@ export default function BugListPage() {
                   </FormItem>
                   )}
                 />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="createdAt" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Created On</FormLabel>
+                            <FormControl>
+                                <Input type="date" {...field} value={field.value || ''} readOnly={!!editingBug} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="closedAt" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Closed On</FormLabel>
+                            <FormControl>
+                                <Input type="date" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Saving...' : 'Save Changes'}

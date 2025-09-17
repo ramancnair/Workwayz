@@ -451,7 +451,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                 if (!docData) return { id: doc.id };
                 const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
                 const dateFields: Record<string, string[]> = {
-                    stories: ['startDate', 'endDate', 'deletedAt', 'updatedAt', 'developmentStartDate', 'completionDate'],
+                    stories: ['startDate', 'endDate', 'deletedAt', 'updatedAt', 'developmentStartDate', 'completionDate', 'createdAt', 'closedAt'],
                     testCases: ['deletedAt', 'executionDate', 'closeDate'],
                     testPlans: ['startDate', 'endDate'],
                     risks: ['deletedAt'],
@@ -625,6 +625,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             storyId, 
             isDeleted: false, 
             deletedAt: null,
+            createdAt: now,
             statusHistory: [{ fromStatus: null, toStatus: story.status, date: now }]
         };
         if (startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
@@ -750,7 +751,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
     try {
         const batch = writeBatch(db);
-        const { startDate, endDate, ...rest } = data;
+        const { startDate, endDate, closedAt, ...rest } = data;
         
         // Use a mutable payload
         let payload: any = { ...rest, updatedAt: Timestamp.now().toDate().toISOString() };
@@ -773,10 +774,18 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             if (data.status === 'Done' && !storyToUpdate.completionDate) {
                 payload.completionDate = now;
             }
+            if (storyToUpdate.itemType === 'Bug') {
+              if (data.status === 'Done' && !storyToUpdate.closedAt) {
+                  payload.closedAt = now;
+              } else if (data.status !== 'Done' && storyToUpdate.closedAt) {
+                  payload.closedAt = null;
+              }
+            }
         }
 
         if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
         if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
+        if (data.hasOwnProperty('closedAt')) payload.closedAt = closedAt ? new Date(closedAt).toISOString() : null;
 
         batch.update(storyRef, sanitizeForFirestore(payload));
 
@@ -1260,7 +1269,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
       if (data.hasOwnProperty('executionDate')) payload.executionDate = executionDate ? new Date(executionDate).toISOString() : null;
       if (data.hasOwnProperty('closeDate')) payload.closeDate = closeDate ? new Date(closeDate).toISOString() : null;
-      if (data.hasOwnProperty('testPlanId') && data.testPlanId === undefined) {
+      if (data.hasOwnProperty('testPlanId') && (data.testPlanId === undefined || data.testPlanId === 'none')) {
           payload.testPlanId = null;
       }
       
@@ -1385,6 +1394,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             environmentId: environmentId,
             isDeleted: false,
             deletedAt: null,
+            createdAt: now,
           };
           
           batch.set(newBugRef, sanitizeForFirestore(newBug));
