@@ -148,22 +148,15 @@ export default function TestPlanPage() {
   const [sorting, setSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
   
   useEffect(() => {
-    const shouldUpdateDates = !testPlanForm.getValues('startDate') && !testPlanForm.getValues('endDate');
-
-    if (shouldUpdateDates) {
-        if (watchedPlanType === 'Sprint' && watchedSprintId) {
-            const sprint = sprints.find(s => s.id === watchedSprintId);
-            if (sprint && sprint.startDate && sprint.endDate) {
-                testPlanForm.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
-                testPlanForm.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
-            }
-        } else if (watchedPlanType === 'Release' && watchedReleaseId) {
-            const release = releases.find(r => r.id === watchedReleaseId);
-            if (release && release.startDate && release.endDate) {
-                testPlanForm.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
-                testPlanForm.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
-            }
-        }
+    const sprint = sprints.find(s => s.id === watchedSprintId);
+    const release = releases.find(r => r.id === watchedReleaseId);
+    
+    if (watchedPlanType === 'Sprint' && sprint?.startDate && sprint?.endDate) {
+        testPlanForm.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
+        testPlanForm.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
+    } else if (watchedPlanType === 'Release' && release?.startDate && release?.endDate) {
+        testPlanForm.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
+        testPlanForm.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
     }
   }, [watchedPlanType, watchedSprintId, watchedReleaseId, sprints, releases, testPlanForm]);
 
@@ -352,6 +345,13 @@ export default function TestPlanPage() {
             if (valA > valB) return sorting.desc ? -1 : 1;
             return 0;
         });
+        dayTCs.sort((a,b) => {
+            const valA = (a as any)[sortKey];
+            const valB = (b as any)[sortKey];
+            if (valA < valB) return sorting.desc ? 1 : -1;
+            if (valA > valB) return sorting.desc ? -1 : 1;
+            return 0;
+        });
     }
     
     return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
@@ -394,17 +394,13 @@ export default function TestPlanPage() {
   
   const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => {
     const isSorting = sorting?.id === columnId;
-    const isDesc = sorting?.desc === true;
+    const sortIcon = isSorting ? (sorting.desc ? <ArrowUpDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4" />) : <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
 
     return (
       <TableHead>
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleSort(columnId)}>
             <span>{children}</span>
-            {isSorting ? (
-                isDesc ? <ArrowUpDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4" />
-            ) : (
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-            )}
+            {sortIcon}
         </div>
       </TableHead>
     );
@@ -528,10 +524,10 @@ export default function TestPlanPage() {
                                             checked={tcsForCurrentDay.length > 0 && selectedScheduledTCs.length === tcsForCurrentDay.length}
                                         />
                                     </TableHead>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Sprint</TableHead>
-                                    <TableHead>Release</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                                    <SortableHeader columnId="sprintId">Sprint</SortableHeader>
+                                    <SortableHeader columnId="releaseId">Release</SortableHeader>
+                                    <SortableHeader columnId="status">Status</SortableHeader>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -646,7 +642,7 @@ export default function TestPlanPage() {
                   <FormField control={testPlanForm.control} name="startDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                      <FormControl><Input type="date" {...field} value={field.value || ''}  /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}/>
