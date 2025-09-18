@@ -2,17 +2,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority } from '@/types';
+import { format } from 'date-fns';
 
-type EnrichedRisk = Risk & { projectName: string };
-type EnrichedIssue = Issue & { projectName: string };
+type EnrichedRisk = Risk & { projectName: string; projectId: string; };
+type EnrichedIssue = Issue & { projectName: string; projectId: string; };
 
 const getRiskPotential = (severity: RiskSeverity, probability: RiskProbability) => {
   const potential = severity * probability;
@@ -21,6 +25,14 @@ const getRiskPotential = (severity: RiskSeverity, probability: RiskProbability) 
   return 'High';
 };
 
+const getRiskPotentialClass = (severity: RiskSeverity, probability: RiskProbability) => {
+  const potential = getRiskPotential(severity, probability);
+  if (potential === 'Low') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+  if (potential === 'Medium') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+  return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+};
+
+
 const issuePriorityStyles: Record<IssuePriority, string> = {
     'Low': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
     'Medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
@@ -28,19 +40,30 @@ const issuePriorityStyles: Record<IssuePriority, string> = {
     'Critical': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
+const issueStatusStyles: Record<Issue['status'], string> = {
+    'Open': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'In Progress': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'Resolved': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'Closed': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+};
 
-function RiskItem({ item }: { item: EnrichedRisk }) {
+function RiskItem({ item, onClick }: { item: EnrichedRisk; onClick: () => void }) {
     return (
-        <div className="p-3 border-b last:border-b-0">
-            <p className="text-sm font-medium">{item.description}</p>
+        <div className="p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50" onClick={onClick}>
+            <div className="flex justify-between items-start">
+                <p className="text-sm font-medium flex-1 pr-2">{item.description}</p>
+                <Badge className={cn(getRiskPotentialClass(item.severity, item.probability))}>
+                    {getRiskPotential(item.severity, item.probability)}
+                </Badge>
+            </div>
             <Badge variant="outline" className="mt-1">{item.projectName}</Badge>
         </div>
     );
 }
 
-function IssueItem({ item }: { item: EnrichedIssue }) {
+function IssueItem({ item, onClick }: { item: EnrichedIssue; onClick: () => void }) {
     return (
-         <div className="p-3 border-b last:border-b-0">
+         <div className="p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50" onClick={onClick}>
             <div className="flex justify-between items-start">
                  <p className="text-sm font-medium flex-1 pr-2">{item.description}</p>
                  <Badge className={cn(issuePriorityStyles[item.priority])}>{item.priority}</Badge>
@@ -50,10 +73,85 @@ function IssueItem({ item }: { item: EnrichedIssue }) {
     )
 }
 
+function RiskDetailDialog({ risk, isOpen, onOpenChange }: { risk: EnrichedRisk | null; isOpen: boolean; onOpenChange: (open: boolean) => void; }) {
+    if (!risk) return null;
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Risk Details ({risk.riskId})</DialogTitle>
+                    <DialogDescription>Viewing risk from project: {risk.projectName}</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4 text-sm">
+                    <div>
+                        <h4 className="font-semibold">Description</h4>
+                        <p className="text-muted-foreground">{risk.description}</p>
+                    </div>
+                     <div>
+                        <h4 className="font-semibold">Mitigation Plan</h4>
+                        <p className="text-muted-foreground">{risk.mitigationPlan}</p>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold">Contingency Plan</h4>
+                        <p className="text-muted-foreground">{risk.contingencyPlan}</p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Link href={`/projects/${risk.projectId}/risks`}>
+                        <Button>Go to Project</Button>
+                    </Link>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+function IssueDetailDialog({ issue, isOpen, onOpenChange }: { issue: EnrichedIssue | null; isOpen: boolean; onOpenChange: (open: boolean) => void; }) {
+    if (!issue) return null;
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Issue Details ({issue.issueId})</DialogTitle>
+                    <DialogDescription>Viewing issue from project: {issue.projectName}</DialogDescription>
+                </DialogHeader>
+                 <div className="space-y-4 py-4 text-sm">
+                    <div>
+                        <h4 className="font-semibold">Description</h4>
+                        <p className="text-muted-foreground">{issue.description}</p>
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <h4 className="font-semibold">Status</h4>
+                            <Badge className={cn(issueStatusStyles[issue.status])}>{issue.status}</Badge>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold">Priority</h4>
+                            <Badge className={cn(issuePriorityStyles[issue.priority])}>{issue.priority}</Badge>
+                        </div>
+                     </div>
+                     <div>
+                        <h4 className="font-semibold">Reported Date</h4>
+                        <p className="text-muted-foreground">{format(new Date(issue.reportedDate), 'PPP')}</p>
+                    </div>
+                </div>
+                <DialogFooter>
+                     <Link href={`/projects/${issue.projectId}/issues`}>
+                        <Button>Go to Project</Button>
+                    </Link>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+
 export default function CtoDashboardPage() {
   const [highRisks, setHighRisks] = useState<EnrichedRisk[]>([]);
   const [criticalIssues, setCriticalIssues] = useState<EnrichedIssue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewingRisk, setViewingRisk] = useState<EnrichedRisk | null>(null);
+  const [viewingIssue, setViewingIssue] = useState<EnrichedIssue | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,7 +172,7 @@ export default function CtoDashboardPage() {
             risksSnapshot.forEach(doc => {
                 const risk = doc.data() as Risk;
                 if (getRiskPotential(risk.severity, risk.probability) === 'High') {
-                    allRisks.push({ ...risk, projectName: project.name });
+                    allRisks.push({ ...risk, id: doc.id, projectName: project.name, projectId: project.id });
                 }
             });
 
@@ -83,7 +181,7 @@ export default function CtoDashboardPage() {
             issuesSnapshot.forEach(doc => {
                 const issue = doc.data() as Issue;
                  if (['Critical', 'High'].includes(issue.priority)) {
-                    allIssues.push({ ...issue, projectName: project.name });
+                    allIssues.push({ ...issue, id: doc.id, projectName: project.name, projectId: project.id });
                 }
             });
         }
@@ -103,6 +201,7 @@ export default function CtoDashboardPage() {
   }, []);
 
   return (
+    <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="CTO Dashboard" description="High-level overview of all portfolios and projects." />
       
@@ -117,7 +216,7 @@ export default function CtoDashboardPage() {
                 <CardContent>
                     <ScrollArea className="h-full max-h-[50vh] pr-4">
                         {highRisks.length > 0 ? (
-                            highRisks.map((risk, index) => <RiskItem key={index} item={risk} />)
+                            highRisks.map((risk, index) => <RiskItem key={index} item={risk} onClick={() => setViewingRisk(risk)} />)
                         ) : (
                             <p className="text-muted-foreground text-center py-10">No high potential risks found in active projects.</p>
                         )}
@@ -132,7 +231,7 @@ export default function CtoDashboardPage() {
                 <CardContent>
                     <ScrollArea className="h-full max-h-[50vh] pr-4">
                         {criticalIssues.length > 0 ? (
-                           criticalIssues.map((issue, index) => <IssueItem key={index} item={issue} />)
+                           criticalIssues.map((issue, index) => <IssueItem key={index} item={issue} onClick={() => setViewingIssue(issue)} />)
                         ) : (
                             <p className="text-muted-foreground text-center py-10">No critical or high priority issues found in active projects.</p>
                         )}
@@ -142,5 +241,17 @@ export default function CtoDashboardPage() {
         </div>
       )}
     </div>
+    
+    <RiskDetailDialog 
+        risk={viewingRisk} 
+        isOpen={!!viewingRisk} 
+        onOpenChange={(open) => !open && setViewingRisk(null)}
+    />
+    <IssueDetailDialog 
+        issue={viewingIssue} 
+        isOpen={!!viewingIssue} 
+        onOpenChange={(open) => !open && setViewingIssue(null)}
+    />
+    </>
   );
 }
