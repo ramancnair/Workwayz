@@ -39,17 +39,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, Circle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
-import { type Portfolio, type Project, type ProjectMethodology, type PricingModel, type User, type ProjectStatus } from '@/types';
+import { type Portfolio, type Project, type ProjectMethodology, type PricingModel, type User, type ProjectStatus, type RagStatus } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC', 'Hybrid'];
 const pricingModels: PricingModel[] = ['Fixed Price', 'T&M', 'Fixed Capacity'];
@@ -62,6 +63,12 @@ const statusStyles: Record<ProjectStatus, string> = {
     'On Hold': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
     'Completed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     'Cancelled': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
+
+const ragStatusStyles: Record<RagStatus, string> = {
+  'Green': 'bg-green-500',
+  'Amber': 'bg-yellow-500',
+  'Red': 'bg-red-500',
 };
 
 
@@ -79,6 +86,15 @@ const projectSchema = z.object({
     message: 'End date must be after or on the same day as the start date.',
     path: ['endDate'],
 });
+
+function HealthIndicator({ status, label }: { status?: RagStatus; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className={cn("h-3 w-3 rounded-full", status ? ragStatusStyles[status] : 'bg-gray-300')} />
+      <span className="text-sm font-medium">{label}</span>
+    </div>
+  );
+}
 
 function ProjectDialogContent({
   form,
@@ -551,8 +567,9 @@ export default function ProjectsDashboard() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <SortableHeader columnId="id" className="w-[180px]">Project ID</SortableHeader>
+                              <SortableHeader columnId="id" className="w-[120px]">Project ID</SortableHeader>
                               <SortableHeader columnId="name">Project Name</SortableHeader>
+                              <TableHead>Project Health</TableHead>
                               <SortableHeader columnId="status">Status</SortableHeader>
                               <SortableHeader columnId="projectManagerId">Project Manager</SortableHeader>
                               <TableHead className="text-right">Actions</TableHead>
@@ -572,6 +589,23 @@ export default function ProjectsDashboard() {
                                       <Link href={`/projects/${project.id}/development/dashboard`} className="block w-full h-full">
                                         {project.name}
                                       </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <div className="flex items-center gap-2 cursor-pointer">
+                                                <Circle className={cn("h-4 w-4", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                                                <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
+                                            </div>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-80">
+                                            <div className="space-y-4">
+                                              <HealthIndicator status={project.scopeStatus} label="Scope" />
+                                              <HealthIndicator status={project.costStatus} label="Cost" />
+                                              <HealthIndicator status={project.timeStatus} label="Time" />
+                                            </div>
+                                          </PopoverContent>
+                                        </Popover>
                                     </TableCell>
                                     <TableCell>
                                       <Link href={`/projects/${project.id}/development/dashboard`} className="block w-full h-full">
@@ -643,3 +677,4 @@ export default function ProjectsDashboard() {
     
 
     
+
