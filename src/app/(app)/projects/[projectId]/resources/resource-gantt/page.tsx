@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -34,12 +33,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    const hours = data.isPlaceholder ? 0 : data.hours;
     return (
       <div className="bg-background border rounded-md p-2 shadow-md text-sm">
         <p className="font-bold">{label}</p>
         <p>Status: <span className="font-semibold">{data.status}</span></p>
-        <p>Hours Logged: {hours.toFixed(1)}</p>
+        <p>Hours Logged: {data.actualHours.toFixed(1)}</p>
       </div>
     );
   }
@@ -78,7 +76,7 @@ export default function ResourceGanttPage() {
 
         let status = 'Normal';
         let color = '#22c55e'; // Green (Normal)
-        let isPlaceholder = false;
+        let displayHours = loggedHours;
 
         if (isLeave) {
           status = 'Leave';
@@ -98,17 +96,17 @@ export default function ResourceGanttPage() {
           }
         }
         
-        let displayHours = loggedHours;
+        // If it's a non-working day with no hours, we still want to show a bar.
+        // We'll render a full 8-hour bar for visual purposes, but the actualHours is 0.
         if (loggedHours === 0 && (isLeave || isNonWorkingDay)) {
-            displayHours = 0.1; // Render a tiny bar to show color
-            isPlaceholder = true;
+            displayHours = 8; 
         }
 
         return {
           date: format(day, 'd'),
           fullDate: dateStr,
-          hours: displayHours,
-          isPlaceholder,
+          displayHours: displayHours,
+          actualHours: loggedHours,
           status: status,
           color: color,
         };
@@ -148,7 +146,7 @@ export default function ResourceGanttPage() {
                   <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false}/>
                   <YAxis domain={[0, 12]} tickFormatter={(value) => `${value}h`} fontSize={12} tickLine={false} axisLine={false}/>
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted))' }}/>
-                  <Bar dataKey="hours">
+                  <Bar dataKey="displayHours">
                     {dailyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
