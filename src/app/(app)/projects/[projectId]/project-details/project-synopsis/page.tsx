@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -95,10 +94,10 @@ export default function ProjectSynopsisPage() {
     const onSubmit = async (values: z.infer<typeof statusUpdateSchema>) => {
         const success = await updateProject(values);
         if (success) {
-            toast({ title: 'Success', description: 'Project status updated successfully.' });
+            toast({ title: 'Success', description: 'Project health updated successfully.' });
             setIsDialogOpen(false);
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not update project status.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not update project health.' });
         }
     };
         
@@ -181,7 +180,7 @@ export default function ProjectSynopsisPage() {
                     <Card>
                         <CardHeader className="flex flex-row justify-between items-start">
                             <div>
-                                <CardTitle>Project Status</CardTitle>
+                                <CardTitle>Project Health</CardTitle>
                             </div>
                              <DialogTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -191,14 +190,14 @@ export default function ProjectSynopsisPage() {
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
-                                <h4 className="font-medium">Overall Status</h4>
+                                <h4 className="font-medium">Overall Health</h4>
                                 <div className="flex items-center gap-4">
                                     <span className={cn('h-8 w-8 rounded-full', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
                                     <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
                                 </div>
                             </div>
                             <div className="space-y-4">
-                               <h4 className="font-medium">Sub-Statuses</h4>
+                               <h4 className="font-medium">Health Indicators</h4>
                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                    <RagStatusIndicator status={project.scopeStatus} label="Scope" />
                                    <RagStatusIndicator status={project.costStatus} label="Cost" />
@@ -211,7 +210,7 @@ export default function ProjectSynopsisPage() {
                 
                 <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
-                        <DialogTitle>Edit Project Status</DialogTitle>
+                        <DialogTitle>Edit Project Health</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -220,7 +219,7 @@ export default function ProjectSynopsisPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <FormField control={form.control} name="overallStatus" render={({ field }) => (
                                       <FormItem>
-                                          <FormLabel>Overall Status</FormLabel>
+                                          <FormLabel>Overall Health</FormLabel>
                                           <Select onValueChange={field.onChange} value={field.value}>
                                               <FormControl><SelectTrigger><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
                                               <SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
