@@ -26,7 +26,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label as UiLabel } from '@/components/ui/label';
 import { format, parseISO, isSameDay, eachDayOfInterval, differenceInDays, isWithinInterval } from 'date-fns';
-import type { Story, WorklogItem, UserRole } from '@/types';
+import type { Story, Worklog, UserRole } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
 const taskChartConfig = {
@@ -186,10 +186,10 @@ export default function ProjectDashboardPage() {
   }, [workloadSprintId, stories, employees]);
 
 
-  const calculateEffort = useCallback((relevantStories: Story[]) => {
-     const planned = relevantStories.reduce((sum, story) => sum + (story.estimatedHours || 0), 0);
+  const calculateEffort = useCallback((relevantStories: Story[], relevantWorklogs: Worklog[]) => {
+    const planned = relevantStories.reduce((sum, story) => sum + (story.estimatedHours || 0), 0);
     
-    const actual = relevantStories.reduce((total, story) => {
+    const derived = relevantStories.reduce((total, story) => {
         if (!story.developmentStartDate || !story.completionDate) return total;
         const start = parseISO(story.developmentStartDate);
         const end = parseISO(story.completionDate);
@@ -197,22 +197,43 @@ export default function ProjectDashboardPage() {
         const hoursPerDay = projectSettings?.manDayToHours || 8;
         return total + (days * hoursPerDay);
     }, 0);
+
+    const worklog = relevantWorklogs.reduce((sum, log) => sum + log.totalHours, 0);
     
     return [
-        { name: 'Actual', value: actual, fill: 'hsl(var(--primary))' },
+        { name: 'Worklog', value: worklog, fill: 'hsl(var(--chart-4))' },
+        { name: 'Derived', value: derived, fill: 'hsl(var(--primary))' },
         { name: 'Planned', value: planned, fill: 'hsl(var(--chart-2))' },
     ];
   }, [calculateBusinessDays, projectSettings]);
 
   const sprintTimeChartData = useMemo(() => {
     const relevantStories = timeFilterSprintId === 'all' ? stories : stories.filter(s => s.sprintId === timeFilterSprintId);
-    return calculateEffort(relevantStories);
-  }, [timeFilterSprintId, stories, calculateEffort]);
+    const sprint = sprints.find(s => s.id === timeFilterSprintId);
+    
+    const relevantWorklogs = worklogs.filter(w => {
+      if (timeFilterSprintId === 'all') return true;
+      if (!sprint?.startDate || !sprint?.endDate) return false;
+      const logDate = parseISO(w.date);
+      return isWithinInterval(logDate, { start: parseISO(sprint.startDate), end: parseISO(sprint.endDate) });
+    });
+
+    return calculateEffort(relevantStories, relevantWorklogs);
+  }, [timeFilterSprintId, stories, worklogs, sprints, calculateEffort]);
   
   const releaseTimeChartData = useMemo(() => {
-      const relevantStories = timeFilterReleaseId === 'all' ? stories : stories.filter(s => s.releaseId === timeFilterReleaseId);
-      return calculateEffort(relevantStories);
-  }, [timeFilterReleaseId, stories, calculateEffort]);
+    const relevantStories = timeFilterReleaseId === 'all' ? stories : stories.filter(s => s.releaseId === timeFilterReleaseId);
+    const release = releases.find(r => r.id === timeFilterReleaseId);
+
+    const relevantWorklogs = worklogs.filter(w => {
+      if (timeFilterReleaseId === 'all') return true;
+      if (!release?.startDate || !release?.endDate) return false;
+      const logDate = parseISO(w.date);
+      return isWithinInterval(logDate, { start: parseISO(release.startDate), end: parseISO(release.endDate) });
+    });
+    
+    return calculateEffort(relevantStories, relevantWorklogs);
+  }, [timeFilterReleaseId, stories, worklogs, releases, calculateEffort]);
   
   const resourceCostsData = useMemo(() => {
     let startDate: string | undefined, endDate: string | undefined;
