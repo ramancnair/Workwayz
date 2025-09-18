@@ -3,11 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority } from '@/types';
 
 type EnrichedRisk = Risk & { projectName: string };
@@ -21,10 +22,10 @@ const getRiskPotential = (severity: RiskSeverity, probability: RiskProbability) 
 };
 
 const issuePriorityStyles: Record<IssuePriority, string> = {
-    'Low': 'bg-gray-100 text-gray-800',
-    'Medium': 'bg-yellow-100 text-yellow-800',
-    'High': 'bg-orange-100 text-orange-800',
-    'Critical': 'bg-red-100 text-red-800',
+    'Low': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    'Medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'High': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'Critical': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
 
@@ -63,41 +64,31 @@ export default function CtoDashboardPage() {
         const projectsQuery = query(collection(db, 'projects'), where('status', '==', 'Active'));
         const projectsSnapshot = await getDocs(projectsQuery);
         const activeProjects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
-        const activeProjectIds = activeProjects.map(p => p.id);
 
-        if (activeProjectIds.length === 0) {
-            setIsLoading(false);
-            return;
+        const allRisks: EnrichedRisk[] = [];
+        const allIssues: EnrichedIssue[] = [];
+
+        for (const project of activeProjects) {
+            // Fetch risks for the project
+            const risksSnapshot = await getDocs(collection(db, 'projects', project.id, 'risks'));
+            risksSnapshot.forEach(doc => {
+                const risk = doc.data() as Risk;
+                if (getRiskPotential(risk.severity, risk.probability) === 'High') {
+                    allRisks.push({ ...risk, projectName: project.name });
+                }
+            });
+
+            // Fetch issues for the project
+            const issuesSnapshot = await getDocs(collection(db, 'projects', project.id, 'issues'));
+            issuesSnapshot.forEach(doc => {
+                const issue = doc.data() as Issue;
+                 if (['Critical', 'High'].includes(issue.priority)) {
+                    allIssues.push({ ...issue, projectName: project.name });
+                }
+            });
         }
         
-        const projectMap = new Map(activeProjects.map(p => [p.id, p.name]));
-
-        // Fetch all risks from all projects in one go
-        const risksQuery = query(collectionGroup(db, 'risks'), where('projectId', 'in', activeProjectIds));
-        const risksSnapshot = await getDocs(risksQuery);
-        
-        const allRisks: EnrichedRisk[] = [];
-        risksSnapshot.forEach(doc => {
-            const risk = doc.data() as Risk;
-            const projectId = doc.ref.parent.parent!.id;
-            if (getRiskPotential(risk.severity, risk.probability) === 'High') {
-                allRisks.push({ ...risk, projectName: projectMap.get(projectId) || 'Unknown Project' });
-            }
-        });
         setHighRisks(allRisks);
-
-        // Fetch all issues from all projects
-        const issuesQuery = query(collectionGroup(db, 'issues'), where('projectId', 'in', activeProjectIds));
-        const issuesSnapshot = await getDocs(issuesQuery);
-
-        const allIssues: EnrichedIssue[] = [];
-        issuesSnapshot.forEach(doc => {
-            const issue = doc.data() as Issue;
-            const projectId = doc.ref.parent.parent!.id;
-            if (['Critical', 'High'].includes(issue.priority)) {
-                allIssues.push({ ...issue, projectName: projectMap.get(projectId) || 'Unknown Project' });
-            }
-        });
         setCriticalIssues(allIssues.sort((a,b) => (a.priority === 'Critical' ? -1 : 1)));
 
 
