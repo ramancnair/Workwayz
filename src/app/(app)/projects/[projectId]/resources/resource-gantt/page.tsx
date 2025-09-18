@@ -24,6 +24,8 @@ import {
   parseISO,
   addMonths,
   subMonths,
+  startOfDay,
+  endOfDay,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
