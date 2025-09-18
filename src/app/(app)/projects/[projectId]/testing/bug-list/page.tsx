@@ -43,7 +43,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { Story, StoryStatus, Release, TestCase } from '@/types';
+import type { Story, StoryStatus, Release, TestCase, BugSeverity } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -55,6 +55,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Bot, PlusCircle, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format, parseISO } from 'date-fns';
+import { DatePicker } from '@/components/ui/datepicker';
 
 const statusStyles: Record<StoryStatus, string> = {
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
@@ -63,6 +64,7 @@ const statusStyles: Record<StoryStatus, string> = {
 };
 
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
+const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
 
 
 const bugFormSchema = z.object({
@@ -73,17 +75,18 @@ const bugFormSchema = z.object({
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
+  severity: z.enum(severities).optional(),
   sprintId: z.string().optional(),
   environmentId: z.string().optional(),
   attachments: z.string().optional(),
   releaseId: z.string().optional(),
-  createdAt: z.string().optional(),
-  closedAt: z.string().optional(),
+  createdAt: z.date().optional(),
+  closedAt: z.date().optional(),
 });
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs, releasesAndMilestones, testCases } = useProject();
+  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs, releasesAndMilestones, testCases, testDate } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -150,12 +153,13 @@ export default function BugListPage() {
           reporterId: editingBug.reporterId || 'unassigned',
           assigneeId: editingBug.assigneeId || 'unassigned',
           status: editingBug.status,
+          severity: editingBug.severity,
           sprintId: editingBug.sprintId || 'backlog',
           environmentId: editingBug.environmentId || 'unassigned',
           attachments: editingBug.attachments || '',
           releaseId: editingBug.releaseId || 'unassigned',
-          createdAt: editingBug.createdAt ? format(parseISO(editingBug.createdAt), 'yyyy-MM-dd') : '',
-          closedAt: editingBug.closedAt ? format(parseISO(editingBug.closedAt), 'yyyy-MM-dd') : '',
+          createdAt: editingBug.createdAt ? parseISO(editingBug.createdAt) : undefined,
+          closedAt: editingBug.closedAt ? parseISO(editingBug.closedAt) : undefined,
         });
       } else {
          setTestCaseInputText('');
@@ -167,12 +171,11 @@ export default function BugListPage() {
             reporterId: 'unassigned',
             assigneeId: 'unassigned',
             status: 'To Do',
+            severity: 'Medium',
             sprintId: 'backlog',
             environmentId: 'unassigned',
             attachments: '',
             releaseId: 'unassigned',
-            createdAt: '',
-            closedAt: '',
         });
       }
     }
@@ -187,7 +190,7 @@ export default function BugListPage() {
     setIsSubmitting(true);
     let success = false;
     
-    const payload = {
+    const payload: Partial<Story> = {
         title: values.title,
         description: values.description,
         acceptanceCriteria: values.acceptanceCriteria,
@@ -195,17 +198,20 @@ export default function BugListPage() {
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         status: values.status,
+        severity: values.severity,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
         attachments: values.attachments,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
-        createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
-        closedAt: values.closedAt ? new Date(values.closedAt).toISOString() : undefined,
     };
 
     if (editingBug) {
+        payload.createdAt = values.createdAt ? values.createdAt.toISOString() : undefined;
+        payload.closedAt = values.closedAt ? values.closedAt.toISOString() : undefined;
         success = await updateStory(editingBug.id, payload);
     } else {
+        payload.createdAt = (values.createdAt || new Date()).toISOString();
+        payload.closedAt = values.closedAt ? values.closedAt.toISOString() : undefined;
         success = await addStory({ ...payload, itemType: 'Bug' });
     }
     
@@ -558,6 +564,30 @@ export default function BugListPage() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                        control={form.control}
+                        name="severity"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Severity</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Set severity" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {severities.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                    {s}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                 </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
@@ -622,7 +652,7 @@ export default function BugListPage() {
                         <FormItem>
                             <FormLabel>Created On</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} value={field.value || ''} />
+                                <DatePicker date={field.value} setDate={field.onChange} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -631,7 +661,7 @@ export default function BugListPage() {
                         <FormItem>
                             <FormLabel>Closed On</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} value={field.value || ''} />
+                                <DatePicker date={field.value} setDate={field.onChange} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

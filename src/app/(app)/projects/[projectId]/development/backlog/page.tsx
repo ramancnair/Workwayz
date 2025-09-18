@@ -664,7 +664,8 @@ export default function BacklogPage() {
           attachments: values.attachments,
           isDeleted: false,
           deletedAt: null,
-          createdAt: values.createdAt?.toISOString(),
+          createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
+          closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
         };
 
         const success = await addStory(newStory);
@@ -1247,30 +1248,55 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                         />
                         {watchedItemType === 'Bug' && (
-                          <FormField
-                            control={addStoryForm.control}
-                            name="severity"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Severity</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Set severity" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {severities.map((s) => (
-                                      <SelectItem key={s} value={s}>
-                                        {s}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={addStoryForm.control}
+                                    name="environmentId"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Environment</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                            <SelectValue placeholder="Select an environment" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="unassigned">None</SelectItem>
+                                            {sortedEnvironments.map(env => (
+                                            <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={addStoryForm.control}
+                                    name="severity"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Severity</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                            <SelectValue placeholder="Set severity" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {severities.map((s) => (
+                                            <SelectItem key={s} value={s}>
+                                                {s}
+                                            </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            </div>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
@@ -1313,29 +1339,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         {watchedItemType === 'Bug' && (
                             <>
                             <FormField
-                            control={addStoryForm.control}
-                            name="environmentId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Environment</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select an environment" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="unassigned">None</SelectItem>
-                                    {sortedEnvironments.map(env => (
-                                        <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                             <FormField
                                 control={addStoryForm.control}
                                 name="attachments"
                                 render={({ field }) => (
@@ -1348,6 +1351,26 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 </FormItem>
                                 )}
                             />
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField control={addStoryForm.control} name="createdAt" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Created On</FormLabel>
+                                        <FormControl>
+                                            <DatePicker date={field.value} setDate={field.onChange} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={addStoryForm.control} name="closedAt" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Closed On</FormLabel>
+                                        <FormControl>
+                                            <DatePicker date={field.value} setDate={field.onChange} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
                             </>
                         )}
                     </div>
@@ -2342,5 +2365,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     </>
   );
 }
+
 
 
