@@ -72,7 +72,7 @@ export default function ResourceGanttPage() {
 
         const isHoliday = holidaySet.has(dateStr);
         const isWeekend = weeklyOffDays.includes(dayOfWeek);
-        const isNonWorkingDay = isHoliday || isWeekend;
+        const isNonWorkingDay = isHoliday || isWeekend || isLeave;
 
         let status = 'Normal';
         let color = '#22c55e'; // Green (Normal)
@@ -81,13 +81,16 @@ export default function ResourceGanttPage() {
         if (isLeave) {
           status = 'Leave';
           color = '#facc15'; // Yellow
-        } else if (isNonWorkingDay) {
-          status = isHoliday ? 'Holiday' : 'Weekend';
+        } else if (isHoliday) {
+          status = 'Holiday';
+          color = '#ef4444'; // Red
+        } else if (isWeekend) {
+          status = 'Weekend';
           color = '#ef4444'; // Red
         }
 
         if (loggedHours > 0) {
-          if (isNonWorkingDay || isLeave) {
+          if (isNonWorkingDay) {
             status = `Work on ${status}`;
             color = '#3b82f6'; // Blue
           } else if (loggedHours > 8) {
@@ -96,9 +99,9 @@ export default function ResourceGanttPage() {
           }
         }
         
-        // If it's a non-working day with no hours, we still want to show a bar.
-        // We'll render a full 8-hour bar for visual purposes, but the actualHours is 0.
-        if (loggedHours === 0 && (isLeave || isNonWorkingDay)) {
+        // For non-working days with no hours, render a full bar for visibility
+        // but ensure the tooltip shows 0 actual hours.
+        if (loggedHours === 0 && isNonWorkingDay) {
             displayHours = 8; 
         }
 
