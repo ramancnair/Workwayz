@@ -75,35 +75,35 @@ export default function ResourceGanttPage() {
         const isNonWorkingDay = isHoliday || isWeekend || isLeave;
 
         let status = 'Normal';
-        let color = '#22c55e'; // Green (Normal)
-        let displayHours = loggedHours;
-
-        if (isLeave) {
-          status = 'Leave';
-          color = '#facc15'; // Yellow
-        } else if (isHoliday) {
-          status = 'Holiday';
-          color = '#ef4444'; // Red
-        } else if (isWeekend) {
-          status = 'Weekend';
-          color = '#ef4444'; // Red
-        }
+        let color = '#22c55e'; // Green
+        let opacity = 1.0;
 
         if (loggedHours > 0) {
-          if (isNonWorkingDay) {
-            status = `Work on ${status}`;
-            color = '#3b82f6'; // Blue
-          } else if (loggedHours > 8) {
-            status = 'Overtime';
-            color = '#3b82f6'; // Blue
-          }
+            if (isNonWorkingDay) {
+                status = `Work on ${isLeave ? 'Leave' : (isHoliday ? 'Holiday' : 'Weekend')}`;
+                color = '#3b82f6'; // Blue
+            } else if (loggedHours > 8) {
+                status = 'Overtime';
+                color = '#3b82f6'; // Blue
+            }
+        } else {
+            if (isLeave) {
+              status = 'Leave';
+              color = '#facc15'; // Yellow
+              opacity = 0.5;
+            } else if (isHoliday) {
+              status = 'Holiday';
+              color = '#ef4444'; // Red
+              opacity = 0.5;
+            } else if (isWeekend) {
+              status = 'Weekend';
+              color = '#ef4444'; // Red
+              opacity = 0.5;
+            }
         }
         
-        // For non-working days with no hours, render a full bar for visibility
-        // but ensure the tooltip shows 0 actual hours.
-        if (loggedHours === 0 && isNonWorkingDay) {
-            displayHours = 8; 
-        }
+        // Use loggedHours for bar height if work was done, otherwise use a full bar for non-working day indication
+        const displayHours = (loggedHours === 0 && isNonWorkingDay) ? 8 : loggedHours;
 
         return {
           date: format(day, 'd'),
@@ -112,6 +112,7 @@ export default function ResourceGanttPage() {
           actualHours: loggedHours,
           status: status,
           color: color,
+          opacity: opacity,
         };
       });
 
@@ -151,7 +152,7 @@ export default function ResourceGanttPage() {
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted))' }}/>
                   <Bar dataKey="displayHours">
                     {dailyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={entry.opacity} />
                     ))}
                   </Bar>
                 </BarChart>
