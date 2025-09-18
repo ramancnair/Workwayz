@@ -51,7 +51,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority, StatusHistoryItem } from '@/types';
+import type { Epic, Story, Sprint, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority, StatusHistoryItem, BugSeverity } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -70,6 +70,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/datepicker';
 
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -83,6 +84,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
+const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
 
 const priorityStyles: Record<Priority, string> = {
     'Critical': 'text-red-500 fill-red-500',
@@ -109,14 +111,15 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   priority: z.enum(priorities).optional(),
+  severity: z.enum(severities).optional(),
   releaseId: z.string().optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
   sprintId: z.string().optional(),
   relatedTestCaseId: z.string().optional(),
-  createdAt: z.string().optional(),
-  closedAt: z.string().optional(),
+  createdAt: z.date().optional(),
+  closedAt: z.date().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -342,6 +345,7 @@ export default function BacklogPage() {
     weeklyOffDays,
     projectSettings,
     testCases,
+    testDate,
   } = useProject();
   
   const { toast } = useToast();
@@ -426,7 +430,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', severity: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -545,14 +549,15 @@ export default function BacklogPage() {
               assigneeId: selectedStory.assigneeId || 'unassigned',
               estimatedHours: selectedStory.estimatedHours,
               priority: selectedStory.priority || 'Medium',
+              severity: selectedStory.severity || 'Medium',
               releaseId: selectedStory.releaseId || 'unassigned',
               sprintId: selectedStory.sprintId || 'backlog',
               environmentId: selectedStory.environmentId || 'unassigned',
               impactedSystemIds: selectedStory.impactedSystemIds || [],
               attachments: selectedStory.attachments || '',
               relatedTestCaseId: selectedStory.relatedTestCaseId || 'unassigned',
-              createdAt: selectedStory.createdAt ? format(parseISO(selectedStory.createdAt), 'yyyy-MM-dd') : '',
-              closedAt: selectedStory.closedAt ? format(parseISO(selectedStory.closedAt), 'yyyy-MM-dd') : '',
+              createdAt: selectedStory.createdAt ? parseISO(selectedStory.createdAt) : undefined,
+              closedAt: selectedStory.closedAt ? parseISO(selectedStory.closedAt) : undefined,
           });
           if (isSubItem && selectedStory.parentStoryId) {
               const parent = parentStoryOptions.find(p => p.value === selectedStory.parentStoryId);
@@ -651,6 +656,7 @@ export default function BacklogPage() {
           status: 'To Do',
           estimatedHours: values.estimatedHours,
           priority: values.priority,
+          severity: values.severity,
           sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
           releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
           environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
@@ -658,7 +664,7 @@ export default function BacklogPage() {
           attachments: values.attachments,
           isDeleted: false,
           deletedAt: null,
-          createdAt: new Date().toISOString(),
+          createdAt: values.createdAt?.toISOString(),
         };
 
         const success = await addStory(newStory);
@@ -681,8 +687,8 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
         ...values,
         assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
-        createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
-        closedAt: values.closedAt ? new Date(values.closedAt).toISOString() : undefined,
+        createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
+        closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
     });
     if (success) {
         handleSetSelectedStory(null);
@@ -1240,6 +1246,32 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </FormItem>
                             )}
                         />
+                        {watchedItemType === 'Bug' && (
+                          <FormField
+                            control={addStoryForm.control}
+                            name="severity"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Severity</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Set severity" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {severities.map((s) => (
+                                      <SelectItem key={s} value={s}>
+                                        {s}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                             control={addStoryForm.control}
@@ -2003,6 +2035,57 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </FormItem>
                             )}
                         />
+                        {selectedStory.itemType === 'Bug' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={editStoryForm.control}
+                              name="environmentId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Environment</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select an environment" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="unassigned">None</SelectItem>
+                                      {sortedEnvironments.map(env => (
+                                        <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                             <FormField
+                              control={editStoryForm.control}
+                              name="severity"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Severity</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Set severity" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {severities.map((s) => (
+                                        <SelectItem key={s} value={s}>
+                                          {s}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                              <FormField
                                 control={editStoryForm.control}
@@ -2064,29 +2147,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                         {selectedStory.itemType === 'Bug' && (
                             <>
                             <FormField
-                            control={editStoryForm.control}
-                            name="environmentId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Environment</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select an environment" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="unassigned">None</SelectItem>
-                                    {sortedEnvironments.map(env => (
-                                        <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
                                 control={editStoryForm.control}
                                 name="attachments"
                                 render={({ field }) => (
@@ -2104,7 +2164,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     <FormItem>
                                         <FormLabel>Created On</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} value={field.value || ''} />
+                                            <DatePicker date={field.value} setDate={field.onChange} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -2113,7 +2173,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     <FormItem>
                                         <FormLabel>Closed On</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} value={field.value || ''} />
+                                            <DatePicker date={field.value} setDate={field.onChange} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -2282,4 +2342,5 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     </>
   );
 }
+
 

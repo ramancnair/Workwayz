@@ -24,6 +24,7 @@ export type Epic = {
 export type StoryStatus = string;
 export type WorkItemType = 'Requirement/Story' | 'Bug' | 'Task' | 'Feature Change' | 'Sub Task';
 export type Priority = 'Critical' | 'High' | 'Medium' | 'Low' | 'Backburner';
+export type BugSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
 
 export type StatusHistoryItem = {
   fromStatus: StoryStatus | null; // null for creation
@@ -46,6 +47,7 @@ export type Story = {
   statusHistory?: StatusHistoryItem[];
   estimatedHours?: number;
   priority?: Priority;
+  severity?: BugSeverity;
   startDate?: string; // ISO String
   endDate?: string; // ISO String
   updatedAt?: string; // ISO String for tracking completion date

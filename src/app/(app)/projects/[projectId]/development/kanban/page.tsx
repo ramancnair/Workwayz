@@ -7,7 +7,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority } from '@/types';
+import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority, BugSeverity } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -57,6 +57,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay } from 'date-fns';
+import { DatePicker } from '@/components/ui/datepicker';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Requirement/Story': BookOpen,
@@ -68,6 +69,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
 
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
+const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
 
 const priorityStyles: Record<Priority, string> = {
     'Critical': 'text-red-500 fill-red-500',
@@ -87,14 +89,15 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   priority: z.enum(priorities).optional(),
+  severity: z.enum(severities).optional(),
   environmentId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
   status: z.enum(statusOptions).optional(),
   sprintId: z.string().optional(),
   releaseId: z.string().optional(),
-  createdAt: z.string().optional(),
-  closedAt: z.string().optional(),
+  createdAt: z.date().optional(),
+  closedAt: z.date().optional(),
   relatedTestCaseId: z.string().optional(),
 });
 
@@ -326,7 +329,7 @@ function StoryCard({
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings, testCases } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings, testCases, testDate } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -487,14 +490,15 @@ export default function KanbanPage() {
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         priority: selectedStory.priority || 'Medium',
+        severity: selectedStory.severity || 'Medium',
         environmentId: selectedStory.environmentId || 'unassigned',
         impactedSystemIds: selectedStory.impactedSystemIds || [],
         attachments: selectedStory.attachments || '',
         status: selectedStory.status,
         sprintId: selectedStory.sprintId || 'backlog',
         releaseId: selectedStory.releaseId || 'unassigned',
-        createdAt: selectedStory.createdAt ? format(parseISO(selectedStory.createdAt), 'yyyy-MM-dd') : '',
-        closedAt: selectedStory.closedAt ? format(parseISO(selectedStory.closedAt), 'yyyy-MM-dd') : '',
+        createdAt: selectedStory.createdAt ? parseISO(selectedStory.createdAt) : undefined,
+        closedAt: selectedStory.closedAt ? parseISO(selectedStory.closedAt) : undefined,
         relatedTestCaseId: selectedStory.relatedTestCaseId,
       });
       if (isSubItem && selectedStory.parentStoryId) {
@@ -511,8 +515,8 @@ export default function KanbanPage() {
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
-        createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
-        closedAt: values.closedAt ? new Date(values.closedAt).toISOString() : undefined,
+        createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
+        closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
     });
     if (success) {
         handleSetSelectedStory(null);
@@ -1089,6 +1093,57 @@ export default function KanbanPage() {
                                       </FormItem>
                                     )}
                                   />
+                                   {selectedStory.itemType === 'Bug' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <FormField
+                                        control={editStoryForm.control}
+                                        name="environmentId"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Environment</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                              <FormControl>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select an environment" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                <SelectItem value="unassigned">None</SelectItem>
+                                                {sortedEnvironments.map(env => (
+                                                  <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editStoryForm.control}
+                                        name="severity"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Severity</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                              <FormControl>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Set severity" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                {severities.map((s) => (
+                                                  <SelectItem key={s} value={s}>
+                                                    {s}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                  )}
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <FormField
                                     control={editStoryForm.control}
@@ -1140,29 +1195,7 @@ export default function KanbanPage() {
                                   </div>
                                   {selectedStory.itemType === 'Bug' && (
                                       <>
-                                           <FormField
-                                              control={editStoryForm.control}
-                                              name="environmentId"
-                                              render={({ field }) => (
-                                                  <FormItem>
-                                                  <FormLabel>Environment</FormLabel>
-                                                  <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                                      <FormControl>
-                                                      <SelectTrigger>
-                                                          <SelectValue placeholder="Select an environment" />
-                                                      </SelectTrigger>
-                                                      </FormControl>
-                                                      <SelectContent>
-                                                      <SelectItem value="unassigned">None</SelectItem>
-                                                      {sortedEnvironments.map(env => (
-                                                          <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
-                                                      ))}
-                                                      </SelectContent>
-                                                  </Select>
-                                                  <FormMessage />
-                                                  </FormItem>
-                                              )}
-                                          />
+                                          
                                            <FormField
                                               control={editStoryForm.control}
                                               name="attachments"
@@ -1177,25 +1210,25 @@ export default function KanbanPage() {
                                               )}
                                           />
                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                              <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
-                                                  <FormItem>
-                                                      <FormLabel>Created On</FormLabel>
-                                                      <FormControl>
-                                                          <Input type="date" {...field} value={field.value || ''} />
-                                                      </FormControl>
-                                                      <FormMessage />
-                                                  </FormItem>
-                                              )} />
-                                              <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
-                                                  <FormItem>
-                                                      <FormLabel>Closed On</FormLabel>
-                                                      <FormControl>
-                                                          <Input type="date" {...field} value={field.value || ''} />
-                                                      </FormControl>
-                                                      <FormMessage />
-                                                  </FormItem>
-                                              )} />
-                                          </div>
+                                               <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Created On</FormLabel>
+                                                        <FormControl>
+                                                            <DatePicker date={field.value} setDate={field.onChange} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )} />
+                                                <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Closed On</FormLabel>
+                                                        <FormControl>
+                                                            <DatePicker date={field.value} setDate={field.onChange} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )} />
+                                            </div>
                                       </>
                                   )}
                                   <FormField
@@ -1359,3 +1392,5 @@ export default function KanbanPage() {
     </>
   );
 }
+
+
