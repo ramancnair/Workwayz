@@ -179,7 +179,12 @@ export default function CtoDashboardPage() {
             // Fetch issues for the project
             const issuesSnapshot = await getDocs(collection(db, 'projects', project.id, 'issues'));
             issuesSnapshot.forEach(doc => {
-                const issue = doc.data() as Issue;
+                const data = doc.data();
+                 const issue = {
+                    ...data,
+                    reportedDate: data.reportedDate?.toDate ? data.reportedDate.toDate().toISOString() : data.reportedDate,
+                 } as Issue;
+
                  if (['Critical', 'High'].includes(issue.priority)) {
                     allIssues.push({ ...issue, id: doc.id, projectName: project.name, projectId: project.id });
                 }
