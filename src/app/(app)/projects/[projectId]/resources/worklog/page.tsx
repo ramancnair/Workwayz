@@ -89,8 +89,6 @@ export default function WorklogPage() {
     stories,
     worklogs,
     saveWorklog,
-    submitWorklogForWeek,
-    worklogSubmissions,
     holidays,
     weeklyOffDays,
     isLoading,
@@ -104,12 +102,10 @@ export default function WorklogPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [displayDate, setDisplayDate] = useState<Date>(new Date());
   const [logItems, setLogItems] = useState<WorklogItem[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [workItemInputValues, setWorkItemInputValues] = useState<
     Record<string, string>
   >({});
-  const [isEditing, setIsEditing] = useState(true);
-  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
@@ -156,15 +152,6 @@ export default function WorklogPage() {
     });
   }, [weekStartDate]);
 
-  const isWeekSubmitted = useMemo(() => {
-    if (!selectedEmployee) return false;
-    const weekStartDateString = format(weekStartDate, 'yyyy-MM-dd');
-    return worklogSubmissions.some(
-      (sub) =>
-        sub.employeeId === selectedEmployee.id &&
-        sub.weekStartDate === weekStartDateString
-    );
-  }, [worklogSubmissions, selectedEmployee, weekStartDate]);
 
   const workItemOptions = useMemo(() => {
     const storyItems = stories.map((s) => ({
@@ -200,7 +187,7 @@ export default function WorklogPage() {
 
   // Effect to auto-populate holidays and weekends for the displayed week
   useEffect(() => {
-    if (!selectedEmployee || isWeekSubmitted || isLoading) return;
+    if (!selectedEmployee || isLoading) return;
   
     const autoPopulateWeek = async () => {
       for (const day of weekDays) {
@@ -236,7 +223,7 @@ export default function WorklogPage() {
     };
 
     autoPopulateWeek();
-  }, [selectedEmployee, weekStartDate, worklogs, holidays, weeklyOffDays, isWeekSubmitted, saveWorklog, isLoading]);
+  }, [selectedEmployee, weekStartDate, worklogs, holidays, weeklyOffDays, saveWorklog, isLoading]);
 
 
   useEffect(() => {
@@ -265,11 +252,9 @@ export default function WorklogPage() {
           }
         });
         setWorkItemInputValues(newInputValues);
-        setIsEditing(false);
       } else {
         setLogItems([]);
         setWorkItemInputValues({});
-        setIsEditing(true);
       }
     }
   }, [selectedEmployee, selectedDate, worklogs, workItemOptions]);
@@ -288,6 +273,7 @@ export default function WorklogPage() {
     const newInputs = { ...workItemInputValues };
     delete newInputs[id];
     setWorkItemInputValues(newInputs);
+    handleAutoSave();
   };
 
   const handleItemChange = (
@@ -326,41 +312,41 @@ export default function WorklogPage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!selectedEmployee || !selectedDate) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please select an employee and date.',
-      });
-      return;
-    }
+  const handleAutoSave = async () => {
+    if (!selectedEmployee || !selectedDate) return;
+    
+    // De-duplicate items before saving
+    const itemMap = new Map<string, WorklogItem>();
+    logItems.forEach(item => {
+        if(item.itemId) { // only consider items with a selected work item
+            const existing = itemMap.get(item.itemId);
+            if(existing) {
+                existing.hours += item.hours;
+                if(item.description) {
+                    existing.description = (existing.description || '') + ' ' + item.description;
+                }
+            } else {
+                itemMap.set(item.itemId, { ...item });
+            }
+        }
+    });
 
-    if (logItems.some((item) => !item.itemId || item.hours <= 0)) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please fill out all worklog items and hours properly.',
-      });
-      return;
-    }
+    const finalItems = Array.from(itemMap.values());
 
-    setIsSubmitting(true);
-
-    const totalHours = logItems.reduce((sum, item) => sum + Number(item.hours), 0);
+    setIsSaving(true);
+    const totalHours = finalItems.reduce((sum, item) => sum + Number(item.hours), 0);
 
     const worklogData = {
       employeeId: selectedEmployee.id,
       date: format(selectedDate, 'yyyy-MM-dd'),
-      items: logItems.map(({ id, ...rest }) => rest),
+      items: finalItems.map(({ id, ...rest }) => rest),
       totalHours: totalHours,
     };
 
     const success = await saveWorklog(worklogData);
 
     if (success) {
-      toast({ title: 'Success', description: 'Worklog saved successfully.' });
-      setIsEditing(false);
+      // Data will refresh via snapshot listener, no need to toast on every save
     } else {
       toast({
         variant: 'destructive',
@@ -368,86 +354,9 @@ export default function WorklogPage() {
         description: 'Failed to save worklog.',
       });
     }
-    setIsSubmitting(false);
+    setIsSaving(false);
   };
 
-  const handleCancel = () => {
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
-    const existingLog = worklogs.find(
-      (log) =>
-        log.employeeId === selectedEmployee?.id &&
-        format(parseISO(log.date), 'yyyy-MM-dd') === dateString
-    );
-    if (existingLog && existingLog.items.length > 0) {
-      const newLogItems = existingLog.items.map((item) => ({
-        ...item,
-        id: uuidv4(),
-      }));
-      setLogItems(newLogItems);
-      const newInputValues: Record<string, string> = {};
-      newLogItems.forEach((item) => {
-        const option = workItemOptions.find((opt) => opt.value === item.itemId);
-        if (option) {
-          newInputValues[item.id] = option.label;
-        }
-      });
-      setWorkItemInputValues(newInputValues);
-    } else {
-      setLogItems([]);
-      setWorkItemInputValues({});
-    }
-    if (logItems.length > 0) {
-      setIsEditing(false);
-    } else {
-      setIsEditing(true);
-    }
-  };
-
-  const handleSubmitWeek = async () => {
-    if (isEditing && logItems.length > 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Unsaved Changes',
-        description:
-          "Please save or cancel the current day's log before submitting the week.",
-      });
-      return;
-    }
-
-    const weeklyTotal = weekDays.reduce((sum, day) => {
-      const dateKey = format(day, 'yyyy-MM-dd');
-      return sum + (dailyHoursMap[dateKey] || 0);
-    }, 0);
-
-    if (weeklyTotal < 40) {
-      setShowConfirmation(true);
-    } else {
-      await proceedWithSubmission();
-    }
-  };
-
-  const proceedWithSubmission = async () => {
-    if (!selectedEmployee) return;
-    setIsSubmitting(true);
-    const success = await submitWorklogForWeek(
-      selectedEmployee.id,
-      format(weekStartDate, 'yyyy-MM-dd')
-    );
-    if (success) {
-      toast({
-        title: 'Success',
-        description: "Week's worklog submitted successfully.",
-      });
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to submit worklog.',
-      });
-    }
-    setIsSubmitting(false);
-    setShowConfirmation(false);
-  };
 
   return (
     <>
@@ -521,9 +430,6 @@ export default function WorklogPage() {
                 </Form>
             </DialogContent>
           </Dialog>
-          <Button onClick={handleSubmitWeek} disabled={isWeekSubmitted || isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit Week's Worklog"}
-          </Button>
         </PageHeader>
         <Card>
           <CardHeader>
@@ -614,7 +520,6 @@ export default function WorklogPage() {
                       variant={isSameDay(day, selectedDate) ? 'default' : 'outline'}
                       onClick={() => setSelectedDate(day)}
                       className="flex flex-col h-auto p-2"
-                      disabled={isWeekSubmitted}
                     >
                       <span className="text-xs">{format(day, 'EEE')}</span>
                       <span className="text-lg font-bold">{format(day, 'd')}</span>
@@ -637,197 +542,88 @@ export default function WorklogPage() {
                   Log for {selectedEmployee.firstName} on {format(selectedDate, 'PPP')}
                 </CardTitle>
                 <CardDescription>
-                  {isWeekSubmitted
-                    ? "This week has been submitted and is locked."
-                    : isEditing
-                    ? 'Add or modify items and hours worked.'
-                    : 'Viewing saved log. Click Edit to make changes.'}
+                  Add or modify items and hours worked. Changes are saved automatically.
                 </CardDescription>
               </div>
-              {!isEditing && !isWeekSubmitted && (
-                <Button onClick={() => setIsEditing(true)} disabled={isSubmitting}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              )}
             </CardHeader>
             <CardContent className="space-y-4">
-              {isEditing && !isWeekSubmitted ? (
-                <>
-                  {logItems.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="grid grid-cols-[1fr_120px_1fr_auto] gap-4 items-end"
+              <div>
+                {logItems.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="grid grid-cols-[1fr_120px_1fr_auto] gap-4 items-end mb-2"
+                  >
+                    <div className="space-y-1">
+                      {index === 0 && (
+                        <label className="text-sm font-medium">Work Item</label>
+                      )}
+                      <Input
+                        list="work-item-options"
+                        placeholder="Search work item..."
+                        value={workItemInputValues[item.id] || ''}
+                        onChange={(e) => handleWorkItemInputChange(item.id, e.target.value)}
+                        onBlur={handleAutoSave}
+                        disabled={isSaving}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      {index === 0 && (
+                        <label className="text-sm font-medium">Hours</label>
+                      )}
+                      <Input
+                        type="number"
+                        placeholder="Hours"
+                        value={item.hours}
+                        onChange={(e) => handleItemChange(item.id, 'hours', parseFloat(e.target.value) || 0)}
+                        onBlur={handleAutoSave}
+                        min="0.5"
+                        step="0.5"
+                        disabled={isSaving}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      {item.itemType === 'Other' && (
+                        <>
+                          {index === 0 && (
+                            <label className="text-sm font-medium">
+                              Description
+                            </label>
+                          )}
+                          <Textarea
+                            placeholder="Describe other work..."
+                            value={item.description || ''}
+                            onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                            onBlur={handleAutoSave}
+                            disabled={isSaving}
+                          />
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveItem(item.id)}
+                      disabled={isSaving}
                     >
-                      <div className="space-y-1">
-                        {index === 0 && (
-                          <label className="text-sm font-medium">Work Item</label>
-                        )}
-                        <Input
-                          list="work-item-options"
-                          placeholder="Search work item..."
-                          value={workItemInputValues[item.id] || ''}
-                          onChange={(e) =>
-                            handleWorkItemInputChange(item.id, e.target.value)
-                          }
-                          onBlur={(e) => {
-                            const matchingOption = workItemOptions.find(
-                              (opt) => opt.label === e.target.value
-                            );
-                            if (!matchingOption) {
-                              handleWorkItemInputChange(item.id, '');
-                            }
-                          }}
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        {index === 0 && (
-                          <label className="text-sm font-medium">Hours</label>
-                        )}
-                        <Input
-                          type="number"
-                          placeholder="Hours"
-                          value={item.hours}
-                          onChange={(e) =>
-                            handleItemChange(
-                              item.id,
-                              'hours',
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          min="0.5"
-                          step="0.5"
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        {item.itemType === 'Other' && (
-                          <>
-                            {index === 0 && (
-                              <label className="text-sm font-medium">
-                                Description
-                              </label>
-                            )}
-                            <Textarea
-                              placeholder="Describe other work..."
-                              value={item.description || ''}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  'description',
-                                  e.target.value
-                                )
-                              }
-                              disabled={isSubmitting}
-                            />
-                          </>
-                        )}
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveItem(item.id)}
-                        disabled={isSubmitting}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <datalist id="work-item-options">
-                    {workItemOptions.map((option) => (
-                      <option key={option.value} value={option.label} />
-                    ))}
-                  </datalist>
-                  <div className="flex justify-between items-center pt-4">
-                    <Button variant="outline" onClick={handleAddItem} disabled={isSubmitting}>
-                      <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
-                    <div className="flex gap-2">
-                      {logItems.length > 0 && (
-                        <Button variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
-                          <XCircle className="mr-2 h-4 w-4" /> Cancel
-                        </Button>
-                      )}
-                      <Button
-                        onClick={handleSave}
-                        disabled={isSubmitting || logItems.length === 0}
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        {isSubmitting ? 'Saving...' : 'Save Daily Log'}
-                      </Button>
-                    </div>
                   </div>
-                </>
-              ) : (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Work Item</TableHead>
-                        <TableHead>Hours</TableHead>
-                        <TableHead>Description</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {logItems.length > 0 ? logItems.map((item) => {
-                        const workItemLabel = workItemOptions.find(opt => opt.value === item.itemId)?.label || item.itemId;
-                        return (
-                            <TableRow key={item.id}>
-                            <TableCell>{workItemLabel}</TableCell>
-                            <TableCell>{item.hours}</TableCell>
-                            <TableCell>{item.description || 'N/A'}</TableCell>
-                            </TableRow>
-                        );
-                        }) : (
-                        <TableRow>
-                            <TableCell colSpan={3} className="text-center text-muted-foreground">
-                            No work logged for this day.
-                            </TableCell>
-                        </TableRow>
-                        )}
-                      {logItems.length > 0 && (
-                        <TableRow className="font-bold bg-muted/50">
-                          <TableCell>Total Hours</TableCell>
-                          <TableCell>
-                            {logItems.reduce((sum, item) => sum + item.hours, 0).toFixed(1)}
-                          </TableCell>
-                          <TableCell></TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </>
-              )}
+                ))}
+                <datalist id="work-item-options">
+                  {workItemOptions.map((option) => (
+                    <option key={option.value} value={option.label} />
+                  ))}
+                </datalist>
+                <div className="flex justify-between items-center pt-4">
+                  <Button variant="outline" onClick={handleAddItem} disabled={isSaving}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
-      <AlertDialog
-        open={showConfirmation}
-        onOpenChange={setShowConfirmation}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Submission</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have logged less than 40 hours for this week. Are you sure you
-              want to submit?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={proceedWithSubmission}
-              className={cn(buttonVariants({ variant: 'destructive' }))}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Submitting...' : 'Yes, Submit'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

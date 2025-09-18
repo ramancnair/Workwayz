@@ -192,7 +192,6 @@ interface ProjectContextType {
 
   // Worklog actions
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
-  submitWorklogForWeek: (employeeId: string, weekStartDate: string) => Promise<boolean>;
   autoGenerateWorklogs: (employeeId: string, startDate: Date, endDate: Date) => Promise<boolean>;
   
   // Document actions
@@ -295,7 +294,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays', 'horizontals'],
     '/resources/resource-gantt': ['stories', 'epics', 'employees', 'sprints'],
-    '/resources/worklog': ['employees', 'stories', 'worklogs', 'worklogSubmissions', 'holidays'],
+    '/resources/worklog': ['employees', 'stories', 'worklogs', 'holidays'],
     '/resources/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
     '/resources/leave-calendar': ['employees', 'holidays', 'weeklyOffDays'],
     '/raid-dashboard': ['risks', 'assumptions', 'issues', 'dependencies'],
@@ -2129,26 +2128,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         return false;
     }
   };
-
-  const submitWorklogForWeek = async (employeeId: string, weekStartDate: string): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    try {
-        const submissionId = `${employeeId}-${weekStartDate}`;
-        const submissionRef = doc(db, 'projects', projectId, 'worklogSubmissions', submissionId);
-
-        const payload = {
-            employeeId,
-            weekStartDate: Timestamp.fromDate(new Date(weekStartDate)),
-            submittedAt: Timestamp.now(),
-        };
-
-        await setDoc(submissionRef, sanitizeForFirestore(payload));
-        return true;
-    } catch (e) {
-        console.error("Firebase Error: Failed to submit worklog for week.", e);
-        return false;
-    }
-  };
   
   const autoGenerateWorklogs = async (employeeId: string, startDate: Date, endDate: Date): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -2485,7 +2464,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     deleteEnvironment,
     updateEnvironmentOrder,
     saveWorklog,
-    submitWorklogForWeek,
     autoGenerateWorklogs,
     addDocument,
     updateDocument,
