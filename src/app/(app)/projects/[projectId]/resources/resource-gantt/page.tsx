@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -33,11 +34,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
+    const hours = data.isPlaceholder ? 0 : data.hours;
     return (
       <div className="bg-background border rounded-md p-2 shadow-md text-sm">
         <p className="font-bold">{label}</p>
         <p>Status: <span className="font-semibold">{data.status}</span></p>
-        <p>Hours: {data.hours.toFixed(2)}</p>
+        <p>Hours Logged: {hours.toFixed(1)}</p>
       </div>
     );
   }
@@ -76,6 +78,7 @@ export default function ResourceGanttPage() {
 
         let status = 'Normal';
         let color = '#22c55e'; // Green (Normal)
+        let isPlaceholder = false;
 
         if (isLeave) {
           status = 'Leave';
@@ -94,11 +97,18 @@ export default function ResourceGanttPage() {
             color = '#3b82f6'; // Blue
           }
         }
+        
+        let displayHours = loggedHours;
+        if (loggedHours === 0 && (isLeave || isNonWorkingDay)) {
+            displayHours = 0.1; // Render a tiny bar to show color
+            isPlaceholder = true;
+        }
 
         return {
           date: format(day, 'd'),
           fullDate: dateStr,
-          hours: loggedHours,
+          hours: displayHours,
+          isPlaceholder,
           status: status,
           color: color,
         };
@@ -128,16 +138,16 @@ export default function ResourceGanttPage() {
       <div className="flex-1 space-y-6 overflow-y-auto pr-2">
         {processedData.map(({ employee, dailyData }) => (
           <Card key={employee.id}>
-            <CardHeader>
-              <CardTitle>{employee.firstName} {employee.lastName}</CardTitle>
+            <CardHeader className="py-4">
+              <CardTitle className="text-base">{employee.firstName} {employee.lastName}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={dailyData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CardContent className="pl-0">
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={dailyData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
+                  <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false}/>
+                  <YAxis domain={[0, 12]} tickFormatter={(value) => `${value}h`} fontSize={12} tickLine={false} axisLine={false}/>
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted))' }}/>
                   <Bar dataKey="hours">
                     {dailyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
