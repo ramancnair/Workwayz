@@ -21,10 +21,11 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugCriticality, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
+import { eachDayOfInterval, format, isSameDay, parseISO } from 'date-fns';
 
 // Helper to remove undefined values from an object before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
@@ -192,6 +193,7 @@ interface ProjectContextType {
   // Worklog actions
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
   submitWorklogForWeek: (employeeId: string, weekStartDate: string) => Promise<boolean>;
+  autoGenerateWorklogs: (employeeId: string, startDate: Date, endDate: Date) => Promise<boolean>;
   
   // Document actions
   addDocument: (doc: Omit<ProjectDocument, 'id' | 'createdAt'>) => Promise<boolean>;
@@ -625,7 +627,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             storyId, 
             isDeleted: false, 
             deletedAt: null,
-            createdAt: now,
+            createdAt: story.createdAt || now,
             statusHistory: [{ fromStatus: null, toStatus: story.status, date: now }]
         };
         if (startDate) payload.startDate = Timestamp.fromDate(new Date(startDate));
@@ -751,7 +753,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
     try {
         const batch = writeBatch(db);
-        const { startDate, endDate, closedAt, ...rest } = data;
+        const { startDate, endDate, createdAt, closedAt, ...rest } = data;
         
         // Use a mutable payload
         let payload: any = { ...rest, updatedAt: Timestamp.now().toDate().toISOString() };
@@ -785,6 +787,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
         if (data.hasOwnProperty('startDate')) payload.startDate = startDate ? Timestamp.fromDate(new Date(startDate)) : null;
         if (data.hasOwnProperty('endDate')) payload.endDate = endDate ? Timestamp.fromDate(new Date(endDate)) : null;
+        if (data.hasOwnProperty('createdAt')) payload.createdAt = createdAt ? new Date(createdAt).toISOString() : null;
         if (data.hasOwnProperty('closedAt')) payload.closedAt = closedAt ? new Date(closedAt).toISOString() : null;
 
         batch.update(storyRef, sanitizeForFirestore(payload));
@@ -2147,6 +2150,51 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
+  const autoGenerateWorklogs = async (employeeId: string, startDate: Date, endDate: Date): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    
+    const employee = employees.find(e => e.id === employeeId);
+    if (!employee) return false;
+    
+    try {
+      const batch = writeBatch(db);
+      const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+
+      for (const day of dateRange) {
+        const isWeekend = weeklyOffDays.includes(day.getDay());
+        const isHoliday = holidays.some(h => isSameDay(parseISO(h.date), day));
+        const isOnLeave = employee.leavePeriods?.some(p => 
+          isWithinInterval(day, { start: parseISO(p.startDate), end: parseISO(p.endDate) })
+        );
+
+        if (!isWeekend && !isHoliday && !isOnLeave) {
+          const dateString = format(day, 'yyyy-MM-dd');
+          const worklogId = `${employeeId}-${dateString}`;
+          const worklogRef = doc(db, 'projects', projectId, 'worklogs', worklogId);
+
+          const payload = {
+            employeeId,
+            date: Timestamp.fromDate(day),
+            items: [{
+              itemId: 'other',
+              itemType: 'Other',
+              hours: 8,
+              description: 'Sample auto-generated work.'
+            }],
+            totalHours: 8,
+          };
+          batch.set(worklogRef, sanitizeForFirestore(payload), { merge: true });
+        }
+      }
+      
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to auto-generate worklogs.", e);
+      return false;
+    }
+  };
+  
   // Document Actions
   const addDocument = async (docData: Omit<ProjectDocument, 'id' | 'createdAt'>) => {
     if (!db || !projectId) return false;
@@ -2435,6 +2483,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     updateEnvironmentOrder,
     saveWorklog,
     submitWorklogForWeek,
+    autoGenerateWorklogs,
     addDocument,
     updateDocument,
     deleteDocument,
