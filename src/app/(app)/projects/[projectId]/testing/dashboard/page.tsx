@@ -13,8 +13,9 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { eachDayOfInterval, format, parseISO, startOfDay } from 'date-fns';
 
 const testCaseStatusConfig = {
   testCases: {
@@ -60,11 +61,18 @@ const bugStatusConfig = {
   },
 } satisfies ChartConfig;
 
+const dailyActivityConfig = {
+    executed: { label: 'Executed', color: 'hsl(var(--chart-1))' },
+    closed: { label: 'Closed', color: 'hsl(var(--chart-2))' },
+    opened: { label: 'Opened', color: 'hsl(var(--chart-5))' },
+} satisfies ChartConfig;
+
 export default function TestingDashboard() {
   const { testCases, stories, testPlans } = useProject();
   const [selectedTestPlanId, setSelectedTestPlanId] = useState('all');
+  const [dailyViewTestPlanId, setDailyViewTestPlanId] = useState('all');
 
-  const filteredData = useMemo(() => {
+  const filteredSummaryData = useMemo(() => {
     let filteredTestCases = testCases;
     let relatedBugs: Story[] = [];
 
@@ -105,6 +113,61 @@ export default function TestingDashboard() {
       bugStatusData,
     };
   }, [testCases, stories, selectedTestPlanId]);
+  
+  const dailyViewData = useMemo(() => {
+    let filteredTestCases = testCases;
+    let relatedBugs: Story[] = [];
+
+    if (dailyViewTestPlanId !== 'all') {
+      const testCaseIdsInPlan = new Set();
+       if (dailyViewTestPlanId === 'none') {
+        filteredTestCases = testCases.filter(tc => !tc.testPlanId);
+      } else {
+        filteredTestCases = testCases.filter(tc => tc.testPlanId === dailyViewTestPlanId);
+      }
+      filteredTestCases.forEach(tc => testCaseIdsInPlan.add(tc.id));
+      relatedBugs = stories.filter(story => story.itemType === 'Bug' && story.relatedTestCaseId && testCaseIdsInPlan.has(story.relatedTestCaseId));
+    } else {
+      relatedBugs = stories.filter(story => story.itemType === 'Bug');
+    }
+    
+    const allDates: Date[] = [];
+    filteredTestCases.forEach(tc => {
+        if(tc.executionDate) allDates.push(startOfDay(parseISO(tc.executionDate)));
+        if(tc.closeDate) allDates.push(startOfDay(parseISO(tc.closeDate)));
+    });
+    relatedBugs.forEach(bug => {
+        if(bug.createdAt) allDates.push(startOfDay(parseISO(bug.createdAt)));
+        if(bug.closedAt) allDates.push(startOfDay(parseISO(bug.closedAt)));
+    });
+
+    if (allDates.length === 0) return { tcData: [], bugData: [] };
+
+    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+    const dateInterval = eachDayOfInterval({ start: minDate, end: maxDate });
+
+    const tcData = dateInterval.map(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        return {
+            date: format(date, 'MMM d'),
+            executed: filteredTestCases.filter(tc => tc.executionDate && format(parseISO(tc.executionDate), 'yyyy-MM-dd') === dateStr).length,
+            closed: filteredTestCases.filter(tc => tc.closeDate && format(parseISO(tc.closeDate), 'yyyy-MM-dd') === dateStr).length,
+        };
+    });
+
+    const bugData = dateInterval.map(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        return {
+            date: format(date, 'MMM d'),
+            opened: relatedBugs.filter(bug => bug.createdAt && format(parseISO(bug.createdAt), 'yyyy-MM-dd') === dateStr).length,
+            closed: relatedBugs.filter(bug => bug.closedAt && format(parseISO(bug.closedAt), 'yyyy-MM-dd') === dateStr).length,
+        };
+    });
+
+    return { tcData, bugData };
+    
+  }, [testCases, stories, dailyViewTestPlanId]);
 
 
   return (
@@ -136,8 +199,8 @@ export default function TestingDashboard() {
                 <ChartContainer config={testCaseStatusConfig} className="h-full w-full">
                     <PieChart>
                       <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                      <Pie data={filteredData.testCaseStatusData} dataKey="value" nameKey="name">
-                        {filteredData.testCaseStatusData.map((entry) => (
+                      <Pie data={filteredSummaryData.testCaseStatusData} dataKey="value" nameKey="name">
+                        {filteredSummaryData.testCaseStatusData.map((entry) => (
                           <Cell key={entry.name} fill={entry.fill} />
                         ))}
                       </Pie>
@@ -152,8 +215,8 @@ export default function TestingDashboard() {
                 <ChartContainer config={bugStatusConfig} className="h-full w-full">
                     <PieChart>
                       <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                      <Pie data={filteredData.bugStatusData} dataKey="value" nameKey="name">
-                        {filteredData.bugStatusData.map((entry) => (
+                      <Pie data={filteredSummaryData.bugStatusData} dataKey="value" nameKey="name">
+                        {filteredSummaryData.bugStatusData.map((entry) => (
                           <Cell key={entry.name} fill={entry.fill} />
                         ))}
                       </Pie>
@@ -161,6 +224,56 @@ export default function TestingDashboard() {
                     </PieChart>
                   </ChartContainer>
                </div>
+            </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+           <div className="flex justify-between items-center">
+              <CardTitle>Daily View</CardTitle>
+               <div className="flex items-center gap-2">
+                <Select value={dailyViewTestPlanId} onValueChange={setDailyViewTestPlanId}>
+                  <SelectTrigger className="w-[250px] h-8">
+                    <SelectValue placeholder="Select a Test Plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Test Plans</SelectItem>
+                    <SelectItem value="none">TC Backlog (Unassigned)</SelectItem>
+                    {testPlans.map(tp => <SelectItem key={tp.id} value={tp.id}>[{tp.testPlanId}] {tp.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-6 md:grid-cols-2">
+            <div>
+                 <h3 className="text-lg font-semibold text-center mb-4">Test Cases Daily Trend</h3>
+                 <ChartContainer config={dailyActivityConfig} className="h-[300px] w-full">
+                     <LineChart data={dailyViewData.tcData}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Line type="monotone" dataKey="executed" stroke="var(--color-executed)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="closed" stroke="var(--color-closed)" strokeWidth={2} dot={false} />
+                     </LineChart>
+                 </ChartContainer>
+            </div>
+             <div>
+                 <h3 className="text-lg font-semibold text-center mb-4">Bugs Daily Trend</h3>
+                 <ChartContainer config={dailyActivityConfig} className="h-[300px] w-full">
+                     <LineChart data={dailyViewData.bugData}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Line type="monotone" dataKey="opened" stroke="var(--color-opened)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="closed" stroke="var(--color-closed)" strokeWidth={2} dot={false} />
+                     </LineChart>
+                 </ChartContainer>
             </div>
         </CardContent>
       </Card>
