@@ -16,6 +16,7 @@ import {
 import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { eachDayOfInterval, format, parseISO, startOfDay } from 'date-fns';
+import { Story, BugSeverity } from '@/types';
 
 const testCaseStatusConfig = {
   testCases: {
@@ -60,6 +61,29 @@ const bugStatusConfig = {
     color: '#22c55e',
   },
 } satisfies ChartConfig;
+
+const bugSeverityConfig: ChartConfig = {
+  bugs: {
+    label: "Bugs",
+  },
+  'Critical': {
+    label: "Critical",
+    color: '#ef4444',
+  },
+  'High': {
+    label: "High",
+    color: '#f97316',
+  },
+  'Medium': {
+    label: "Medium",
+    color: '#eab308',
+  },
+  'Low': {
+    label: "Low",
+    color: '#a1a1aa',
+  },
+};
+
 
 const dailyActivityConfig = {
     executed: { label: 'Executed', color: 'hsl(var(--chart-1))' },
@@ -106,11 +130,22 @@ export default function TestingDashboard() {
         return acc;
       }, {} as Record<string, number>)
     ).map(([name, value]) => ({ name, value, fill: bugStatusConfig[name as keyof typeof bugStatusConfig]?.color || '#ccc' }));
+    
+    // Open Bugs by Severity
+    const openBugs = relatedBugs.filter(bug => bug.status === 'To Do' || bug.status === 'In Progress');
+    const openBugsBySeverityData = Object.entries(
+      openBugs.reduce((acc, bug) => {
+        const severity = bug.severity || 'Medium';
+        acc[severity] = (acc[severity] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([name, value]) => ({ name, value, fill: bugSeverityConfig[name as keyof typeof bugSeverityConfig]?.color || '#ccc' }));
 
 
     return {
       testCaseStatusData,
       bugStatusData,
+      openBugsBySeverityData,
     };
   }, [testCases, stories, selectedTestPlanId]);
   
@@ -192,7 +227,7 @@ export default function TestingDashboard() {
               </div>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-6 md:grid-cols-2">
+        <CardContent className="grid gap-6 md:grid-cols-3">
             <div className="flex flex-col">
               <h3 className="text-lg font-semibold text-center mb-4">Test Cases by Status</h3>
               <div className="h-[300px] w-full">
@@ -217,6 +252,22 @@ export default function TestingDashboard() {
                       <ChartTooltip content={<ChartTooltipContent hideLabel />} />
                       <Pie data={filteredSummaryData.bugStatusData} dataKey="value" nameKey="name">
                         {filteredSummaryData.bugStatusData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <ChartLegend content={<ChartLegendContent />} />
+                    </PieChart>
+                  </ChartContainer>
+               </div>
+            </div>
+            <div className="flex flex-col">
+               <h3 className="text-lg font-semibold text-center mb-4">Open Bugs by Severity</h3>
+               <div className="h-[300px] w-full">
+                <ChartContainer config={bugSeverityConfig} className="h-full w-full">
+                    <PieChart>
+                      <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                      <Pie data={filteredSummaryData.openBugsBySeverityData} dataKey="value" nameKey="name">
+                        {filteredSummaryData.openBugsBySeverityData.map((entry) => (
                           <Cell key={entry.name} fill={entry.fill} />
                         ))}
                       </Pie>
