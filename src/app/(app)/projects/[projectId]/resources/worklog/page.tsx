@@ -589,7 +589,7 @@ export default function WorklogPage() {
                               Description
                             </label>
                           )}
-                          <Textarea
+                          <Input
                             placeholder="Describe other work..."
                             value={item.description || ''}
                             onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
