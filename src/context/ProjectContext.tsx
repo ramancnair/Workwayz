@@ -2163,9 +2163,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       for (const day of dateRange) {
         const isWeekend = weeklyOffDays.includes(day.getDay());
         const isHoliday = holidays.some(h => isSameDay(parseISO(h.date), day));
-        const isOnLeave = employee.leavePeriods?.some(p => 
-          isWithinInterval(day, { start: parseISO(p.startDate), end: parseISO(p.endDate) })
-        );
+        
+        const isOnLeave = employee.leavePeriods?.some(p => {
+          const leaveStart = parseISO(p.startDate);
+          const leaveEnd = parseISO(p.endDate);
+          return isSameDay(day, leaveStart) || isSameDay(day, leaveEnd) || (day > leaveStart && day < leaveEnd);
+        });
 
         if (!isWeekend && !isHoliday && !isOnLeave) {
           const dateString = format(day, 'yyyy-MM-dd');
