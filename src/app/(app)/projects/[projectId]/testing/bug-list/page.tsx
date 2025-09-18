@@ -45,14 +45,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Story, StoryStatus, Release, TestCase, BugSeverity } from '@/types';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
-import { Bot, PlusCircle, Trash2 } from 'lucide-react';
+import { Bot, PlusCircle, Trash2, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format, parseISO } from 'date-fns';
 import { DatePicker } from '@/components/ui/datepicker';
@@ -65,6 +59,13 @@ const statusStyles: Record<StoryStatus, string> = {
 
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
+
+const severityStyles: Record<BugSeverity, string> = {
+    'Critical': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    'High': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'Medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'Low': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+};
 
 
 const bugFormSchema = z.object({
@@ -101,6 +102,7 @@ export default function BugListPage() {
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const [testCaseInputText, setTestCaseInputText] = useState('');
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'storyId', desc: false });
 
   const autoGenFormSchema = useMemo(() => {
     const shape: Record<string, z.ZodNumber> = {};
@@ -152,7 +154,7 @@ export default function BugListPage() {
           relatedTestCaseId: editingBug.relatedTestCaseId || 'unassigned',
           reporterId: editingBug.reporterId || 'unassigned',
           assigneeId: editingBug.assigneeId || 'unassigned',
-          status: editingBug.status,
+          status: editingBug.status as StoryStatus,
           severity: editingBug.severity,
           sprintId: editingBug.sprintId || 'backlog',
           environmentId: editingBug.environmentId || 'unassigned',
@@ -243,6 +245,36 @@ export default function BugListPage() {
     setShowBulkDeleteConfirm(false);
   };
 
+  const handleSort = (columnId: string) => {
+    if (sorting?.id === columnId) {
+      setSorting({ ...sorting, desc: !sorting.desc });
+    } else {
+      setSorting({ id: columnId, desc: false });
+    }
+  };
+
+  const sortedBugs = useMemo(() => {
+    let sorted = [...bugs];
+    if (sorting) {
+      sorted.sort((a, b) => {
+        const valA = (a as any)[sorting.id] || '';
+        const valB = (b as any)[sorting.id] || '';
+        const comparison = String(valA).localeCompare(String(valB), undefined, { numeric: true });
+        return sorting.desc ? -comparison : comparison;
+      });
+    }
+    return sorted;
+  }, [bugs, sorting]);
+
+  const SortableHeader = ({ columnId, children }: { columnId: string, children: React.ReactNode }) => (
+    <TableHead>
+      <Button variant="ghost" onClick={() => handleSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -311,18 +343,17 @@ export default function BugListPage() {
                     aria-label="Select all"
                 />
               </TableHead>
-              <TableHead>ID</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Environment</TableHead>
-              <TableHead>Assignee</TableHead>
-              <TableHead>Related Test Case</TableHead>
+              <SortableHeader columnId="storyId">ID</SortableHeader>
+              <SortableHeader columnId="title">Title</SortableHeader>
+              <SortableHeader columnId="status">Status</SortableHeader>
+              <SortableHeader columnId="severity">Severity</SortableHeader>
+              <SortableHeader columnId="environmentId">Environment</SortableHeader>
+              <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bugs.map((bug) => {
+            {sortedBugs.map((bug) => {
               const assignee = employees.find(e => e.id === bug.assigneeId);
-              const relatedTestCase = testCases.find(tc => tc.id === bug.relatedTestCaseId);
               const environment = environments.find(e => e.id === bug.environmentId);
               return (
                 <TableRow key={bug.id} data-state={selectedBugs.includes(bug.id) && "selected"}>
@@ -349,9 +380,16 @@ export default function BugListPage() {
                       </button>
                   </TableCell>
                   <TableCell>
-                    <Badge className={cn('font-semibold', statusStyles[bug.status])}>
+                    <Badge className={cn('font-semibold', statusStyles[bug.status as StoryStatus])}>
                       {bug.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {bug.severity && (
+                        <Badge className={cn('font-semibold', severityStyles[bug.severity])}>
+                            {bug.severity}
+                        </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {environment ? (
@@ -368,20 +406,6 @@ export default function BugListPage() {
                         {assignee.firstName} {assignee.lastName}
                       </div>
                     ) : "Unassigned"}
-                  </TableCell>
-                   <TableCell>
-                    {relatedTestCase ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                              <Badge variant="secondary">{relatedTestCase.testCaseId}</Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{relatedTestCase.title}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ): 'N/A'}
                   </TableCell>
                 </TableRow>
               );
@@ -596,7 +620,7 @@ export default function BugListPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value as StoryStatus}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue />
