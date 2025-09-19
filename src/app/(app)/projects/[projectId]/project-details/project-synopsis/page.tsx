@@ -60,7 +60,7 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
 function RagStatusIndicator({ status, label }: { status?: RagStatus, label: string }) {
     return (
         <div className="flex items-center gap-2">
-            <span className={cn('h-4 w-4 rounded-full', status ? ragStatusStyles[status] : 'bg-gray-300')} />
+            <span className={cn('h-3 w-3 rounded-full', status ? ragStatusStyles[status] : 'bg-gray-300')} />
             <span className="font-medium">{label}</span>
         </div>
     );

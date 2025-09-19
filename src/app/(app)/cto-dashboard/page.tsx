@@ -27,17 +27,17 @@ const getRiskPotential = (severity: RiskSeverity, probability: RiskProbability) 
 
 const getRiskPotentialClass = (severity: RiskSeverity, probability: RiskProbability) => {
   const potential = getRiskPotential(severity, probability);
-  if (potential === 'Low') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-  if (potential === 'Medium') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-  return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+  if (potential === 'Low') return 'bg-green-500';
+  if (potential === 'Medium') return 'bg-yellow-500';
+  return 'bg-red-500';
 };
 
 
 const issuePriorityStyles: Record<IssuePriority, string> = {
-    'Low': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    'Medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    'High': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    'Critical': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    'Low': 'bg-gray-400',
+    'Medium': 'bg-yellow-500',
+    'High': 'bg-orange-500',
+    'Critical': 'bg-red-500',
 };
 
 const issueStatusStyles: Record<Issue['status'], string> = {
@@ -58,9 +58,10 @@ function RiskItem({ item, onClick }: { item: EnrichedRisk; onClick: () => void }
         <div className="p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50" onClick={onClick}>
             <div className="flex justify-between items-start">
                 <p className="text-sm font-medium flex-1 pr-2">{item.description}</p>
-                <Badge className={cn(getRiskPotentialClass(item.severity, item.probability))}>
-                    {getRiskPotential(item.severity, item.probability)}
-                </Badge>
+                <div className="flex items-center gap-2">
+                    <div className={cn("h-3 w-3 rounded-full", getRiskPotentialClass(item.severity, item.probability))} />
+                    <span className="text-xs font-semibold">{getRiskPotential(item.severity, item.probability)}</span>
+                </div>
             </div>
             <Badge variant="outline" className="mt-1">{item.projectName}</Badge>
         </div>
@@ -72,7 +73,10 @@ function IssueItem({ item, onClick }: { item: EnrichedIssue; onClick: () => void
          <div className="p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50" onClick={onClick}>
             <div className="flex justify-between items-start">
                  <p className="text-sm font-medium flex-1 pr-2">{item.description}</p>
-                 <Badge className={cn(issuePriorityStyles[item.priority])}>{item.priority}</Badge>
+                 <div className="flex items-center gap-2">
+                    <div className={cn("h-3 w-3 rounded-full", issuePriorityStyles[item.priority])} />
+                    <span className="text-xs font-semibold">{item.priority}</span>
+                </div>
             </div>
             <Badge variant="outline" className="mt-1">{item.projectName}</Badge>
         </div>
@@ -148,7 +152,10 @@ function IssueDetailDialog({ issue, isOpen, onOpenChange }: { issue: EnrichedIss
                         </div>
                         <div>
                             <h4 className="font-semibold">Priority</h4>
-                            <Badge className={cn(issuePriorityStyles[issue.priority])}>{issue.priority}</Badge>
+                            <div className="flex items-center gap-2">
+                                <div className={cn("h-3 w-3 rounded-full", issuePriorityStyles[issue.priority])} />
+                                <span className="text-sm font-semibold">{issue.priority}</span>
+                            </div>
                         </div>
                      </div>
                      <div>
