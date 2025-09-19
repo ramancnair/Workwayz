@@ -1561,10 +1561,14 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           description: `${assumptionSamples[i % assumptionSamples.length]}`,
           category: categories[Math.floor(Math.random() * categories.length)],
           status: statuses[Math.floor(Math.random() * statuses.length)],
-          ownerId: employees[Math.floor(Math.random() * employees.length)]?.id,
           isDeleted: false,
           deletedAt: null
         };
+        
+        if (employees.length > 0) {
+            newAssumption.ownerId = employees[Math.floor(Math.random() * employees.length)].id;
+        }
+
         batch.set(assumptionRef, newAssumption);
       }
       await batch.commit();
@@ -1643,10 +1647,14 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           description: issueSamples[i % issueSamples.length],
           priority: priorities[Math.floor(Math.random() * priorities.length)],
           status: statuses[Math.floor(Math.random() * statuses.length)],
-          assigneeId: getRandomItem(employees)?.id,
           isDeleted: false,
           deletedAt: null
         };
+        
+        if (employees.length > 0) {
+            newIssue.assigneeId = getRandomItem(employees)?.id;
+        }
+        
         const payload = { ...newIssue, reportedDate: Timestamp.now() };
         batch.set(issueRef, payload);
       }
@@ -1725,10 +1733,14 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           dependencyOn: sample.on,
           status: statuses[Math.floor(Math.random() * statuses.length)],
           type: types[Math.floor(Math.random() * types.length)],
-          ownerId: employees[Math.floor(Math.random() * employees.length)]?.id,
           isDeleted: false,
           deletedAt: null
         };
+        
+        if (employees.length > 0) {
+          newDependency.ownerId = employees[Math.floor(Math.random() * employees.length)].id;
+        }
+
         const expectedDate = new Date();
         expectedDate.setDate(expectedDate.getDate() + Math.floor(Math.random() * 30) + 7);
         const payload = { ...newDependency, expectedByDate: Timestamp.fromDate(expectedDate) };
