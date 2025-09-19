@@ -282,7 +282,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
     '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
     '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
-    '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays'],
+    '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'testCases'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testPlans'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints', 'environments'],
@@ -293,8 +293,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays', 'horizontals'],
-    '/resources/resource-gantt': ['stories', 'epics', 'employees', 'sprints'],
-    '/resources/worklog': ['employees', 'stories', 'worklogs', 'holidays'],
+    '/resources/resource-gantt': ['employees', 'worklogs', 'holidays', 'weeklyOffDays'],
+    '/resources/worklog': ['employees', 'stories', 'worklogs', 'holidays', 'weeklyOffDays'],
     '/resources/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
     '/resources/leave-calendar': ['employees', 'holidays', 'weeklyOffDays'],
     '/raid-dashboard': ['risks', 'assumptions', 'issues', 'dependencies'],
@@ -1620,6 +1620,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   
   const autoGenerateIssues = async (count: number): Promise<boolean> => {
     if (!db || !projectId) return false;
+    const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
+    
     try {
       const batch = writeBatch(db);
       const snapshot = await getDocs(collection(db, 'projects', projectId, 'issues'));
@@ -1641,7 +1643,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           description: issueSamples[i % issueSamples.length],
           priority: priorities[Math.floor(Math.random() * priorities.length)],
           status: statuses[Math.floor(Math.random() * statuses.length)],
-          assigneeId: employees[Math.floor(Math.random() * employees.length)]?.id,
+          assigneeId: getRandomItem(employees)?.id,
           isDeleted: false,
           deletedAt: null
         };
