@@ -520,7 +520,7 @@ export default function ProjectsDashboard() {
   );
 
   return (
-    <>
+    <TooltipProvider>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Home" description="Manage all your portfolios and projects.">
           <Button onClick={() => handleOpenDialog(null)}>
@@ -594,8 +594,17 @@ export default function ProjectsDashboard() {
                                         <Popover>
                                           <PopoverTrigger asChild>
                                             <div className="flex items-center gap-2 cursor-pointer">
-                                                <span className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
-                                                <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
+                                                <div className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
+                                                  </TooltipTrigger>
+                                                  {project.statusComments && (
+                                                    <TooltipContent>
+                                                      <p>{project.statusComments}</p>
+                                                    </TooltipContent>
+                                                  )}
+                                                </Tooltip>
                                             </div>
                                           </PopoverTrigger>
                                           <PopoverContent className="w-80">
@@ -667,7 +676,7 @@ export default function ProjectsDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </TooltipProvider>
   );
 }
     
@@ -677,5 +686,3 @@ export default function ProjectsDashboard() {
     
 
     
-
-
