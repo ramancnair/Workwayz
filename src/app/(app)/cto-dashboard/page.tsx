@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -14,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { cn } from '@/lib/utils';
 import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority, RagStatus } from '@/types';
 import { format } from 'date-fns';
+import { Circle } from 'lucide-react';
 
 type EnrichedRisk = Risk & { projectName: string; projectId: string; };
 type EnrichedIssue = Issue & { projectName: string; projectId: string; };
@@ -48,9 +48,9 @@ const issueStatusStyles: Record<Issue['status'], string> = {
 };
 
 const ragStatusStyles: Record<RagStatus, string> = {
-  'Green': 'bg-green-500',
-  'Amber': 'bg-yellow-500',
-  'Red': 'bg-red-500',
+  'Green': 'text-green-500',
+  'Amber': 'text-yellow-500',
+  'Red': 'text-red-500',
 };
 
 function RiskItem({ item, onClick }: { item: EnrichedRisk; onClick: () => void }) {
@@ -88,8 +88,8 @@ function ProjectItem({ project }: { project: Project }) {
         <Link href={`/projects/${project.id}/project-details/project-synopsis`} className="block p-3 border-b last:border-b-0 hover:bg-muted/50">
             <div className="flex justify-between items-start">
                 <p className="text-sm font-medium flex-1 pr-2">{project.name}</p>
-                <div className="flex items-center gap-2">
-                    <div className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                 <div className="flex items-center gap-2">
+                    <Circle className={cn("h-4 w-4", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} />
                     <span className="text-xs font-semibold">{project.overallStatus}</span>
                 </div>
             </div>
