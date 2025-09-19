@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority } from '@/types';
+import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority, RagStatus } from '@/types';
 import { format } from 'date-fns';
 
 type EnrichedRisk = Risk & { projectName: string; projectId: string; };
@@ -47,6 +47,12 @@ const issueStatusStyles: Record<Issue['status'], string> = {
     'Closed': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };
 
+const ragStatusStyles: Record<RagStatus, string> = {
+  'Green': 'bg-green-500',
+  'Amber': 'bg-yellow-500',
+  'Red': 'bg-red-500',
+};
+
 function RiskItem({ item, onClick }: { item: EnrichedRisk; onClick: () => void }) {
     return (
         <div className="p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50" onClick={onClick}>
@@ -71,6 +77,21 @@ function IssueItem({ item, onClick }: { item: EnrichedIssue; onClick: () => void
             <Badge variant="outline" className="mt-1">{item.projectName}</Badge>
         </div>
     )
+}
+
+function ProjectItem({ project }: { project: Project }) {
+    return (
+        <Link href={`/projects/${project.id}/project-details/project-synopsis`} className="block p-3 border-b last:border-b-0 hover:bg-muted/50">
+            <div className="flex justify-between items-start">
+                <p className="text-sm font-medium flex-1 pr-2">{project.name}</p>
+                <div className="flex items-center gap-2">
+                    <div className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                    <span className="text-xs font-semibold">{project.overallStatus}</span>
+                </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 truncate">{project.statusComments}</p>
+        </Link>
+    );
 }
 
 function RiskDetailDialog({ risk, isOpen, onOpenChange }: { risk: EnrichedRisk | null; isOpen: boolean; onOpenChange: (open: boolean) => void; }) {
@@ -149,6 +170,7 @@ function IssueDetailDialog({ issue, isOpen, onOpenChange }: { issue: EnrichedIss
 export default function CtoDashboardPage() {
   const [highRisks, setHighRisks] = useState<EnrichedRisk[]>([]);
   const [criticalIssues, setCriticalIssues] = useState<EnrichedIssue[]>([]);
+  const [redHealthProjects, setRedHealthProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewingRisk, setViewingRisk] = useState<EnrichedRisk | null>(null);
   const [viewingIssue, setViewingIssue] = useState<EnrichedIssue | null>(null);
@@ -162,6 +184,8 @@ export default function CtoDashboardPage() {
         const projectsQuery = query(collection(db, 'projects'), where('status', '==', 'Active'));
         const projectsSnapshot = await getDocs(projectsQuery);
         const activeProjects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+        
+        setRedHealthProjects(activeProjects.filter(p => p.overallStatus === 'Red'));
 
         const allRisks: EnrichedRisk[] = [];
         const allIssues: EnrichedIssue[] = [];
@@ -213,32 +237,49 @@ export default function CtoDashboardPage() {
       {isLoading ? (
         <p>Loading dashboard data...</p>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>High Potential Risks</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-full max-h-[50vh] pr-4">
+                            {highRisks.length > 0 ? (
+                                highRisks.map((risk, index) => <RiskItem key={index} item={risk} onClick={() => setViewingRisk(risk)} />)
+                            ) : (
+                                <p className="text-muted-foreground text-center py-10">No high potential risks found in active projects.</p>
+                            )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Critical & High Priority Issues</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-full max-h-[50vh] pr-4">
+                            {criticalIssues.length > 0 ? (
+                               criticalIssues.map((issue, index) => <IssueItem key={index} item={issue} onClick={() => setViewingIssue(issue)} />)
+                            ) : (
+                                <p className="text-muted-foreground text-center py-10">No critical or high priority issues found in active projects.</p>
+                            )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            </div>
+            
             <Card>
                 <CardHeader>
-                    <CardTitle>High Potential Risks</CardTitle>
+                    <CardTitle>Red Health Projects</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-full max-h-[50vh] pr-4">
-                        {highRisks.length > 0 ? (
-                            highRisks.map((risk, index) => <RiskItem key={index} item={risk} onClick={() => setViewingRisk(risk)} />)
+                        {redHealthProjects.length > 0 ? (
+                           redHealthProjects.map((project) => <ProjectItem key={project.id} project={project} />)
                         ) : (
-                            <p className="text-muted-foreground text-center py-10">No high potential risks found in active projects.</p>
-                        )}
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-
-             <Card>
-                <CardHeader>
-                    <CardTitle>Critical & High Priority Issues</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ScrollArea className="h-full max-h-[50vh] pr-4">
-                        {criticalIssues.length > 0 ? (
-                           criticalIssues.map((issue, index) => <IssueItem key={index} item={issue} onClick={() => setViewingIssue(issue)} />)
-                        ) : (
-                            <p className="text-muted-foreground text-center py-10">No critical or high priority issues found in active projects.</p>
+                            <p className="text-muted-foreground text-center py-10">No projects with red health status.</p>
                         )}
                     </ScrollArea>
                 </CardContent>
