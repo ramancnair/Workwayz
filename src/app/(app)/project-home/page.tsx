@@ -39,7 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, Circle } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
@@ -594,7 +594,7 @@ export default function ProjectsDashboard() {
                                         <Popover>
                                           <PopoverTrigger asChild>
                                             <div className="flex items-center gap-2 cursor-pointer">
-                                                <Circle className={cn("h-4 w-4", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                                                <span className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
                                                 <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
                                             </div>
                                           </PopoverTrigger>
@@ -677,4 +677,5 @@ export default function ProjectsDashboard() {
     
 
     
+
 
