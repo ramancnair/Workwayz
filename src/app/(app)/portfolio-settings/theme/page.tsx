@@ -45,7 +45,7 @@ const fontOptions = [
 
 function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: number, selectedS: number, onColorSelect: (h: number, s: number) => void }) {
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="grid grid-cols-5 gap-1">
       {colorPalette.map(({ h, s, name }) => {
         const isActive = h === selectedH && s === selectedS;
         return (
@@ -53,14 +53,14 @@ function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: numb
             key={name}
             type="button"
             className={cn(
-              "h-10 w-10 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center",
+              "h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center",
               isActive ? 'border-primary' : 'border-transparent'
             )}
             style={{ backgroundColor: `hsl(${h}, ${s}%, 50%)` }}
             onClick={() => onColorSelect(h, s)}
             title={name}
           >
-            {isActive && <Check className="h-6 w-6 text-white" />}
+            {isActive && <Check className="h-4 w-4 text-white" />}
           </button>
         );
       })}
@@ -71,6 +71,7 @@ function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: numb
 type Theme = {
     primary: { h: number; s: number; l: number };
     background: { h: number; s: number; l: number };
+    foreground: { h: number; s: number; l: number };
     accent: { h: number; s: number; l: number };
     card: { h: number; s: number; l: number };
     topbar: { h: number; s: number; l: number };
@@ -94,6 +95,7 @@ export default function ThemePage() {
     useEffect(() => {
         document.documentElement.style.setProperty('--primary', `${currentTheme.primary.h} ${currentTheme.primary.s}% ${currentTheme.primary.l}%`);
         document.documentElement.style.setProperty('--background', `${currentTheme.background.h} ${currentTheme.background.s}% ${currentTheme.background.l}%`);
+        document.documentElement.style.setProperty('--foreground', `${currentTheme.foreground.h} ${currentTheme.foreground.s}% ${currentTheme.foreground.l}%`);
         document.documentElement.style.setProperty('--accent', `${currentTheme.accent.h} ${currentTheme.accent.s}% ${currentTheme.accent.l}%`);
         document.documentElement.style.setProperty('--card', `${currentTheme.card.h} ${currentTheme.card.s}% ${currentTheme.card.l}%`);
         document.documentElement.style.setProperty('--topbar-background', `${currentTheme.topbar.h} ${currentTheme.topbar.s}% ${currentTheme.topbar.l}%`);
@@ -103,7 +105,7 @@ export default function ThemePage() {
         document.documentElement.style.fontSize = `${currentTheme.fontSize}px`;
     }, [currentTheme]);
 
-    type ColorName = 'primary' | 'background' | 'accent' | 'card' | 'topbar' | 'sidebar';
+    type ColorName = 'primary' | 'background' | 'foreground' | 'accent' | 'card' | 'topbar' | 'sidebar';
 
     const handleColorChange = (colorName: ColorName, property: 'h' | 's' | 'l', value: number) => {
         setCurrentTheme(prev => ({
@@ -147,13 +149,15 @@ export default function ThemePage() {
     };
 
     const createColorSection = (name: ColorName, label: string) => (
-        <div className="space-y-4">
-            <Label>{label}</Label>
-            <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${currentTheme[name].h}, ${currentTheme[name].s}%, ${currentTheme[name].l}%)` }} />
-                <div className="flex-1 space-y-2">
+        <div className="space-y-2">
+            <Label className="text-sm">{label}</Label>
+            <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: `hsl(${currentTheme[name].h}, ${currentTheme[name].s}%, ${currentTheme[name].l}%)` }} />
+                <div className="flex-1">
                     <ColorPalette selectedH={currentTheme[name].h} selectedS={currentTheme[name].s} onColorSelect={(h, s) => handlePaletteSelect(name, h, s)} />
-                    <Slider value={[currentTheme[name].l]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
+                </div>
+                <div className="w-24">
+                  <Slider value={[currentTheme[name].l]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
                 </div>
             </div>
         </div>
@@ -214,13 +218,14 @@ export default function ThemePage() {
                             <CardTitle>Colors</CardTitle>
                             <CardDescription>Adjust the main colors of the UI.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            {createColorSection('primary', 'Primary Color')}
-                            {createColorSection('background', 'Background Color')}
-                            {createColorSection('accent', 'Accent Color')}
-                            {createColorSection('card', 'Card Color')}
-                            {createColorSection('topbar', 'Top Bar Color')}
-                            {createColorSection('sidebar', 'Sidebar Color')}
+                        <CardContent className="space-y-4">
+                            {createColorSection('primary', 'Primary')}
+                            {createColorSection('background', 'Background')}
+                            {createColorSection('foreground', 'Foreground')}
+                            {createColorSection('accent', 'Accent')}
+                            {createColorSection('card', 'Card')}
+                            {createColorSection('topbar', 'Top Bar')}
+                            {createColorSection('sidebar', 'Sidebar')}
                         </CardContent>
                     </Card>
 

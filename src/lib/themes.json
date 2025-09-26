@@ -3,6 +3,7 @@
   "Default": {
     "primary": { "h": 221, "s": 83, "l": 53 },
     "background": { "h": 0, "s": 0, "l": 100 },
+    "foreground": { "h": 240, "s": 5.9, "l": 10 },
     "accent": { "h": 0, "s": 0, "l": 96.1 },
     "card": { "h": 0, "s": 0, "l": 100 },
     "topbar": { "h": 0, "s": 0, "l": 100 },
