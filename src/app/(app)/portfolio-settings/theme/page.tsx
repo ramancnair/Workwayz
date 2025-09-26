@@ -7,27 +7,46 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { Save } from 'lucide-react';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { Save, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-// Helper to parse HSL values from the CSS file content
-const parseCssVariable = (css: string, variable: string): [number, number, number] => {
-  const regex = new RegExp(`${variable}:\\s*(\\d+)\\s*(\\d+)%\\s*(\\d+)%`);
-  const match = css.match(regex);
-  if (match) {
-    return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
-  }
-  return [0, 0, 0];
-};
 
-const parseCssValue = (css: string, variable: string): number => {
-    const regex = new RegExp(`${variable}:\\s*([0-9.]+)rem`);
-    const match = css.match(regex);
-    if (match) {
-        return parseFloat(match[1]);
-    }
-    return 0.5; // default
+const colorPalette = [
+  { h: 0, s: 84, name: 'Red' },
+  { h: 25, s: 95, name: 'Orange' },
+  { h: 45, s: 95, name: 'Yellow' },
+  { h: 145, s: 63, name: 'Green' },
+  { h: 200, s: 80, name: 'Blue' },
+  { h: 221, s: 83, name: 'Indigo' },
+  { h: 260, s: 85, name: 'Violet' },
+  { h: 320, s: 70, name: 'Pink' },
+  { h: 210, s: 40, name: 'Slate' },
+  { h: 0, s: 0, name: 'Gray' },
+];
+
+function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: number, selectedS: number, onColorSelect: (h: number, s: number) => void }) {
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {colorPalette.map(({ h, s, name }) => {
+        const isActive = h === selectedH && s === selectedS;
+        return (
+          <button
+            key={name}
+            type="button"
+            className={cn(
+              "h-10 w-10 rounded-full border-2 transition-transform hover:scale-110",
+              isActive ? 'border-primary' : 'border-transparent'
+            )}
+            style={{ backgroundColor: `hsl(${h}, ${s}%, 50%)` }}
+            onClick={() => onColorSelect(h, s)}
+            title={name}
+          >
+            {isActive && <Check className="h-6 w-6 text-white" />}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 
@@ -42,13 +61,7 @@ export default function ThemePage() {
 
     const [isLoading, setIsLoading] = useState(false);
 
-    // No need to fetch, we can just set a default state
-    // In a real app, you'd fetch the saved theme from a database
-    // and the CSS file content on server-side.
-    // For this prototype, we'll just use client-side state and update CSS vars.
-
     useEffect(() => {
-        // This effect applies the theme to the document in real-time
         document.documentElement.style.setProperty('--primary', `${theme.primary.h} ${theme.primary.s}% ${theme.primary.l}%`);
         document.documentElement.style.setProperty('--background', `${theme.background.h} ${theme.background.s}% ${theme.background.l}%`);
         document.documentElement.style.setProperty('--accent', `${theme.accent.h} ${theme.accent.s}% ${theme.accent.l}%`);
@@ -65,6 +78,17 @@ export default function ThemePage() {
         }));
     };
     
+    const handlePaletteSelect = (colorName: 'primary' | 'background' | 'accent', h: number, s: number) => {
+      setTheme(prev => ({
+        ...prev,
+        [colorName]: {
+          ...prev[colorName],
+          h,
+          s
+        }
+      }))
+    }
+
     const handleRadiusChange = (value: number) => {
         setTheme(prev => ({ ...prev, radius: value }));
     }
@@ -72,11 +96,6 @@ export default function ThemePage() {
     const handleSaveTheme = async () => {
         setIsLoading(true);
         toast({ title: 'Saving Theme...', description: 'Please wait while we update your theme.' });
-        
-        // In a real Next.js app, this would be an API route call.
-        // We're simulating the file write for prototyping purposes.
-        // This code will NOT work directly on the client.
-        // We need a server action to handle this.
         
         const cssContent = `
 @tailwind base;
@@ -174,10 +193,8 @@ body {
 }
         `;
         
-        // This is a placeholder for a server action
         console.log("Saving CSS:", cssContent);
         
-        // Simulate a delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         toast({ title: 'Theme Saved!', description: 'Your new theme has been applied.' });
@@ -205,37 +222,34 @@ body {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Primary Color */}
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                             <Label>Primary Color</Label>
                             <div className="flex items-center gap-4">
                                <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${theme.primary.h}, ${theme.primary.s}%, ${theme.primary.l}%)` }} />
                                <div className="flex-1 space-y-2">
-                                   <Slider value={[theme.primary.h]} onValueChange={([v]) => handleColorChange('primary', 'h', v)} max={360} />
-                                   <Slider value={[theme.primary.s]} onValueChange={([v]) => handleColorChange('primary', 's', v)} max={100} />
+                                   <ColorPalette selectedH={theme.primary.h} selectedS={theme.primary.s} onColorSelect={(h, s) => handlePaletteSelect('primary', h, s)} />
                                    <Slider value={[theme.primary.l]} onValueChange={([v]) => handleColorChange('primary', 'l', v)} max={100} />
                                </div>
                             </div>
                         </div>
                         {/* Background Color */}
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                             <Label>Background Color</Label>
                              <div className="flex items-center gap-4">
                                <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${theme.background.h}, ${theme.background.s}%, ${theme.background.l}%)` }} />
                                <div className="flex-1 space-y-2">
-                                   <Slider value={[theme.background.h]} onValueChange={([v]) => handleColorChange('background', 'h', v)} max={360} />
-                                   <Slider value={[theme.background.s]} onValueChange={([v]) => handleColorChange('background', 's', v)} max={100} />
+                                   <ColorPalette selectedH={theme.background.h} selectedS={theme.background.s} onColorSelect={(h, s) => handlePaletteSelect('background', h, s)} />
                                    <Slider value={[theme.background.l]} onValueChange={([v]) => handleColorChange('background', 'l', v)} max={100} />
                                </div>
                             </div>
                         </div>
                          {/* Accent Color */}
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                             <Label>Accent Color</Label>
                              <div className="flex items-center gap-4">
                                <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${theme.accent.h}, ${theme.accent.s}%, ${theme.accent.l}%)` }} />
                                <div className="flex-1 space-y-2">
-                                   <Slider value={[theme.accent.h]} onValueChange={([v]) => handleColorChange('accent', 'h', v)} max={360} />
-                                   <Slider value={[theme.accent.s]} onValueChange={([v]) => handleColorChange('accent', 's', v)} max={100} />
+                                   <ColorPalette selectedH={theme.accent.h} selectedS={theme.accent.s} onColorSelect={(h, s) => handlePaletteSelect('accent', h, s)} />
                                    <Slider value={[theme.accent.l]} onValueChange={([v]) => handleColorChange('accent', 'l', v)} max={100} />
                                </div>
                             </div>
