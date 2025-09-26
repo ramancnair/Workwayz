@@ -9,6 +9,17 @@ import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import themesData from '@/lib/themes.json';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const colorPalette = [
@@ -49,35 +60,41 @@ function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: numb
   );
 }
 
+type Theme = {
+    primary: { h: number; s: number; l: number };
+    background: { h: number; s: number; l: number };
+    accent: { h: number; s: number; l: number };
+    card: { h: number; s: number; l: number };
+    topbar: { h: number; s: number; l: number };
+    sidebar: { h: number; s: number; l: number };
+    radius: number;
+};
+
+type Themes = Record<string, Theme>;
 
 export default function ThemePage() {
     const { toast } = useToast();
-    const [theme, setTheme] = useState({
-        primary: { h: 221, s: 83, l: 53 },
-        background: { h: 0, s: 0, l: 100 },
-        accent: { h: 0, s: 0, l: 96.1 },
-        card: { h: 0, s: 0, l: 100 },
-        topbar: { h: 0, s: 0, l: 100 },
-        sidebar: { h: 0, s: 0, l: 100 },
-        radius: 0.5,
-    });
-
+    const [themes, setThemes] = useState<Themes>(themesData);
+    const [selectedTheme, setSelectedTheme] = useState<string>('Default');
+    const [currentTheme, setCurrentTheme] = useState<Theme>(themes.Default);
+    const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+    const [newThemeName, setNewThemeName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        document.documentElement.style.setProperty('--primary', `${theme.primary.h} ${theme.primary.s}% ${theme.primary.l}%`);
-        document.documentElement.style.setProperty('--background', `${theme.background.h} ${theme.background.s}% ${theme.background.l}%`);
-        document.documentElement.style.setProperty('--accent', `${theme.accent.h} ${theme.accent.s}% ${theme.accent.l}%`);
-        document.documentElement.style.setProperty('--card', `${theme.card.h} ${theme.card.s}% ${theme.card.l}%`);
-        document.documentElement.style.setProperty('--topbar-background', `${theme.topbar.h} ${theme.topbar.s}% ${theme.topbar.l}%`);
-        document.documentElement.style.setProperty('--sidebar-background', `${theme.sidebar.h} ${theme.sidebar.s}% ${theme.sidebar.l}%`);
-        document.documentElement.style.setProperty('--radius', `${theme.radius}rem`);
-    }, [theme]);
+        document.documentElement.style.setProperty('--primary', `${currentTheme.primary.h} ${currentTheme.primary.s}% ${currentTheme.primary.l}%`);
+        document.documentElement.style.setProperty('--background', `${currentTheme.background.h} ${currentTheme.background.s}% ${currentTheme.background.l}%`);
+        document.documentElement.style.setProperty('--accent', `${currentTheme.accent.h} ${currentTheme.accent.s}% ${currentTheme.accent.l}%`);
+        document.documentElement.style.setProperty('--card', `${currentTheme.card.h} ${currentTheme.card.s}% ${currentTheme.card.l}%`);
+        document.documentElement.style.setProperty('--topbar-background', `${currentTheme.topbar.h} ${currentTheme.topbar.s}% ${currentTheme.topbar.l}%`);
+        document.documentElement.style.setProperty('--sidebar-background', `${currentTheme.sidebar.h} ${currentTheme.sidebar.s}% ${currentTheme.sidebar.l}%`);
+        document.documentElement.style.setProperty('--radius', `${currentTheme.radius}rem`);
+    }, [currentTheme]);
 
     type ColorName = 'primary' | 'background' | 'accent' | 'card' | 'topbar' | 'sidebar';
 
     const handleColorChange = (colorName: ColorName, property: 'h' | 's' | 'l', value: number) => {
-        setTheme(prev => ({
+        setCurrentTheme(prev => ({
             ...prev,
             [colorName]: {
                 ...prev[colorName],
@@ -87,7 +104,7 @@ export default function ThemePage() {
     };
     
     const handlePaletteSelect = (colorName: ColorName, h: number, s: number) => {
-      setTheme(prev => ({
+      setCurrentTheme(prev => ({
         ...prev,
         [colorName]: {
           ...prev[colorName],
@@ -98,86 +115,140 @@ export default function ThemePage() {
     }
 
     const handleRadiusChange = (value: number) => {
-        setTheme(prev => ({ ...prev, radius: value }));
+        setCurrentTheme(prev => ({ ...prev, radius: value }));
     }
     
+    const handleThemeSelect = (themeName: string) => {
+        setSelectedTheme(themeName);
+        setCurrentTheme(themes[themeName]);
+    };
+
     const createColorSection = (name: ColorName, label: string) => (
         <div className="space-y-4">
             <Label>{label}</Label>
             <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${theme[name].h}, ${theme[name].s}%, ${theme[name].l}%)` }} />
+                <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${currentTheme[name].h}, ${currentTheme[name].s}%, ${currentTheme[name].l}%)` }} />
                 <div className="flex-1 space-y-2">
-                    <ColorPalette selectedH={theme[name].h} selectedS={theme[name].s} onColorSelect={(h, s) => handlePaletteSelect(name, h, s)} />
-                    <Slider value={[theme[name].l]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
+                    <ColorPalette selectedH={currentTheme[name].h} selectedS={currentTheme[name].s} onColorSelect={(h, s) => handlePaletteSelect(name, h, s)} />
+                    <Slider value={[currentTheme[name].l]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
                 </div>
             </div>
         </div>
     );
 
     const handleSaveTheme = async () => {
+        if (!newThemeName.trim()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please enter a theme name.' });
+            return;
+        }
         setIsLoading(true);
         toast({ title: 'Saving Theme...', description: 'Please wait while we update your theme.' });
         
-        // This is where you would typically make an API call to a server action
-        // to write the file. For this prototype, we'll just simulate it.
-        console.log("Saving theme with these values:", theme);
+        const newThemes = { ...themes, [newThemeName]: currentTheme };
+        setThemes(newThemes);
+        setSelectedTheme(newThemeName);
+
+        // This is a simulation. In a real app, this would be an API call to a server action to write the file.
+        console.log("Simulating save of themes.json:", JSON.stringify(newThemes, null, 2));
         
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        toast({ title: 'Theme Saved!', description: 'Your new theme has been applied.' });
+        toast({ title: 'Theme Saved!', description: `Theme "${newThemeName}" has been saved.` });
         setIsLoading(false);
+        setIsSaveDialogOpen(false);
+        setNewThemeName('');
     };
 
     return (
-        <div className="space-y-4">
-             <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-medium">Theme</h3>
-                    <p className="text-sm text-muted-foreground">Customize the look and feel of the application.</p>
+        <>
+            <div className="space-y-4">
+                 <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-medium">Theme</h3>
+                        <p className="text-sm text-muted-foreground">Customize the look and feel of the application.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Select value={selectedTheme} onValueChange={handleThemeSelect}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select a theme" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.keys(themes).map(themeName => (
+                                    <SelectItem key={themeName} value={themeName}>{themeName}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={() => setIsSaveDialogOpen(true)} disabled={isLoading}>
+                            <Save className="mr-2 h-4 w-4" />
+                            {isLoading ? 'Saving...' : 'Save Theme'}
+                        </Button>
+                    </div>
                 </div>
-                 <Button onClick={handleSaveTheme} disabled={isLoading}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {isLoading ? 'Saving...' : 'Save Theme'}
-                </Button>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Colors</CardTitle>
-                        <CardDescription>Adjust the main colors of the UI.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {createColorSection('primary', 'Primary Color')}
-                        {createColorSection('background', 'Background Color')}
-                        {createColorSection('accent', 'Accent Color')}
-                        {createColorSection('card', 'Card Color')}
-                        {createColorSection('topbar', 'Top Bar Color')}
-                        {createColorSection('sidebar', 'Sidebar Color')}
-                    </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Colors</CardTitle>
+                            <CardDescription>Adjust the main colors of the UI.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {createColorSection('primary', 'Primary Color')}
+                            {createColorSection('background', 'Background Color')}
+                            {createColorSection('accent', 'Accent Color')}
+                            {createColorSection('card', 'Card Color')}
+                            {createColorSection('topbar', 'Top Bar Color')}
+                            {createColorSection('sidebar', 'Sidebar Color')}
+                        </CardContent>
+                    </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Sizing & Spacing</CardTitle>
-                        <CardDescription>Adjust font sizes and spacing.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-2">
-                            <Label>Border Radius: {theme.radius}rem</Label>
-                            <Slider value={[theme.radius]} onValueChange={([v]) => handleRadiusChange(v)} min={0} max={2} step={0.1} />
-                        </div>
-                         <div className="space-y-2">
-                            <Label>Font Size (Not Implemented)</Label>
-                             <Slider defaultValue={[16]} min={12} max={20} step={1} disabled />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Padding (Not Implemented)</Label>
-                            <Slider defaultValue={[4]} min={2} max={8} step={1} disabled />
-                        </div>
-                    </CardContent>
-                </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Sizing & Spacing</CardTitle>
+                            <CardDescription>Adjust font sizes and spacing.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-2">
+                                <Label>Border Radius: {currentTheme.radius}rem</Label>
+                                <Slider value={[currentTheme.radius]} onValueChange={([v]) => handleRadiusChange(v)} min={0} max={2} step={0.1} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label>Font Size (Not Implemented)</Label>
+                                 <Slider defaultValue={[16]} min={12} max={20} step={1} disabled />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Padding (Not Implemented)</Label>
+                                <Slider defaultValue={[4]} min={2} max={8} step={1} disabled />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
-        </div>
+            
+            <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Save New Theme</DialogTitle>
+                        <DialogDescription>
+                            Enter a name for your current theme configuration to save it for later use.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Label htmlFor="theme-name">Theme Name</Label>
+                        <Input 
+                            id="theme-name" 
+                            value={newThemeName} 
+                            onChange={(e) => setNewThemeName(e.target.value)} 
+                            placeholder="E.g., Dark Mode" 
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsSaveDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveTheme} disabled={isLoading}>
+                            {isLoading ? 'Saving...' : 'Save Theme'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
