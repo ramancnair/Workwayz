@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Check } from 'lucide-react';
+import { Save, Check, Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import themesData from '@/lib/themes.json';
 import {
@@ -33,6 +33,14 @@ const colorPalette = [
   { h: 320, s: 70, name: 'Pink' },
   { h: 210, s: 40, name: 'Slate' },
   { h: 0, s: 0, name: 'Gray' },
+];
+
+const fontOptions = [
+  { value: 'Inter, sans-serif', label: 'Inter' },
+  { value: 'Roboto, sans-serif', label: 'Roboto' },
+  { value: 'Lato, sans-serif', label: 'Lato' },
+  { value: 'Montserrat, sans-serif', label: 'Montserrat' },
+  { value: 'Oswald, sans-serif', label: 'Oswald' },
 ];
 
 function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: number, selectedS: number, onColorSelect: (h: number, s: number) => void }) {
@@ -68,6 +76,8 @@ type Theme = {
     topbar: { h: number; s: number; l: number };
     sidebar: { h: number; s: number; l: number };
     radius: number;
+    fontFamily: string;
+    fontSize: number;
 };
 
 type Themes = Record<string, Theme>;
@@ -89,6 +99,8 @@ export default function ThemePage() {
         document.documentElement.style.setProperty('--topbar-background', `${currentTheme.topbar.h} ${currentTheme.topbar.s}% ${currentTheme.topbar.l}%`);
         document.documentElement.style.setProperty('--sidebar-background', `${currentTheme.sidebar.h} ${currentTheme.sidebar.s}% ${currentTheme.sidebar.l}%`);
         document.documentElement.style.setProperty('--radius', `${currentTheme.radius}rem`);
+        document.documentElement.style.setProperty('--font-body-family', currentTheme.fontFamily);
+        document.documentElement.style.fontSize = `${currentTheme.fontSize}px`;
     }, [currentTheme]);
 
     type ColorName = 'primary' | 'background' | 'accent' | 'card' | 'topbar' | 'sidebar';
@@ -117,6 +129,17 @@ export default function ThemePage() {
     const handleRadiusChange = (value: number) => {
         setCurrentTheme(prev => ({ ...prev, radius: value }));
     }
+
+    const handleFontChange = (fontFamily: string) => {
+        setCurrentTheme(prev => ({ ...prev, fontFamily }));
+    };
+
+    const handleFontSizeChange = (direction: 'increase' | 'decrease') => {
+        setCurrentTheme(prev => ({
+            ...prev,
+            fontSize: direction === 'increase' ? prev.fontSize + 1 : prev.fontSize - 1,
+        }));
+    };
     
     const handleThemeSelect = (themeName: string) => {
         setSelectedTheme(themeName);
@@ -208,16 +231,27 @@ export default function ThemePage() {
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
-                                <Label>Border Radius: {currentTheme.radius}rem</Label>
-                                <Slider value={[currentTheme.radius]} onValueChange={([v]) => handleRadiusChange(v)} min={0} max={2} step={0.1} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label>Font Size (Not Implemented)</Label>
-                                 <Slider defaultValue={[16]} min={12} max={20} step={1} disabled />
+                                <Label>Font Family</Label>
+                                <Select value={currentTheme.fontFamily} onValueChange={handleFontChange}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        {fontOptions.map(font => (
+                                            <SelectItem key={font.value} value={font.value} style={{fontFamily: font.value}}>{font.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Padding (Not Implemented)</Label>
-                                <Slider defaultValue={[4]} min={2} max={8} step={1} disabled />
+                                <Label>Font Size: {currentTheme.fontSize}px</Label>
+                                <div className='flex items-center gap-2'>
+                                    <Button size="icon" variant="outline" onClick={() => handleFontSizeChange('decrease')}><Minus/></Button>
+                                    <Slider value={[currentTheme.fontSize]} onValueChange={([v]) => setCurrentTheme(p => ({...p, fontSize: v}))} min={12} max={20} step={1} />
+                                    <Button size="icon" variant="outline" onClick={() => handleFontSizeChange('increase')}><Plus/></Button>
+                                </div>
+                            </div>
+                             <div className="space-y-2">
+                                <Label>Border Radius: {currentTheme.radius}rem</Label>
+                                <Slider value={[currentTheme.radius]} onValueChange={([v]) => handleRadiusChange(v)} min={0} max={2} step={0.1} />
                             </div>
                         </CardContent>
                     </Card>

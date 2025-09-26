@@ -1,3 +1,4 @@
+
 {
   "Default": {
     "primary": { "h": 221, "s": 83, "l": 53 },
@@ -6,6 +7,8 @@
     "card": { "h": 0, "s": 0, "l": 100 },
     "topbar": { "h": 0, "s": 0, "l": 100 },
     "sidebar": { "h": 0, "s": 0, "l": 100 },
-    "radius": 0.5
+    "radius": 0.5,
+    "fontFamily": "Inter, sans-serif",
+    "fontSize": 16
   }
 }

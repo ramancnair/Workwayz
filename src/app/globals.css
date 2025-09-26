@@ -1,9 +1,10 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body-family), sans-serif;
 }
 
 @layer base {
@@ -43,6 +44,7 @@ body {
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 0 0% 89.8%;
     --sidebar-ring: 221 83% 53%;
+    --font-body-family: 'Inter', sans-serif;
   }
   .dark {
     /* Dark theme settings can be customized here as well */
