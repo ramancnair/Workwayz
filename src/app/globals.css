@@ -13,7 +13,7 @@ body {
     --foreground: hsl(var(--foreground));
     --card: hsl(var(--card));
     --card-foreground: hsl(var(--foreground));
-    --popover: hsl(var(--popover));
+    --popover: hsl(var(--card));
     --popover-foreground: hsl(var(--foreground));
     --primary: hsl(var(--primary));
     --primary-foreground: hsl(var(--primary-foreground));
