@@ -149,18 +149,18 @@ export default function ThemePage() {
     };
 
     const createColorSection = (name: ColorName, label: string) => (
-        <div className="space-y-2">
-            <Label className="text-sm">{label}</Label>
-            <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: `hsl(${currentTheme[name].h}, ${currentTheme[name].s}%, ${currentTheme[name].l}%)` }} />
-                <div className="flex-1">
-                    <ColorPalette selectedH={currentTheme[name].h} selectedS={currentTheme[name].s} onColorSelect={(h, s) => handlePaletteSelect(name, h, s)} />
-                </div>
-                <div className="w-24">
-                  <Slider value={[currentTheme[name].l]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
-                </div>
-            </div>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm w-24">{label}</Label>
+          <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: `hsl(${currentTheme[name].h}, ${currentTheme[name].s}%, ${currentTheme[name].l}%)` }} />
+          <div className="flex-1">
+            <ColorPalette selectedH={currentTheme[name].h} selectedS={currentTheme[name].s} onColorSelect={(h, s) => handlePaletteSelect(name, h, s)} />
+          </div>
+          <div className="w-24">
+            <Slider value={[currentTheme[name].l]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
+          </div>
         </div>
+      </div>
     );
 
     const handleSaveTheme = async () => {
