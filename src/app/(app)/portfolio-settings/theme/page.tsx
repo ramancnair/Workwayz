@@ -34,7 +34,7 @@ function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: numb
             key={name}
             type="button"
             className={cn(
-              "h-10 w-10 rounded-full border-2 transition-transform hover:scale-110",
+              "h-10 w-10 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center",
               isActive ? 'border-primary' : 'border-transparent'
             )}
             style={{ backgroundColor: `hsl(${h}, ${s}%, 50%)` }}
@@ -56,6 +56,9 @@ export default function ThemePage() {
         primary: { h: 221, s: 83, l: 53 },
         background: { h: 0, s: 0, l: 100 },
         accent: { h: 0, s: 0, l: 96.1 },
+        card: { h: 0, s: 0, l: 100 },
+        topbar: { h: 0, s: 0, l: 100 },
+        sidebar: { h: 0, s: 0, l: 100 },
         radius: 0.5,
     });
 
@@ -65,10 +68,15 @@ export default function ThemePage() {
         document.documentElement.style.setProperty('--primary', `${theme.primary.h} ${theme.primary.s}% ${theme.primary.l}%`);
         document.documentElement.style.setProperty('--background', `${theme.background.h} ${theme.background.s}% ${theme.background.l}%`);
         document.documentElement.style.setProperty('--accent', `${theme.accent.h} ${theme.accent.s}% ${theme.accent.l}%`);
+        document.documentElement.style.setProperty('--card', `${theme.card.h} ${theme.card.s}% ${theme.card.l}%`);
+        document.documentElement.style.setProperty('--topbar-background', `${theme.topbar.h} ${theme.topbar.s}% ${theme.topbar.l}%`);
+        document.documentElement.style.setProperty('--sidebar-background', `${theme.sidebar.h} ${theme.sidebar.s}% ${theme.sidebar.l}%`);
         document.documentElement.style.setProperty('--radius', `${theme.radius}rem`);
     }, [theme]);
 
-    const handleColorChange = (colorName: 'primary' | 'background' | 'accent', property: 'h' | 's' | 'l', value: number) => {
+    type ColorName = 'primary' | 'background' | 'accent' | 'card' | 'topbar' | 'sidebar';
+
+    const handleColorChange = (colorName: ColorName, property: 'h' | 's' | 'l', value: number) => {
         setTheme(prev => ({
             ...prev,
             [colorName]: {
@@ -78,7 +86,7 @@ export default function ThemePage() {
         }));
     };
     
-    const handlePaletteSelect = (colorName: 'primary' | 'background' | 'accent', h: number, s: number) => {
+    const handlePaletteSelect = (colorName: ColorName, h: number, s: number) => {
       setTheme(prev => ({
         ...prev,
         [colorName]: {
@@ -92,108 +100,27 @@ export default function ThemePage() {
     const handleRadiusChange = (value: number) => {
         setTheme(prev => ({ ...prev, radius: value }));
     }
+    
+    const createColorSection = (name: ColorName, label: string) => (
+        <div className="space-y-4">
+            <Label>{label}</Label>
+            <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${theme[name].h}, ${theme[name].s}%, ${theme[name].l}%)` }} />
+                <div className="flex-1 space-y-2">
+                    <ColorPalette selectedH={theme[name].h} selectedS={theme[name].s} onColorSelect={(h, s) => handlePaletteSelect(name, h, s)} />
+                    <Slider value={[theme[name].l]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
+                </div>
+            </div>
+        </div>
+    );
 
     const handleSaveTheme = async () => {
         setIsLoading(true);
         toast({ title: 'Saving Theme...', description: 'Please wait while we update your theme.' });
         
-        const cssContent = `
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-body {
-  font-family: 'Inter', sans-serif;
-}
-
-@layer base {
-  :root {
-    --background: ${theme.background.h} ${theme.background.s}% ${theme.background.l}%;
-    --foreground: 240 5.9% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 5.9% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 5.9% 10%;
-    --primary: ${theme.primary.h} ${theme.primary.s}% ${theme.primary.l}%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: ${theme.accent.h} ${theme.accent.s}% ${theme.accent.l}%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: ${theme.primary.h} ${theme.primary.s}% ${theme.primary.l}%;
-    --topbar-background: 0 0% 100%;
-    --topbar-foreground: 240 5.9% 10%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: ${theme.radius}rem;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 5.9% 10%;
-    --sidebar-primary: ${theme.primary.h} ${theme.primary.s}% ${theme.primary.l}%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 96.1%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 0 0% 89.8%;
-    --sidebar-ring: ${theme.primary.h} ${theme.primary.s}% ${theme.primary.l}%;
-  }
-  .dark {
-    /* Dark theme settings can be customized here as well */
-    --background: 222 84% 4.9%;
-    --foreground: 0 0% 98%;
-    --card: 222 84% 4.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 222 84% 4.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
-    --topbar-background: 222 84% 4.9%;
-    --topbar-foreground: 0 0% 98%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 210 60% 45%;
-    --chart-3: 200 80% 55%;
-    --chart-4: 190 65% 60%;
-    --chart-5: 180 75% 55%;
-    --sidebar-background: 222 84% 4.9%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 60%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-        `;
-        
-        console.log("Saving CSS:", cssContent);
+        // This is where you would typically make an API call to a server action
+        // to write the file. For this prototype, we'll just simulate it.
+        console.log("Saving theme with these values:", theme);
         
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -221,39 +148,12 @@ body {
                         <CardDescription>Adjust the main colors of the UI.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {/* Primary Color */}
-                        <div className="space-y-4">
-                            <Label>Primary Color</Label>
-                            <div className="flex items-center gap-4">
-                               <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${theme.primary.h}, ${theme.primary.s}%, ${theme.primary.l}%)` }} />
-                               <div className="flex-1 space-y-2">
-                                   <ColorPalette selectedH={theme.primary.h} selectedS={theme.primary.s} onColorSelect={(h, s) => handlePaletteSelect('primary', h, s)} />
-                                   <Slider value={[theme.primary.l]} onValueChange={([v]) => handleColorChange('primary', 'l', v)} max={100} />
-                               </div>
-                            </div>
-                        </div>
-                        {/* Background Color */}
-                        <div className="space-y-4">
-                            <Label>Background Color</Label>
-                             <div className="flex items-center gap-4">
-                               <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${theme.background.h}, ${theme.background.s}%, ${theme.background.l}%)` }} />
-                               <div className="flex-1 space-y-2">
-                                   <ColorPalette selectedH={theme.background.h} selectedS={theme.background.s} onColorSelect={(h, s) => handlePaletteSelect('background', h, s)} />
-                                   <Slider value={[theme.background.l]} onValueChange={([v]) => handleColorChange('background', 'l', v)} max={100} />
-                               </div>
-                            </div>
-                        </div>
-                         {/* Accent Color */}
-                        <div className="space-y-4">
-                            <Label>Accent Color</Label>
-                             <div className="flex items-center gap-4">
-                               <div className="w-10 h-10 rounded-md border" style={{ backgroundColor: `hsl(${theme.accent.h}, ${theme.accent.s}%, ${theme.accent.l}%)` }} />
-                               <div className="flex-1 space-y-2">
-                                   <ColorPalette selectedH={theme.accent.h} selectedS={theme.accent.s} onColorSelect={(h, s) => handlePaletteSelect('accent', h, s)} />
-                                   <Slider value={[theme.accent.l]} onValueChange={([v]) => handleColorChange('accent', 'l', v)} max={100} />
-                               </div>
-                            </div>
-                        </div>
+                        {createColorSection('primary', 'Primary Color')}
+                        {createColorSection('background', 'Background Color')}
+                        {createColorSection('accent', 'Accent Color')}
+                        {createColorSection('card', 'Card Color')}
+                        {createColorSection('topbar', 'Top Bar Color')}
+                        {createColorSection('sidebar', 'Sidebar Color')}
                     </CardContent>
                 </Card>
 

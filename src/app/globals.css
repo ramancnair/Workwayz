@@ -45,6 +45,7 @@ body {
     --sidebar-ring: 221 83% 53%;
   }
   .dark {
+    /* Dark theme settings can be customized here as well */
     --background: 222 84% 4.9%;
     --foreground: 0 0% 98%;
     --card: 222 84% 4.9%;
