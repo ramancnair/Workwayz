@@ -41,6 +41,11 @@ const fontOptions = [
   { value: 'Lato, sans-serif', label: 'Lato' },
   { value: 'Montserrat, sans-serif', label: 'Montserrat' },
   { value: 'Oswald, sans-serif', label: 'Oswald' },
+  { value: 'Open Sans, sans-serif', label: 'Open Sans' },
+  { value: 'Source Sans Pro, sans-serif', label: 'Source Sans Pro' },
+  { value: 'Raleway, sans-serif', label: 'Raleway' },
+  { value: 'PT Sans, sans-serif', label: 'PT Sans' },
+  { value: 'Ubuntu, sans-serif', label: 'Ubuntu' },
 ];
 
 const shadowOptions = [
