@@ -28,7 +28,8 @@ export default function PortfolioSettingsLayout({
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="access-settings">Access Settings</TabsTrigger>
-          <TabsTrigger value="theme">Theme</TabsTrigger>
+          <TabsTrigger value="themes">Themes</TabsTrigger>
+          <TabsTrigger value="theme-creator">Theme Creator</TabsTrigger>
         </TabsList>
         <div>{children}</div>
       </Tabs>
