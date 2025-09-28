@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Check, Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import themesData from '@/lib/themes.json';
+import { getThemes, saveThemes } from '@/app/actions';
 import {
   Dialog,
   DialogContent,
@@ -96,14 +96,25 @@ type Themes = Record<string, Theme>;
 
 export default function ThemeCreatorPage() {
     const { toast } = useToast();
-    const [themes, setThemes] = useState<Themes>(themesData);
+    const [themes, setThemes] = useState<Themes | null>(null);
     const [selectedTheme, setSelectedTheme] = useState<string>('Default');
-    const [currentTheme, setCurrentTheme] = useState<Theme>(themes.Default);
+    const [currentTheme, setCurrentTheme] = useState<Theme | null>(null);
     const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
     const [newThemeName, setNewThemeName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
+        async function fetchThemes() {
+            const themesData = await getThemes();
+            setThemes(themesData);
+            setCurrentTheme(themesData.Default);
+        }
+        fetchThemes();
+    }, []);
+
+    useEffect(() => {
+        if (!currentTheme) return;
+
         document.documentElement.style.setProperty('--primary', `${currentTheme.primary.h} ${currentTheme.primary.s}% ${currentTheme.primary.l}%`);
         document.documentElement.style.setProperty('--background', `${currentTheme.background.h} ${currentTheme.background.s}% ${currentTheme.background.l}%`);
         document.documentElement.style.setProperty('--foreground', `${currentTheme.foreground.h} ${currentTheme.foreground.s}% ${currentTheme.foreground.l}%`);
@@ -129,20 +140,22 @@ export default function ThemeCreatorPage() {
     type ColorName = 'primary' | 'background' | 'foreground' | 'accent' | 'card' | 'border' | 'popover' | 'topbar' | 'sidebar';
 
     const handleColorChange = (colorName: ColorName, property: 'h' | 's' | 'l', value: number) => {
+        if (!currentTheme) return;
         setCurrentTheme(prev => ({
-            ...prev,
+            ...prev!,
             [colorName]: {
-                ...prev[colorName],
+                ...prev![colorName],
                 [property]: value
             }
         }));
     };
     
     const handlePaletteSelect = (colorName: ColorName, h: number, s: number) => {
+      if (!currentTheme) return;
       setCurrentTheme(prev => ({
-        ...prev,
+        ...prev!,
         [colorName]: {
-          ...prev[colorName],
+          ...prev![colorName],
           h,
           s
         }
@@ -150,25 +163,30 @@ export default function ThemeCreatorPage() {
     }
 
     const handleRadiusChange = (value: number) => {
-        setCurrentTheme(prev => ({ ...prev, radius: value }));
+        if (!currentTheme) return;
+        setCurrentTheme(prev => ({ ...prev!, radius: value }));
     }
     
      const handleShadowChange = (shadow: 'none' | 'sm' | 'md' | 'lg') => {
-        setCurrentTheme(prev => ({ ...prev, shadow }));
+        if (!currentTheme) return;
+        setCurrentTheme(prev => ({ ...prev!, shadow }));
     };
 
     const handleFontChange = (fontFamily: string) => {
-        setCurrentTheme(prev => ({ ...prev, fontFamily }));
+        if (!currentTheme) return;
+        setCurrentTheme(prev => ({ ...prev!, fontFamily }));
     };
 
     const handleFontSizeChange = (direction: 'increase' | 'decrease') => {
+        if (!currentTheme) return;
         setCurrentTheme(prev => ({
-            ...prev,
-            fontSize: direction === 'increase' ? prev.fontSize + 1 : prev.fontSize - 1,
+            ...prev!,
+            fontSize: direction === 'increase' ? prev!.fontSize + 1 : prev!.fontSize - 1,
         }));
     };
     
     const handleThemeSelect = (themeName: string) => {
+        if (!themes) return;
         setSelectedTheme(themeName);
         setCurrentTheme(themes[themeName]);
     };
@@ -177,12 +195,12 @@ export default function ThemeCreatorPage() {
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Label className="text-sm w-24">{label}</Label>
-          <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: `hsl(${currentTheme[name].h}, ${currentTheme[name].s}%, ${currentTheme[name].l}%)` }} />
+          <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: currentTheme ? `hsl(${currentTheme[name].h}, ${currentTheme[name].s}%, ${currentTheme[name].l}%)` : 'transparent' }} />
           <div className="flex-1">
-            <ColorPalette selectedH={currentTheme[name].h} selectedS={currentTheme[name].s} onColorSelect={(h, s) => handlePaletteSelect(name, h, s)} />
+            {currentTheme && <ColorPalette selectedH={currentTheme[name].h} selectedS={currentTheme[name].s} onColorSelect={(h, s) => handlePaletteSelect(name, h, s)} />}
           </div>
           <div className="w-24">
-            <Slider value={[currentTheme[name].l]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
+            <Slider value={currentTheme ? [currentTheme[name].l] : [50]} onValueChange={([v]) => handleColorChange(name, 'l', v)} max={100} />
           </div>
         </div>
       </div>
@@ -193,23 +211,33 @@ export default function ThemeCreatorPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Please enter a theme name.' });
             return;
         }
+        if (!themes || !currentTheme) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Themes not loaded yet.' });
+            return;
+        }
+
         setIsLoading(true);
-        toast({ title: 'Saving Theme...', description: 'Please wait while we update your theme.' });
         
         const newThemes = { ...themes, [newThemeName]: currentTheme };
-        setThemes(newThemes);
-        setSelectedTheme(newThemeName);
-
-        // This is a simulation. In a real app, this would be an API call to a server action to write the file.
-        console.log("Simulating save of themes.json:", JSON.stringify(newThemes, null, 2));
         
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const result = await saveThemes(newThemes);
         
-        toast({ title: 'Theme Saved!', description: `Theme "${newThemeName}" has been saved.` });
+        if (result.success) {
+            setThemes(newThemes);
+            setSelectedTheme(newThemeName);
+            toast({ title: 'Theme Saved!', description: `Theme "${newThemeName}" has been saved.` });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+        
         setIsLoading(false);
         setIsSaveDialogOpen(false);
         setNewThemeName('');
     };
+    
+    if (!themes || !currentTheme) {
+        return <div>Loading themes...</div>
+    }
 
     return (
         <>
@@ -277,7 +305,7 @@ export default function ThemeCreatorPage() {
                                 <Label>Font Size: {currentTheme.fontSize}px</Label>
                                 <div className='flex items-center gap-2'>
                                     <Button size="icon" variant="outline" onClick={() => handleFontSizeChange('decrease')}><Minus/></Button>
-                                    <Slider value={[currentTheme.fontSize]} onValueChange={([v]) => setCurrentTheme(p => ({...p, fontSize: v}))} min={12} max={20} step={1} />
+                                    <Slider value={[currentTheme.fontSize]} onValueChange={([v]) => setCurrentTheme(p => ({...p!, fontSize: v}))} min={12} max={20} step={1} />
                                     <Button size="icon" variant="outline" onClick={() => handleFontSizeChange('increase')}><Plus/></Button>
                                 </div>
                             </div>

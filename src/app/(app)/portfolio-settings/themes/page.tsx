@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import themesData from '@/lib/themes.json';
+import { getThemes, saveThemes } from '@/app/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,17 +33,26 @@ type Theme = {
     radius: number;
     fontFamily: string;
     fontSize: number;
+    shadow: 'none' | 'sm' | 'md' | 'lg';
 };
 
 type Themes = Record<string, Theme>;
 
 export default function ThemesPage() {
     const { toast } = useToast();
-    const [themes, setThemes] = useState<Themes>(themesData);
+    const [themes, setThemes] = useState<Themes | null>(null);
     const [deletingTheme, setDeletingTheme] = useState<string | null>(null);
 
+    useEffect(() => {
+        async function fetchThemes() {
+            const themesData = await getThemes();
+            setThemes(themesData);
+        }
+        fetchThemes();
+    }, []);
+
     const handleDeleteTheme = async () => {
-        if (!deletingTheme) return;
+        if (!deletingTheme || !themes) return;
 
         if (deletingTheme === 'Default') {
             toast({ variant: 'destructive', title: 'Error', description: 'The Default theme cannot be deleted.' });
@@ -53,14 +62,22 @@ export default function ThemesPage() {
 
         const newThemes = { ...themes };
         delete newThemes[deletingTheme];
-        setThemes(newThemes);
+        
+        const result = await saveThemes(newThemes);
 
-        // This is a simulation. In a real app, this would be an API call to a server action to write the file.
-        console.log("Simulating save of themes.json:", JSON.stringify(newThemes, null, 2));
-
-        toast({ title: 'Theme Deleted', description: `Theme "${deletingTheme}" has been deleted.` });
+        if (result.success) {
+            setThemes(newThemes);
+            toast({ title: 'Theme Deleted', description: `Theme "${deletingTheme}" has been deleted.` });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+        
         setDeletingTheme(null);
     };
+
+    if (!themes) {
+        return <div>Loading themes...</div>;
+    }
 
     return (
         <>
@@ -118,3 +135,4 @@ export default function ThemesPage() {
         </>
     );
 }
+
