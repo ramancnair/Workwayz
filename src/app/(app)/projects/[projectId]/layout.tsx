@@ -70,7 +70,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
         </Sidebar>
         <SidebarInset>
           <div className="h-screen flex flex-col">
-            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-topbar-foreground/10 flex items-center justify-between gap-4">
+            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4">
               <div>
                 <h1 className="text-xl font-bold">{project?.name || 'Loading Project...'}</h1>
                 <p className="text-xs text-muted-foreground">{project?.id}</p>
