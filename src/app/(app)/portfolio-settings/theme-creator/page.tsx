@@ -74,6 +74,7 @@ type Theme = {
     foreground: { h: number; s: number; l: number };
     accent: { h: number; s: number; l: number };
     card: { h: number; s: number; l: number };
+    border: { h: number; s: number; l: number };
     popover: { h: number; s: number; l: number };
     topbar: { h: number; s: number; l: number };
     sidebar: { h: number; s: number; l: number };
@@ -99,6 +100,7 @@ export default function ThemeCreatorPage() {
         document.documentElement.style.setProperty('--foreground', `${currentTheme.foreground.h} ${currentTheme.foreground.s}% ${currentTheme.foreground.l}%`);
         document.documentElement.style.setProperty('--accent', `${currentTheme.accent.h} ${currentTheme.accent.s}% ${currentTheme.accent.l}%`);
         document.documentElement.style.setProperty('--card', `${currentTheme.card.h} ${currentTheme.card.s}% ${currentTheme.card.l}%`);
+        document.documentElement.style.setProperty('--border', `${currentTheme.border.h} ${currentTheme.border.s}% ${currentTheme.border.l}%`);
         document.documentElement.style.setProperty('--popover', `${currentTheme.popover.h} ${currentTheme.popover.s}% ${currentTheme.popover.l}%`);
         document.documentElement.style.setProperty('--popover-foreground', `${currentTheme.foreground.h} ${currentTheme.foreground.s}% ${currentTheme.foreground.l}%`);
         document.documentElement.style.setProperty('--topbar-background', `${currentTheme.topbar.h} ${currentTheme.topbar.s}% ${currentTheme.topbar.l}%`);
@@ -108,7 +110,7 @@ export default function ThemeCreatorPage() {
         document.documentElement.style.fontSize = `${currentTheme.fontSize}px`;
     }, [currentTheme]);
 
-    type ColorName = 'primary' | 'background' | 'foreground' | 'accent' | 'card' | 'popover' | 'topbar' | 'sidebar';
+    type ColorName = 'primary' | 'background' | 'foreground' | 'accent' | 'card' | 'border' | 'popover' | 'topbar' | 'sidebar';
 
     const handleColorChange = (colorName: ColorName, property: 'h' | 's' | 'l', value: number) => {
         setCurrentTheme(prev => ({
@@ -227,6 +229,7 @@ export default function ThemeCreatorPage() {
                             {createColorSection('foreground', 'Foreground')}
                             {createColorSection('accent', 'Accent')}
                             {createColorSection('card', 'Card')}
+                            {createColorSection('border', 'Border')}
                             {createColorSection('popover', 'Popover')}
                             {createColorSection('topbar', 'Top Bar')}
                             {createColorSection('sidebar', 'Sidebar')}
@@ -295,3 +298,4 @@ export default function ThemeCreatorPage() {
         </>
     );
 }
+

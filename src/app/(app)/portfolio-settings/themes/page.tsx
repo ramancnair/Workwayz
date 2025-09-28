@@ -26,6 +26,7 @@ type Theme = {
     foreground: { h: number; s: number; l: number };
     accent: { h: number; s: number; l: number };
     card: { h: number; s: number; l: number };
+    border: { h: number; s: number; l: number };
     popover: { h: number; s: number; l: number };
     topbar: { h: number; s: number; l: number };
     sidebar: { h: number; s: number; l: number };
