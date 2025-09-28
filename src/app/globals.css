@@ -45,6 +45,25 @@ body {
     --sidebar-border: hsl(var(--border));
     --sidebar-ring: hsl(var(--primary));
     --font-body-family: 'Inter', sans-serif;
+    
+    --shadow-color: 220 3% 15%;
+    --shadow-strength: 1%;
+    
+    --shadow-sm-none: 0 0 #0000;
+    --shadow-md-none: 0 0 #0000;
+    --shadow-lg-none: 0 0 #0000;
+
+    --shadow-sm-sm: 0 1px 2px 0 hsl(var(--shadow-color) / calc(var(--shadow-strength) + 5%));
+    --shadow-md-sm: 0 4px 6px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 6%)), 0 2px 4px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 6%));
+    --shadow-lg-sm: 0 10px 15px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 5%)), 0 4px 6px -4px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 5%));
+
+    --shadow-sm-md: 0 1px 3px 0 hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%)), 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
+    --shadow-md-md: 0 6px 10px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%)), 0 3px 6px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%));
+    --shadow-lg-md: 0 15px 25px -5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 8%)), 0 8px 10px -6px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 8%));
+    
+    --shadow-sm-lg: 0 2px 5px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 12%));
+    --shadow-md-lg: 0 8px 14px -4px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 12%));
+    --shadow-lg-lg: 0 20px 30px -8px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%));
   }
   .dark {
     /* Dark theme settings can be customized here as well */
@@ -82,6 +101,9 @@ body {
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 217 33% 17%;
     --sidebar-ring: 217 91% 60%;
+    
+    --shadow-color: 220 40% 2%;
+    --shadow-strength: 25%;
   }
 }
 

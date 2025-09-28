@@ -43,6 +43,14 @@ const fontOptions = [
   { value: 'Oswald, sans-serif', label: 'Oswald' },
 ];
 
+const shadowOptions = [
+    { value: 'none', label: 'None' },
+    { value: 'sm', label: 'Small' },
+    { value: 'md', label: 'Medium' },
+    { value: 'lg', label: 'Large' },
+];
+
+
 function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: number, selectedS: number, onColorSelect: (h: number, s: number) => void }) {
   return (
     <div className="grid grid-cols-5 gap-1">
@@ -81,6 +89,7 @@ type Theme = {
     radius: number;
     fontFamily: string;
     fontSize: number;
+    shadow: 'none' | 'sm' | 'md' | 'lg';
 };
 
 type Themes = Record<string, Theme>;
@@ -108,6 +117,13 @@ export default function ThemeCreatorPage() {
         document.documentElement.style.setProperty('--radius', `${currentTheme.radius}rem`);
         document.documentElement.style.setProperty('--font-body-family', currentTheme.fontFamily);
         document.documentElement.style.fontSize = `${currentTheme.fontSize}px`;
+        
+        const shadowValue = currentTheme.shadow === 'none' ? '0 0 #0000' : `var(--shadow-${currentTheme.shadow})`;
+        document.documentElement.style.setProperty('--shadow', shadowValue);
+        document.documentElement.style.setProperty('--shadow-sm', `var(--shadow-sm-${currentTheme.shadow})`);
+        document.documentElement.style.setProperty('--shadow-md', `var(--shadow-md-${currentTheme.shadow})`);
+        document.documentElement.style.setProperty('--shadow-lg', `var(--shadow-lg-${currentTheme.shadow})`);
+
     }, [currentTheme]);
 
     type ColorName = 'primary' | 'background' | 'foreground' | 'accent' | 'card' | 'border' | 'popover' | 'topbar' | 'sidebar';
@@ -136,6 +152,10 @@ export default function ThemeCreatorPage() {
     const handleRadiusChange = (value: number) => {
         setCurrentTheme(prev => ({ ...prev, radius: value }));
     }
+    
+     const handleShadowChange = (shadow: 'none' | 'sm' | 'md' | 'lg') => {
+        setCurrentTheme(prev => ({ ...prev, shadow }));
+    };
 
     const handleFontChange = (fontFamily: string) => {
         setCurrentTheme(prev => ({ ...prev, fontFamily }));
@@ -264,6 +284,17 @@ export default function ThemeCreatorPage() {
                              <div className="space-y-2">
                                 <Label>Border Radius: {currentTheme.radius}rem</Label>
                                 <Slider value={[currentTheme.radius]} onValueChange={([v]) => handleRadiusChange(v)} min={0} max={2} step={0.1} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Shadow Style</Label>
+                                <Select value={currentTheme.shadow} onValueChange={handleShadowChange}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        {shadowOptions.map(opt => (
+                                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </CardContent>
                     </Card>

@@ -17,6 +17,11 @@ export default {
       },
     },
     extend: {
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+      },
       fontFamily: {
         body: ['var(--font-body-family)', 'sans-serif'],
         headline: ['var(--font-body-family)', 'sans-serif'],
