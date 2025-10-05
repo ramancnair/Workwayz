@@ -63,14 +63,22 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     }
   };
 
-  return (
-      <SidebarProvider>
-        <Sidebar collapsible="icon">
-          <SidebarNav projectId={projectId} />
-        </Sidebar>
-        <SidebarInset>
-          <div className="h-screen flex flex-col">
-            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4">
+  if (isLoading) {
+    // You might want a more sophisticated loading skeleton here
+    return <div className="flex h-screen w-full items-center justify-center">Loading project...</div>;
+  }
+
+  const renderContent = () => {
+    if (project?.status === 'Initial Estimation') {
+      return (
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
+      );
+    }
+    return (
+       <>
+        <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4">
               <div>
                 <h1 className="text-xl font-bold">{project?.name || 'Loading Project...'}</h1>
                 <p className="text-xs text-muted-foreground">{project?.id}</p>
@@ -92,6 +100,18 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
             <div className="flex-1 overflow-auto">
                 {children}
             </div>
+       </>
+    );
+  };
+
+  return (
+      <SidebarProvider>
+        <Sidebar collapsible="icon">
+          <SidebarNav projectId={projectId} />
+        </Sidebar>
+        <SidebarInset>
+          <div className="h-screen flex flex-col">
+            {renderContent()}
           </div>
         </SidebarInset>
       </SidebarProvider>
