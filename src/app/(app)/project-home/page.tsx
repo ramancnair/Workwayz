@@ -578,15 +578,18 @@ export default function ProjectsDashboard() {
                           <TableBody>
                             {portfolio.projects.map((project) => {
                                 const projectManager = users.find(u => u.id === project.projectManagerId);
+                                const projectUrl = project.status === 'Initial Estimation'
+                                  ? `/projects/${project.id}/initial-estimation/ballpark`
+                                  : `/projects/${project.id}/development/dashboard`;
                                 return (
                                   <TableRow key={project.id}>
                                     <TableCell className="font-medium">
-                                      <Link href={`/projects/${project.id}/development/dashboard`} className="block w-full h-full">
+                                      <Link href={projectUrl} className="block w-full h-full">
                                         {project.id}
                                       </Link>
                                     </TableCell>
                                     <TableCell>
-                                      <Link href={`/projects/${project.id}/development/dashboard`} className="block w-full h-full">
+                                      <Link href={projectUrl} className="block w-full h-full">
                                         {project.name}
                                       </Link>
                                     </TableCell>
@@ -617,7 +620,7 @@ export default function ProjectsDashboard() {
                                         </Popover>
                                     </TableCell>
                                     <TableCell>
-                                      <Link href={`/projects/${project.id}/development/dashboard`} className="block w-full h-full">
+                                      <Link href={projectUrl} className="block w-full h-full">
                                         {project.status ? (
                                              <Badge className={cn('font-semibold', statusStyles[project.status])}>
                                                 {project.status}
@@ -626,7 +629,7 @@ export default function ProjectsDashboard() {
                                       </Link>
                                     </TableCell>
                                     <TableCell>
-                                      <Link href={`/projects/${project.id}/development/dashboard`} className="block w-full h-full">
+                                      <Link href={projectUrl} className="block w-full h-full">
                                         {projectManager ? (
                                           <span>{projectManager.firstName} {projectManager.lastName}</span>
                                         ) : 'Unassigned'}

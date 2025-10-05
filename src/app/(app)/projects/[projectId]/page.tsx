@@ -1,36 +1,10 @@
 'use client';
 import { redirect } from 'next/navigation';
-import { use, useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { type Project } from '@/types';
+import { use } from 'react';
 
 export default function ProjectRootPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params);
-  const [status, setStatus] = useState<Project['status'] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (db && projectId) {
-      getDoc(doc(db, 'projects', projectId)).then(docSnap => {
-        if (docSnap.exists()) {
-          setStatus(docSnap.data().status);
-        }
-        setIsLoading(false);
-      });
-    } else {
-        setIsLoading(false);
-    }
-  }, [projectId]);
-
-  if (isLoading) {
-    // You can return a loading indicator here
-    return <div>Loading project details...</div>;
-  }
-  
-  if (status === 'Initial Estimation') {
-    redirect(`/projects/${projectId}/initial-estimation/ballpark`);
-  }
-  
+  // The primary navigation logic is now handled by the links on the project-home page.
+  // This page serves as a fallback, directing to the main dashboard.
   redirect(`/projects/${projectId}/development/dashboard`);
 }
