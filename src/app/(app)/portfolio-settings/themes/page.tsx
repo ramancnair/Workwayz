@@ -38,7 +38,8 @@ export default function ThemesPage() {
             setThemes(themesData);
             const savedTheme = localStorage.getItem('active-theme') || 'Default';
             setActiveTheme(savedTheme);
-            applyTheme(themesData[savedTheme] || themesData.Default);
+            // The global ThemeApplicator handles applying the theme on initial load.
+            // This page only needs to apply it on selection change.
         }
         fetchThemes();
     }, []);
