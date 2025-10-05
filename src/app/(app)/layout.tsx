@@ -6,6 +6,7 @@ import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { type PropsWithChildren } from "react";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PmSidebarNav } from '@/components/PmSidebarNav';
+import { ThemeApplicator } from '@/components/ThemeApplicator';
 
 export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -53,6 +54,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   return (
     <SidebarProvider>
+      <ThemeApplicator />
       <Sidebar collapsible="icon">
         <PmSidebarNav activeTab={activeTab} />
       </Sidebar>

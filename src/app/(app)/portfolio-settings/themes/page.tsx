@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getThemes, saveThemes } from '@/app/actions';
@@ -17,39 +17,38 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { buttonVariants } from '@/components/ui/button';
-
-type Theme = {
-    primary: { h: number; s: number; l: number };
-    background: { h: number; s: number; l: number };
-    foreground: { h: number; s: number; l: number };
-    accent: { h: number; s: number; l: number };
-    card: { h: number; s: number; l: number };
-    border: { h: number; s: number; l: number };
-    popover: { h: number; s: number; l: number };
-    topbar: { h: number; s: number; l: number };
-    sidebar: { h: number; s: number; l: number };
-    radius: number;
-    fontFamily: string;
-    fontSize: number;
-    shadow: 'none' | 'sm' | 'md' | 'lg';
-};
+import { applyTheme } from '@/lib/theme-utils';
+import type { Theme } from '@/lib/theme-utils';
 
 type Themes = Record<string, Theme>;
 
 export default function ThemesPage() {
     const { toast } = useToast();
     const [themes, setThemes] = useState<Themes | null>(null);
+    const [activeTheme, setActiveTheme] = useState('Default');
     const [deletingTheme, setDeletingTheme] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchThemes() {
             const themesData = await getThemes();
             setThemes(themesData);
+            const savedTheme = localStorage.getItem('active-theme') || 'Default';
+            setActiveTheme(savedTheme);
+            applyTheme(themesData[savedTheme] || themesData.Default);
         }
         fetchThemes();
     }, []);
+
+    const handleThemeSelect = (themeName: string) => {
+        if (!themes) return;
+        setActiveTheme(themeName);
+        localStorage.setItem('active-theme', themeName);
+        applyTheme(themes[themeName]);
+    };
 
     const handleDeleteTheme = async () => {
         if (!deletingTheme || !themes) return;
@@ -67,6 +66,9 @@ export default function ThemesPage() {
 
         if (result.success) {
             setThemes(newThemes);
+            if (activeTheme === deletingTheme) {
+                handleThemeSelect('Default');
+            }
             toast({ title: 'Theme Deleted', description: `Theme "${deletingTheme}" has been deleted.` });
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
@@ -85,32 +87,53 @@ export default function ThemesPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h3 className="text-lg font-medium">Manage Themes</h3>
-                        <p className="text-sm text-muted-foreground">View and delete your saved themes.</p>
+                        <p className="text-sm text-muted-foreground">Select a theme to apply it across the application.</p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Object.entries(themes).map(([themeName, theme]) => (
-                        <Card key={themeName}>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>{themeName}</CardTitle>
-                                {themeName !== 'Default' && (
-                                    <Button variant="ghost" size="icon" onClick={() => setDeletingTheme(themeName)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                )}
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: `hsl(${theme.primary.h}, ${theme.primary.s}%, ${theme.primary.l}%)` }} title="Primary" />
-                                    <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: `hsl(${theme.background.h}, ${theme.background.s}%, ${theme.background.l}%)` }} title="Background" />
-                                    <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: `hsl(${theme.accent.h}, ${theme.accent.s}%, ${theme.accent.l}%)` }} title="Accent" />
-                                    <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: `hsl(${theme.card.h}, ${theme.card.s}%, ${theme.card.l}%)` }} title="Card" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                <Card>
+                    <CardContent className="p-0">
+                        <RadioGroup value={activeTheme} onValueChange={handleThemeSelect}>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-12"></TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Palette</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {Object.entries(themes).map(([themeName, theme]) => (
+                                        <TableRow key={themeName} className="cursor-pointer" onClick={() => handleThemeSelect(themeName)}>
+                                            <TableCell>
+                                                <RadioGroupItem value={themeName} id={themeName} />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Label htmlFor={themeName} className="font-medium">{themeName}</Label>
+                                            </TableCell>
+                                            <TableCell>
+                                                 <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: `hsl(${theme.primary.h}, ${theme.primary.s}%, ${theme.primary.l}%)` }} title="Primary" />
+                                                    <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: `hsl(${theme.background.h}, ${theme.background.s}%, ${theme.background.l}%)` }} title="Background" />
+                                                    <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: `hsl(${theme.accent.h}, ${theme.accent.s}%, ${theme.accent.l}%)` }} title="Accent" />
+                                                    <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: `hsl(${theme.card.h}, ${theme.card.s}%, ${theme.card.l}%)` }} title="Card" />
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {themeName !== 'Default' && (
+                                                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeletingTheme(themeName); }}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </RadioGroup>
+                    </CardContent>
+                </Card>
             </div>
 
             <AlertDialog open={!!deletingTheme} onOpenChange={(isOpen) => !isOpen && setDeletingTheme(null)}>
@@ -135,4 +158,3 @@ export default function ThemesPage() {
         </>
     );
 }
-

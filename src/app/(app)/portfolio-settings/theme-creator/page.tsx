@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Save, Check, Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getThemes, saveThemes } from '@/app/actions';
+import { applyTheme, type Theme } from '@/lib/theme-utils';
 import {
   Dialog,
   DialogContent,
@@ -81,22 +82,6 @@ function ColorPalette({ selectedH, selectedS, onColorSelect }: { selectedH: numb
   );
 }
 
-type Theme = {
-    primary: { h: number; s: number; l: number };
-    background: { h: number; s: number; l: number };
-    foreground: { h: number; s: number; l: number };
-    accent: { h: number; s: number; l: number };
-    card: { h: number; s: number; l: number };
-    border: { h: number; s: number; l: number };
-    popover: { h: number; s: number; l: number };
-    topbar: { h: number; s: number; l: number };
-    sidebar: { h: number; s: number; l: number };
-    radius: number;
-    fontFamily: string;
-    fontSize: number;
-    shadow: 'none' | 'sm' | 'md' | 'lg';
-};
-
 type Themes = Record<string, Theme>;
 
 export default function ThemeCreatorPage() {
@@ -112,34 +97,17 @@ export default function ThemeCreatorPage() {
         async function fetchThemes() {
             const themesData = await getThemes();
             setThemes(themesData);
-            setCurrentTheme(themesData.Default);
+            const savedThemeName = localStorage.getItem('active-theme') || 'Default';
+            setSelectedTheme(savedThemeName);
+            setCurrentTheme(themesData[savedThemeName] || themesData.Default);
         }
         fetchThemes();
     }, []);
 
     useEffect(() => {
-        if (!currentTheme) return;
-
-        document.documentElement.style.setProperty('--primary', `${currentTheme.primary.h} ${currentTheme.primary.s}% ${currentTheme.primary.l}%`);
-        document.documentElement.style.setProperty('--background', `${currentTheme.background.h} ${currentTheme.background.s}% ${currentTheme.background.l}%`);
-        document.documentElement.style.setProperty('--foreground', `${currentTheme.foreground.h} ${currentTheme.foreground.s}% ${currentTheme.foreground.l}%`);
-        document.documentElement.style.setProperty('--accent', `${currentTheme.accent.h} ${currentTheme.accent.s}% ${currentTheme.accent.l}%`);
-        document.documentElement.style.setProperty('--card', `${currentTheme.card.h} ${currentTheme.card.s}% ${currentTheme.card.l}%`);
-        document.documentElement.style.setProperty('--border', `${currentTheme.border.h} ${currentTheme.border.s}% ${currentTheme.border.l}%`);
-        document.documentElement.style.setProperty('--popover', `${currentTheme.popover.h} ${currentTheme.popover.s}% ${currentTheme.popover.l}%`);
-        document.documentElement.style.setProperty('--popover-foreground', `${currentTheme.foreground.h} ${currentTheme.foreground.s}% ${currentTheme.foreground.l}%`);
-        document.documentElement.style.setProperty('--topbar-background', `${currentTheme.topbar.h} ${currentTheme.topbar.s}% ${currentTheme.topbar.l}%`);
-        document.documentElement.style.setProperty('--sidebar-background', `${currentTheme.sidebar.h} ${currentTheme.sidebar.s}% ${currentTheme.sidebar.l}%`);
-        document.documentElement.style.setProperty('--radius', `${currentTheme.radius}rem`);
-        document.documentElement.style.setProperty('--font-body-family', currentTheme.fontFamily);
-        document.documentElement.style.fontSize = `${currentTheme.fontSize}px`;
-        
-        const shadowValue = currentTheme.shadow === 'none' ? '0 0 #0000' : `var(--shadow-${currentTheme.shadow})`;
-        document.documentElement.style.setProperty('--shadow', shadowValue);
-        document.documentElement.style.setProperty('--shadow-sm', `var(--shadow-sm-${currentTheme.shadow})`);
-        document.documentElement.style.setProperty('--shadow-md', `var(--shadow-md-${currentTheme.shadow})`);
-        document.documentElement.style.setProperty('--shadow-lg', `var(--shadow-lg-${currentTheme.shadow})`);
-
+        if (currentTheme) {
+            applyTheme(currentTheme);
+        }
     }, [currentTheme]);
 
     type ColorName = 'primary' | 'background' | 'foreground' | 'accent' | 'card' | 'border' | 'popover' | 'topbar' | 'sidebar';
@@ -230,6 +198,7 @@ export default function ThemeCreatorPage() {
         if (result.success) {
             setThemes(newThemes);
             setSelectedTheme(newThemeName);
+            localStorage.setItem('active-theme', newThemeName);
             toast({ title: 'Theme Saved!', description: `Theme "${newThemeName}" has been saved.` });
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
@@ -362,4 +331,3 @@ export default function ThemeCreatorPage() {
         </>
     );
 }
-
