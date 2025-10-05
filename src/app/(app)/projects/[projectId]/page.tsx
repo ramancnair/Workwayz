@@ -8,6 +8,7 @@ import { type Project } from '@/types';
 export default function ProjectRootPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params);
   const [status, setStatus] = useState<Project['status'] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (db && projectId) {
@@ -15,17 +16,20 @@ export default function ProjectRootPage({ params }: { params: Promise<{ projectI
         if (docSnap.exists()) {
           setStatus(docSnap.data().status);
         }
+        setIsLoading(false);
       });
+    } else {
+        setIsLoading(false);
     }
   }, [projectId]);
 
-  if (status === null) {
+  if (isLoading) {
     // You can return a loading indicator here
     return <div>Loading project details...</div>;
   }
-
+  
   if (status === 'Initial Estimation') {
-    redirect(`/projects/${projectId}/initial-estimation`);
+    redirect(`/projects/${projectId}/initial-estimation/ballpark`);
   }
   
   redirect(`/projects/${projectId}/development/dashboard`);
