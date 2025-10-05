@@ -48,6 +48,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { getAiEstimates } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+const GeminiIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    {...props}
+  >
+    <path d="M12.012 2.25c.348 0 .68.163.888.45l3.5 5.063c.21.303.324.673.324 1.05V15a3 3 0 0 1-3 3h-3.414a3 3 0 0 1-2.122-.879l-3.5-3.5a3 3 0 0 1 0-4.242l3.5-3.5a3 3 0 0 1 2.122-.879H12.012Zm0 1.5H9.89a1.5 1.5 0 0 0-1.06.44L5.33 7.69a1.5 1.5 0 0 0 0 2.12l3.5 3.5a1.5 1.5 0 0 0 1.06.44h2.122a1.5 1.5 0 0 0 1.5-1.5V8.813a1.5 1.5 0 0 0-.162-.75L13.06 3.013a1.5 1.5 0 0 0-.44-.683l-.008-.005a1.53 1.53 0 0 0-.6-.175Z" />
+    <path d="M16.513 10.5h-2.121a1.5 1.5 0 0 0-1.061.44l-3.5 3.5a1.5 1.5 0 0 0 0 2.12l3.5 3.5a1.5 1.5 0 0 0 1.06.44h2.122a3 3 0 0 0 3-3V13.5a3 3 0 0 0-3-3Zm-2.121 1.5h2.121a1.5 1.5 0 0 1 1.5 1.5v2.188a1.5 1.5 0 0 1-1.06 1.419l-3.5 1.75a1.5 1.5 0 0 1-1.68-.21l-3.5-3.5a1.5 1.5 0 0 1-.21-1.68l1.75-3.5a1.5 1.5 0 0 1 1.42-1.06Z" />
+  </svg>
+);
+
+
 const estimationSchema = z.object({
   summary: z.string().optional(),
 });
@@ -103,7 +116,7 @@ export default function InitialEstimationPage() {
 
   const systemForm = useForm<z.infer<typeof systemSchema>>({
     resolver: zodResolver(systemSchema),
-    defaultValues: { name: '', description: '', category: 'Technology', estimate: 0, dailyBillingRate: 0 },
+    defaultValues: { name: '', description: '', category: 'Technology', estimate: undefined, dailyBillingRate: 0 },
   });
   
   const horizontalForm = useForm<z.infer<typeof horizontalFormSchema>>({
@@ -125,11 +138,11 @@ export default function InitialEstimationPage() {
       if (editingSystem) {
         systemForm.reset({
           ...editingSystem,
-          estimate: editingSystem.estimate || 0,
+          estimate: editingSystem.estimate || undefined,
           dailyBillingRate: editingSystem.dailyBillingRate || 0,
         });
       } else {
-        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: 0, dailyBillingRate: 0 });
+        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: undefined, dailyBillingRate: 0 });
       }
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
@@ -293,7 +306,7 @@ export default function InitialEstimationPage() {
                   onClick={handleAiEstimate}
                   disabled={isAiEstimating || !project?.summary || initialImpactedSystems.length === 0}
                 >
-                  <Bot className="mr-2 h-4 w-4" />
+                  <GeminiIcon className="mr-2 h-4 w-4" />
                   {isAiEstimating ? 'Estimating...' : 'AI Estimator'}
                 </Button>
                 <Button onClick={handleConfirmEstimation} disabled={isConfirming}>
