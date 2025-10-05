@@ -396,7 +396,23 @@ export default function InitialEstimationPage() {
                   <TableRow key={system.id}>
                     <TableCell className="font-medium">{system.name}</TableCell>
                     <TableCell>{system.estimate || 'N/A'}</TableCell>
-                    <TableCell>${system.dailyBillingRate || 'N/A'}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        defaultValue={system.dailyBillingRate}
+                        onBlur={(e) => {
+                            const newRate = parseFloat(e.target.value);
+                            if (!isNaN(newRate) && newRate !== system.dailyBillingRate) {
+                                updateInitialImpactedSystem(system.id, { dailyBillingRate: newRate });
+                            } else if (e.target.value === '' && system.dailyBillingRate !== undefined) {
+                                updateInitialImpactedSystem(system.id, { dailyBillingRate: undefined });
+                            }
+                        }}
+                        className="w-24"
+                        readOnly={project?.status !== 'Initial Estimation'}
+                        placeholder="0"
+                      />
+                    </TableCell>
                     <TableCell>${((system.estimate || 0) * (system.dailyBillingRate || 0)).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                        {project?.status === 'Initial Estimation' && (
