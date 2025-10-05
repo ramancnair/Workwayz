@@ -11,25 +11,21 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-const SystemSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-});
-
-const HorizontalSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-});
-
-export const AiEstimatorInputSchema = z.object({
+const AiEstimatorInputSchema = z.object({
   projectSummary: z.string().describe('The overall summary of the project.'),
-  impactedSystems: z.array(SystemSchema).describe('A list of systems impacted by the project.'),
-  horizontals: z.array(HorizontalSchema).describe('A list of horizontal concerns for the project.'),
+  impactedSystems: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+  })).describe('A list of systems impacted by the project.'),
+  horizontals: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+  })).describe('A list of horizontal concerns for the project.'),
 });
 export type AiEstimatorInput = z.infer<typeof AiEstimatorInputSchema>;
 
-export const AiEstimatorOutputSchema = z.object({
+const AiEstimatorOutputSchema = z.object({
   systemEstimates: z
     .array(
       z.object({
