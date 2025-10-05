@@ -39,12 +39,14 @@ import {
   TableFooter,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, Save, CheckCircle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Save, CheckCircle, Bot } from 'lucide-react';
 import { type ImpactedSystem, type ImpactedSystemCategory, type Horizontal } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
+import { getAiEstimates } from '@/app/actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const estimationSchema = z.object({
   summary: z.string().optional(),
@@ -92,6 +94,9 @@ export default function InitialEstimationPage() {
   const [deletingHorizontal, setDeletingHorizontal] = useState<Horizontal | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
 
+  const [isAiEstimating, setIsAiEstimating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   const estimationForm = useForm<z.infer<typeof estimationSchema>>({
     resolver: zodResolver(estimationSchema),
   });
@@ -138,6 +143,41 @@ export default function InitialEstimationPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not confirm estimation.' });
     }
     setIsConfirming(false);
+  };
+  
+  const handleAiEstimate = async () => {
+    if (!project?.summary || initialImpactedSystems.length === 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Project summary and at least one impacted system are required.'});
+      return;
+    }
+    setIsAiEstimating(true);
+    setAiError(null);
+    try {
+      const result = await getAiEstimates({
+        projectSummary: project.summary,
+        impactedSystems: initialImpactedSystems.map(({ id, name, description }) => ({ id, name, description })),
+        horizontals: initialHorizontals.map(({ id, name }) => ({ id, name })),
+      });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      const { systemEstimates, horizontalEstimates } = result.estimates;
+      
+      const systemPromises = systemEstimates.map(est => updateInitialImpactedSystem(est.id, { estimate: est.estimate }));
+      const horizontalPromises = horizontalEstimates.map(est => updateInitialHorizontal(est.id, { weightage: est.weightage }));
+      
+      await Promise.all([...systemPromises, ...horizontalPromises]);
+
+      toast({ title: 'Success', description: 'AI estimates have been applied.' });
+
+    } catch (e: any) {
+      setAiError(e.message || 'An unknown error occurred.');
+      toast({ variant: 'destructive', title: 'AI Estimation Failed', description: e.message || 'Could not get AI estimates.' });
+    } finally {
+      setIsAiEstimating(false);
+    }
   };
 
   const onSummarySubmit = async (values: z.infer<typeof estimationSchema>) => {
@@ -247,12 +287,29 @@ export default function InitialEstimationPage() {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Ballpark Estimation" description="Define the project summary and impacted systems for an initial estimate.">
            {project?.status === 'Initial Estimation' && (
-              <Button onClick={handleConfirmEstimation} disabled={isConfirming}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                {isConfirming ? 'Confirming...' : 'Confirm Estimation'}
-              </Button>
+              <>
+                <Button 
+                  variant="outline"
+                  onClick={handleAiEstimate}
+                  disabled={isAiEstimating || !project?.summary || initialImpactedSystems.length === 0}
+                >
+                  <Bot className="mr-2 h-4 w-4" />
+                  {isAiEstimating ? 'Estimating...' : 'AI Estimator'}
+                </Button>
+                <Button onClick={handleConfirmEstimation} disabled={isConfirming}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  {isConfirming ? 'Confirming...' : 'Confirm Estimation'}
+                </Button>
+              </>
             )}
         </PageHeader>
+        
+        {aiError && (
+          <Alert variant="destructive">
+            <AlertTitle>AI Estimation Error</AlertTitle>
+            <AlertDescription>{aiError}</AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

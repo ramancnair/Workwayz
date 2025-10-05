@@ -1,6 +1,7 @@
 'use server';
 
 import { aiTaskTestSuggestions, type AiTaskTestSuggestionsInput } from '@/ai/flows/task-test-suggestions';
+import { aiEstimator, type AiEstimatorInput, type AiEstimatorOutput } from '@/ai/flows/ai-estimator';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -13,6 +14,18 @@ export async function getAiTaskSuggestions(
   } catch (e: any) {
     console.error(e);
     return { error: e.message || 'An unexpected error occurred.' };
+  }
+}
+
+export async function getAiEstimates(
+  input: AiEstimatorInput
+): Promise<{ estimates: AiEstimatorOutput } | { error: string }> {
+  try {
+    const result = await aiEstimator(input);
+    return { estimates: result };
+  } catch (e: any) {
+    console.error('AI Estimator Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while getting AI estimates.' };
   }
 }
 
