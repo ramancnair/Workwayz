@@ -41,7 +41,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns } from 'lucide-react';
-import { type TestCase, type TestCaseStatus, type TestCaseType, type StatusHistoryItem } from '@/types';
+import { type TestCase, type TestCaseStatus, type TestCaseType, type StatusHistoryItem, type Story } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -53,6 +53,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuChe
 import { format, parseISO } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getAiTestCaseSuggestions } from '@/app/actions';
+import { DatePicker } from '@/components/ui/datepicker';
 
 
 const testCaseFormSchema = z.object({
@@ -123,8 +124,6 @@ export default function TestCasesPage() {
 
   const [isAiGenOpen, setIsAiGenOpen] = useState(false);
   const [isAiGenSubmitting, setIsAiGenSubmitting] = useState(false);
-  
-  const sortedEnvironments = useMemo(() => [...environments].sort((a,b) => a.order - b.order), [environments]);
 
   const onAiGenSubmit = async () => {
     setIsAiGenSubmitting(true);
@@ -843,5 +842,7 @@ export default function TestCasesPage() {
     </>
   );
 }
+
+    
 
     
