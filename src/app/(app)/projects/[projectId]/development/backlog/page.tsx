@@ -71,6 +71,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/datepicker';
+import { getAiStorySuggestions } from '@/app/actions';
 
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -141,13 +142,6 @@ const subTaskFormSchema = z.object({
 }, {
     message: "End date must be on or after start date.",
     path: ['endDate'],
-});
-
-const autoGenFormSchema = z.object({
-  'Requirement/Story': z.coerce.number().min(0).default(0),
-  'Feature Change': z.coerce.number().min(0).default(0),
-  'Task': z.coerce.number().min(0).default(0),
-  'Bug': z.coerce.number().min(0).default(0),
 });
 
 const bulkMoveSchema = z.object({
@@ -323,6 +317,7 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
 
 export default function BacklogPage() {
   const { 
+    project,
     epics, 
     stories, 
     sprints, 
@@ -338,7 +333,6 @@ export default function BacklogPage() {
     addEpic,
     addStory,
     updateStory,
-    autoGenerateStories,
     bulkDeleteStories,
     bulkMoveStoriesToEpic,
     holidays,
@@ -366,8 +360,8 @@ export default function BacklogPage() {
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [deleteEpicItems, setDeleteEpicItems] = useState(false);
   const [showAddSubTask, setShowAddSubTask] = useState(false);
-  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
-  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  const [isAiGenOpen, setIsAiGenOpen] = useState(false);
+  const [isAiGenSubmitting, setIsAiGenSubmitting] = useState(false);
   
   const [selectedStories, setSelectedStories] = useState<string[]>([]);
   const [storiesToDelete, setStoriesToDelete] = useState<string[]>([]);
@@ -449,16 +443,6 @@ export default function BacklogPage() {
     }
   });
 
-  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
-    resolver: zodResolver(autoGenFormSchema),
-    defaultValues: {
-      'Requirement/Story': 0,
-      'Feature Change': 0,
-      'Task': 0,
-      'Bug': 0,
-    }
-  });
-  
   const bulkMoveForm = useForm<z.infer<typeof bulkMoveSchema>>({
     resolver: zodResolver(bulkMoveSchema),
   });
@@ -582,22 +566,57 @@ export default function BacklogPage() {
     }
   }, [epicToDelete]);
 
-  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
-    setIsAutoGenSubmitting(true);
-    try {
-        const success = await autoGenerateStories(values);
-        if(success) {
-            toast({ title: "Success", description: "Test data generated successfully."});
-            setIsAutoGenOpen(false);
-        } else {
-            toast({ variant: "destructive", title: "Error", description: "Could not generate test data." });
-        }
-    } catch (e: any) {
-        toast({ variant: "destructive", title: "Error", description: e.message || "An unknown error occurred." });
-    } finally {
-        setIsAutoGenSubmitting(false);
+  const onAiGenSubmit = async () => {
+    if (!project?.summary) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Project summary is required to generate stories.' });
+      return;
     }
-  }
+    setIsAiGenSubmitting(true);
+    try {
+      const result = await getAiStorySuggestions({
+        projectSummary: project.summary,
+        impactedSystems: impactedSystems.map(s => ({ id: s.id, name: s.name })),
+      });
+  
+      if (result.error) {
+        throw new Error(result.error);
+      }
+  
+      for (const story of result.stories) {
+        const storyPayload: Omit<Story, 'id' | 'storyId'> = {
+          title: story.title,
+          description: story.description,
+          acceptanceCriteria: story.acceptanceCriteria,
+          itemType: 'Requirement/Story',
+          status: 'To Do',
+          priority: story.priority,
+          estimatedHours: story.estimatedHours,
+          impactedSystemIds: story.impactedSystemIds,
+        };
+        const storyId = await addStory(storyPayload, 'ST', true);
+  
+        if (storyId && story.subTasks) {
+          for (const subTask of story.subTasks) {
+            const subTaskPayload: Omit<Story, 'id' | 'storyId'> = {
+              title: subTask.title,
+              itemType: 'Sub Task',
+              status: 'To Do',
+              parentStoryId: storyId,
+              estimatedHours: subTask.estimatedHours,
+              impactedSystemId: subTask.impactedSystemId,
+            };
+            await addStory(subTaskPayload, 'SUB', true);
+          }
+        }
+      }
+      toast({ title: 'Success', description: `${result.stories.length} stories and their sub-tasks generated.` });
+      setIsAiGenOpen(false);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message || 'An unknown error occurred.' });
+    } finally {
+      setIsAiGenSubmitting(false);
+    }
+  };
   
   const onAddEpicSubmit = async (values: z.infer<typeof epicFormSchema>) => {
     setAddEpicSubmitting(true);
@@ -884,45 +903,26 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
           title="Product Backlog"
           description="Manage your epics and stories."
         >
-          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+          <Dialog open={isAiGenOpen} onOpenChange={setIsAiGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">
                     <Bot className="mr-2 h-4 w-4" />
-                    Req Autogen
+                    AI Req Gen
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Auto-Generate Requirements</DialogTitle>
-                    <DialogDescription>Enter the number of each item type to create for testing.</DialogDescription>
+                    <DialogTitle>Generate Stories with AI</DialogTitle>
+                    <DialogDescription>
+                        The AI will analyze the project summary to generate relevant user stories, sub-tasks, and estimates. Do you want to proceed?
+                    </DialogDescription>
                 </DialogHeader>
-                <Form {...autoGenForm}>
-                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            {workItemTypes.map(itemType => (
-                                <FormField
-                                    key={itemType}
-                                    control={autoGenForm.control}
-                                    name={itemType}
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{itemType}</FormLabel>
-                                        <FormControl>
-                                        <Input type="number" placeholder="0" {...field} value={field.value || ''} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                            ))}
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isAutoGenSubmitting}>
-                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Items'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsAiGenOpen(false)}>Cancel</Button>
+                    <Button onClick={onAiGenSubmit} disabled={isAiGenSubmitting}>
+                        {isAiGenSubmitting ? 'Generating...' : 'Proceed'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
           </Dialog>
 
@@ -2365,6 +2365,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     </>
   );
 }
+
 
 
 

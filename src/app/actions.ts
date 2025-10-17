@@ -2,6 +2,7 @@
 
 import { aiTaskTestSuggestions, type AiTaskTestSuggestionsInput } from '@/ai/flows/task-test-suggestions';
 import { aiEstimator, type AiEstimatorInput, type AiEstimatorOutput } from '@/ai/flows/ai-estimator';
+import { aiStoryGenerator, type AiStoryGeneratorInput, type AiStoryGeneratorOutput } from '@/ai/flows/ai-story-generator';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -26,6 +27,18 @@ export async function getAiEstimates(
   } catch (e: any) {
     console.error('AI Estimator Flow Error:', e);
     return { error: e.message || 'An unexpected error occurred while getting AI estimates.' };
+  }
+}
+
+export async function getAiStorySuggestions(
+  input: AiStoryGeneratorInput
+): Promise<{ stories: AiStoryGeneratorOutput['stories'] } | { error: string }> {
+  try {
+    const result = await aiStoryGenerator(input);
+    return { stories: result.stories };
+  } catch (e: any) {
+    console.error('AI Story Generator Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while generating stories.' };
   }
 }
 
