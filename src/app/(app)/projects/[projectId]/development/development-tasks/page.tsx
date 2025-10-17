@@ -105,7 +105,7 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean, f
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones, bulkAssignSubTasks } = useProject();
+  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones, bulkAssignSubTasks, bulkDeleteStories } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubTask, setEditingSubTask] = useState<Story | null>(null);
@@ -114,6 +114,7 @@ export default function DevelopmentTasksPage() {
   const [editingCell, setEditingCell] = useState<{ taskId: string; columnId: ColumnId } | null>(null);
   const [selectedSubTasks, setSelectedSubTasks] = useState<string[]>([]);
   const [tasksToAssign, setTasksToAssign] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   
   const subTasks = stories.filter(story => story.itemType === 'Sub Task');
@@ -307,6 +308,19 @@ export default function DevelopmentTasksPage() {
     }
     setDeletingSubTask(null);
   };
+  
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedSubTasks.length === 0) return;
+    const success = await bulkDeleteStories(selectedSubTasks);
+    if(success) {
+      toast({ title: "Success", description: `${selectedSubTasks.length} sub-task(s) moved to trash.`});
+      setSelectedSubTasks([]);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete selected sub-tasks." });
+    }
+    setShowBulkDeleteConfirm(false);
+  };
+
 
   const onSubmit = async (values: z.infer<typeof subTaskSchema>) => {
     setIsSubmitting(true);
@@ -433,7 +447,7 @@ export default function DevelopmentTasksPage() {
                   <UserCog className="mr-2 h-4 w-4" />
                   Assign Selected ({selectedSubTasks.length})
                 </Button>
-                <Button variant="destructive" onClick={() => {}}>
+                <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Selected ({selectedSubTasks.length})
                 </Button>
@@ -886,6 +900,27 @@ export default function DevelopmentTasksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move {selectedSubTasks.length} sub-task(s) to the trash.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDeleteConfirm}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Move to Trash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <Dialog open={tasksToAssign.length > 0} onOpenChange={(isOpen) => !isOpen && setTasksToAssign([])}>
         <DialogContent>
@@ -930,3 +965,4 @@ export default function DevelopmentTasksPage() {
     </>
   );
 }
+
