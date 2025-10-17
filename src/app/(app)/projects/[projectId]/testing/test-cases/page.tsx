@@ -397,7 +397,7 @@ export default function TestCasesPage() {
                 </DialogHeader>
                  <DialogFooter>
                     <Button variant="ghost" onClick={() => setIsAiGenOpen(false)}>Cancel</Button>
-                    <Button onClick={onAutoGenSubmit} disabled={isAiGenSubmitting}>
+                    <Button onClick={onAiGenSubmit} disabled={isAiGenSubmitting}>
                         {isAiGenSubmitting ? 'Generating...' : 'Proceed'}
                     </Button>
                 </DialogFooter>
@@ -842,7 +842,3 @@ export default function TestCasesPage() {
     </>
   );
 }
-
-    
-
-    
