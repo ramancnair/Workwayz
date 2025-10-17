@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Edit } from 'lucide-react';
+import { Edit, Circle } from 'lucide-react';
 
 
 const ragStatuses: RagStatus[] = ['Green', 'Amber', 'Red'];
@@ -42,9 +42,9 @@ const statusStyles: Record<ProjectStatus, string> = {
 };
 
 const ragStatusStyles: Record<RagStatus, string> = {
-  'Green': 'bg-green-500',
-  'Amber': 'bg-yellow-500',
-  'Red': 'bg-red-500',
+  'Green': 'text-green-500',
+  'Amber': 'text-yellow-500',
+  'Red': 'text-red-500',
 };
 
 
@@ -60,7 +60,7 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
 function RagStatusIndicator({ status, label }: { status?: RagStatus, label: string }) {
     return (
         <div className="flex items-center gap-2">
-            <span className={cn('h-3 w-3 rounded-full', status ? ragStatusStyles[status] : 'bg-gray-300')} />
+            <Circle className={cn('h-4 w-4', status ? ragStatusStyles[status] : 'text-gray-300')} />
             <span className="font-medium">{label}</span>
         </div>
     );
@@ -135,10 +135,10 @@ export default function ProjectSynopsisPage() {
                 
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader><CardTitle>Project Objective</CardTitle></CardHeader>
+                        <CardHeader><CardTitle>Project Summary</CardTitle></CardHeader>
                         <CardContent>
                             <p className="text-muted-foreground whitespace-pre-wrap">
-                                {project.description || "No description provided."}
+                                {project.summary || "No summary provided."}
                             </p>
                         </CardContent>
                     </Card>
@@ -192,7 +192,7 @@ export default function ProjectSynopsisPage() {
                             <div className="space-y-4">
                                 <h4 className="font-medium">Overall Health</h4>
                                 <div className="flex items-center gap-4">
-                                    <span className={cn('h-8 w-8 rounded-full', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                                     <Circle className={cn('h-8 w-8', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} />
                                     <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
                                 </div>
                             </div>
