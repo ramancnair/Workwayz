@@ -1,9 +1,11 @@
+
 'use server';
 
 import { aiTaskTestSuggestions, type AiTaskTestSuggestionsInput } from '@/ai/flows/task-test-suggestions';
 import { aiEstimator, type AiEstimatorInput, type AiEstimatorOutput } from '@/ai/flows/ai-estimator';
 import { aiStoryGenerator, type AiStoryGeneratorInput, type AiStoryGeneratorOutput } from '@/ai/flows/ai-story-generator';
 import { aiTestCaseGenerator, type AiTestCaseGeneratorInput, type AiTestCaseGeneratorOutput } from '@/ai/flows/ai-test-case-generator';
+import { aiRiskGenerator, type AiRiskGeneratorInput, type AiRiskGeneratorOutput } from '@/ai/flows/ai-risk-generator';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -52,6 +54,18 @@ export async function getAiTestCaseSuggestions(
   } catch (e: any) {
     console.error('AI Test Case Generator Flow Error:', e);
     return { error: e.message || 'An unexpected error occurred while generating test cases.' };
+  }
+}
+
+export async function getAiRiskSuggestions(
+  input: AiRiskGeneratorInput
+): Promise<{ risks: AiRiskGeneratorOutput['risks'] } | { error: string }> {
+  try {
+    const result = await aiRiskGenerator(input);
+    return { risks: result.risks };
+  } catch (e: any) {
+    console.error('AI Risk Generator Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while generating risks.' };
   }
 }
 

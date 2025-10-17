@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getAiRiskSuggestions } from '@/app/actions';
 
 const riskSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
@@ -55,10 +56,6 @@ const riskSchema = z.object({
   mitigationPlan: z.string().min(1, 'Mitigation Plan is required.'),
   residualRisk: z.string().min(1, 'Residual Risk is required.'),
   contingencyPlan: z.string().min(1, 'Contingency Plan is required.'),
-});
-
-const autoGenFormSchema = z.object({
-    count: z.coerce.number().min(1, "Please enter a valid number.").default(5),
 });
 
 const severityOptions: { value: RiskSeverity, label: string }[] = [
@@ -85,14 +82,14 @@ function getRiskPotential(severity: number, probability: number) {
 }
 
 export default function RisksPage() {
-  const { risks, addRisk, updateRisk, deleteRisk, autoGenerateRisks } = useProject();
+  const { project, risks, addRisk, updateRisk, deleteRisk } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
   const [deletingRisk, setDeletingRisk] = useState<Risk | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
-  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  const [isAiGenOpen, setIsAiGenOpen] = useState(false);
+  const [isAiGenSubmitting, setIsAiGenSubmitting] = useState(false);
   const [selectedRisks, setSelectedRisks] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
@@ -107,11 +104,6 @@ export default function RisksPage() {
         residualRisk: '',
         contingencyPlan: '',
     }
-  });
-
-  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
-    resolver: zodResolver(autoGenFormSchema),
-    defaultValues: { count: 5 },
   });
 
   useEffect(() => {
@@ -130,18 +122,30 @@ export default function RisksPage() {
       }
     }
   }, [isDialogOpen, editingRisk, form]);
-
-  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
-    setIsAutoGenSubmitting(true);
-    const success = await autoGenerateRisks(values.count);
-    if(success) {
-        toast({ title: "Success", description: `${values.count} risks generated successfully.`});
-        setIsAutoGenOpen(false);
-    } else {
-        toast({ variant: "destructive", title: "Error", description: "Could not generate risks." });
+  
+  const onAiGenSubmit = async () => {
+    if (!project?.summary) {
+      toast({ variant: 'destructive', title: 'Error', description: 'A project summary is required to generate risks.' });
+      return;
     }
-    setIsAutoGenSubmitting(false);
-  }
+    setIsAiGenSubmitting(true);
+    try {
+      const result = await getAiRiskSuggestions({ projectSummary: project.summary });
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      for (const risk of result.risks) {
+        await addRisk(risk);
+      }
+      toast({ title: 'Success', description: `${result.risks.length} risks generated successfully.` });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message || 'Could not generate risks.' });
+    } finally {
+      setIsAiGenSubmitting(false);
+      setIsAiGenOpen(false);
+    }
+  };
 
   const handleDialogOpen = (risk: Risk | null) => {
     setEditingRisk(risk);
@@ -209,40 +213,24 @@ export default function RisksPage() {
                 Delete Selected ({selectedRisks.length})
             </Button>
           )}
-          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+          <Dialog open={isAiGenOpen} onOpenChange={setIsAiGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">
                     <Bot className="mr-2 h-4 w-4" />
-                    Autogen Risks
+                    AI Risk Gen
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Auto-Generate Risks</DialogTitle>
-                    <DialogDescription>Enter the number of risks to create for testing.</DialogDescription>
+                    <DialogTitle>Generate Risks with AI</DialogTitle>
+                    <DialogDescription>The AI will analyze the project summary to generate relevant project risks. Do you want to proceed?</DialogDescription>
                 </DialogHeader>
-                <Form {...autoGenForm}>
-                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
-                        <FormField
-                            control={autoGenForm.control}
-                            name="count"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Number of Risks</FormLabel>
-                                <FormControl>
-                                <Input type="number" placeholder="5" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <DialogFooter>
-                            <Button type="submit" disabled={isAutoGenSubmitting}>
-                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Items'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsAiGenOpen(false)}>Cancel</Button>
+                    <Button onClick={onAiGenSubmit} disabled={isAiGenSubmitting}>
+                        {isAiGenSubmitting ? 'Generating...' : 'Proceed'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
           </Dialog>
           <Button onClick={() => handleDialogOpen(null)}>
