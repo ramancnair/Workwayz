@@ -48,6 +48,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getAiAssumptionSuggestions } from '@/app/actions';
 
 const assumptionSchema = z.object({
   description: z.string().min(1, 'Description is required.'),
@@ -55,10 +56,6 @@ const assumptionSchema = z.object({
   status: z.enum(['Active', 'Validated', 'Invalidated']),
   ownerId: z.string().optional(),
   validationDate: z.string().optional(),
-});
-
-const autoGenFormSchema = z.object({
-    count: z.coerce.number().min(1, "Please enter a valid number.").default(5),
 });
 
 const categories: AssumptionCategory[] = ['Technical', 'Resource', 'Business', 'External'];
@@ -72,24 +69,19 @@ const statusStyles: Record<AssumptionStatus, string> = {
 
 
 export default function AssumptionsPage() {
-  const { assumptions, employees: users, addAssumption, updateAssumption, deleteAssumption, autoGenerateAssumptions } = useProject();
+  const { project, stories, assumptions, employees: users, addAssumption, updateAssumption, deleteAssumption } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAssumption, setEditingAssumption] = useState<Assumption | null>(null);
   const [deletingAssumption, setDeletingAssumption] = useState<Assumption | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
-  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  const [isAiGenOpen, setIsAiGenOpen] = useState(false);
+  const [isAiGenSubmitting, setIsAiGenSubmitting] = useState(false);
   const [selectedAssumptions, setSelectedAssumptions] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const form = useForm<z.infer<typeof assumptionSchema>>({
     resolver: zodResolver(assumptionSchema),
-  });
-
-  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
-    resolver: zodResolver(autoGenFormSchema),
-    defaultValues: { count: 5 },
   });
 
   useEffect(() => {
@@ -112,17 +104,36 @@ export default function AssumptionsPage() {
     }
   }, [isDialogOpen, editingAssumption, form]);
 
-  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
-    setIsAutoGenSubmitting(true);
-    const success = await autoGenerateAssumptions(values.count);
-    if(success) {
-        toast({ title: "Success", description: `${values.count} assumptions generated successfully.`});
-        setIsAutoGenOpen(false);
-    } else {
-        toast({ variant: "destructive", title: "Error", description: "Could not generate assumptions." });
+  const onAiGenSubmit = async () => {
+    if (!project?.summary && stories.length === 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'A project summary or at least one story is required to generate assumptions.' });
+      return;
     }
-    setIsAutoGenSubmitting(false);
-  }
+    setIsAiGenSubmitting(true);
+    try {
+      const result = await getAiAssumptionSuggestions({
+        projectSummary: project?.summary || '',
+        stories: stories.map(s => ({
+          title: s.title,
+          description: s.description,
+          acceptanceCriteria: s.acceptanceCriteria,
+        }))
+      });
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      for (const assumption of result.assumptions) {
+        await addAssumption({ ...assumption, status: 'Active' });
+      }
+      toast({ title: 'Success', description: `${result.assumptions.length} assumptions generated successfully.` });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message || 'Could not generate assumptions.' });
+    } finally {
+      setIsAiGenSubmitting(false);
+      setIsAiGenOpen(false);
+    }
+  };
 
   const handleDialogOpen = (assumption: Assumption | null) => {
     setEditingAssumption(assumption);
@@ -190,40 +201,24 @@ export default function AssumptionsPage() {
                 Delete Selected ({selectedAssumptions.length})
             </Button>
           )}
-          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+          <Dialog open={isAiGenOpen} onOpenChange={setIsAiGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">
                     <Bot className="mr-2 h-4 w-4" />
-                    Autogen Assumptions
+                    AI Gen Assumptions
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Auto-Generate Assumptions</DialogTitle>
-                    <DialogDescription>Enter the number of assumptions to create for testing.</DialogDescription>
+                    <DialogTitle>Generate Assumptions with AI</DialogTitle>
+                    <DialogDescription>The AI will analyze the project summary and stories to generate relevant assumptions. Do you want to proceed?</DialogDescription>
                 </DialogHeader>
-                <Form {...autoGenForm}>
-                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
-                        <FormField
-                            control={autoGenForm.control}
-                            name="count"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Number of Assumptions</FormLabel>
-                                <FormControl>
-                                <Input type="number" placeholder="5" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <DialogFooter>
-                            <Button type="submit" disabled={isAutoGenSubmitting}>
-                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Items'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                 <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsAiGenOpen(false)}>Cancel</Button>
+                    <Button onClick={onAiGenSubmit} disabled={isAiGenSubmitting}>
+                        {isAiGenSubmitting ? 'Generating...' : 'Proceed'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
           </Dialog>
           <Button onClick={() => handleDialogOpen(null)}>

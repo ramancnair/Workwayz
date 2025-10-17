@@ -6,6 +6,8 @@ import { aiEstimator, type AiEstimatorInput, type AiEstimatorOutput } from '@/ai
 import { aiStoryGenerator, type AiStoryGeneratorInput, type AiStoryGeneratorOutput } from '@/ai/flows/ai-story-generator';
 import { aiTestCaseGenerator, type AiTestCaseGeneratorInput, type AiTestCaseGeneratorOutput } from '@/ai/flows/ai-test-case-generator';
 import { aiRiskGenerator, type AiRiskGeneratorInput, type AiRiskGeneratorOutput } from '@/ai/flows/ai-risk-generator';
+import { aiAssumptionGenerator, type AiAssumptionGeneratorInput, type AiAssumptionGeneratorOutput } from '@/ai/flows/ai-assumption-generator';
+
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -66,6 +68,18 @@ export async function getAiRiskSuggestions(
   } catch (e: any) {
     console.error('AI Risk Generator Flow Error:', e);
     return { error: e.message || 'An unexpected error occurred while generating risks.' };
+  }
+}
+
+export async function getAiAssumptionSuggestions(
+  input: AiAssumptionGeneratorInput
+): Promise<{ assumptions: AiAssumptionGeneratorOutput['assumptions'] } | { error: string }> {
+  try {
+    const result = await aiAssumptionGenerator(input);
+    return { assumptions: result.assumptions };
+  } catch (e: any) {
+    console.error('AI Assumption Generator Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while generating assumptions.' };
   }
 }
 
