@@ -7,6 +7,7 @@ import { aiStoryGenerator, type AiStoryGeneratorInput, type AiStoryGeneratorOutp
 import { aiTestCaseGenerator, type AiTestCaseGeneratorInput, type AiTestCaseGeneratorOutput } from '@/ai/flows/ai-test-case-generator';
 import { aiRiskGenerator, type AiRiskGeneratorInput, type AiRiskGeneratorOutput } from '@/ai/flows/ai-risk-generator';
 import { aiAssumptionGenerator, type AiAssumptionGeneratorInput, type AiAssumptionGeneratorOutput } from '@/ai/flows/ai-assumption-generator';
+import { aiDependencyGenerator, type AiDependencyGeneratorInput, type AiDependencyGeneratorOutput } from '@/ai/flows/ai-dependency-generator';
 
 import fs from 'fs/promises';
 import path from 'path';
@@ -82,6 +83,19 @@ export async function getAiAssumptionSuggestions(
     return { error: e.message || 'An unexpected error occurred while generating assumptions.' };
   }
 }
+
+export async function getAiDependencySuggestions(
+  input: AiDependencyGeneratorInput
+): Promise<{ dependencies: AiDependencyGeneratorOutput['dependencies'] } | { error: string }> {
+  try {
+    const result = await aiDependencyGenerator(input);
+    return { dependencies: result.dependencies };
+  } catch (e: any) {
+    console.error('AI Dependency Generator Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while generating dependencies.' };
+  }
+}
+
 
 const themesPath = path.join(process.cwd(), 'src', 'lib', 'themes.json');
 
