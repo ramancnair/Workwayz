@@ -27,7 +27,7 @@ const StorySchema = z.object({
   subTasks: z.array(SubTaskSchema).describe('An array of sub-tasks required to complete the story.'),
 });
 
-export const AiStoryGeneratorInputSchema = z.object({
+const AiStoryGeneratorInputSchema = z.object({
   projectSummary: z.string().describe('The overall summary of the project.'),
   impactedSystems: z.array(z.object({
     id: z.string(),
@@ -36,7 +36,7 @@ export const AiStoryGeneratorInputSchema = z.object({
 });
 export type AiStoryGeneratorInput = z.infer<typeof AiStoryGeneratorInputSchema>;
 
-export const AiStoryGeneratorOutputSchema = z.object({
+const AiStoryGeneratorOutputSchema = z.object({
   stories: z.array(StorySchema),
 });
 export type AiStoryGeneratorOutput = z.infer<typeof AiStoryGeneratorOutputSchema>;
