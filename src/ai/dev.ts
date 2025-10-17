@@ -1,6 +1,8 @@
+'use client';
 import { config } from 'dotenv';
 config();
 
 import '@/ai/flows/task-test-suggestions.ts';
 import '@/ai/flows/ai-estimator.ts';
 import '@/ai/flows/ai-story-generator.ts';
+import '@/ai/flows/ai-test-case-generator.ts';

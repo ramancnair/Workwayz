@@ -3,6 +3,7 @@
 import { aiTaskTestSuggestions, type AiTaskTestSuggestionsInput } from '@/ai/flows/task-test-suggestions';
 import { aiEstimator, type AiEstimatorInput, type AiEstimatorOutput } from '@/ai/flows/ai-estimator';
 import { aiStoryGenerator, type AiStoryGeneratorInput, type AiStoryGeneratorOutput } from '@/ai/flows/ai-story-generator';
+import { aiTestCaseGenerator, type AiTestCaseGeneratorInput, type AiTestCaseGeneratorOutput } from '@/ai/flows/ai-test-case-generator';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -39,6 +40,18 @@ export async function getAiStorySuggestions(
   } catch (e: any) {
     console.error('AI Story Generator Flow Error:', e);
     return { error: e.message || 'An unexpected error occurred while generating stories.' };
+  }
+}
+
+export async function getAiTestCaseSuggestions(
+  input: AiTestCaseGeneratorInput
+): Promise<{ testCases: AiTestCaseGeneratorOutput['testCases'] } | { error: string }> {
+  try {
+    const result = await aiTestCaseGenerator(input);
+    return { testCases: result.testCases };
+  } catch (e: any) {
+    console.error('AI Test Case Generator Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while generating test cases.' };
   }
 }
 

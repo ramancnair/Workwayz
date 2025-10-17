@@ -52,6 +52,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { format, parseISO } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { getAiTestCaseSuggestions } from '@/app/actions';
 
 
 const testCaseFormSchema = z.object({
@@ -120,38 +121,50 @@ export default function TestCasesPage() {
     }, {} as Record<ColumnId, boolean>)
   );
 
-  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
-  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+  const [isAiGenOpen, setIsAiGenOpen] = useState(false);
+  const [isAiGenSubmitting, setIsAiGenSubmitting] = useState(false);
   
   const sortedEnvironments = useMemo(() => [...environments].sort((a,b) => a.order - b.order), [environments]);
 
-  const autoGenFormSchema = useMemo(() => {
-    const shape: Record<string, z.ZodNumber> = {};
-    sortedEnvironments.forEach(env => {
-      shape[env.id] = z.coerce.number().min(0).default(0);
-    });
-    return z.object(shape);
-  }, [sortedEnvironments]);
-
-  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
-    resolver: zodResolver(autoGenFormSchema),
-    defaultValues: sortedEnvironments.reduce((acc, env) => {
-        acc[env.id] = 0;
-        return acc;
-    }, {} as Record<string, number>),
-  });
-
-  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
-    setIsAutoGenSubmitting(true);
-    const success = await autoGenerateTestCases(values);
-    if(success) {
-        toast({ title: "Success", description: "Test cases generated successfully."});
-        setIsAutoGenOpen(false);
-    } else {
-        toast({ variant: "destructive", title: "Error", description: "Could not generate test cases." });
+  const onAiGenSubmit = async () => {
+    setIsAiGenSubmitting(true);
+    const storiesToProcess = stories.filter(s => s.itemType === 'Requirement/Story');
+    if (storiesToProcess.length === 0) {
+      toast({ variant: 'destructive', title: 'No Stories Found', description: 'There are no user stories to generate test cases from.'});
+      setIsAiGenSubmitting(false);
+      setIsAiGenOpen(false);
+      return;
     }
-    setIsAutoGenSubmitting(false);
-  }
+
+    try {
+      const result = await getAiTestCaseSuggestions({
+        stories: storiesToProcess.map(s => ({
+          id: s.id,
+          title: s.title,
+          description: s.description,
+          acceptanceCriteria: s.acceptanceCriteria,
+        }))
+      });
+
+      if (result.error) throw new Error(result.error);
+      
+      let successCount = 0;
+      for (const tc of result.testCases) {
+        const success = await addTestCase({
+          ...tc,
+          status: 'Not Run',
+        });
+        if (success) successCount++;
+      }
+      toast({ title: 'Success', description: `${successCount} test cases generated successfully.` });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message || 'An unknown error occurred.' });
+    } finally {
+      setIsAiGenSubmitting(false);
+      setIsAiGenOpen(false);
+    }
+  };
+
 
   const form = useForm<z.infer<typeof testCaseFormSchema>>({
     resolver: zodResolver(testCaseFormSchema),
@@ -371,45 +384,24 @@ export default function TestCasesPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Test Cases" description="Manage and track all test cases for the project.">
-           <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
+           <Dialog open={isAiGenOpen} onOpenChange={setIsAiGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">
                     <Bot className="mr-2 h-4 w-4" />
-                    TC Autogen
+                    AI TC Gen
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Auto-Generate Test Cases</DialogTitle>
-                    <DialogDescription>Enter the number of test cases to create for each environment.</DialogDescription>
+                    <DialogTitle>Generate Test Cases with AI</DialogTitle>
+                    <DialogDescription>The AI will analyze all user stories to generate relevant test cases. This may take a moment. Do you want to proceed?</DialogDescription>
                 </DialogHeader>
-                <Form {...autoGenForm}>
-                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            {sortedEnvironments.map(env => (
-                                <FormField
-                                    key={env.id}
-                                    control={autoGenForm.control}
-                                    name={env.id}
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{env.name}</FormLabel>
-                                        <FormControl>
-                                        <Input type="number" placeholder="0" {...field} value={field.value || ''} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                            ))}
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isAutoGenSubmitting}>
-                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Test Cases'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                 <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsAiGenOpen(false)}>Cancel</Button>
+                    <Button onClick={onAutoGenSubmit} disabled={isAiGenSubmitting}>
+                        {isAiGenSubmitting ? 'Generating...' : 'Proceed'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
           </Dialog>
           
