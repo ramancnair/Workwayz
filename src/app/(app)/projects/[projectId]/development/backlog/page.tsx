@@ -593,19 +593,19 @@ export default function BacklogPage() {
           estimatedHours: story.estimatedHours,
           impactedSystemIds: story.impactedSystemIds,
         };
-        const storyId = await addStory(storyPayload, 'ST', true);
+        const storyRef = await addStory(storyPayload, 'ST');
   
-        if (storyId && story.subTasks) {
+        if (storyRef && story.subTasks) {
           for (const subTask of story.subTasks) {
             const subTaskPayload: Omit<Story, 'id' | 'storyId'> = {
               title: subTask.title,
               itemType: 'Sub Task',
               status: 'To Do',
-              parentStoryId: storyId,
+              parentStoryId: storyRef.id,
               estimatedHours: subTask.estimatedHours,
               impactedSystemId: subTask.impactedSystemId,
             };
-            await addStory(subTaskPayload, 'SUB', true);
+            await addStory(subTaskPayload, 'SUB');
           }
         }
       }
@@ -687,12 +687,9 @@ export default function BacklogPage() {
           closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
         };
 
-        const success = await addStory(newStory);
-        if (success) {
-          setAddRequirementOpen(false);
-        } else {
-          toast({ variant: "destructive", title: `Error Creating ${values.itemType}`, description: `Could not save your ${values.itemType.toLowerCase()}.` });
-        }
+        await addStory(newStory);
+        setAddRequirementOpen(false);
+        
     } catch(e: any) {
         toast({ variant: "destructive", title: "Error", description: e.message || "An unknown error occurred." });
     } finally {
@@ -2365,6 +2362,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     </>
   );
 }
+
 
 
 

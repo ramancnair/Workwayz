@@ -79,7 +79,7 @@ interface ProjectContextType {
   updateProject: (data: Partial<Omit<Project, 'id'>>) => Promise<boolean>;
   
   // Story actions
-  addStory: (story: Omit<Story, 'id' | 'storyId'>, prefix?: string) => Promise<boolean>;
+  addStory: (story: Omit<Story, 'id' | 'storyId'>, prefix?: string) => Promise<{id: string, storyId: string} | null>;
   autoGenerateStories: (counts: Record<WorkItemType, number>) => Promise<boolean>;
   updateStory: (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>) => Promise<boolean>;
   deleteStory: (storyId: string) => Promise<boolean>;
@@ -596,8 +596,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   // Story Actions
-  const addStory = async (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string): Promise<boolean> => {
-    if (!db || !projectId) return false;
+  const addStory = async (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string): Promise<{id: string, storyId: string} | null> => {
+    if (!db || !projectId) return null;
     const projectDocRef = doc(db, 'projects', projectId);
     try {
         const storiesSnapshot = await getDocs(collection(projectDocRef, 'stories'));
@@ -641,15 +641,15 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             }
         }
         
-        await addDoc(collection(projectDocRef, 'stories'), sanitizeForFirestore(payload));
+        const newDocRef = await addDoc(collection(projectDocRef, 'stories'), sanitizeForFirestore(payload));
 
         if (story.itemType === 'Sub Task' && story.parentStoryId) {
             await updateStoryEffort(story.parentStoryId);
         }
-        return true;
+        return { id: newDocRef.id, storyId };
     } catch (e: any) {
         console.error("Firebase Error: Failed to add story.", e);
-        return false;
+        return null;
     }
   };
 
