@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { type ProjectStatus, type RagStatus } from '@/types';
+import { type ProjectStatus, type RagStatus, type ProjectMethodology, type PricingModel } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -20,9 +20,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Edit, Circle } from 'lucide-react';
-
+import { Input } from '@/components/ui/input';
 
 const ragStatuses: RagStatus[] = ['Green', 'Amber', 'Red'];
+const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
+const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC', 'Hybrid'];
+const pricingModels: PricingModel[] = ['Fixed Price', 'T&M', 'Fixed Capacity'];
+
 
 const statusUpdateSchema = z.object({
   overallStatus: z.enum(ragStatuses).optional(),
@@ -30,6 +34,21 @@ const statusUpdateSchema = z.object({
   costStatus: z.enum(ragStatuses).optional(),
   timeStatus: z.enum(ragStatuses).optional(),
   statusComments: z.string().optional(),
+});
+
+const keyInfoUpdateSchema = z.object({
+    status: z.enum(projectStatuses),
+    projectManagerId: z.string().optional(),
+    methodology: z.enum(projectMethodologies),
+    pricingModel: z.enum(pricingModels),
+    startDate: z.string(),
+    endDate: z.string(),
+}).refine(data => {
+    if (!data.startDate || !data.endDate) return true;
+    return new Date(data.endDate) >= new Date(data.startDate);
+}, {
+    message: "End date must be on or after the start date.",
+    path: ['endDate'],
 });
 
 const statusStyles: Record<ProjectStatus, string> = {
@@ -68,16 +87,21 @@ function RagStatusIndicator({ status, label }: { status?: RagStatus, label: stri
 
 export default function ProjectSynopsisPage() {
     const { project, isLoading, allUsers, updateProject } = useProject();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isHealthDialogOpen, setIsHealthDialogOpen] = useState(false);
+    const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
     const { toast } = useToast();
 
-    const form = useForm<z.infer<typeof statusUpdateSchema>>({
+    const healthForm = useForm<z.infer<typeof statusUpdateSchema>>({
         resolver: zodResolver(statusUpdateSchema),
+    });
+    
+    const infoForm = useForm<z.infer<typeof keyInfoUpdateSchema>>({
+        resolver: zodResolver(keyInfoUpdateSchema),
     });
 
     useEffect(() => {
-        if (project && isDialogOpen) {
-            form.reset({
+        if (project && isHealthDialogOpen) {
+            healthForm.reset({
                 overallStatus: project.overallStatus,
                 scopeStatus: project.scopeStatus,
                 costStatus: project.costStatus,
@@ -85,21 +109,49 @@ export default function ProjectSynopsisPage() {
                 statusComments: project.statusComments,
             });
         }
-    }, [project, form, isDialogOpen]);
+    }, [project, healthForm, isHealthDialogOpen]);
+    
+     useEffect(() => {
+        if (project && isInfoDialogOpen) {
+            infoForm.reset({
+                status: project.status,
+                projectManagerId: project.projectManagerId || 'unassigned',
+                methodology: project.methodology,
+                pricingModel: project.pricingModel,
+                startDate: project.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : '',
+                endDate: project.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
+            });
+        }
+    }, [project, infoForm, isInfoDialogOpen]);
 
     const projectManager = project?.projectManagerId
         ? allUsers.find(e => e.id === project.projectManagerId)
         : null;
 
-    const onSubmit = async (values: z.infer<typeof statusUpdateSchema>) => {
+    const onHealthSubmit = async (values: z.infer<typeof statusUpdateSchema>) => {
         const success = await updateProject(values);
         if (success) {
             toast({ title: 'Success', description: 'Project health updated successfully.' });
-            setIsDialogOpen(false);
+            setIsHealthDialogOpen(false);
         } else {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not update project health.' });
         }
     };
+    
+    const onInfoSubmit = async (values: z.infer<typeof keyInfoUpdateSchema>) => {
+        const success = await updateProject({
+            ...values,
+            projectManagerId: values.projectManagerId === 'unassigned' ? undefined : values.projectManagerId,
+            startDate: new Date(values.startDate).toISOString(),
+            endDate: new Date(values.endDate).toISOString(),
+        });
+        if (success) {
+            toast({ title: 'Success', description: 'Project information updated successfully.' });
+            setIsInfoDialogOpen(false);
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not update project information.' });
+        }
+    }
         
     if (isLoading) {
         return (
@@ -130,21 +182,26 @@ export default function ProjectSynopsisPage() {
     
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <PageHeader title="Project Synopsis" description="A high-level overview of your project details." />
-                
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle>Project Summary</CardTitle></CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground whitespace-pre-wrap">
-                                {project.summary || "No summary provided."}
-                            </p>
-                        </CardContent>
-                    </Card>
+            <PageHeader title="Project Synopsis" description="A high-level overview of your project details." />
+            
+            <div className="space-y-6">
+                <Card>
+                    <CardHeader><CardTitle>Project Summary</CardTitle></CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground whitespace-pre-wrap">
+                            {project.summary || "No summary provided."}
+                        </p>
+                    </CardContent>
+                </Card>
 
+                <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
                     <Card>
-                        <CardHeader><CardTitle>Key Information</CardTitle></CardHeader>
+                         <CardHeader className="flex flex-row justify-between items-start">
+                            <div><CardTitle>Key Information</CardTitle></div>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                            </DialogTrigger>
+                        </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <DetailCard 
                                 title="Status" 
@@ -176,7 +233,45 @@ export default function ProjectSynopsisPage() {
                             />
                         </CardContent>
                     </Card>
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader><DialogTitle>Edit Key Information</DialogTitle></DialogHeader>
+                        <Form {...infoForm}>
+                            <form onSubmit={infoForm.handleSubmit(onInfoSubmit)} className="space-y-4">
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                   <FormField control={infoForm.control} name="status" render={({ field }) => (
+                                        <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{projectStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
+                                   )}/>
+                                    <FormField control={infoForm.control} name="projectManagerId" render={({ field }) => (
+                                        <FormItem><FormLabel>Project Manager</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a PM"/></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Unassigned</SelectItem>{allUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
+                                    )}/>
+                               </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <FormField control={infoForm.control} name="methodology" render={({ field }) => (
+                                        <FormItem><FormLabel>Methodology</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{projectMethodologies.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
+                                    )}/>
+                                     <FormField control={infoForm.control} name="pricingModel" render={({ field }) => (
+                                        <FormItem><FormLabel>Pricing Model</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{pricingModels.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
+                                    )}/>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={infoForm.control} name="startDate" render={({ field }) => (
+                                        <FormItem><FormLabel>Start Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage/></FormItem>
+                                    )}/>
+                                    <FormField control={infoForm.control} name="endDate" render={({ field }) => (
+                                        <FormItem><FormLabel>End Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage/></FormItem>
+                                    )}/>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit" disabled={infoForm.formState.isSubmitting}>
+                                        {infoForm.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    </DialogContent>
+                </Dialog>
 
+                <Dialog open={isHealthDialogOpen} onOpenChange={setIsHealthDialogOpen}>
                     <Card>
                         <CardHeader className="flex flex-row justify-between items-start">
                             <div>
@@ -206,55 +301,54 @@ export default function ProjectSynopsisPage() {
                             </div>
                         </CardContent>
                     </Card>
-                </div>
-                
-                <DialogContent className="sm:max-w-3xl">
-                    <DialogHeader>
-                        <DialogTitle>Edit Project Health</DialogTitle>
-                    </DialogHeader>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <Card className="pt-4 border-none shadow-none">
-                              <CardContent className="space-y-4 p-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <FormField control={form.control} name="overallStatus" render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Overall Health</FormLabel>
-                                          <Select onValueChange={field.onChange} value={field.value}>
-                                              <FormControl><SelectTrigger><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
-                                              <SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                                          </Select>
-                                      </FormItem>
-                                  )}/>
-                                   <FormField control={form.control} name="statusComments" render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Status Comments</FormLabel>
-                                          <FormControl><Textarea placeholder="Add comments about the current status..." {...field} value={field.value ?? ''}/></FormControl>
-                                      </FormItem>
-                                  )}/>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <FormField control={form.control} name="scopeStatus" render={({ field }) => (
-                                      <FormItem><FormLabel>Scope</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                    )}/>
-                                    <FormField control={form.control} name="costStatus" render={({ field }) => (
-                                      <FormItem><FormLabel>Cost</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                    )}/>
-                                    <FormField control={form.control} name="timeStatus" render={({ field }) => (
-                                      <FormItem><FormLabel>Time</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                    )}/>
-                                </div>
-                              </CardContent>
-                            </Card>
-                            <DialogFooter>
-                                <Button type="submit" disabled={form.formState.isSubmitting}>
-                                    {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
+                    <DialogContent className="sm:max-w-3xl">
+                        <DialogHeader>
+                            <DialogTitle>Edit Project Health</DialogTitle>
+                        </DialogHeader>
+                        <Form {...healthForm}>
+                            <form onSubmit={healthForm.handleSubmit(onHealthSubmit)} className="space-y-4">
+                                <Card className="pt-4 border-none shadow-none">
+                                  <CardContent className="space-y-4 p-0">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <FormField control={healthForm.control} name="overallStatus" render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Overall Health</FormLabel>
+                                              <Select onValueChange={field.onChange} value={field.value}>
+                                                  <FormControl><SelectTrigger><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
+                                                  <SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                              </Select>
+                                          </FormItem>
+                                      )}/>
+                                       <FormField control={healthForm.control} name="statusComments" render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Status Comments</FormLabel>
+                                              <FormControl><Textarea placeholder="Add comments about the current status..." {...field} value={field.value ?? ''}/></FormControl>
+                                          </FormItem>
+                                      )}/>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <FormField control={healthForm.control} name="scopeStatus" render={({ field }) => (
+                                          <FormItem><FormLabel>Scope</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                        )}/>
+                                        <FormField control={healthForm.control} name="costStatus" render={({ field }) => (
+                                          <FormItem><FormLabel>Cost</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                        )}/>
+                                        <FormField control={healthForm.control} name="timeStatus" render={({ field }) => (
+                                          <FormItem><FormLabel>Time</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                        )}/>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                                <DialogFooter>
+                                    <Button type="submit" disabled={healthForm.formState.isSubmitting}>
+                                        {healthForm.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
     );
 }
