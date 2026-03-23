@@ -1945,14 +1945,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'projects', projectId, 'impactedSystems', systemId), sanitizeForFirestore(data));
+      const safeId = systemId.replace(/\//g, '-');
+      await setDoc(doc(db, 'projects', projectId, 'impactedSystems', safeId), sanitizeForFirestore(data), { merge: true });
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
   const deleteImpactedSystem = async (systemId: string) => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'impactedSystems', systemId));
+      const safeId = systemId.replace(/\//g, '-');
+      await deleteDoc(doc(db, 'projects', projectId, 'impactedSystems', safeId));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
@@ -1968,14 +1970,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateInitialImpactedSystem = async (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', systemId), sanitizeForFirestore(data));
+      const safeId = systemId.replace(/\//g, '-');
+      await setDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', safeId), sanitizeForFirestore(data), { merge: true });
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
   const deleteInitialImpactedSystem = async (systemId: string) => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', systemId));
+      const safeId = systemId.replace(/\//g, '-');
+      await deleteDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', safeId));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
@@ -2028,14 +2032,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'projects', projectId, 'horizontals', horizontalId), sanitizeForFirestore(data));
+      const safeId = horizontalId.replace(/\//g, '-');
+      await setDoc(doc(db, 'projects', projectId, 'horizontals', safeId), sanitizeForFirestore(data), { merge: true });
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
   const deleteHorizontal = async (horizontalId: string) => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'horizontals', horizontalId));
+      const safeId = horizontalId.replace(/\//g, '-');
+      await deleteDoc(doc(db, 'projects', projectId, 'horizontals', safeId));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
@@ -2051,14 +2057,16 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateInitialHorizontal = async (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => {
     if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'projects', projectId, 'initialHorizontals', horizontalId), sanitizeForFirestore(data));
+      const safeId = horizontalId.replace(/\//g, '-');
+      await setDoc(doc(db, 'projects', projectId, 'initialHorizontals', safeId), sanitizeForFirestore(data), { merge: true });
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
   const deleteInitialHorizontal = async (horizontalId: string) => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'initialHorizontals', horizontalId));
+      const safeId = horizontalId.replace(/\//g, '-');
+      await deleteDoc(doc(db, 'projects', projectId, 'initialHorizontals', safeId));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };

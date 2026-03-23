@@ -178,8 +178,8 @@ export default function InitialEstimationPage() {
 
       const { systemEstimates, horizontalEstimates } = result.estimates;
       
-      const systemPromises = systemEstimates.map(est => updateInitialImpactedSystem(est.id, { estimate: est.estimate }));
-      const horizontalPromises = horizontalEstimates.map(est => updateInitialHorizontal(est.id, { weightage: est.weightage }));
+      const systemPromises = systemEstimates.map(est => updateInitialImpactedSystem(est.id, { name: est.name, estimate: est.estimate }));
+      const horizontalPromises = horizontalEstimates.map(est => updateInitialHorizontal(est.id, { name: est.name, weightage: est.weightage, isEnabled: true }));
       
       await Promise.all([...systemPromises, ...horizontalPromises]);
 

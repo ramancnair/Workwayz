@@ -29,19 +29,21 @@ const AiEstimatorOutputSchema = z.object({
   systemEstimates: z
     .array(
       z.object({
-        id: z.string().describe('The ID of the impacted system.'),
+        id: z.string().describe('The ID of the impacted system. Generate a short, unique ID if suggesting a new system.'),
+        name: z.string().describe('The name of the impacted system.'),
         estimate: z.number().describe('The estimated effort in man-days for this system.'),
       })
     )
-    .describe('The list of man-day estimates for each impacted system.'),
+    .describe('The list of man-day estimates for each impacted system (you may include new ones).'),
   horizontalEstimates: z
     .array(
       z.object({
-        id: z.string().describe('The ID of the horizontal.'),
+        id: z.string().describe('The ID of the horizontal. Generate a short, unique ID if suggesting a new horizontal.'),
+        name: z.string().describe('The name of the horizontal.'),
         weightage: z.number().describe('The estimated weightage as a percentage for this horizontal.'),
       })
     )
-    .describe('The list of weightage percentages for each horizontal.'),
+    .describe('The list of weightage percentages for each horizontal (you may include new ones).'),
 });
 export type AiEstimatorOutput = z.infer<typeof AiEstimatorOutputSchema>;
 
