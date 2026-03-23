@@ -48,17 +48,17 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'portfolio'
     },
     {
-      id: 'cto-dashboard',
-      href: `/cto-dashboard`,
-      label: "CTO Dashboard",
-      icon: LayoutDashboard,
-      group: 'portfolio'
-    },
-    {
       id: 'projects',
       href: `/project-home`,
       label: "Project Home",
       icon: FolderKanban,
+      group: 'projects'
+    },
+    {
+      id: 'cto-dashboard',
+      href: `/cto-dashboard`,
+      label: "CTO Dashboard",
+      icon: LayoutDashboard,
       group: 'projects'
     },
     {
@@ -114,18 +114,23 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
 
   return (
     <>
-      <SidebarHeader className="flex items-center justify-between p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-        <div className="flex items-center gap-2">
-          <Waves className="w-8 h-8 text-primary" />
-          <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
-                  <ChevronLeft />
-              </Button>
-              <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
+      <SidebarHeader className="p-2 transition-all duration-300">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center h-10 overflow-hidden">
+            <Waves className="w-8 h-8 text-primary shrink-0" />
+            <h1 className="ml-3 text-xl font-semibold text-sidebar-foreground transition-all duration-300 ease-in-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
+                ProjectFlow
+            </h1>
+            <Button variant="ghost" size="icon" className="md:hidden ml-auto shrink-0 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 overflow-hidden" onClick={toggleSidebar}>
+               <ChevronLeft />
+            </Button>
+          </div>
+          <div className="flex items-center ml-[2px]">
+            <SidebarTrigger className="h-7 w-7 rounded-sm border bg-background shadow-sm hover:bg-sidebar-accent hidden md:flex shrink-0" />
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
+      <SidebarContent className="p-2 transition-all duration-300">
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
@@ -142,8 +147,8 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
-        <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
+      <SidebarFooter className="p-2 transition-all duration-300">
+        <Separator className="my-2 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:my-0 bg-sidebar-border" />
         <SidebarMenu>
           <SidebarMenuItem>
             <Link href="/trash">
@@ -162,13 +167,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:justify-center">
-          <Avatar className="h-10 w-10">
+        <div className="flex items-center mt-4 h-10 overflow-hidden">
+          <Avatar className="h-8 w-8 shrink-0">
               <AvatarFallback>RN</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <span className="font-semibold text-sm text-sidebar-foreground">Raman C Nair</span>
-              <span className="text-xs text-sidebar-foreground/70">ramanreadsmail@gmail.com</span>
+          <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
+              <span className="font-semibold text-sm text-sidebar-foreground truncate pr-2">Raman C Nair</span>
+              <span className="text-xs text-sidebar-foreground/70 truncate pr-2">ramanreadsmail@gmail.com</span>
           </div>
         </div>
       </SidebarFooter>

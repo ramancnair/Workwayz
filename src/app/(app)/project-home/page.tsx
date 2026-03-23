@@ -72,14 +72,19 @@ const ragStatusStyles: Record<RagStatus, string> = {
 };
 
 
+const portfolioSchema = z.object({
+  name: z.string().min(1, 'Portfolio name is required.'),
+  description: z.string().optional(),
+});
+
 const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required.'),
   description: z.string().optional(),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
   projectManagerId: z.string().optional(),
-  methodology: z.enum(projectMethodologies).optional(),
-  pricingModel: z.enum(pricingModels).optional(),
-  status: z.enum(projectStatuses).optional(),
+  methodology: z.enum(['Agile', 'SDLC', 'Hybrid'] as const).optional(),
+  pricingModel: z.enum(['Fixed Price', 'T&M', 'Fixed Capacity'] as const).optional(),
+  status: z.enum(['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'] as const).optional(),
   startDate: z.string().min(1, "Start date is required."),
   endDate: z.string().min(1, "End date is required."),
 }).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
@@ -333,6 +338,7 @@ export default function ProjectsDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPortfolioDialogOpen, setIsPortfolioDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [filterText, setFilterText] = useState('');
@@ -342,6 +348,11 @@ export default function ProjectsDashboard() {
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
     defaultValues: { name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' },
+  });
+
+  const portfolioForm = useForm<z.infer<typeof portfolioSchema>>({
+    resolver: zodResolver(portfolioSchema),
+    defaultValues: { name: '', description: '' },
   });
   
   useEffect(() => {
@@ -395,12 +406,42 @@ export default function ProjectsDashboard() {
   }, [isDialogOpen, editingProject, form]);
 
 
+  const onPortfolioSubmit = async (values: z.infer<typeof portfolioSchema>) => {
+    if (!db) return;
+    try {
+      const portfoliosSnapshot = await getDocs(collection(db, 'portfolios'));
+      const existingIds = portfoliosSnapshot.docs
+        .map(doc => parseInt(doc.id.replace('PF', ''), 10))
+        .filter(num => !isNaN(num));
+      const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+      const portfolioId = `PF${nextId.toString().padStart(3, '0')}`;
+      
+      const newPortfolioRef = doc(db, 'portfolios', portfolioId);
+      await setDoc(newPortfolioRef, {
+        id: portfolioId,
+        name: values.name,
+        description: values.description || '',
+        isDeleted: false,
+        createdAt: Timestamp.now(),
+      });
+      toast({ title: 'Success', description: 'Portfolio created successfully.' });
+      setIsPortfolioDialogOpen(false);
+      portfolioForm.reset();
+    } catch (error) {
+      console.error('Error creating portfolio:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not create portfolio.' });
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
     if (!db) return;
     try {
       const { projectManagerId, ...restValues } = values;
       const dataToSave: Partial<Project> = {
           ...restValues,
+          methodology: restValues.methodology as ProjectMethodology | undefined,
+          pricingModel: restValues.pricingModel as PricingModel | undefined,
+          status: restValues.status as ProjectStatus | undefined,
           startDate: new Date(values.startDate).toISOString(),
           endDate: new Date(values.endDate).toISOString(),
       };
@@ -442,10 +483,10 @@ export default function ProjectsDashboard() {
   };
 
   const handleDeleteProject = async () => {
-    if (!deletingProject) return;
+    if (!deletingProject || !db) return;
     try {
       // Soft delete the project
-      const projectRef = doc(db, 'projects', deletingProject.id);
+      const projectRef = doc(db!, 'projects', deletingProject.id);
       await updateDoc(projectRef, { isDeleted: true, deletedAt: Timestamp.now() });
       toast({ title: 'Success', description: `Project "${deletingProject.name}" moved to Trash.` });
     } catch (error) {
@@ -512,7 +553,7 @@ export default function ProjectsDashboard() {
   
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>
-      <Button variant="ghost" onClick={() => handleSort(columnId)}>
+      <Button variant="ghost" className="-ml-4 px-4" onClick={() => handleSort(columnId)}>
         {children}
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
@@ -523,11 +564,58 @@ export default function ProjectsDashboard() {
     <TooltipProvider>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Home" description="Manage all your portfolios and projects.">
-          <Button onClick={() => handleOpenDialog(null)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Project
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsPortfolioDialogOpen(true)}>
+              <Folder className="mr-2 h-4 w-4" />
+              New Portfolio
+            </Button>
+            <Button onClick={() => handleOpenDialog(null)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Project
+            </Button>
+          </div>
         </PageHeader>
+
+        <Dialog open={isPortfolioDialogOpen} onOpenChange={setIsPortfolioDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create New Portfolio</DialogTitle>
+            </DialogHeader>
+            <Form {...portfolioForm}>
+              <form onSubmit={portfolioForm.handleSubmit(onPortfolioSubmit)} className="space-y-4">
+                <FormField
+                  control={portfolioForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Portfolio Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="E.g., Q1 Strategic Initiatives" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={portfolioForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Describe the portfolio..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="submit">Create Portfolio</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <ProjectDialogContent 

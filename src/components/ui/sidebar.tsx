@@ -291,27 +291,7 @@ const SidebarRail = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
 >(({ className, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
-
-  return (
-    <button
-      ref={ref}
-      data-sidebar="rail"
-      aria-label="Toggle Sidebar"
-      tabIndex={-1}
-      onClick={toggleSidebar}
-      title="Toggle Sidebar"
-      className={cn(
-        "absolute top-1/2 z-20 -translate-y-1/2 flex items-center justify-center h-8 w-6 rounded-md",
-        "group-data-[side=left]:-right-3 group-data-[side=right]:-left-3",
-        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        className
-      )}
-      {...props}
-    >
-        <MoreVertical className="h-5 w-5" />
-    </button>
-  )
+  return null;
 })
 SidebarRail.displayName = "SidebarRail"
 

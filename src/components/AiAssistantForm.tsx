@@ -42,9 +42,9 @@ export function AiAssistantForm({ initialDescription = '', projectContext = '' }
       taskOrTestCaseDescription: values.description,
       projectContext: values.context,
     });
-    if (result.error) {
+    if ('error' in result) {
       setError(result.error);
-    } else {
+    } else if ('suggestions' in result) {
       setSuggestions(result.suggestions);
     }
     setIsLoading(false);
@@ -82,7 +82,7 @@ export function AiAssistantForm({ initialDescription = '', projectContext = '' }
         </Alert>
       )}
       {error && (
-         <Alert variant="destructive" className="mt-4">
+        <Alert variant="destructive" className="mt-4">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>

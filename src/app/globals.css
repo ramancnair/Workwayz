@@ -53,7 +53,7 @@ body {
     --chart-4: 190 65% 60%;
     --chart-5: 180 75% 55%;
  
-    --radius: 0.5rem;
+    --radius: 0.25rem;
     --font-body-family: 'Inter', sans-serif;
     
     --shadow-color: 220 3% 15%;
@@ -76,40 +76,40 @@ body {
     --shadow-lg-lg: 0 20px 30px -8px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%));
   }
   .dark {
-    --background: 222 84% 4.9%;
+    --background: 224 25% 12%;
     --foreground: 0 0% 98%;
-    --card: 222 84% 4.9%;
+    --card: 224 20% 16%;
     --card-foreground: 0 0% 98%;
-    --popover: 222 84% 4.9%;
+    --popover: 224 20% 16%;
     --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 217 33% 17%;
+    --secondary: 224 20% 22%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 217 33% 17%;
+    --muted: 224 20% 22%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --accent: 224 20% 22%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
-    --topbar-background: 222 84% 4.9%;
+    --border: 224 20% 22%;
+    --input: 224 20% 22%;
+    --ring: 221 83% 53%;
+    --topbar-background: 224 35% 8%;
     --topbar-foreground: 0 0% 98%;
     --chart-1: 220 70% 50%;
     --chart-2: 210 60% 45%;
     --chart-3: 200 80% 55%;
     --chart-4: 190 65% 60%;
     --chart-5: 180 75% 55%;
-    --sidebar-background: 222 84% 4.9%;
+    --sidebar-background: 224 35% 8%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent: 224 20% 20%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-border: 224 20% 15%;
+    --sidebar-ring: 221 83% 53%;
     
     --shadow-color: 220 40% 2%;
     --shadow-strength: 25%;

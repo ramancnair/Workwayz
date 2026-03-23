@@ -277,18 +277,23 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <SidebarHeader className="flex items-center justify-between p-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-        <div className="flex items-center gap-2">
-          <Waves className="w-8 h-8 text-primary" />
-          <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
-                  <ChevronLeft />
-              </Button>
-              <h1 className="text-xl font-semibold text-sidebar-foreground">ProjectFlow</h1>
+      <SidebarHeader className="p-2 transition-all duration-300">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center h-10 overflow-hidden">
+            <Waves className="w-8 h-8 text-primary shrink-0" />
+            <h1 className="ml-3 text-xl font-semibold text-sidebar-foreground transition-all duration-300 ease-in-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
+                ProjectFlow
+            </h1>
+            <Button variant="ghost" size="icon" className="md:hidden ml-auto shrink-0 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 overflow-hidden" onClick={toggleSidebar}>
+               <ChevronLeft />
+            </Button>
+          </div>
+          <div className="flex items-center ml-[2px]">
+            <SidebarTrigger className="h-7 w-7 rounded-sm border bg-background shadow-sm hover:bg-sidebar-accent hidden md:flex shrink-0" />
           </div>
         </div>
       </SidebarHeader>
-      <div className="p-4 group-data-[collapsible=icon]:p-2">
+      <div className="p-2 transition-all duration-300">
         <SidebarMenu>
             <SidebarMenuItem>
               <Link href="/project-home">
@@ -300,9 +305,19 @@ export function SidebarNav({ projectId }: { projectId: string }) {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+            <SidebarMenuItem>
+              <Link href="/cto-dashboard">
+                <SidebarMenuButton
+                  tooltip="CTO Dashboard"
+                >
+                  <LayoutDashboard />
+                  <span>CTO Dashboard</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
         </SidebarMenu>
       </div>
-      <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
+      <SidebarContent className="p-2 transition-all duration-300">
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
@@ -319,12 +334,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
-        <div className="group-data-[collapsible=icon]:hidden space-y-2 mb-2">
-          <label className="text-xs font-semibold text-sidebar-foreground/70">Test Date</label>
-          <DateTimePicker date={testDate} setDate={setTestDate} />
+      <SidebarFooter className="p-2 transition-all duration-300">
+        <div className="grid grid-rows-[1fr] transition-all duration-300 group-data-[collapsible=icon]:grid-rows-[0fr] opacity-100 group-data-[collapsible=icon]:opacity-0 overflow-hidden">
+          <div className="min-h-0 space-y-2 mb-2 group-data-[collapsible=icon]:mb-0 whitespace-nowrap overflow-hidden">
+            <label className="text-xs font-semibold text-sidebar-foreground/70">Test Date</label>
+            <DateTimePicker date={testDate} setDate={setTestDate} />
+          </div>
         </div>
-        <Separator className="my-2 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
+        <Separator className="my-2 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:my-0 bg-sidebar-border" />
         <SidebarMenu>
           <SidebarMenuItem>
             <Link href={`${basePath}/trash`}>
@@ -343,14 +360,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="flex items-center gap-3 mt-4 px-2 group-data-[collapsible=icon]:justify-center">
-            <Avatar className="h-10 w-10">
-                <AvatarFallback>RN</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                <span className="font-semibold text-sm text-sidebar-foreground">Raman C Nair</span>
-                <span className="text-xs text-sidebar-foreground/70">ramanreadsmail@gmail.com</span>
-            </div>
+        <div className="flex items-center mt-4 h-10 overflow-hidden">
+          <Avatar className="h-8 w-8 shrink-0">
+              <AvatarFallback>RN</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
+              <span className="font-semibold text-sm text-sidebar-foreground truncate pr-2">Raman C Nair</span>
+              <span className="text-xs text-sidebar-foreground/70 truncate pr-2">ramanreadsmail@gmail.com</span>
+          </div>
         </div>
       </SidebarFooter>
     </>

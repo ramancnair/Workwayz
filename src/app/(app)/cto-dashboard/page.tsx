@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority, RagStatus } from '@/types';
+import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority, RagStatus, Portfolio } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { Circle } from 'lucide-react';
 
@@ -175,12 +176,21 @@ function IssueDetailDialog({ issue, isOpen, onOpenChange }: { issue: EnrichedIss
 
 
 export default function CtoDashboardPage() {
-  const [highRisks, setHighRisks] = useState<EnrichedRisk[]>([]);
-  const [criticalIssues, setCriticalIssues] = useState<EnrichedIssue[]>([]);
-  const [redHealthProjects, setRedHealthProjects] = useState<Project[]>([]);
+  const [allRisks, setAllRisks] = useState<EnrichedRisk[]>([]);
+  const [allIssues, setAllIssues] = useState<EnrichedIssue[]>([]);
+  const [allActiveProjects, setAllActiveProjects] = useState<Project[]>([]);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [viewingRisk, setViewingRisk] = useState<EnrichedRisk | null>(null);
   const [viewingIssue, setViewingIssue] = useState<EnrichedIssue | null>(null);
+
+  const filteredProjects = selectedPortfolioId === 'all' ? allActiveProjects : allActiveProjects.filter(p => p.portfolioId === selectedPortfolioId);
+  const validProjectIds = new Set(filteredProjects.map(p => p.id));
+  
+  const redHealthProjects = filteredProjects.filter(p => p.overallStatus === 'Red');
+  const highRisks = allRisks.filter(r => validProjectIds.has(r.projectId));
+  const criticalIssues = allIssues.filter(i => validProjectIds.has(i.projectId));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -188,14 +198,18 @@ export default function CtoDashboardPage() {
       setIsLoading(true);
 
       try {
+        const portfoliosQuery = query(collection(db, 'portfolios'), where('isDeleted', '!=', true));
+        const portfoliosSnapshot = await getDocs(portfoliosQuery);
+        setPortfolios(portfoliosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Portfolio)));
+
         const projectsQuery = query(collection(db, 'projects'), where('status', '==', 'Active'));
         const projectsSnapshot = await getDocs(projectsQuery);
         const activeProjects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
         
-        setRedHealthProjects(activeProjects.filter(p => p.overallStatus === 'Red'));
+        setAllActiveProjects(activeProjects);
 
-        const allRisks: EnrichedRisk[] = [];
-        const allIssues: EnrichedIssue[] = [];
+        const fetchedRisks: EnrichedRisk[] = [];
+        const fetchedIssues: EnrichedIssue[] = [];
 
         for (const project of activeProjects) {
             // Fetch risks for the project
@@ -203,7 +217,7 @@ export default function CtoDashboardPage() {
             risksSnapshot.forEach(doc => {
                 const risk = doc.data() as Risk;
                 if (getRiskPotential(risk.severity, risk.probability) === 'High') {
-                    allRisks.push({ ...risk, id: doc.id, projectName: project.name, projectId: project.id });
+                    fetchedRisks.push({ ...risk, id: doc.id, projectName: project.name, projectId: project.id });
                 }
             });
 
@@ -217,13 +231,13 @@ export default function CtoDashboardPage() {
                  } as Issue;
 
                  if (['Critical', 'High'].includes(issue.priority)) {
-                    allIssues.push({ ...issue, id: doc.id, projectName: project.name, projectId: project.id });
+                    fetchedIssues.push({ ...issue, id: doc.id, projectName: project.name, projectId: project.id });
                 }
             });
         }
         
-        setHighRisks(allRisks);
-        setCriticalIssues(allIssues.sort((a,b) => (a.priority === 'Critical' ? -1 : 1)));
+        setAllRisks(fetchedRisks);
+        setAllIssues(fetchedIssues.sort((a,b) => (a.priority === 'Critical' ? -1 : 1)));
 
 
       } catch (error) {
@@ -239,7 +253,19 @@ export default function CtoDashboardPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="CTO Dashboard" description="High-level overview of all portfolios and projects." />
+      <PageHeader title="CTO Dashboard" description="High-level overview of all portfolios and projects.">
+        <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Select Portfolio" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Portfolios</SelectItem>
+            {portfolios.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PageHeader>
       
       {isLoading ? (
         <p>Loading dashboard data...</p>
