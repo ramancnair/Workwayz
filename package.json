@@ -48,6 +48,7 @@
     "genkit": "^1.20.0",
     "lucide-react": "^0.475.0",
     "next": "latest",
+    "next-themes": "^1.0.0-beta.0",
     "patch-package": "^8.0.0",
     "react": "^19.0.0-rc.0",
     "react-day-picker": "^9.0.0-beta.233",

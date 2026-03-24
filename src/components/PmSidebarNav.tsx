@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { 
   SidebarContent,
@@ -15,6 +15,16 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 import { 
   Waves,
   ChevronLeft,
@@ -28,9 +38,11 @@ import {
   CreditCard,
   DollarSign,
   LayoutDashboard,
+  LogOut,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type PmSidebarNavProps = {
   activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing';
@@ -38,6 +50,7 @@ type PmSidebarNavProps = {
 
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { toggleSidebar } = useSidebar();
   const [user, setUser] = useState({ name: 'Raman C Nair', email: 'ramanreadsmail@gmail.com' });
 
@@ -51,6 +64,18 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       }
     }
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      if (auth) {
+        await signOut(auth);
+      }
+      localStorage.removeItem('projectflow_user');
+      router.push('/login');
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -147,8 +172,11 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
                <ChevronLeft />
             </Button>
           </div>
-          <div className="flex items-center ml-[2px]">
+          <div className="flex items-center ml-[2px] gap-2">
             <SidebarTrigger className="h-7 w-7 rounded-sm border bg-background shadow-sm hover:bg-sidebar-accent hidden md:flex shrink-0" />
+            <div className="ml-auto flex transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden">
+                <ThemeToggle />
+            </div>
           </div>
         </div>
       </SidebarHeader>
@@ -189,15 +217,27 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="flex items-center mt-4 h-10 overflow-hidden">
-          <Avatar className="h-8 w-8 shrink-0">
-              <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col ml-3 transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">
-              <span className="font-semibold text-sm text-sidebar-foreground truncate">{user.name}</span>
-              <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">
+              <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col ml-3 transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">
+                  <span className="font-semibold text-sm text-sidebar-foreground truncate">{user.name}</span>
+                  <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
+              </div>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="end" className="w-56">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </>
   );

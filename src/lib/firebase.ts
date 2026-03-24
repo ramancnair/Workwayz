@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -22,5 +23,6 @@ if (firebaseConfig.projectId && getApps().length === 0) {
 }
 
 const db = app ? getFirestore(app) : null;
+const auth = app ? getAuth(app) : null;
 
-export { db, firebaseConfig };
+export { db, auth, firebaseConfig };
