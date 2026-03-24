@@ -69,10 +69,20 @@ export default function LoginPage() {
       });
       router.push('/project-home');
     } catch (error: any) {
-      console.error("Login error:", error);
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        errorMessage = "Invalid email or password. Please try again.";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many failed attempts. Please try again later.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Please enter a valid email address.";
+      } else if (error.message) {
+        errorMessage = error.message.replace('Firebase: ', '');
+      }
+
       toast({
         title: "Login failed",
-        description: error.message || "Invalid credentials.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

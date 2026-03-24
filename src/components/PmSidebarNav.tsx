@@ -88,13 +88,6 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   
   const allMenuItems = [
     {
-      id: 'portfolios',
-      href: `/portfolios`,
-      label: "Portfolios",
-      icon: Briefcase,
-      group: 'portfolio'
-    },
-    {
       id: 'projects',
       href: `/project-home`,
       label: "Project Home",
