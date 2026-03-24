@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import { 
   SidebarContent,
   SidebarHeader,
@@ -38,6 +39,27 @@ type PmSidebarNavProps = {
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
+  const [user, setUser] = useState({ name: 'Raman C Nair', email: 'ramanreadsmail@gmail.com' });
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('projectflow_user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user from local storage");
+      }
+    }
+  }, []);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
   
   const allMenuItems = [
     {
@@ -169,11 +191,11 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
         </SidebarMenu>
         <div className="flex items-center mt-4 h-10 overflow-hidden">
           <Avatar className="h-8 w-8 shrink-0">
-              <AvatarFallback>RN</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
-              <span className="font-semibold text-sm text-sidebar-foreground truncate pr-2">Raman C Nair</span>
-              <span className="text-xs text-sidebar-foreground/70 truncate pr-2">ramanreadsmail@gmail.com</span>
+          <div className="flex flex-col ml-3 transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">
+              <span className="font-semibold text-sm text-sidebar-foreground truncate">{user.name}</span>
+              <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
           </div>
         </div>
       </SidebarFooter>
