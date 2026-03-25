@@ -340,7 +340,9 @@ export default function ProjectsDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPortfolioDialogOpen, setIsPortfolioDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editingPortfolio, setEditingPortfolio] = useState<Portfolio | null>(null);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
+  const [deletingPortfolio, setDeletingPortfolio] = useState<Portfolio | null>(null);
   const [filterText, setFilterText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'name', desc: false });
   const { toast } = useToast();
@@ -406,30 +408,68 @@ export default function ProjectsDashboard() {
   }, [isDialogOpen, editingProject, form]);
 
 
+  useEffect(() => {
+    if (isPortfolioDialogOpen) {
+      if (editingPortfolio) {
+        portfolioForm.reset({ name: editingPortfolio.name, description: editingPortfolio.description || '' });
+      } else {
+        portfolioForm.reset({ name: '', description: '' });
+      }
+    }
+  }, [isPortfolioDialogOpen, editingPortfolio, portfolioForm]);
+
   const onPortfolioSubmit = async (values: z.infer<typeof portfolioSchema>) => {
     if (!db) return;
     try {
-      const portfoliosSnapshot = await getDocs(collection(db, 'portfolios'));
-      const existingIds = portfoliosSnapshot.docs
-        .map(doc => parseInt(doc.id.replace('PF', ''), 10))
-        .filter(num => !isNaN(num));
-      const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
-      const portfolioId = `PF${nextId.toString().padStart(3, '0')}`;
-      
-      const newPortfolioRef = doc(db, 'portfolios', portfolioId);
-      await setDoc(newPortfolioRef, {
-        id: portfolioId,
-        name: values.name,
-        description: values.description || '',
-        isDeleted: false,
-        createdAt: Timestamp.now(),
-      });
-      toast({ title: 'Success', description: 'Portfolio created successfully.' });
+      if (editingPortfolio) {
+        const portfolioRef = doc(db, 'portfolios', editingPortfolio.id);
+        await updateDoc(portfolioRef, { name: values.name, description: values.description || '' });
+        toast({ title: 'Success', description: 'Portfolio updated successfully.' });
+      } else {
+        const portfoliosSnapshot = await getDocs(collection(db, 'portfolios'));
+        const existingIds = portfoliosSnapshot.docs
+          .map(doc => parseInt(doc.id.replace('PF', ''), 10))
+          .filter(num => !isNaN(num));
+        const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+        const portfolioId = `PF${nextId.toString().padStart(3, '0')}`;
+        
+        const newPortfolioRef = doc(db, 'portfolios', portfolioId);
+        await setDoc(newPortfolioRef, {
+          id: portfolioId,
+          name: values.name,
+          description: values.description || '',
+          isDeleted: false,
+          createdAt: Timestamp.now(),
+        });
+        toast({ title: 'Success', description: 'Portfolio created successfully.' });
+      }
       setIsPortfolioDialogOpen(false);
+      setEditingPortfolio(null);
       portfolioForm.reset();
     } catch (error) {
-      console.error('Error creating portfolio:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not create portfolio.' });
+      console.error('Error saving portfolio:', error);
+      toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingPortfolio ? 'update' : 'create'} portfolio.` });
+    }
+  };
+
+  const handleDeletePortfolio = async () => {
+    if (!deletingPortfolio || !db) return;
+    try {
+      const portfolioRef = doc(db, 'portfolios', deletingPortfolio.id);
+      await updateDoc(portfolioRef, { isDeleted: true, deletedAt: Timestamp.now() });
+      
+      const portfolioProjects = projects.filter(p => p.portfolioId === deletingPortfolio.id);
+      for (const project of portfolioProjects) {
+        const projectRef = doc(db, 'projects', project.id);
+        await updateDoc(projectRef, { isDeleted: true, deletedAt: Timestamp.now() });
+      }
+      
+      toast({ title: 'Success', description: `Portfolio "${deletingPortfolio.name}" and its ${portfolioProjects.length} project(s) moved to Trash.` });
+    } catch (error) {
+      console.error('Error deleting portfolio:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete portfolio.' });
+    } finally {
+      setDeletingPortfolio(null);
     }
   };
 
@@ -500,6 +540,11 @@ export default function ProjectsDashboard() {
   const handleOpenDialog = (project: Project | null) => {
     setEditingProject(project);
     setIsDialogOpen(true);
+  };
+
+  const handleEditPortfolio = (portfolio: Portfolio) => {
+    setEditingPortfolio(portfolio);
+    setIsPortfolioDialogOpen(true);
   };
 
 
@@ -576,10 +621,10 @@ export default function ProjectsDashboard() {
           </div>
         </PageHeader>
 
-        <Dialog open={isPortfolioDialogOpen} onOpenChange={setIsPortfolioDialogOpen}>
+        <Dialog open={isPortfolioDialogOpen} onOpenChange={(open) => { setIsPortfolioDialogOpen(open); if (!open) setEditingPortfolio(null); }}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Create New Portfolio</DialogTitle>
+              <DialogTitle>{editingPortfolio ? 'Edit Portfolio' : 'Create New Portfolio'}</DialogTitle>
             </DialogHeader>
             <Form {...portfolioForm}>
               <form onSubmit={portfolioForm.handleSubmit(onPortfolioSubmit)} className="space-y-4">
@@ -610,7 +655,7 @@ export default function ProjectsDashboard() {
                   )}
                 />
                 <DialogFooter>
-                  <Button type="submit">Create Portfolio</Button>
+                  <Button type="submit">{editingPortfolio ? 'Save Changes' : 'Create Portfolio'}</Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -643,11 +688,19 @@ export default function ProjectsDashboard() {
                 {projectsByPortfolio.map(portfolio => (
                    <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
                      <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
-                       <div className="flex items-center gap-4">
+                       <div className="flex items-center gap-4 flex-1">
                          <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                          <Folder className="h-5 w-5" />
                          <span className="font-semibold">{portfolio.name}</span>
                          <Badge variant="secondary">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}</Badge>
+                         <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                           <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => handleEditPortfolio(portfolio)}>
+                             <Edit className="h-3.5 w-3.5" />
+                           </div>
+                           <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => setDeletingPortfolio(portfolio)}>
+                             <Trash2 className="h-3.5 w-3.5" />
+                           </div>
+                         </div>
                        </div>
                      </AccordionTrigger>
                      <AccordionContent className="p-0">
@@ -760,6 +813,25 @@ export default function ProjectsDashboard() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteProject}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Move to Trash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!deletingPortfolio} onOpenChange={(isOpen) => !isOpen && setDeletingPortfolio(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Portfolio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move the portfolio "{deletingPortfolio?.name}" and all its projects to the Trash. They will be permanently deleted after 30 days.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePortfolio}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Move to Trash
