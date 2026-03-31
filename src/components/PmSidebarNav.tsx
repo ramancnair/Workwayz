@@ -39,6 +39,9 @@ import {
   DollarSign,
   LayoutDashboard,
   LogOut,
+  Shield,
+  Database,
+  Bot,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -129,6 +132,27 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       icon: CalendarDays,
       group: 'holidays'
     },
+    {
+      id: 'access-settings',
+      href: '/portfolio-settings/access-settings',
+      label: 'Access Settings',
+      icon: Shield,
+      group: 'portfolio'
+    },
+    {
+      id: 'database',
+      href: '/portfolio-settings/database',
+      label: 'Database',
+      icon: Database,
+      group: 'portfolio'
+    },
+    {
+      id: 'ai-config',
+      href: '/portfolio-settings/ai-config',
+      label: 'AI Config',
+      icon: Bot,
+      group: 'portfolio'
+    },
   ];
 
   const getGroupForTab = (tab: PmSidebarNavProps['activeTab']) => {
@@ -203,7 +227,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/portfolio-settings">
-              <SidebarMenuButton tooltip="Portfolio Settings" isActive={pathname.startsWith(`/portfolio-settings`)}>
+              <SidebarMenuButton tooltip="Portfolio Settings" isActive={pathname === `/portfolio-settings`}>
                 <Settings />
                 <span>Portfolio Settings</span>
               </SidebarMenuButton>

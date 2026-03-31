@@ -112,16 +112,15 @@ export default function AccessSettingsPage() {
     
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-medium">Access Settings</h3>
-                    <p className="text-sm text-muted-foreground">Define page-level access for different roles.</p>
-                </div>
+            <PageHeader 
+                title="Access Settings" 
+                description="Define page-level access for different roles."
+            >
                  <Button onClick={handleSaveChanges} disabled={isLoading}>
                     <Save className="mr-2 h-4 w-4" />
                     {isLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
-            </div>
+            </PageHeader>
             <Card>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">

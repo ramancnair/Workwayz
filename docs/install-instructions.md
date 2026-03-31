@@ -29,7 +29,18 @@ Install the following software **before** proceeding with the project setup. The
 
 ## 3. Environment Variables Setup
 
-The project requires a `.env` file in the root directory with the following keys:
+This application provides a **built-in Configuration UI** for administrators to initialize the database and AI providers upon first offline run. 
+
+Instead of manually creating a `.env` file, an **Administrator** can:
+1. Start the application (see Section 5).
+2. Expand the Sidebar and navigate to **Access Settings**.
+3. Use the **Database** and **AI Config** forms to enter project-specific configurations (Firebase, Supabase, Postgres, OpenAI, Genkit, LM Studio, etc.).
+4. Click Save. The application will automatically generate the required `.env.local` file.
+5. **Restart the Next.js development server** for the new configuration to take effect.
+
+> **Note on Roles:** Only users logged in with the `Administrator` role can access the Database and AI Configuration UI wizards.
+
+*(Optional)* You can still manually create a `.env.local` file in the root directory if you prefer to bypass the UI:
 
 ```env
 # Firebase Configuration
@@ -43,8 +54,6 @@ NEXT_PUBLIC_FIREBASE_APP_ID="<your-app-id>"
 # Gemini AI Key (used by Genkit)
 GEMINI_API_KEY=<your-gemini-api-key>
 ```
-
-> Ask the project administrator for the actual values, or create your own Firebase project and Gemini API key.
 
 ---
 
@@ -105,10 +114,11 @@ npm start        # Serve the production build
 2.  Install Node.js (v18+)
 3.  git clone https://github.com/ramancnair/ProjectFlow.git
 4.  cd ProjectFlow
-5.  Create .env file with required keys (see Section 3)
-6.  npm install
-7.  npm run dev
-8.  Open http://localhost:3000 in your browser
+5.  `npm install`
+6.  `npm run dev` to start the setup wizard
+7.  Configure Database and AI through the UI (Requires Administrator role)
+8.  Restart the development server
+9.  Open http://localhost:3000 in your browser
 ```
 
 ---
