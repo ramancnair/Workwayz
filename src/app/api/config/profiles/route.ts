@@ -7,8 +7,11 @@ const getProfilesPath = () => path.join(process.cwd(), 'connections.json');
 
 const autoSeedFromEnv = (conns: any): boolean => {
     let changed = false;
-    const envPath = path.join(process.cwd(), '.env.local');
-    if (!fs.existsSync(envPath)) return false;
+    let envPath = path.join(process.cwd(), '.env.local');
+    if (!fs.existsSync(envPath)) {
+        envPath = path.join(process.cwd(), '.env');
+        if (!fs.existsSync(envPath)) return false;
+    }
 
     const envMap = new Map<string, string>();
     const lines = fs.readFileSync(envPath, 'utf8').split('\n');
@@ -57,12 +60,27 @@ const autoSeedFromEnv = (conns: any): boolean => {
         }
     }
 
+    if (!conns.authentication || conns.authentication.length === 0) {
+        let authProvider = envMap.get('NEXT_PUBLIC_AUTH_PROVIDER') || (envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : 'local');
+        const auth: any = { 
+             id: crypto.randomUUID(), 
+             profileName: 'Primary .env Auth', 
+             provider: authProvider, 
+             googleSso: false,
+             facebookSso: false,
+             appleSso: false,
+             isActive: true 
+        };
+        conns.authentication = [auth];
+        changed = true;
+    }
+
     return changed;
 };
 
 const getConnections = () => {
     const p = getProfilesPath();
-    let conns = { database: [], ai: [] };
+    let conns: any = { database: [], ai: [], authentication: [] };
     if (fs.existsSync(p)) {
         try {
             conns = JSON.parse(fs.readFileSync(p, 'utf8'));

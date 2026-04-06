@@ -199,6 +199,8 @@ export default function AuthenticationSettingsPage() {
         );
     }
     
+    const activeProfile = profiles.find(p => p.isActive);
+
     return (
         <div className="space-y-6">
             <PageHeader 
@@ -211,6 +213,15 @@ export default function AuthenticationSettingsPage() {
                      </Button>
                 )}
             </PageHeader>
+
+            {/* Existing environment status */}
+            <Alert className="max-w-3xl bg-slate-100 border-slate-200 dark:bg-slate-900/40 dark:border-slate-800">
+                <CheckCircle2 className="h-4 w-4" />
+                <AlertTitle>Current .env State</AlertTitle>
+                <AlertDescription>
+                    Automatically bound to <strong>{activeProfile ? activeProfile.provider : 'Unknown'}</strong>. Restart node engine if you swap active profiles below.
+                </AlertDescription>
+            </Alert>
 
             {/* Saved Profiles List */}
             <div className="space-y-4">
