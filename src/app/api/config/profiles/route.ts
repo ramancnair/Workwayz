@@ -105,9 +105,10 @@ export async function GET() {
         const conns = getConnections();
         const maskedDb = (conns.database || []).map((p: any) => maskProfile(p, 'database'));
         const maskedAi = (conns.ai || []).map((p: any) => maskProfile(p, 'ai'));
-        return NextResponse.json({ database: maskedDb, ai: maskedAi });
+        const auth = (conns.authentication || []);
+        return NextResponse.json({ database: maskedDb, ai: maskedAi, authentication: auth });
     } catch (e) {
-        return NextResponse.json({ database: [], ai: [] });
+        return NextResponse.json({ database: [], ai: [], authentication: [] });
     }
 }
 

@@ -42,6 +42,7 @@ import {
   Shield,
   Database,
   Bot,
+  Key,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -144,6 +145,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: '/portfolio-settings/database',
       label: 'Database',
       icon: Database,
+      group: 'portfolio'
+    },
+    {
+      id: 'authentication',
+      href: '/portfolio-settings/authentication',
+      label: 'Authentication',
+      icon: Key,
       group: 'portfolio'
     },
     {
