@@ -175,7 +175,7 @@ function IssueDetailDialog({ issue, isOpen, onOpenChange }: { issue: EnrichedIss
 }
 
 
-export default function CtoDashboardPage() {
+export default function PortfolioDashboardPage() {
   const [allRisks, setAllRisks] = useState<EnrichedRisk[]>([]);
   const [allIssues, setAllIssues] = useState<EnrichedIssue[]>([]);
   const [allActiveProjects, setAllActiveProjects] = useState<Project[]>([]);
@@ -241,7 +241,7 @@ export default function CtoDashboardPage() {
 
 
       } catch (error) {
-        console.error("Error fetching CTO dashboard data:", error);
+        console.error("Error fetching Portfolio dashboard data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -253,7 +253,7 @@ export default function CtoDashboardPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="CTO Dashboard" description="High-level overview of all portfolios and projects.">
+      <PageHeader title="Portfolio Dashboard" description="High-level overview of all portfolios and projects.">
         <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Select Portfolio" />

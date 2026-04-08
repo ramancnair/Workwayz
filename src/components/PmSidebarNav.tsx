@@ -43,6 +43,7 @@ import {
   Database,
   Bot,
   Key,
+  Wand2,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -99,9 +100,9 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'projects'
     },
     {
-      id: 'cto-dashboard',
-      href: `/cto-dashboard`,
-      label: "CTO Dashboard",
+      id: 'portfolio-dashboard',
+      href: `/portfolio-dashboard`,
+      label: "Portfolio Dashboard",
       icon: LayoutDashboard,
       group: 'projects'
     },
@@ -159,6 +160,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: '/portfolio-settings/ai-config',
       label: 'AI Config',
       icon: Bot,
+      group: 'portfolio'
+    },
+    {
+      id: 'setup-wizard',
+      href: '/setup-wizard',
+      label: 'Setup Wizard',
+      icon: Wand2,
       group: 'portfolio'
     },
   ];

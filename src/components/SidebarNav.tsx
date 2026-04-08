@@ -306,12 +306,12 @@ export function SidebarNav({ projectId }: { projectId: string }) {
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <Link href="/cto-dashboard">
+              <Link href="/portfolio-dashboard">
                 <SidebarMenuButton
-                  tooltip="CTO Dashboard"
+                  tooltip="Portfolio Dashboard"
                 >
                   <LayoutDashboard />
-                  <span>CTO Dashboard</span>
+                  <span>Portfolio Dashboard</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
