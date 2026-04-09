@@ -323,6 +323,8 @@ export type Project = {
   costStatus?: RagStatus;
   timeStatus?: RagStatus;
   statusComments?: string;
+  isArchived?: boolean;
+  archivedAt?: string; // ISO String
 };
 
 export type AccessControlSetting = {
@@ -385,4 +387,13 @@ export type FixedCost = {
   id: string;
   name: string;
   cost: number;
+};
+
+export type ArchiveSettings = {
+    id?: string;
+    autoArchiveCompletedProjects: boolean;
+    autoArchiveAfterMonths: string;
+    autoDeleteArchivedProjects: boolean;
+    autoDeleteAfterMonths: string;
+    customDeleteMonths?: number;
 };

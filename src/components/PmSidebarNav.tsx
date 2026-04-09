@@ -44,6 +44,7 @@ import {
   Bot,
   Key,
   Wand2,
+  Archive,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -167,6 +168,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: '/setup-wizard',
       label: 'Setup Wizard',
       icon: Wand2,
+      group: 'portfolio'
+    },
+    {
+      id: 'archive',
+      href: '/portfolio-settings/archive',
+      label: 'Archive',
+      icon: Archive,
       group: 'portfolio'
     },
   ];
