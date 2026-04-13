@@ -444,6 +444,24 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                     batch.commit().catch(e => console.error("Failed to set default Fixed Costs", e));
                     return;
                 }
+                if (name === 'initialHorizontals' && snapshot.empty) {
+                    const batch = writeBatch(db);
+                    defaultHorizontals.forEach(horizontal => {
+                        const docRef = doc(collection(rootProjectDocRef, 'initialHorizontals'));
+                        batch.set(docRef, horizontal);
+                    });
+                    batch.commit().catch(e => console.error("Failed to set default Initial Horizontals", e));
+                    return;
+                }
+                if (name === 'horizontals' && snapshot.empty) {
+                    const batch = writeBatch(db);
+                    defaultHorizontals.forEach(horizontal => {
+                        const docRef = doc(collection(rootProjectDocRef, 'horizontals'));
+                        batch.set(docRef, horizontal);
+                    });
+                    batch.commit().catch(e => console.error("Failed to set default Horizontals", e));
+                    return;
+                }
                  // ... other default data logic
             }
 

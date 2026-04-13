@@ -93,5 +93,30 @@ export async function getAiDependencySuggestions(
     return { error: e.message || 'An unexpected error occurred while generating dependencies.' };
   }
 }
+import { aiSuggestTechStack, type TechStackSuggestionInput, type TechStackSuggestionOutput } from '@/ai/flows/ai-suggest-tech-stack';
 
+export async function getAiTechStackSuggestions(
+  input: TechStackSuggestionInput
+): Promise<{ stacks: TechStackSuggestionOutput['stacks'] } | { error: string }> {
+  try {
+    const result = await aiSuggestTechStack(input);
+    return { stacks: result.stacks };
+  } catch (e: any) {
+    console.error('AI Tech Stack Suggestion Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while generating tech stack suggestions.' };
+  }
+}
 
+import { aiSuggestHorizontals, type HorizontalSuggestionInput, type HorizontalSuggestionOutput } from '@/ai/flows/ai-suggest-horizontals';
+
+export async function getAiHorizontalSuggestions(
+  input: HorizontalSuggestionInput
+): Promise<{ strategies: HorizontalSuggestionOutput['strategies'] } | { error: string }> {
+  try {
+    const result = await aiSuggestHorizontals(input);
+    return { strategies: result.strategies };
+  } catch (e: any) {
+    console.error('AI Horizontal Suggestion Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while generating horizontal suggestions.' };
+  }
+}

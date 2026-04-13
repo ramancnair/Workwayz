@@ -20,6 +20,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -39,13 +45,13 @@ import {
   TableFooter,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, Save, CheckCircle, Bot } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Save, CheckCircle, Bot, RefreshCcw } from 'lucide-react';
 import { type ImpactedSystem, type ImpactedSystemCategory, type Horizontal } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
-import { getAiEstimates } from '@/app/actions';
+import { getAiEstimates, getAiTechStackSuggestions, getAiHorizontalSuggestions } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const GeminiIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -109,6 +115,16 @@ export default function InitialEstimationPage() {
 
   const [isAiEstimating, setIsAiEstimating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  const [isSuggestStackDialogOpen, setIsSuggestStackDialogOpen] = useState(false);
+  const [isAiSuggestingStack, setIsAiSuggestingStack] = useState(false);
+  const [techStackSuggestions, setTechStackSuggestions] = useState<any[]>([]);
+  const [suggestStackError, setSuggestStackError] = useState<string | null>(null);
+
+  const [isSuggestHorizontalsDialogOpen, setIsSuggestHorizontalsDialogOpen] = useState(false);
+  const [isAiSuggestingHorizontals, setIsAiSuggestingHorizontals] = useState(false);
+  const [horizontalSuggestions, setHorizontalSuggestions] = useState<any[]>([]);
+  const [suggestHorizontalsError, setSuggestHorizontalsError] = useState<string | null>(null);
 
   const estimationForm = useForm<z.infer<typeof estimationSchema>>({
     resolver: zodResolver(estimationSchema),
@@ -190,6 +206,98 @@ export default function InitialEstimationPage() {
       toast({ variant: 'destructive', title: 'AI Estimation Failed', description: e.message || 'Could not get AI estimates.' });
     } finally {
       setIsAiEstimating(false);
+    }
+  };
+
+  const handleSuggestTechStack = async (force: boolean = false) => {
+    if (!project?.summary) return;
+    setIsSuggestStackDialogOpen(true);
+    
+    if (!force && techStackSuggestions.length > 0) {
+      return;
+    }
+
+    setIsAiSuggestingStack(true);
+    setSuggestStackError(null);
+    setTechStackSuggestions([]);
+
+    try {
+      const result = await getAiTechStackSuggestions({ projectSummary: project.summary });
+      if ('error' in result && result.error) {
+         throw new Error(result.error);
+      }
+      setTechStackSuggestions(result.stacks || []);
+    } catch (e: any) {
+      setSuggestStackError(e.message || 'Failed to get tech stack suggestions.');
+    } finally {
+      setIsAiSuggestingStack(false);
+    }
+  };
+
+  const handleSelectTechStack = async (stack: any) => {
+    try {
+       const deletePromises = initialImpactedSystems.map(sys => deleteInitialImpactedSystem(sys.id));
+       await Promise.all(deletePromises);
+
+       const promises = stack.systems.map((sys: any) => 
+           addInitialImpactedSystem({
+               name: sys.name,
+               description: sys.description,
+               category: sys.category,
+               estimate: undefined,
+               dailyBillingRate: 0
+           })
+       );
+       await Promise.all(promises);
+       toast({ title: 'Success', description: `Applied ${stack.name} systems` });
+       setIsSuggestStackDialogOpen(false);
+    } catch(e) {
+       toast({ variant: 'destructive', title: 'Error', description: 'Failed to apply systems from tech stack.' });
+    }
+  };
+
+  const handleSuggestHorizontals = async (force: boolean = false) => {
+    if (!project?.summary) return;
+    setIsSuggestHorizontalsDialogOpen(true);
+
+    if (!force && horizontalSuggestions.length > 0) {
+      return;
+    }
+
+    setIsAiSuggestingHorizontals(true);
+    setSuggestHorizontalsError(null);
+    setHorizontalSuggestions([]);
+
+    try {
+      const result = await getAiHorizontalSuggestions({ projectSummary: project.summary });
+      if ('error' in result && result.error) {
+         throw new Error(result.error);
+      }
+      setHorizontalSuggestions(result.strategies || []);
+    } catch (e: any) {
+      setSuggestHorizontalsError(e.message || 'Failed to get horizontal strategy suggestions.');
+    } finally {
+      setIsAiSuggestingHorizontals(false);
+    }
+  };
+
+  const handleSelectHorizontalStrategy = async (strategy: any) => {
+    try {
+       const deletePromises = initialHorizontals.map(hor => deleteInitialHorizontal(hor.id));
+       await Promise.all(deletePromises);
+
+       const promises = strategy.horizontals.map((hor: any) => 
+           addInitialHorizontal({
+               name: hor.name,
+               weightage: hor.weightage,
+               isEnabled: true
+           })
+       );
+       await Promise.all(promises);
+       toast({ title: 'Success', description: `Applied ${strategy.name} strategy` });
+       setIsSuggestHorizontalsDialogOpen(false);
+    } catch(e) {
+       toast({ variant: 'destructive', title: 'Error', description: 'Failed to apply horizontal strategy.' });
     }
   };
 
@@ -374,10 +482,31 @@ export default function InitialEstimationPage() {
               <CardDescription>Manage all systems impacted by the project.</CardDescription>
             </div>
             {project?.status === 'Initial Estimation' && (
-              <Button onClick={() => handleSystemDialogOpen(null)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add System
-              </Button>
+              <div className="flex gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button 
+                           variant="outline"
+                           onClick={handleSuggestTechStack}
+                           disabled={!project?.summary || isEditingSummary}
+                        >
+                          <Bot className="mr-2 h-4 w-4" />
+                          Stack Suggest
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>AI based architecture suggestion</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Button onClick={() => handleSystemDialogOpen(null)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add System
+                </Button>
+              </div>
             )}
           </CardHeader>
           <CardContent>
@@ -448,6 +577,33 @@ export default function InitialEstimationPage() {
                     <CardTitle>Horizontals</CardTitle>
                     <CardDescription>Effort derived from the Total Development Effort.</CardDescription>
                 </div>
+                {project?.status === 'Initial Estimation' && (
+                  <div className="flex gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <Button 
+                               variant="outline"
+                               onClick={handleSuggestHorizontals}
+                               disabled={!project?.summary || isEditingSummary}
+                            >
+                              <Bot className="mr-2 h-4 w-4" />
+                              Horizontals Suggest
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>AI based horizontals suggestion</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <Button onClick={() => setIsHorizontalFormOpen(true)}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Horizontal
+                    </Button>
+                  </div>
+                )}
             </CardHeader>
             <CardContent>
                 <Table>
@@ -522,15 +678,6 @@ export default function InitialEstimationPage() {
                         })}
                     </TableBody>
                      <TableFooter>
-                        {project?.status === 'Initial Estimation' && !isHorizontalFormOpen && (
-                          <TableRow>
-                            <TableCell colSpan={7}>
-                              <Button variant="link" onClick={() => setIsHorizontalFormOpen(true)} className="mt-4 p-0">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Horizontal
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        )}
                         {project?.status === 'Initial Estimation' && isHorizontalFormOpen && (
                             <TableRow>
                                 <TableCell colSpan={7}>
@@ -717,6 +864,107 @@ export default function InitialEstimationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isSuggestStackDialogOpen} onOpenChange={setIsSuggestStackDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle>AI Tech Stack Suggestions</DialogTitle>
+            <Button variant="outline" size="sm" onClick={() => handleSuggestTechStack(true)} disabled={isAiSuggestingStack}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Refresh
+            </Button>
+          </DialogHeader>
+          <div className="space-y-4">
+             {isAiSuggestingStack && (
+                <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
+                   <Bot className="h-8 w-8 mb-4 animate-pulse" />
+                   <p>Analyzing project summary and generating stack options...</p>
+                </div>
+             )}
+             {suggestStackError && (
+               <Alert variant="destructive">
+                 <AlertTitle>Error</AlertTitle>
+                 <AlertDescription>{suggestStackError}</AlertDescription>
+               </Alert>
+             )}
+             {!isAiSuggestingStack && techStackSuggestions.length > 0 && (
+                <div className="grid gap-4">
+                   {techStackSuggestions.map((stack, idx) => (
+                      <Card key={idx}>
+                         <CardHeader>
+                            <CardTitle>{stack.name}</CardTitle>
+                            <CardDescription>{stack.description}</CardDescription>
+                         </CardHeader>
+                         <CardContent>
+                            <ul className="list-disc pl-5 space-y-1 mb-4 text-sm">
+                               {stack.systems.map((sys: any, i: number) => (
+                                  <li key={i}><strong>{sys.name}</strong> ({sys.category}): {sys.description}</li>
+                               ))}
+                            </ul>
+                            <div className="flex justify-end">
+                                <Button onClick={() => handleSelectTechStack(stack)}>Select this Stack</Button>
+                            </div>
+                         </CardContent>
+                      </Card>
+                   ))}
+                </div>
+             )}
+          </div>
+          <DialogFooter className="mt-4">
+             <Button variant="ghost" onClick={() => setIsSuggestStackDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isSuggestHorizontalsDialogOpen} onOpenChange={setIsSuggestHorizontalsDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle>AI Horizontal Strategy Suggestions</DialogTitle>
+            <Button variant="outline" size="sm" onClick={() => handleSuggestHorizontals(true)} disabled={isAiSuggestingHorizontals}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Refresh
+            </Button>
+          </DialogHeader>
+          <div className="space-y-4">
+             {isAiSuggestingHorizontals && (
+                <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
+                   <Bot className="h-8 w-8 mb-4 animate-pulse" />
+                   <p>Analyzing project summary and generating horizontal strategies...</p>
+                </div>
+             )}
+             {suggestHorizontalsError && (
+               <Alert variant="destructive">
+                 <AlertTitle>Error</AlertTitle>
+                 <AlertDescription>{suggestHorizontalsError}</AlertDescription>
+               </Alert>
+             )}
+             {!isAiSuggestingHorizontals && horizontalSuggestions.length > 0 && (
+                <div className="grid gap-4">
+                   {horizontalSuggestions.map((strategy, idx) => (
+                      <Card key={idx}>
+                         <CardHeader>
+                            <CardTitle>{strategy.name}</CardTitle>
+                            <CardDescription>{strategy.description}</CardDescription>
+                         </CardHeader>
+                         <CardContent>
+                            <ul className="list-disc pl-5 space-y-1 mb-4 text-sm">
+                               {strategy.horizontals.map((hor: any, i: number) => (
+                                  <li key={i}><strong>{hor.name}</strong>: {hor.weightage}%</li>
+                               ))}
+                            </ul>
+                            <div className="flex justify-end">
+                                <Button onClick={() => handleSelectHorizontalStrategy(strategy)}>Apply Strategy</Button>
+                            </div>
+                         </CardContent>
+                      </Card>
+                   ))}
+                </div>
+             )}
+          </div>
+          <DialogFooter className="mt-4">
+             <Button variant="ghost" onClick={() => setIsSuggestHorizontalsDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
