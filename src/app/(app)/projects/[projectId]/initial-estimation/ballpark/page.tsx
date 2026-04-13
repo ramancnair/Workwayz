@@ -94,10 +94,12 @@ export default function InitialEstimationPage() {
     addInitialImpactedSystem, 
     updateInitialImpactedSystem, 
     deleteInitialImpactedSystem,
+    replaceInitialImpactedSystems,
     initialHorizontals,
     addInitialHorizontal,
     updateInitialHorizontal,
     deleteInitialHorizontal,
+    replaceInitialHorizontals,
     confirmInitialEstimation
   } = useProject();
   const { toast } = useToast();
@@ -236,19 +238,16 @@ export default function InitialEstimationPage() {
 
   const handleSelectTechStack = async (stack: any) => {
     try {
-       const deletePromises = initialImpactedSystems.map(sys => deleteInitialImpactedSystem(sys.id));
-       await Promise.all(deletePromises);
-
-       const promises = stack.systems.map((sys: any) => 
-           addInitialImpactedSystem({
-               name: sys.name,
-               description: sys.description,
-               category: sys.category,
-               estimate: undefined,
-               dailyBillingRate: 0
-           })
-       );
-       await Promise.all(promises);
+       const newSystems = stack.systems.map((sys: any) => ({
+           name: sys.name,
+           description: sys.description,
+           category: sys.category,
+           estimate: undefined,
+           dailyBillingRate: 0
+       }));
+       
+       await replaceInitialImpactedSystems(newSystems);
+       
        toast({ title: 'Success', description: `Applied ${stack.name} systems` });
        setIsSuggestStackDialogOpen(false);
     } catch(e) {
@@ -283,17 +282,14 @@ export default function InitialEstimationPage() {
 
   const handleSelectHorizontalStrategy = async (strategy: any) => {
     try {
-       const deletePromises = initialHorizontals.map(hor => deleteInitialHorizontal(hor.id));
-       await Promise.all(deletePromises);
+       const newHorizontals = strategy.horizontals.map((hor: any) => ({
+           name: hor.name,
+           weightage: hor.weightage,
+           isEnabled: true
+       }));
 
-       const promises = strategy.horizontals.map((hor: any) => 
-           addInitialHorizontal({
-               name: hor.name,
-               weightage: hor.weightage,
-               isEnabled: true
-           })
-       );
-       await Promise.all(promises);
+       await replaceInitialHorizontals(newHorizontals);
+       
        toast({ title: 'Success', description: `Applied ${strategy.name} strategy` });
        setIsSuggestHorizontalsDialogOpen(false);
     } catch(e) {
@@ -388,12 +384,10 @@ export default function InitialEstimationPage() {
   const averageDevRate = totalDevEffort > 0 ? totalDevCost / totalDevEffort : 0;
   
   const totalHorizontalEffort = initialHorizontals.reduce((acc, h) => {
-      if (!h.isEnabled) return acc;
       return acc + (totalDevEffort * (h.weightage / 100));
   }, 0);
 
   const totalHorizontalCost = initialHorizontals.reduce((acc, h) => {
-    if (!h.isEnabled) return acc;
     const horizontalEffort = (totalDevEffort * (h.weightage / 100));
     const rate = h.dailyBillingRate === undefined ? averageDevRate : h.dailyBillingRate;
     return acc + (horizontalEffort * rate);
@@ -407,22 +401,6 @@ export default function InitialEstimationPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Ballpark Estimation" description="Define the project summary and impacted systems for an initial estimate.">
-           {project?.status === 'Initial Estimation' && (
-              <>
-                <Button 
-                  variant="outline"
-                  onClick={handleAiEstimate}
-                  disabled={isAiEstimating || !project?.summary || initialImpactedSystems.length === 0}
-                >
-                  <GeminiIcon className="mr-2 h-4 w-4" />
-                  {isAiEstimating ? 'Estimating...' : 'AI Estimator'}
-                </Button>
-                <Button onClick={handleConfirmEstimation} disabled={isConfirming}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  {isConfirming ? 'Confirming...' : 'Confirm Estimation'}
-                </Button>
-              </>
-            )}
         </PageHeader>
         
         {aiError && (
@@ -514,8 +492,8 @@ export default function InitialEstimationPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[40%]">Name</TableHead>
-                  <TableHead>Estimation (man-days)</TableHead>
-                  <TableHead>Billing Rate (USD)</TableHead>
+                  <TableHead>Effort (man-days)</TableHead>
+                  <TableHead>Daily Billing Rate (USD)</TableHead>
                   <TableHead>Cost (USD)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -609,7 +587,6 @@ export default function InitialEstimationPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-10" />
                             <TableHead>Horizontal</TableHead>
                             <TableHead>Weightage (%)</TableHead>
                             <TableHead>Effort (man-days)</TableHead>
@@ -625,13 +602,6 @@ export default function InitialEstimationPage() {
                             const cost = horizontalEffort * rate;
                             return (
                                 <TableRow key={h.id}>
-                                    <TableCell>
-                                        <Checkbox
-                                            checked={h.isEnabled}
-                                            onCheckedChange={(checked) => updateInitialHorizontal(h.id, { isEnabled: !!checked })}
-                                            disabled={project?.status !== 'Initial Estimation'}
-                                        />
-                                    </TableCell>
                                     <TableCell className="font-medium">{h.name}</TableCell>
                                     <TableCell>
                                         <Input
@@ -680,7 +650,7 @@ export default function InitialEstimationPage() {
                      <TableFooter>
                         {project?.status === 'Initial Estimation' && isHorizontalFormOpen && (
                             <TableRow>
-                                <TableCell colSpan={7}>
+                                <TableCell colSpan={6}>
                                     <div className="mt-4 pt-4 border-t">
                                         <h4 className="font-medium mb-2">Add New Horizontal</h4>
                                         <Form {...horizontalForm}>
@@ -718,14 +688,14 @@ export default function InitialEstimationPage() {
                             </TableRow>
                         )}
                         <TableRow>
-                          <TableCell colSpan={3} className="text-right font-bold">Total Horizontal Effort</TableCell>
+                          <TableCell colSpan={2} className="text-right font-bold">Total Horizontal Effort</TableCell>
                           <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
                           <TableCell />
                           <TableCell className="font-bold">${totalHorizontalCost.toFixed(2)}</TableCell>
                           <TableCell />
                         </TableRow>
                         <TableRow className="bg-muted/80 hover:bg-muted/80">
-                            <TableCell colSpan={3} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
+                            <TableCell colSpan={2} className="text-right font-bold text-lg">Grand Total Effort (man-days)</TableCell>
                             <TableCell className="font-bold text-lg">{grandTotalEffort.toFixed(2)}</TableCell>
                             <TableCell />
                             <TableCell className="font-bold text-lg">${grandTotalCost.toFixed(2)}</TableCell>
@@ -737,7 +707,16 @@ export default function InitialEstimationPage() {
         </Card>
 
         {project?.status === 'Initial Estimation' && (
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end mt-6 gap-4">
+            <Button 
+              variant="outline"
+              size="lg"
+              onClick={handleAiEstimate}
+              disabled={isAiEstimating || !project?.summary || initialImpactedSystems.length === 0}
+            >
+              <GeminiIcon className="mr-2 h-4 w-4" />
+              {isAiEstimating ? 'Estimating...' : 'AI Estimator'}
+            </Button>
             <Button onClick={handleConfirmEstimation} disabled={isConfirming} size="lg">
               <CheckCircle className="mr-2 h-4 w-4" />
               {isConfirming ? 'Confirming...' : 'Confirm Estimation'}

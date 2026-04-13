@@ -174,9 +174,11 @@ interface ProjectContextType {
   addInitialImpactedSystem: (system: Omit<ImpactedSystem, 'id'>) => Promise<boolean>;
   updateInitialImpactedSystem: (systemId: string, data: Partial<Omit<ImpactedSystem, 'id'>>) => Promise<boolean>;
   deleteInitialImpactedSystem: (systemId: string) => Promise<boolean>;
+  replaceInitialImpactedSystems: (systems: Omit<ImpactedSystem, 'id'>[]) => Promise<boolean>;
   addInitialHorizontal: (horizontal: Omit<Horizontal, 'id'>) => Promise<boolean>;
   updateInitialHorizontal: (horizontalId: string, data: Partial<Omit<Horizontal, 'id'>>) => Promise<boolean>;
   deleteInitialHorizontal: (horizontalId: string) => Promise<boolean>;
+  replaceInitialHorizontals: (horizontals: Omit<Horizontal, 'id'>[]) => Promise<boolean>;
   confirmInitialEstimation: () => Promise<boolean>;
 
   // Horizontal Actions (live)
@@ -2001,6 +2003,26 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
   };
+  const replaceInitialImpactedSystems = async (systems: Omit<ImpactedSystem, 'id'>[]) => {
+    if (!db || !projectId) return false;
+    try {
+        const batch = writeBatch(db);
+        const projectDocRef = doc(db, 'projects', projectId);
+        const existingSnapshot = await getDocs(collection(projectDocRef, 'initialImpactedSystems'));
+        existingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+
+        systems.forEach(sys => {
+            const newRef = doc(collection(projectDocRef, 'initialImpactedSystems'));
+            batch.set(newRef, sanitizeForFirestore(sys));
+        });
+
+        await batch.commit();
+        return true;
+    } catch (e: any) {
+        console.error("Firebase Error: Failed to replace initial impacted systems.", { code: e.code, message: e.message, fullError: e });
+        return false;
+    }
+  };
   
   const confirmInitialEstimation = async (): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -2087,6 +2109,26 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       await deleteDoc(doc(db, 'projects', projectId, 'initialHorizontals', safeId));
       return true;
     } catch (e) { console.error("Firebase Error", e); return false; }
+  };
+  const replaceInitialHorizontals = async (horizontals: Omit<Horizontal, 'id'>[]) => {
+    if (!db || !projectId) return false;
+    try {
+        const batch = writeBatch(db);
+        const projectDocRef = doc(db, 'projects', projectId);
+        const existingSnapshot = await getDocs(collection(projectDocRef, 'initialHorizontals'));
+        existingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+
+        horizontals.forEach(hor => {
+            const newRef = doc(collection(projectDocRef, 'initialHorizontals'));
+            batch.set(newRef, sanitizeForFirestore(hor));
+        });
+
+        await batch.commit();
+        return true;
+    } catch (e: any) {
+        console.error("Firebase Error: Failed to replace initial horizontals.", { code: e.code, message: e.message, fullError: e });
+        return false;
+    }
   };
 
   // Environment Actions
@@ -2492,9 +2534,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addInitialImpactedSystem,
     updateInitialImpactedSystem,
     deleteInitialImpactedSystem,
+    replaceInitialImpactedSystems,
     addInitialHorizontal,
     updateInitialHorizontal,
     deleteInitialHorizontal,
+    replaceInitialHorizontals,
     confirmInitialEstimation,
     addHorizontal,
     updateHorizontal,
