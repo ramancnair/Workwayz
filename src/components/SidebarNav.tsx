@@ -305,16 +305,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <Link href="/portfolio-dashboard">
-                <SidebarMenuButton
-                  tooltip="Portfolio Dashboard"
-                >
-                  <LayoutDashboard />
-                  <span>Portfolio Dashboard</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
         </SidebarMenu>
       </div>
       <SidebarContent className="p-2 transition-all duration-300">

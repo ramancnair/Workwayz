@@ -1,5 +1,9 @@
-import { redirect } from 'next/navigation';
+'use client';
 
-export default function ReleasesPage({ params }: { params: { projectId: string } }) {
-  redirect(`/projects/${params.projectId}/releases/project-releases`);
+import { redirect } from 'next/navigation';
+import { use } from 'react';
+
+export default function ReleasesRedirect({ params }: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = use(params);
+  redirect(`/projects/${projectId}/releases/project-releases`);
 }
