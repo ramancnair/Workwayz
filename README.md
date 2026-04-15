@@ -30,12 +30,12 @@ Bash npm install # or your relevant command Set up Environment Variables: Create
 
 Run the application:
 
-Bash npm start 📈 Roadmap [ ] Multi-tenant support for enterprise use.
+Bash npm start 📈 Roadmap [x] Multi-tenant support for enterprise use.
 
-[ ] Integration with Gemini and other APIs.
+[x] Integration with Gemini and other APIs.
 
-[ ] AI-driven risk prediction models.
+[x] AI-driven risk prediction models.
 
-[ ] Advanced Gantt chart visualizations.
+[x] Advanced Gantt chart visualizations.
 
 📄 License Status: Apache 2.0
