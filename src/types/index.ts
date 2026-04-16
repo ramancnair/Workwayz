@@ -224,10 +224,13 @@ export type KanbanColumn = {
   isDoneColumn: boolean;
 };
 
+export type HolidayType = 'National' | 'Regional' | 'Optional';
+
 export type Holiday = {
     id: string;
     date: string; // ISO String
     description: string;
+    type?: HolidayType;
 };
 
 export type ProjectSettings = {

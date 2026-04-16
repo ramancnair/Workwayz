@@ -5,7 +5,9 @@ import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 const SUBCOLLECTIONS = [
   'epics', 'stories', 'sprints', 'employees', 'testCases', 'risks', 
   'assumptions', 'issues', 'dependencies', 'kanbanColumns', 'holidays', 
-  'releases', 'impactedSystems', 'worklogs', 'worklogSubmissions', 'settings'
+  'releases', 'impactedSystems', 'worklogs', 'worklogSubmissions', 'settings',
+  'horizontals', 'initialImpactedSystems', 'initialHorizontals', 'fixedCosts',
+  'environments', 'codeRepositories', 'testPlans', 'documents', 'paymentMilestones'
 ];
 
 async function deleteCollection(collectionPath: string, batch: any) {

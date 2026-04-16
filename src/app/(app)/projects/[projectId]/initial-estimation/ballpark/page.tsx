@@ -410,6 +410,18 @@ export default function InitialEstimationPage() {
           </Alert>
         )}
 
+        {project?.description && (
+          <Card className="mb-6 bg-muted/30">
+            <CardHeader className="pb-3">
+              <CardTitle>Project Objective</CardTitle>
+              <CardDescription>The core objective defined during project creation.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm border-l-2 border-primary/50 pl-4 py-1 italic whitespace-pre-wrap">{project.description}</p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -506,7 +518,8 @@ export default function InitialEstimationPage() {
                     <TableCell>
                       <Input
                         type="number"
-                        defaultValue={system.dailyBillingRate}
+                        defaultValue={system.dailyBillingRate || ''}
+                        onWheel={(e) => e.currentTarget.blur()}
                         onBlur={(e) => {
                             const newRate = parseFloat(e.target.value);
                             if (!isNaN(newRate) && newRate !== system.dailyBillingRate) {
@@ -606,7 +619,8 @@ export default function InitialEstimationPage() {
                                     <TableCell>
                                         <Input
                                             type="number"
-                                            defaultValue={h.weightage}
+                                            defaultValue={h.weightage || ''}
+                                            onWheel={(e) => e.currentTarget.blur()}
                                             onBlur={(e) => {
                                                 const newWeightage = parseFloat(e.target.value);
                                                 if (!isNaN(newWeightage) && newWeightage !== h.weightage) {
@@ -621,8 +635,9 @@ export default function InitialEstimationPage() {
                                     <TableCell>
                                         <Input
                                             type="number"
-                                            defaultValue={h.dailyBillingRate}
+                                            defaultValue={h.dailyBillingRate || ''}
                                             placeholder={averageDevRate.toFixed(2)}
+                                            onWheel={(e) => e.currentTarget.blur()}
                                             onBlur={(e) => {
                                                 const newRate = parseFloat(e.target.value);
                                                 if (!isNaN(newRate) && newRate !== h.dailyBillingRate) {

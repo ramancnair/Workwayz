@@ -39,6 +39,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
       router.push('/holidays');
     } else if (value === 'trash') {
         router.push('/trash');
+    } else if (value === 'portfolios') {
+        router.push('/portfolio-settings');
     }
   };
 
@@ -62,6 +64,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                       <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
                       <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
                       <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                      <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio Settings</TabsTrigger>
                   </TabsList>
               </Tabs>
           </div>

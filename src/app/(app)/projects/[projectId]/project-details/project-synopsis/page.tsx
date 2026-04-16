@@ -79,7 +79,7 @@ function DetailCard({ title, value, className }: { title: string; value: React.R
 function RagStatusIndicator({ status, label }: { status?: RagStatus, label: string }) {
     return (
         <div className="flex items-center gap-2">
-            <Circle className={cn('h-4 w-4', status ? ragStatusStyles[status] : 'text-gray-300')} />
+            <Circle className={cn('h-4 w-4 shrink-0', status ? ragStatusStyles[status] : 'text-gray-300')} fill="currentColor" />
             <span className="font-medium">{label}</span>
         </div>
     );
@@ -186,10 +186,10 @@ export default function ProjectSynopsisPage() {
             
             <div className="space-y-6">
                 <Card>
-                    <CardHeader><CardTitle>Project Summary</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Project Objective</CardTitle></CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground whitespace-pre-wrap">
-                            {project.summary || "No summary provided."}
+                            {project.description || "No objective provided."}
                         </p>
                     </CardContent>
                 </Card>
@@ -287,7 +287,7 @@ export default function ProjectSynopsisPage() {
                             <div className="space-y-4">
                                 <h4 className="font-medium">Overall Health</h4>
                                 <div className="flex items-center gap-4">
-                                     <Circle className={cn('h-8 w-8', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} />
+                                     <Circle className={cn('h-8 w-8 shrink-0', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} fill="currentColor" />
                                     <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
                                 </div>
                             </div>

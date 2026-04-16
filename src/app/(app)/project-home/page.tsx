@@ -769,8 +769,13 @@ export default function ProjectsDashboard() {
                                               </Link>
                                             </TableCell>
                                             <TableCell>
-                                              <Link href={projectUrl} className="block w-full h-full hover:underline">
-                                                {project.name}
+                                              <Link href={projectUrl} className="block w-full h-full">
+                                                <div className="hover:underline font-medium">{project.name}</div>
+                                                {project.description && (
+                                                  <div className="text-xs text-muted-foreground mt-1 line-clamp-2" title={project.description}>
+                                                    {project.description}
+                                                  </div>
+                                                )}
                                               </Link>
                                             </TableCell>
                                             <TableCell>

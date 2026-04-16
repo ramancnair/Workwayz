@@ -10,4 +10,4 @@ import '@/ai/flows/ai-test-case-generator.ts';
 import '@/ai/flows/ai-risk-generator.ts';
 import '@/ai/flows/ai-assumption-generator.ts';
 import '@/ai/flows/ai-dependency-generator.ts';
-
+import '@/ai/flows/ai-holiday-generator.ts';

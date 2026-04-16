@@ -89,12 +89,13 @@ function ProjectItem({ project }: { project: Project }) {
         <Link href={`/projects/${project.id}/project-details/project-synopsis`} className="block p-3 border-b last:border-b-0 hover:bg-muted/50">
             <div className="flex justify-between items-start">
                 <p className="text-sm font-medium flex-1 pr-2">{project.name}</p>
-                 <div className="flex items-center gap-2">
-                    <Circle className={cn("h-4 w-4", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} />
+                 <div className="flex items-center gap-2 shrink-0">
+                    <Circle className={cn("h-4 w-4", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} fill="currentColor" />
                     <span className="text-xs font-semibold">{project.overallStatus}</span>
                 </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 truncate">{project.statusComments}</p>
+            {project.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2 italic">{project.description}</p>}
+            {project.statusComments && <p className="text-xs font-medium text-destructive mt-1 truncate">Status: {project.statusComments}</p>}
         </Link>
     );
 }
