@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
+import {
   SidebarContent,
   SidebarHeader,
   SidebarMenu,
@@ -15,7 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
+import {
   LayoutDashboard,
   KanbanSquare,
   ClipboardCheck,
@@ -53,12 +53,13 @@ import {
 import { useSidebar } from "@/components/ui/sidebar";
 import { useProject } from "@/context/ProjectContext";
 import { DateTimePicker } from "./ui/datetime-picker";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
   const { testDate, setTestDate } = useProject();
-  
+
   const basePath = `/projects/${projectId}`;
 
   const devMenuItems = [
@@ -73,9 +74,9 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Layers,
     },
     {
-        href: `${basePath}/development/grooming`,
-        label: "Grooming",
-        icon: ChevronsUpDown,
+      href: `${basePath}/development/grooming`,
+      label: "Grooming",
+      icon: ChevronsUpDown,
     },
     {
       href: `${basePath}/development/kanban`,
@@ -131,13 +132,13 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   ];
 
   const initialEstimationMenuItems = [
-     {
+    {
       href: `${basePath}/initial-estimation/ballpark`,
       label: "Ballpark",
       icon: DollarSign,
     },
   ];
-  
+
   const releasesMenuItems = [
     {
       href: `${basePath}/releases/project-releases`,
@@ -162,7 +163,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Worklog",
       icon: ClipboardList,
     },
-     {
+    {
       href: `${basePath}/resources/leave-tracker`,
       label: "Leave Tracker",
       icon: CalendarCheck,
@@ -201,13 +202,13 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Link2,
     },
   ];
-  
+
   const holidaysMenuItems = [
-      {
-          href: `${basePath}/holidays`,
-          label: "Holiday Calendar",
-          icon: CalendarDays,
-      },
+    {
+      href: `${basePath}/holidays`,
+      label: "Holiday Calendar",
+      icon: CalendarDays,
+    },
   ];
 
   const pmoMenuItems = [
@@ -245,9 +246,9 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Settings,
     },
     {
-        href: `${basePath}/settings/effort`,
-        label: "Effort Settings",
-        icon: Hourglass,
+      href: `${basePath}/settings/effort`,
+      label: "Effort Settings",
+      icon: Hourglass,
     }
   ];
 
@@ -264,16 +265,16 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
 
   const menuItems = isSettingsPath ? settingsMenuItems
-    : isTestingPath ? testMenuItems 
-    : isProjectPath ? projectMenuItems
-    : isInitialEstimationPath ? initialEstimationMenuItems
-    : isReleasesPath ? releasesMenuItems
-    : isResourcesPath ? resourcesMenuItems 
-    : isGovernancePath ? governanceMenuItems 
-    : isHolidaysPath ? holidaysMenuItems
-    : isPmoPath ? pmoMenuItems
-    : isDevelopmentPath ? devMenuItems
-    : devMenuItems;
+    : isTestingPath ? testMenuItems
+      : isProjectPath ? projectMenuItems
+        : isInitialEstimationPath ? initialEstimationMenuItems
+          : isReleasesPath ? releasesMenuItems
+            : isResourcesPath ? resourcesMenuItems
+              : isGovernancePath ? governanceMenuItems
+                : isHolidaysPath ? holidaysMenuItems
+                  : isPmoPath ? pmoMenuItems
+                    : isDevelopmentPath ? devMenuItems
+                      : devMenuItems;
 
   return (
     <>
@@ -282,29 +283,32 @@ export function SidebarNav({ projectId }: { projectId: string }) {
           <div className="flex items-center h-10 overflow-hidden">
             <Waves className="w-8 h-8 text-primary shrink-0" />
             <h1 className="ml-3 text-xl font-semibold text-sidebar-foreground transition-all duration-300 ease-in-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
-                ProjectFlow
+              ProjectFlow
             </h1>
             <Button variant="ghost" size="icon" className="md:hidden ml-auto shrink-0 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 overflow-hidden" onClick={toggleSidebar}>
-               <ChevronLeft />
+              <ChevronLeft />
             </Button>
           </div>
-          <div className="flex items-center ml-[2px]">
+          <div className="flex items-center ml-[2px] gap-2">
             <SidebarTrigger className="h-7 w-7 rounded-sm border bg-background shadow-sm hover:bg-sidebar-accent hidden md:flex shrink-0" />
+            <div className="ml-auto flex transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </SidebarHeader>
       <div className="p-2 transition-all duration-300">
         <SidebarMenu>
-            <SidebarMenuItem>
-              <Link href="/project-home">
-                <SidebarMenuButton
-                  tooltip="Project Home"
-                >
-                  <Home />
-                  <span>Project Home</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/project-home">
+              <SidebarMenuButton
+                tooltip="Project Home"
+              >
+                <Home />
+                <span>Project Home</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
         </SidebarMenu>
       </div>
       <SidebarContent className="p-2 transition-all duration-300">
@@ -352,11 +356,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         </SidebarMenu>
         <div className="flex items-center mt-4 h-10 overflow-hidden">
           <Avatar className="h-8 w-8 shrink-0">
-              <AvatarFallback>RN</AvatarFallback>
+            <AvatarFallback>RN</AvatarFallback>
           </Avatar>
           <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
-              <span className="font-semibold text-sm text-sidebar-foreground truncate pr-2">Raman C Nair</span>
-              <span className="text-xs text-sidebar-foreground/70 truncate pr-2">ramanreadsmail@gmail.com</span>
+            <span className="font-semibold text-sm text-sidebar-foreground truncate pr-2">Raman C Nair</span>
+            <span className="text-xs text-sidebar-foreground/70 truncate pr-2">ramanreadsmail@gmail.com</span>
           </div>
         </div>
       </SidebarFooter>
