@@ -360,7 +360,12 @@ export default function KanbanPage() {
       }
   });
 
-  
+  const kanbanWatchedImpactedSystemId = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
+  const kanbanFilteredUsersForSubTasks = useMemo(() => {
+    if (!kanbanWatchedImpactedSystemId || kanbanWatchedImpactedSystemId === 'unassigned') return users;
+    return users.filter(emp => emp.capabilities?.includes(kanbanWatchedImpactedSystemId));
+  }, [users, kanbanWatchedImpactedSystemId]);
+
   const calculateBusinessDays = useCallback((startStr?: string, endStr?: string): number => {
     if(!startStr || !endStr) return 0;
     try {
@@ -734,7 +739,7 @@ export default function KanbanPage() {
                                             <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {kanbanFilteredUsersForSubTasks.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                             </SelectContent>
                                             </Select>
                                             <FormMessage/>

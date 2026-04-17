@@ -7,6 +7,7 @@ import { type PropsWithChildren, use } from "react";
 import { ProjectProvider, useProject } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarNav } from '@/components/SidebarNav';
+import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 
 function ProjectLayoutContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -103,8 +104,10 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     );
   };
 
+  const { open, setOpen } = useSidebarPersistedState();
+
   return (
-      <SidebarProvider>
+      <SidebarProvider open={open} onOpenChange={setOpen}>
         <Sidebar collapsible="icon">
           <SidebarNav projectId={projectId} />
         </Sidebar>

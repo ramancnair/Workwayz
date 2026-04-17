@@ -280,7 +280,7 @@ function StoryItemCard({
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                    {story.sprintId !== null && (
+                    {!!story.sprintId && (
                         <DropdownMenuItem onClick={() => onMove(null)}>
                         Backlog
                         </DropdownMenuItem>
@@ -543,7 +543,7 @@ export default function GroomingPage() {
             });
 
             return { ...sprint, stories: filteredStories };
-        }).filter(sprint => sprint.stories.length > 0)
+        })
         .sort((a,b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
 
     }, [sprints, stories, viewBy, selectedAssigneeId]);
@@ -583,6 +583,12 @@ export default function GroomingPage() {
           releaseId: 'unassigned',
         }
     });
+
+    const groomingWatchedImpactedSystemId = useWatch({ control: subTaskForm.control, name: 'impactedSystemId' });
+    const groomingFilteredUsersForSubTasks = useMemo(() => {
+        if (!groomingWatchedImpactedSystemId || groomingWatchedImpactedSystemId === 'unassigned') return employees;
+        return employees.filter(emp => emp.capabilities?.includes(groomingWatchedImpactedSystemId));
+    }, [employees, groomingWatchedImpactedSystemId]);
 
     const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
     const parentStoryOptions = useMemo(() => parentStories.map(s => ({
@@ -934,7 +940,9 @@ export default function GroomingPage() {
                         />
                     ) : (
                         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col items-center justify-center">
-                            <p className="text-lg text-muted-foreground">No sprints found matching the current filters.</p>
+                            <p className="text-lg text-muted-foreground">
+                                {sprints.length === 0 ? 'No sprints yet. Click "Create Sprint" to get started.' : 'No sprints found matching the current filters.'}
+                            </p>
                         </div>
                     )}
                     </div>
@@ -1081,7 +1089,7 @@ export default function GroomingPage() {
                                             <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {groomingFilteredUsersForSubTasks.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                             </SelectContent>
                                             </Select>
                                             <FormMessage/>

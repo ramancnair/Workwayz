@@ -6,12 +6,14 @@ import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { type PropsWithChildren } from "react";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PmSidebarNav } from '@/components/PmSidebarNav';
+import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 
 export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
 
   const isProjectPage = pathname.startsWith('/projects/');
+  const { open, setOpen } = useSidebarPersistedState();
   
   const getTabValue = () => {
     if (pathname.startsWith('/project-home')) return 'projects';
@@ -51,7 +53,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const activeTab = getTabValue();
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={open} onOpenChange={setOpen}>
       <Sidebar collapsible="icon">
         <PmSidebarNav activeTab={activeTab} />
       </Sidebar>

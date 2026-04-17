@@ -449,6 +449,7 @@ export default function TestCasesPage() {
                             <DropdownMenuCheckboxItem
                                 key={key}
                                 className="capitalize"
+                                onSelect={(e) => e.preventDefault()}
                                 checked={columnVisibility[key as ColumnId]}
                                 onCheckedChange={(value) =>
                                 setColumnVisibility((prev) => ({

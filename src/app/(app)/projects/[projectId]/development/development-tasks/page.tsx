@@ -138,6 +138,12 @@ export default function DevelopmentTasksPage() {
     resolver: zodResolver(bulkAssignSchema),
   });
 
+  const watchedImpactedSystemId = useWatch({ control: form.control, name: 'impactedSystemId' });
+  const filteredEmployeesForSubTasks = useMemo(() => {
+    if (!watchedImpactedSystemId || watchedImpactedSystemId === 'unassigned') return employees;
+    return employees.filter(emp => emp.capabilities?.includes(watchedImpactedSystemId));
+  }, [employees, watchedImpactedSystemId]);
+
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
       setSorting({ ...sorting, desc: !sorting.desc });
@@ -369,6 +375,18 @@ export default function DevelopmentTasksPage() {
     }
     setIsSubmitting(false);
   };
+
+  const bulkAssignFilteredEmployees = useMemo(() => {
+    if (tasksToAssign.length === 0) return employees;
+    const systems = subTasks
+      .filter(t => tasksToAssign.includes(t.id))
+      .map(t => t.impactedSystemId)
+      .filter(Boolean) as string[];
+    const uniqueSystems = Array.from(new Set(systems));
+    if (uniqueSystems.length === 0) return employees;
+    
+    return employees.filter(emp => uniqueSystems.every(sys => emp.capabilities?.includes(sys)));
+  }, [employees, tasksToAssign, subTasks]);
   
   const handleBulkAssign = async (values: z.infer<typeof bulkAssignSchema>) => {
     const success = await bulkAssignSubTasks(tasksToAssign, values.assigneeId === 'unassigned' ? null : values.assigneeId);
@@ -381,10 +399,10 @@ export default function DevelopmentTasksPage() {
     setTasksToAssign([]);
   }
 
-  const FilterableHeader = ({ columnId, children, filterOptions }: { columnId: ColumnId, children: React.ReactNode, filterOptions: {value: string, label: string}[] }) => {
+  const renderFilterableHeader = (columnId: ColumnId, children: React.ReactNode, filterOptions: {value: string, label: string}[]) => {
     const activeFilters = filters[columnId] || [];
     return (
-      <TableHead>
+      <TableHead key={columnId}>
         <div className="flex items-center gap-2">
             <span className="font-bold">{children}</span>
             <Popover>
@@ -481,6 +499,7 @@ export default function DevelopmentTasksPage() {
                             <DropdownMenuCheckboxItem
                                 key={key}
                                 className="capitalize"
+                                onSelect={(e) => e.preventDefault()}
                                 checked={columnVisibility[key as ColumnId]}
                                 onCheckedChange={(value) =>
                                 setColumnVisibility((prev) => ({
@@ -515,7 +534,7 @@ export default function DevelopmentTasksPage() {
                 if (!isVisible) return null;
                 const config = columnConfig[key as ColumnId];
                 if (config.filterable) {
-                    return <FilterableHeader key={key} columnId={key as ColumnId} filterOptions={getFilterOptions(key as ColumnId)}>{config.label}</FilterableHeader>
+                    return renderFilterableHeader(key as ColumnId, config.label, getFilterOptions(key as ColumnId));
                 }
                 return <TableHead key={key}><Button variant="ghost" onClick={() => handleSort(key)}>{config.label}<ArrowUpDown className="ml-2 h-4 w-4" /></Button></TableHead>
               })}
@@ -749,7 +768,7 @@ export default function DevelopmentTasksPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {employees.map(emp => (
+                            {filteredEmployeesForSubTasks.map(emp => (
                               <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                             ))}
                           </SelectContent>
@@ -946,7 +965,7 @@ export default function DevelopmentTasksPage() {
                                     </FormControl>
                                     <SelectContent>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {employees.map(emp => (
+                                        {bulkAssignFilteredEmployees.map(emp => (
                                             <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                                         ))}
                                     </SelectContent>
