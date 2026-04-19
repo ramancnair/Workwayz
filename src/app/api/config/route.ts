@@ -79,6 +79,7 @@ export async function POST(request: Request) {
                 if (db.connectionString) envMap.set('DATABASE_URL', `"${db.connectionString}"`);
             }
             envMap.set('NEXT_PUBLIC_DATABASE_PROVIDER', `"${db.provider}"`);
+            envMap.set('NEXT_PUBLIC_AUTH_PROVIDER', `"${db.provider === 'firebase' ? 'firebase' : 'local'}"`);
         }
 
         if (type === 'ai') {
@@ -94,23 +95,13 @@ export async function POST(request: Request) {
             envMap.set('NEXT_PUBLIC_AI_PROVIDER', `"${ai.provider}"`);
         }
         
-        const authKeys = ['NEXT_PUBLIC_AUTH_PROVIDER', 'NEXT_PUBLIC_AUTH_GOOGLE_SSO', 'NEXT_PUBLIC_AUTH_FACEBOOK_SSO', 'NEXT_PUBLIC_AUTH_APPLE_SSO'];
+        const authKeys = ['NEXT_PUBLIC_AUTH_GOOGLE_SSO', 'NEXT_PUBLIC_AUTH_FACEBOOK_SSO', 'NEXT_PUBLIC_AUTH_APPLE_SSO'];
         if (type === 'authentication') {
             const auth = payload;
             authKeys.forEach(k => envMap.set(k, '""'));
-            envMap.set('NEXT_PUBLIC_AUTH_PROVIDER', `"${auth.provider}"`);
             if (auth.googleSso) envMap.set('NEXT_PUBLIC_AUTH_GOOGLE_SSO', '"true"');
             if (auth.facebookSso) envMap.set('NEXT_PUBLIC_AUTH_FACEBOOK_SSO', '"true"');
             if (auth.appleSso) envMap.set('NEXT_PUBLIC_AUTH_APPLE_SSO', '"true"');
-
-            // Overlay authentication-specific Firebase credentials to allow Database/Auth provider splitting
-            if (auth.provider === 'firebase') {
-                if (auth.firebaseApiKey) envMap.set('NEXT_PUBLIC_FIREBASE_API_KEY', `"${auth.firebaseApiKey}"`);
-                if (auth.firebaseProjectId) {
-                     envMap.set('NEXT_PUBLIC_FIREBASE_PROJECT_ID', `"${auth.firebaseProjectId}"`);
-                     envMap.set('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', `"${auth.firebaseProjectId}.firebaseapp.com"`);
-                }
-            }
         }
 
         // Update isActive flags in connections.json if we mapped via an ID

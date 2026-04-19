@@ -28,18 +28,15 @@ type AuthProvider = 'firebase' | 'local';
 interface AuthConfig {
     id?: string;
     profileName: string;
-    provider: AuthProvider;
+    provider?: AuthProvider;
     googleSso: boolean;
     facebookSso: boolean;
     appleSso: boolean;
-    firebaseProjectId?: string;
-    firebaseApiKey?: string;
     isActive?: boolean;
 }
 
 const defaultConfig: AuthConfig = {
     profileName: '',
-    provider: 'firebase',
     googleSso: false,
     facebookSso: false,
     appleSso: false
@@ -47,6 +44,7 @@ const defaultConfig: AuthConfig = {
 
 export default function AuthenticationSettingsPage() {
     const [profiles, setProfiles] = useState<AuthConfig[]>([]);
+    const [dbProvider, setDbProvider] = useState<string>('firebase');
     
     // UI states
     const [config, setConfig] = useState<AuthConfig>({ ...defaultConfig });
@@ -79,6 +77,12 @@ export default function AuthenticationSettingsPage() {
 
     const loadData = async () => {
         try {
+            const envRes = await fetch('/api/config');
+            const envData = await envRes.json();
+            if (envData.db && envData.db.provider) {
+                setDbProvider(envData.db.provider === 'firebase' ? 'firebase' : 'local');
+            }
+
             const profRes = await fetch('/api/config/profiles');
             const profData = await profRes.json();
             setProfiles(profData.authentication || []);
@@ -89,14 +93,7 @@ export default function AuthenticationSettingsPage() {
         }
     };
 
-    const handleProviderChange = (value: string, forEdit = false) => {
-        const provider = value as AuthProvider;
-        if (forEdit && editConfig) {
-            setEditConfig({ ...editConfig, provider });
-        } else {
-            setConfig(prev => ({ ...prev, provider }));
-        }
-    };
+    // handleProviderChange removed as it is inherited
 
     const handleFieldChange = (field: keyof AuthConfig, value: any, forEdit = false) => {
         if (forEdit && editConfig) {
@@ -116,7 +113,7 @@ export default function AuthenticationSettingsPage() {
         try {
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'authentication', profile: config }),
+                body: JSON.stringify({ type: 'authentication', profile: { ...config, provider: dbProvider } }),
                 headers: { 'Content-Type': 'application/json' }
             });
 
@@ -141,7 +138,7 @@ export default function AuthenticationSettingsPage() {
         try {
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'authentication', profile: editConfig }),
+                body: JSON.stringify({ type: 'authentication', profile: { ...editConfig, provider: dbProvider } }),
                 headers: { 'Content-Type': 'application/json' }
             });
             if (!res.ok) throw new Error('Failed to update profile');
@@ -248,9 +245,9 @@ export default function AuthenticationSettingsPage() {
             {/* Existing environment status */}
             <Alert className="max-w-3xl bg-slate-100 border-slate-200 dark:bg-slate-900/40 dark:border-slate-800">
                 <CheckCircle2 className="h-4 w-4" />
-                <AlertTitle>Current .env State</AlertTitle>
+                <AlertTitle>Current Environment Active State</AlertTitle>
                 <AlertDescription>
-                    Automatically bound to <strong>{activeProfile ? activeProfile.provider : 'Unknown'}</strong>. Restart node engine if you swap active profiles below.
+                    Automatically bound and inherited from the Database configuration. The current active engine matches <strong>{dbProvider === 'firebase' ? 'Firebase' : 'Local Authentication'}</strong>. Restart node engine if you swap active SSO profiles below.
                 </AlertDescription>
             </Alert>
 
@@ -280,26 +277,10 @@ export default function AuthenticationSettingsPage() {
                                     </div>
                                     <div className="space-y-2 col-span-2">
                                         <Label>Primary Authentication Method</Label>
-                                        <Select value={editConfig.provider} onValueChange={(val) => handleProviderChange(val, true)}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="firebase">Firebase Native Auth</SelectItem>
-                                                <SelectItem value="local">Local PostgreSQL/DB</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground items-center">
+                                            Inherited from Active Database ({dbProvider === 'firebase' ? 'Firebase Native Auth' : 'Local PostgreSQL/DB'})
+                                        </div>
                                     </div>
-                                    {editConfig.provider === 'firebase' && (
-                                        <>
-                                            <div className="space-y-2 col-span-1">
-                                                <Label>Firebase Project ID (Optional)</Label>
-                                                <Input value={editConfig.firebaseProjectId || ''} onChange={e => handleFieldChange('firebaseProjectId', e.target.value, true)} placeholder="Inherit from Database Profile" />
-                                            </div>
-                                            <div className="space-y-2 col-span-1">
-                                                <Label>Firebase API Key (Optional)</Label>
-                                                <Input value={editConfig.firebaseApiKey || ''} onChange={e => handleFieldChange('firebaseApiKey', e.target.value, true)} placeholder="Inherit from Database Profile" />
-                                            </div>
-                                        </>
-                                    )}
                                     <div className="col-span-2 mt-4">
                                         <Label className="text-muted-foreground mb-4 block uppercase tracking-wider text-xs font-bold">Enabled SSO Providers</Label>
                                         <div className="flex flex-col gap-4 bg-muted/20 p-4 border rounded">
@@ -322,7 +303,7 @@ export default function AuthenticationSettingsPage() {
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground">Provider:</span>
-                                        <p className="font-medium capitalize">{profile.provider === 'firebase' ? 'Firebase' : 'Local DB'}</p>
+                                        <p className="font-medium capitalize text-emerald-600">Inherited from Database</p>
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground">SSO Configured:</span>
@@ -391,29 +372,10 @@ export default function AuthenticationSettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Primary Method</Label>
-                                <Select value={config.provider} onValueChange={(v) => handleProviderChange(v, false)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select primary mode" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="firebase">Firebase Native</SelectItem>
-                                        <SelectItem value="local">Local PostgreSQL/DB</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground items-center">
+                                    Inherits naturally from the Active Database configuration.
+                                </div>
                             </div>
-                            
-                            {config.provider === 'firebase' && (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label>Firebase Project ID (Optional)</Label>
-                                        <Input value={config.firebaseProjectId || ''} onChange={e => handleFieldChange('firebaseProjectId', e.target.value)} placeholder="Leave blank to inherit from Database" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Firebase API Key (Optional)</Label>
-                                        <Input value={config.firebaseApiKey || ''} onChange={e => handleFieldChange('firebaseApiKey', e.target.value)} placeholder="Leave blank to inherit from Database" />
-                                    </div>
-                                </>
-                            )}
                         </div>
 
                         <div className="col-span-2 mt-4 pt-4 border-t">

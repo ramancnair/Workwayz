@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function SetupWizard() {
@@ -31,6 +31,12 @@ export default function SetupWizard() {
   const [ssoGoogle, setSsoGoogle] = useState(false);
   const [ssoGithub, setSsoGithub] = useState(false);
 
+  // Admin State
+  const [adminName, setAdminName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
+
   // AI State
   const [aiProvider, setAiProvider] = useState('google');
   const [aiApiKey, setAiApiKey] = useState('');
@@ -38,7 +44,11 @@ export default function SetupWizard() {
   const [aiModel, setAiModel] = useState('');
 
   const handleNext = () => {
-    if (step < 4) setStep(step + 1);
+    if (step === 3 && adminPassword !== adminConfirmPassword) {
+      toast({ title: "Validation Error", description: "Passwords do not match.", variant: "destructive" });
+      return;
+    }
+    if (step < 5) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -124,8 +134,9 @@ export default function SetupWizard() {
   const steps = [
     { num: 1, title: 'Database', icon: Database },
     { num: 2, title: 'Authentication', icon: Key },
-    { num: 3, title: 'AI Configuration', icon: Bot },
-    { num: 4, title: 'Finish', icon: CheckCircle2 },
+    { num: 3, title: 'Admin User', icon: User },
+    { num: 4, title: 'AI Configuration', icon: Bot },
+    { num: 5, title: 'Finish', icon: CheckCircle2 },
   ];
 
   return (
@@ -144,7 +155,7 @@ export default function SetupWizard() {
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-border -z-10 rounded-full overflow-hidden">
             <div 
               className="h-full bg-primary transition-all duration-500 ease-in-out" 
-              style={{ width: `${((step - 1) / 3) * 100}%` }}
+              style={{ width: `${((step - 1) / 4) * 100}%` }}
             />
           </div>
           {steps.map((s) => (
@@ -176,8 +187,9 @@ export default function SetupWizard() {
             <CardDescription>
               {step === 1 && "Configure your primary database connection."}
               {step === 2 && "Set up identity and authentication providers."}
-              {step === 3 && "Enable intelligent features by connecting an AI provider."}
-              {step === 4 && "Review and finalize your setup configuration."}
+              {step === 3 && "Create the master administrator account for the system."}
+              {step === 4 && "Enable intelligent features by connecting an AI provider."}
+              {step === 5 && "Review and finalize your setup configuration."}
             </CardDescription>
           </CardHeader>
           <CardContent className="min-h-[300px]">
@@ -270,8 +282,36 @@ export default function SetupWizard() {
               </div>
             )}
 
-            {/* Step 3: AI */}
+            {/* Step 3: Admin */}
             {step === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>User Name</Label>
+                    <Input placeholder="John Doe" value={adminName} onChange={e => setAdminName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Role</Label>
+                    <Input value="Administrator" disabled className="bg-muted text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label>Email ID</Label>
+                    <Input type="email" placeholder="admin@example.com" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password</Label>
+                    <Input type="password" placeholder="••••••••" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Re-enter Password</Label>
+                    <Input type="password" placeholder="••••••••" value={adminConfirmPassword} onChange={e => setAdminConfirmPassword(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: AI */}
+            {step === 4 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="space-y-2">
                   <Label>AI Provider</Label>
@@ -311,8 +351,8 @@ export default function SetupWizard() {
               </div>
             )}
 
-            {/* Step 4: Finish */}
-            {step === 4 && (
+            {/* Step 5: Finish */}
+            {step === 5 && (
               <div className="flex flex-col items-center justify-center text-center space-y-4 h-full animate-in zoom-in-95 duration-500 py-8">
                 <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="w-8 h-8" />
@@ -333,6 +373,10 @@ export default function SetupWizard() {
                       <span className="font-medium capitalize">{authProvider}</span>
                     </li>
                     <li className="flex justify-between">
+                      <span className="text-muted-foreground">Admin Account:</span>
+                      <span className="font-medium truncate max-w-[200px]">{adminEmail || 'Pending'}</span>
+                    </li>
+                    <li className="flex justify-between">
                       <span className="text-muted-foreground">AI Integration:</span>
                       <span className="font-medium capitalize">{aiProvider}</span>
                     </li>
@@ -349,7 +393,7 @@ export default function SetupWizard() {
             >
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>
-            {step < 4 ? (
+            {step < 5 ? (
               <Button onClick={handleNext}>
                 Next <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
