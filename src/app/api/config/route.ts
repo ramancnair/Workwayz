@@ -52,13 +52,24 @@ export async function POST(request: Request) {
         }
 
         // Map incoming body settings to ENV vars based on what they sent
+        const dbKeys = ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'DATABASE_URL', 'NEXT_PUBLIC_DATABASE_PROVIDER'];
         if (type === 'database') {
             const db = payload;
+            
+            // Mask out all database properties to prevent .env block fallbacks from bleeding over
+            dbKeys.forEach(k => envMap.set(k, '""'));
+
             if (db.provider === 'firebase') {
                 if (db.apiKey) envMap.set('NEXT_PUBLIC_FIREBASE_API_KEY', `"${db.apiKey}"`);
-                if (db.authDomain) envMap.set('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', `"${db.authDomain}"`);
                 if (db.projectId) envMap.set('NEXT_PUBLIC_FIREBASE_PROJECT_ID', `"${db.projectId}"`);
+                
+                // Auto-infer missing crucial configs to ensure authentication doesn't break
+                if (db.authDomain) envMap.set('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', `"${db.authDomain}"`);
+                else if (db.projectId) envMap.set('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', `"${db.projectId}.firebaseapp.com"`);
+                
                 if (db.storageBucket) envMap.set('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', `"${db.storageBucket}"`);
+                else if (db.projectId) envMap.set('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', `"${db.projectId}.firebasestorage.app"`);
+                
                 if (db.messagingSenderId) envMap.set('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', `"${db.messagingSenderId}"`);
                 if (db.appId) envMap.set('NEXT_PUBLIC_FIREBASE_APP_ID', `"${db.appId}"`);
             } else if (db.provider === 'supabase') {
@@ -81,6 +92,25 @@ export async function POST(request: Request) {
             }
             if (ai.model) envMap.set('AI_DEFAULT_MODEL', `"${ai.model}"`);
             envMap.set('NEXT_PUBLIC_AI_PROVIDER', `"${ai.provider}"`);
+        }
+        
+        const authKeys = ['NEXT_PUBLIC_AUTH_PROVIDER', 'NEXT_PUBLIC_AUTH_GOOGLE_SSO', 'NEXT_PUBLIC_AUTH_FACEBOOK_SSO', 'NEXT_PUBLIC_AUTH_APPLE_SSO'];
+        if (type === 'authentication') {
+            const auth = payload;
+            authKeys.forEach(k => envMap.set(k, '""'));
+            envMap.set('NEXT_PUBLIC_AUTH_PROVIDER', `"${auth.provider}"`);
+            if (auth.googleSso) envMap.set('NEXT_PUBLIC_AUTH_GOOGLE_SSO', '"true"');
+            if (auth.facebookSso) envMap.set('NEXT_PUBLIC_AUTH_FACEBOOK_SSO', '"true"');
+            if (auth.appleSso) envMap.set('NEXT_PUBLIC_AUTH_APPLE_SSO', '"true"');
+
+            // Overlay authentication-specific Firebase credentials to allow Database/Auth provider splitting
+            if (auth.provider === 'firebase') {
+                if (auth.firebaseApiKey) envMap.set('NEXT_PUBLIC_FIREBASE_API_KEY', `"${auth.firebaseApiKey}"`);
+                if (auth.firebaseProjectId) {
+                     envMap.set('NEXT_PUBLIC_FIREBASE_PROJECT_ID', `"${auth.firebaseProjectId}"`);
+                     envMap.set('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', `"${auth.firebaseProjectId}.firebaseapp.com"`);
+                }
+            }
         }
 
         // Update isActive flags in connections.json if we mapped via an ID

@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, firebaseConfig } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -161,6 +161,20 @@ export default function UsersPage() {
     setIsDialogOpen(true);
   };
   
+  const createIdentityInAuthPool = async (email: string) => {
+      try {
+          if (!firebaseConfig?.apiKey) return;
+          const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password: 'P@ssw0rd', returnSecureToken: false })
+          });
+          if (!res.ok) console.warn(`Auth pool creation failed for ${email}`);
+      } catch (e) {
+          console.error("Identity push failed", e);
+      }
+  };
+  
   const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
     if(!db) return;
     setIsAutoGenSubmitting(true);
@@ -204,12 +218,16 @@ export default function UsersPage() {
                 
                 const userRef = doc(db, 'employees', empId);
                 batch.set(userRef, sanitizeForFirestore(newUser));
+                
+                // Construct shadow identity in the auth pool
+                await createIdentityInAuthPool(email);
+                
                 currentIdCounter++;
             }
         }
         
         await batch.commit();
-        toast({ title: 'Success', description: 'Users generated successfully.' });
+        toast({ title: 'Success', description: 'Users generated and pushed to Authentication.' });
         setIsAutoGenOpen(false);
     } catch (e) {
         console.error("Error auto-generating users", e);
@@ -288,7 +306,11 @@ export default function UsersPage() {
             avatar: 'https://placehold.co/40x40.png',
             isDeleted: false,
         });
-        toast({ title: "Success", description: `User added successfully.` });
+        
+        // Push single identity to auth tool
+        await createIdentityInAuthPool(values.email);
+        
+        toast({ title: "Success", description: `User added to database and Authentication cache.` });
       }
       setIsDialogOpen(false);
       setEditingUser(null);

@@ -8,8 +8,19 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { Save, Server, Loader2, Database as DatabaseIcon, Info, CheckCircle2, Bookmark } from 'lucide-react';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 
 type DatabaseProvider = 'firebase' | 'supabase' | 'postgresql' | 'mysql' | 'mongodb';
 
@@ -47,6 +58,7 @@ export default function DatabaseSettingsPage() {
     const [config, setConfig] = useState<DatabaseConfig>({ profileName: '', provider: 'firebase' });
     const [showNewForm, setShowNewForm] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showRestartDialog, setShowRestartDialog] = useState(false);
     
     // Execution states
     const [isLoading, setIsLoading] = useState(true);
@@ -150,10 +162,17 @@ export default function DatabaseSettingsPage() {
             });
             if (!res.ok) throw new Error('Failed to update profile');
             
-            toast({ title: 'Profile Updated', description: 'Changes saved successfully.' });
+            const wasActive = profiles.find(p => p.id === editConfig.id)?.isActive;
+            
             setEditingProfileId(null);
             setEditConfig(null);
             await loadData();
+            
+            if (wasActive) {
+                setShowRestartDialog(true);
+            } else {
+                toast({ title: 'Profile Updated', description: 'Changes saved successfully.' });
+            }
         } catch (e) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not update profile.' });
         } finally {
@@ -185,8 +204,8 @@ export default function DatabaseSettingsPage() {
             });
 
             if (!res.ok) throw new Error('Failed to activate profile');
-            toast({ title: 'Environment Bound', description: 'Restart developer server for changes to apply!', duration: 10000 });
             await loadData();
+            setShowRestartDialog(true);
         } catch (e) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to bind profile to environment.' });
         } finally {
@@ -213,6 +232,16 @@ export default function DatabaseSettingsPage() {
     if (isLoading && profiles.length === 0) {
         return <div className="p-8 flex items-center gap-2"><Loader2 className="animate-spin h-5 w-5" /> Loading settings...</div>;
     }
+
+    const performForcedRestart = async () => {
+        try {
+            if (auth) {
+                await signOut(auth);
+            }
+        } catch(e) { }
+        localStorage.removeItem('projectflow_user');
+        window.location.href = '/login';
+    };
 
     if (!isAdmin) {
         return (
@@ -504,9 +533,27 @@ export default function DatabaseSettingsPage() {
                                 Cancel
                             </Button>
                         </div>
-                    </CardContent>
+                     </CardContent>
                 </Card>
             )}
+
+            <AlertDialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Environment Changed</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have successfully changed the active database bindings. 
+                            To safely connect to the new framework, you must force reload the application securely. 
+                            This will clear your local sessions and log you out.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={performForcedRestart} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                            Logout & Reload Environment
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

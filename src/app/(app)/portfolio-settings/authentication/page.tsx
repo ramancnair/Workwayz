@@ -9,8 +9,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { Save, Loader2, Key, Info, CheckCircle2, Bookmark } from 'lucide-react';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 
 type AuthProvider = 'firebase' | 'local';
 
@@ -21,6 +32,8 @@ interface AuthConfig {
     googleSso: boolean;
     facebookSso: boolean;
     appleSso: boolean;
+    firebaseProjectId?: string;
+    firebaseApiKey?: string;
     isActive?: boolean;
 }
 
@@ -38,6 +51,7 @@ export default function AuthenticationSettingsPage() {
     // UI states
     const [config, setConfig] = useState<AuthConfig>({ ...defaultConfig });
     const [showNewForm, setShowNewForm] = useState(false);
+    const [showRestartDialog, setShowRestartDialog] = useState(false);
     
     // Execution states
     const [isLoading, setIsLoading] = useState(true);
@@ -132,10 +146,17 @@ export default function AuthenticationSettingsPage() {
             });
             if (!res.ok) throw new Error('Failed to update profile');
             
-            toast({ title: 'Profile Updated', description: 'Changes saved successfully.' });
+            const wasActive = profiles.find(p => p.id === editConfig.id)?.isActive;
+            
             setEditingProfileId(null);
             setEditConfig(null);
             await loadData();
+            
+            if (wasActive) {
+                setShowRestartDialog(true);
+            } else {
+                toast({ title: 'Profile Updated', description: 'Changes saved successfully.' });
+            }
         } catch (e) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not update profile.' });
         } finally {
@@ -167,8 +188,8 @@ export default function AuthenticationSettingsPage() {
             });
 
             if (!res.ok) throw new Error('Failed to activate profile');
-            toast({ title: 'Environment Bound', description: 'Restart developer server for changes to apply!', duration: 10000 });
             await loadData();
+            setShowRestartDialog(true);
         } catch (e) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to bind profile to environment.' });
         } finally {
@@ -184,6 +205,16 @@ export default function AuthenticationSettingsPage() {
     if (isLoading && profiles.length === 0) {
         return <div className="p-8 flex items-center gap-2"><Loader2 className="animate-spin h-5 w-5" /> Loading settings...</div>;
     }
+
+    const performForcedRestart = async () => {
+        try {
+            if (auth) {
+                await signOut(auth);
+            }
+        } catch(e) { }
+        localStorage.removeItem('projectflow_user');
+        window.location.href = '/login';
+    };
 
     if (!isAdmin) {
         return (
@@ -257,6 +288,18 @@ export default function AuthenticationSettingsPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    {editConfig.provider === 'firebase' && (
+                                        <>
+                                            <div className="space-y-2 col-span-1">
+                                                <Label>Firebase Project ID (Optional)</Label>
+                                                <Input value={editConfig.firebaseProjectId || ''} onChange={e => handleFieldChange('firebaseProjectId', e.target.value, true)} placeholder="Inherit from Database Profile" />
+                                            </div>
+                                            <div className="space-y-2 col-span-1">
+                                                <Label>Firebase API Key (Optional)</Label>
+                                                <Input value={editConfig.firebaseApiKey || ''} onChange={e => handleFieldChange('firebaseApiKey', e.target.value, true)} placeholder="Inherit from Database Profile" />
+                                            </div>
+                                        </>
+                                    )}
                                     <div className="col-span-2 mt-4">
                                         <Label className="text-muted-foreground mb-4 block uppercase tracking-wider text-xs font-bold">Enabled SSO Providers</Label>
                                         <div className="flex flex-col gap-4 bg-muted/20 p-4 border rounded">
@@ -358,6 +401,19 @@ export default function AuthenticationSettingsPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                            
+                            {config.provider === 'firebase' && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label>Firebase Project ID (Optional)</Label>
+                                        <Input value={config.firebaseProjectId || ''} onChange={e => handleFieldChange('firebaseProjectId', e.target.value)} placeholder="Leave blank to inherit from Database" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Firebase API Key (Optional)</Label>
+                                        <Input value={config.firebaseApiKey || ''} onChange={e => handleFieldChange('firebaseApiKey', e.target.value)} placeholder="Leave blank to inherit from Database" />
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <div className="col-span-2 mt-4 pt-4 border-t">
@@ -398,6 +454,24 @@ export default function AuthenticationSettingsPage() {
                     </CardContent>
                 </Card>
             )}
+
+            <AlertDialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Authentication Changed</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have successfully changed the active authentication bindings. 
+                            To safely connect to the new identity provider, you must force reload the application securely. 
+                            This will clear your local sessions and log you out.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={performForcedRestart} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                            Logout & Reload Environment
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
