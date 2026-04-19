@@ -58,7 +58,7 @@ const userFormSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().min(1, 'Phone number is required'),
   experience: z.coerce.number().optional(),
-  accessLevel: z.enum(accessLevels).optional(),
+  accessLevel: z.enum(['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO']).optional(),
 });
 
 const autoGenFormSchema = z.object({
@@ -255,7 +255,7 @@ export default function UsersPage() {
     const batch = writeBatch(db);
     const deletionTime = Timestamp.now();
     selectedUsers.forEach(userId => {
-        const userRef = doc(db, 'employees', userId);
+        const userRef = doc(db!, 'employees', userId);
         batch.update(userRef, { isDeleted: true, deletedAt: deletionTime });
     });
 
