@@ -23,6 +23,6 @@ if (firebaseConfig.projectId && getApps().length === 0) {
 }
 
 const db = app ? getFirestore(app) : null;
-const auth = app ? getAuth(app) : null;
+const auth = (app && firebaseConfig.apiKey) ? getAuth(app) : null;
 
 export { db, auth, firebaseConfig };

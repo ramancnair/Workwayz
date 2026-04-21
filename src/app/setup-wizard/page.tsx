@@ -99,6 +99,7 @@ export default function SetupWizard() {
         body: JSON.stringify({ type: 'database', profile: dbProfile })
       });
       if (!dbRes.ok) throw new Error('Failed to save Database config');
+      const dbData = await dbRes.json();
 
       const authRes = await fetch('/api/config/profiles', {
         method: 'POST',
@@ -106,6 +107,7 @@ export default function SetupWizard() {
         body: JSON.stringify({ type: 'authentication', profile: authProfile })
       });
       if (!authRes.ok) throw new Error('Failed to save Authentication config');
+      const authData = await authRes.json();
 
       const aiRes = await fetch('/api/config/profiles', {
         method: 'POST',
@@ -113,6 +115,30 @@ export default function SetupWizard() {
         body: JSON.stringify({ type: 'ai', profile: aiProfile })
       });
       if (!aiRes.ok) throw new Error('Failed to save AI config');
+      const aiData = await aiRes.json();
+
+      // Activate the profiles
+      if (dbData.profile?.id) {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'database', makeActiveId: dbData.profile.id })
+        });
+      }
+      if (authData.profile?.id) {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'authentication', makeActiveId: authData.profile.id })
+        });
+      }
+      if (aiData.profile?.id) {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'ai', makeActiveId: aiData.profile.id })
+        });
+      }
 
       toast({
         title: "Setup Complete!",
