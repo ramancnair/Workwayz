@@ -105,6 +105,14 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const col = (name: string) => collection(pRef, name);
   const batch = new AutoBatch(db);
 
+  // ── 0. Pre-calculate Key Dates ──────────────────────────────────────────────
+  // Release: startDate → Friday 1 week before endDate
+  const releaseFriday = previousFriday(subDays(endDate, 7));
+  const totalDuration = releaseFriday.getTime() - startDate.getTime();
+  const designEnd = addDays(startDate, Math.floor((totalDuration / 3) / 86400000));
+  const devEnd = addDays(designEnd, Math.floor((totalDuration / 3) / 86400000));
+  const testingStart = devEnd;
+
   // ── 1. Settings ─────────────────────────────────────────────────────────────
   const settingsRef = doc(pRef, 'settings', 'main');
   batch.set(settingsRef, {
@@ -427,45 +435,80 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   });
 
   // ── 11. Test Plans & Test Cases ─────────────────────────────────────────
-  // First, create a single Test Plan (e.g. SIT Plan)
-  const tpRef = doc(col('testPlans'));
-  const testPlanId = 'TP-1';
-  const sitEnv = envData.find(e => e.name === 'SIT');
-  batch.set(tpRef, {
-    testPlanId,
+  // ── 11. Test Plans & Test Cases ─────────────────────────────────────────
+  const sitEnd = addDays(testingStart, 2);
+  const uatStart = addDays(sitEnd, 1);
+  const uatEnd = addDays(uatStart, 2);
+  const prodStart = addDays(uatEnd, 1);
+  const prodEnd = addDays(prodStart, 2);
+
+  const tpRefs: { id: string; name: string }[] = [];
+  
+  // SIT Plan
+  const sitTpRef = doc(col('testPlans'));
+  batch.set(sitTpRef, {
+    testPlanId: 'TP-SIT',
     name: 'SIT Execution Plan',
-    planType: 'Sprint',
-    sprintId: sprintIds[0],
-    environmentId: sitEnv?.id,
-    startDate: Timestamp.fromDate(startDate),
-    endDate: Timestamp.fromDate(addDays(startDate, sprintDuration - 1)),
-    testCaseIds: [], // We'll populate this as we create test cases
+    planType: 'Release',
+    environmentId: envData.find(e => e.name === 'SIT')?.id,
+    startDate: Timestamp.fromDate(testingStart),
+    endDate: Timestamp.fromDate(sitEnd),
+    testCaseIds: [],
   });
+  tpRefs.push({ id: sitTpRef.id, name: 'SIT' });
+
+  // UAT Plan
+  const uatTpRef = doc(col('testPlans'));
+  batch.set(uatTpRef, {
+    testPlanId: 'TP-UAT',
+    name: 'UAT Sign-off Plan',
+    planType: 'Release',
+    environmentId: envData.find(e => e.name === 'UAT')?.id,
+    startDate: Timestamp.fromDate(uatStart),
+    endDate: Timestamp.fromDate(uatEnd),
+    testCaseIds: [],
+  });
+  tpRefs.push({ id: uatTpRef.id, name: 'UAT' });
+
+  // Prod Plan
+  const prodTpRef = doc(col('testPlans'));
+  batch.set(prodTpRef, {
+    testPlanId: 'TP-PROD',
+    name: 'Production Sanity Plan',
+    planType: 'Release',
+    environmentId: envData.find(e => e.name === 'Prod')?.id,
+    startDate: Timestamp.fromDate(prodStart),
+    endDate: Timestamp.fromDate(prodEnd),
+    testCaseIds: [],
+  });
+  tpRefs.push({ id: prodTpRef.id, name: 'Prod' });
 
   let tcCounter = 1;
   const tpTestCaseIds: string[] = [];
   
   storyRefObjs.forEach(st => {
     const tcRef = doc(col('testCases'));
-    const generatedStatus = rand(['Not Run', 'Passed', 'Failed']);
-    
     tpTestCaseIds.push(tcRef.id);
     
+    // Create executions for all 3 plans
+    const executions = tpRefs.map(tp => {
+      const generatedStatus = rand(['Passed', 'Passed', 'Failed', 'Not Run']); // Weight towards passed for realism
+      return {
+        testPlanId: tp.id,
+        status: generatedStatus,
+        assigneeId: testerUserId,
+        statusHistory: [{ fromStatus: 'Not Run', toStatus: generatedStatus, date: now }],
+        executionDate: now,
+      };
+    });
+
     batch.set(tcRef, clean({
       testCaseId: `TC-${tcCounter++}`,
       title: `Test: ${st.storyId} – validate expected behaviour`,
       type: rand(['Functional', 'Non-functional']),
       description: `Verify that ${st.storyId} meets all acceptance criteria.`,
       expectedResult: 'The feature behaves as per requirements without errors.',
-      executions: [
-         {
-             testPlanId: tpRef.id,
-             status: generatedStatus,
-             assigneeId: testerUserId,
-             statusHistory: [{ fromStatus: 'Not Run', toStatus: generatedStatus, date: now }],
-             executionDate: now,
-         }
-      ],
+      executions,
       storyId: st.id,
       sprintId: st.sprintId,
       isDeleted: false,
@@ -473,7 +516,10 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     }));
   });
 
-  batch.update(tpRef, { testCaseIds: tpTestCaseIds });
+  // Update all plans with the same test case IDs
+  tpRefs.forEach(tp => {
+    batch.update(doc(col('testPlans'), tp.id), { testCaseIds: tpTestCaseIds });
+  });
 
   // ── 12. Bugs (5: 1 Critical, 1 High, 1 Medium, 2 Low) ──────────────────────
   const bugSeverities = ['Critical', 'High', 'Medium', 'Low', 'Low'];
@@ -498,7 +544,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       severity: severity as any,
       priority: severity as any,
       assigneeId: devUserIds[i % Math.max(devUserIds.length, 1)],
-      foundInTestPlanId: tpRef.id,
+      foundInTestPlanId: sitTpRef.id,
       isDeleted: false,
       deletedAt: null,
       createdAt: now,
@@ -506,14 +552,9 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   });
 
   // ── 13. Release + Stages + Milestones ────────────────────────────────────────
-  // Release: startDate → Friday 1 week before endDate
-  const releaseFriday = previousFriday(subDays(endDate, 7));
   const releaseRef = doc(col('releases'));
 
-  // Stage boundaries
-  const totalDuration = releaseFriday.getTime() - startDate.getTime();
-  const designEnd = addDays(startDate, Math.floor((totalDuration / 3) / 86400000));
-  const devEnd = addDays(designEnd, Math.floor((totalDuration / 3) / 86400000));
+  // Stage boundaries (using pre-calculated dates)
 
   batch.set(releaseRef, clean({
     releaseId: 'REL-1',

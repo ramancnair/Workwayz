@@ -119,7 +119,7 @@ interface ProjectContextType {
   deleteTestPlan: (id: string, deleteTestCases?: boolean) => Promise<boolean>;
   
   // Bug actions
-  autoGenerateBugs: (counts: Record<string, number>) => Promise<boolean>;
+
 
   // Risk actions
   addRisk: (risk: Omit<Risk, 'id' | 'riskId'>) => Promise<boolean>;
@@ -137,7 +137,7 @@ interface ProjectContextType {
   addIssue: (issue: Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { reportedDate: Date, resolvedDate?: Date }) => Promise<boolean>;
   updateIssue: (issueId: string, data: Partial<Omit<Issue, 'id' | 'issueId' | 'reportedDate' | 'resolvedDate'> & { resolvedDate?: Date }>) => Promise<boolean>;
   deleteIssue: (issueId: string) => Promise<boolean>;
-  autoGenerateIssues: (count: number) => Promise<boolean>;
+
 
   // Dependency actions
   addDependency: (dependency: Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate: Date }) => Promise<boolean>;
@@ -194,7 +194,7 @@ interface ProjectContextType {
 
   // Worklog actions
   saveWorklog: (worklog: Omit<Worklog, 'id'>) => Promise<boolean>;
-  autoGenerateWorklogs: (employeeId: string, startDate: Date, endDate: Date) => Promise<boolean>;
+
   
   // Document actions
   addDocument: (doc: Omit<ProjectDocument, 'id' | 'createdAt'>) => Promise<boolean>;
@@ -1368,59 +1368,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const autoGenerateBugs = async (counts: Record<string, number>): Promise<boolean> => {
-    if (!db || !projectId) return false;
-
-    const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
-    
-    try {
-      const batch = writeBatch(db);
-      const storiesSnapshot = await getDocs(collection(db, 'projects', projectId, 'stories'));
-      let currentIdCounter = storiesSnapshot.size > 0 ? Math.max(0, ...storiesSnapshot.docs.map(doc => parseInt(doc.data().storyId.replace(/^[A-Z]+-/, ''), 10) || 0)) + 1 : 1;
-
-      const testCasesToLink = testCases;
-
-      for (const environmentId in counts) {
-        const count = counts[environmentId];
-        if (count === 0) continue;
-        const environmentName = environments.find(e => e.id === environmentId)?.name || 'Unknown Env';
-
-        for (let i = 0; i < count; i++) {
-          const newBugRef = doc(collection(db, 'projects', projectId, 'stories'));
-          const relatedTestCase = getRandomItem(testCasesToLink);
-          const now = (testDate || new Date()).toISOString();
-
-          const newBug: Omit<Story, 'id'> = {
-            storyId: `BUG-${currentIdCounter}`,
-            title: `Autogen bug in ${environmentName}: Login fails on ${relatedTestCase?.testCaseId || 'general function'}`,
-            description: `Auto-generated bug for ${environmentName}. Steps to reproduce: 1. Login. 2. Navigate to a page. 3. Observe error.`,
-            itemType: 'Bug',
-            status: 'To Do',
-            statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
-            relatedTestCaseId: relatedTestCase?.id,
-            sprintId: relatedTestCase?.sprintId,
-            assigneeId: getRandomItem(employees.filter(e => e.role === 'Developer'))?.id,
-            priority: getRandomItem(['High', 'Critical', 'Medium']),
-            environmentId: environmentId,
-            isDeleted: false,
-            deletedAt: null,
-            createdAt: now,
-          };
-          
-          batch.set(newBugRef, sanitizeForFirestore(newBug));
-          currentIdCounter++;
-        }
-      }
-      
-      await batch.commit();
-      return true;
-
-    } catch(e) {
-      console.error("Firebase Error: Failed to auto-generate bugs.", e);
-      return false;
-    }
-  };
-
   // Risk Actions
   const addRisk = async (risk: Omit<Risk, 'id' | 'riskId'>): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1630,50 +1577,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
-  const autoGenerateIssues = async (count: number): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
-    
-    try {
-      const batch = writeBatch(db);
-      const snapshot = await getDocs(collection(db, 'projects', projectId, 'issues'));
-      let currentIdCounter = snapshot.size > 0 ? Math.max(0, ...snapshot.docs.map(doc => parseInt(doc.data().issueId.replace('I-', ''), 10) || 0)) + 1 : 1;
-      
-      const issueSamples = [
-        'Development environment setup is delayed.',
-        'Unexpected bug in the authentication module.',
-        'Clarification needed on reporting requirements.',
-        'Access to the testing server has been revoked.',
-      ];
-      const priorities: IssuePriority[] = ['Low', 'Medium', 'High', 'Critical'];
-      const statuses: IssueStatus[] = ['Open', 'In Progress', 'Resolved', 'Closed'];
-
-      for (let i = 0; i < count; i++) {
-        const issueRef = doc(collection(db, 'projects', projectId, 'issues'));
-        const newIssue: Omit<Issue, 'id' | 'reportedDate'> = {
-          issueId: `I-${currentIdCounter++}`,
-          description: issueSamples[i % issueSamples.length],
-          priority: priorities[Math.floor(Math.random() * priorities.length)],
-          status: statuses[Math.floor(Math.random() * statuses.length)],
-          isDeleted: false,
-          deletedAt: null
-        };
-        
-        if (employees.length > 0) {
-            newIssue.assigneeId = getRandomItem(employees)?.id;
-        }
-        
-        const payload = { ...newIssue, reportedDate: Timestamp.now() };
-        batch.set(issueRef, payload);
-      }
-      await batch.commit();
-      return true;
-    } catch(e) {
-      console.error("Firebase error generating issues", e);
-      return false;
-    }
-  };
-
   // Dependency Actions
   const addDependency = async (dependency: Omit<Dependency, 'id' | 'dependencyId' | 'expectedByDate'> & { expectedByDate: Date }): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -2199,54 +2102,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
   
-  const autoGenerateWorklogs = async (employeeId: string, startDate: Date, endDate: Date): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    
-    const employee = employees.find(e => e.id === employeeId);
-    if (!employee) return false;
-    
-    try {
-      const batch = writeBatch(db);
-      const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
 
-      for (const day of dateRange) {
-        const isWeekend = weeklyOffDays.includes(day.getDay());
-        const isHoliday = holidays.some(h => isSameDay(parseISO(h.date), day));
-        
-        const isOnLeave = employee.leavePeriods?.some(p => {
-          const leaveStart = parseISO(p.startDate);
-          const leaveEnd = parseISO(p.endDate);
-          return isSameDay(day, leaveStart) || isSameDay(day, leaveEnd) || (day > leaveStart && day < leaveEnd);
-        });
-
-        if (!isWeekend && !isHoliday && !isOnLeave) {
-          const dateString = format(day, 'yyyy-MM-dd');
-          const worklogId = `${employeeId}-${dateString}`;
-          const worklogRef = doc(db, 'projects', projectId, 'worklogs', worklogId);
-
-          const payload = {
-            employeeId,
-            date: Timestamp.fromDate(day),
-            items: [{
-              itemId: 'other',
-              itemType: 'Other',
-              hours: 8,
-              description: 'Sample auto-generated work.'
-            }],
-            totalHours: 8,
-          };
-          batch.set(worklogRef, sanitizeForFirestore(payload), { merge: true });
-        }
-      }
-      
-      await batch.commit();
-      return true;
-    } catch (e) {
-      console.error("Firebase Error: Failed to auto-generate worklogs.", e);
-      return false;
-    }
-  };
-  
   // Document Actions
   const addDocument = async (docData: Omit<ProjectDocument, 'id' | 'createdAt'>) => {
     if (!db || !projectId) return false;
@@ -2485,7 +2341,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addTestPlan,
     updateTestPlan,
     deleteTestPlan,
-    autoGenerateBugs,
+
     addRisk,
     updateRisk,
     deleteRisk,
@@ -2497,7 +2353,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addIssue,
     updateIssue,
     deleteIssue,
-    autoGenerateIssues,
+
     addDependency,
     updateDependency,
     deleteDependency,
@@ -2536,7 +2392,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     deleteEnvironment,
     updateEnvironmentOrder,
     saveWorklog,
-    autoGenerateWorklogs,
+
     addDocument,
     updateDocument,
     deleteDocument,

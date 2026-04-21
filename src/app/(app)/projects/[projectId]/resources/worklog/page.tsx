@@ -74,15 +74,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-const autoGenWorklogSchema = z.object({
-  employeeId: z.string().min(1, 'Please select an employee.'),
-  startDate: z.string().min(1, 'Start date is required.'),
-  endDate: z.string().min(1, 'End date is required.'),
-}).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
-  message: 'End date must be on or after the start date.',
-  path: ['endDate'],
-});
-
 export default function WorklogPage() {
   const {
     employees,
@@ -92,7 +83,6 @@ export default function WorklogPage() {
     holidays,
     weeklyOffDays,
     isLoading,
-    autoGenerateWorklogs,
   } = useProject();
   const { toast } = useToast();
 
@@ -106,27 +96,6 @@ export default function WorklogPage() {
   const [workItemInputValues, setWorkItemInputValues] = useState<
     Record<string, string>
   >({});
-
-  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
-  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
-
-  const autoGenForm = useForm<z.infer<typeof autoGenWorklogSchema>>({
-    resolver: zodResolver(autoGenWorklogSchema),
-  });
-
-  const onAutoGenSubmit = async (values: z.infer<typeof autoGenWorklogSchema>) => {
-    setIsAutoGenSubmitting(true);
-    const success = await autoGenerateWorklogs(values.employeeId, new Date(values.startDate), new Date(values.endDate));
-    if (success) {
-      toast({ title: 'Success', description: 'Worklogs generated successfully.' });
-      setIsAutoGenOpen(false);
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not generate worklogs.' });
-    }
-    setIsAutoGenSubmitting(false);
-  };
-
-
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: i,
     label: format(new Date(0, i), 'MMMM'),
@@ -364,73 +333,7 @@ export default function WorklogPage() {
         <PageHeader
           title="Worklog"
           description="Log daily work for project resources."
-        >
-          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline">
-                    <Bot className="mr-2 h-4 w-4" />
-                    Autogen Worklog
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Auto-Generate Worklogs</DialogTitle>
-                    <DialogDescription>Select an employee and date range to generate sample worklogs for.</DialogDescription>
-                </DialogHeader>
-                <Form {...autoGenForm}>
-                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
-                        <FormField
-                            control={autoGenForm.control}
-                            name="employeeId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Employee</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Select an employee" /></SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={autoGenForm.control}
-                                name="startDate"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Start Date</FormLabel>
-                                        <FormControl><Input type="date" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={autoGenForm.control}
-                                name="endDate"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>End Date</FormLabel>
-                                        <FormControl><Input type="date" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isAutoGenSubmitting}>
-                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Worklogs'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-          </Dialog>
-        </PageHeader>
+        />
         <Card>
           <CardHeader>
             <CardTitle>Select Employee & Date</CardTitle>
