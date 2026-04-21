@@ -9,6 +9,7 @@ import {
   differenceInDays,
   parseISO,
   startOfWeek,
+  endOfWeek,
   addDays,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -54,35 +55,34 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
         const chartStartDate = startOfWeek(addDays(minDate, -14), { weekStartsOn: 1 });
-        const chartEndDate = startOfWeek(addDays(maxDate, 21), { weekStartsOn: 1 });
+        const chartEndDate = endOfWeek(addDays(maxDate, 21), { weekStartsOn: 1 });
         
         const totalDays = differenceInDays(chartEndDate, chartStartDate) + 1;
         
-        const months = [];
-        let currentMonth = new Date(chartStartDate);
-        while (currentMonth <= chartEndDate) {
-            const startOfMonth = new Date(currentMonth);
-            const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-            const daysInMonth = differenceInDays(
-                endOfMonth > chartEndDate ? chartEndDate : endOfMonth,
-                startOfMonth < chartStartDate ? chartStartDate : startOfMonth
-            ) + 1;
-            months.push({
-                name: format(currentMonth, 'MMMM yyyy'),
-                width: (daysInMonth / totalDays) * 100,
-            });
-            currentMonth.setMonth(currentMonth.getMonth() + 1);
-        }
-
         const weeks = [];
         let currentDateForWeeks = new Date(chartStartDate);
-        while (currentDateForWeeks <= chartEndDate) {
+        while (currentDateForWeeks < chartEndDate) {
             weeks.push({
                 name: format(currentDateForWeeks, 'd'),
-                isSunday: currentDateForWeeks.getDay() === 0,
+                startDate: new Date(currentDateForWeeks),
+                isSunday: false,
             });
             currentDateForWeeks = addDays(currentDateForWeeks, 7);
         }
+
+        const totalWeeks = weeks.length;
+        const monthsMap = new Map<string, number>();
+        
+        weeks.forEach(w => {
+            const thursday = addDays(w.startDate, 3);
+            const monthName = format(thursday, 'MMMM yyyy');
+            monthsMap.set(monthName, (monthsMap.get(monthName) || 0) + 1);
+        });
+
+        const months = Array.from(monthsMap.entries()).map(([name, weeksCount]) => ({
+            name,
+            width: (weeksCount / totalWeeks) * 100,
+        }));
 
         const todayOffset = differenceInDays(today, chartStartDate);
 
@@ -144,7 +144,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                 <div className="relative">
                     <div className="flex border-b">
                         {months.map((month, index) => (
-                            <div key={index} className="p-2 text-center font-semibold text-xs" style={{ width: `${month.width}%`}}>
+                            <div key={index} className="p-2 text-center font-semibold text-xs border-r border-border last:border-r-0" style={{ width: `${month.width}%`}}>
                                 {month.name}
                             </div>
                         ))}

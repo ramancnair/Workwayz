@@ -110,10 +110,32 @@ export async function POST(request: Request) {
              if (fs.existsSync(profilesPath)) {
                  try {
                      const conns = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));
+                     
+                     let activeProfileName = '';
                      if (conns[type]) {
+                         const target = conns[type].find((p: any) => p.id === body.makeActiveId);
+                         if (target) activeProfileName = target.profileName;
+
                          conns[type].forEach((p: any) => {
                              p.isActive = (p.id === body.makeActiveId);
                          });
+
+                         // If activating a database profile, also activate the matching authentication profile by index
+                         if (type === 'database' && conns['authentication']) {
+                             const dbIndex = conns['database'].findIndex((p: any) => p.id === body.makeActiveId);
+                             if (dbIndex !== -1 && conns['authentication'][dbIndex]) {
+                                 const matchingAuth = conns['authentication'][dbIndex];
+                                 conns['authentication'].forEach((p: any) => {
+                                     p.isActive = (p.id === matchingAuth.id);
+                                 });
+                                 // Also apply its SSO config to envMap
+                                 authKeys.forEach(k => envMap.set(k, '""'));
+                                 if (matchingAuth.googleSso) envMap.set('NEXT_PUBLIC_AUTH_GOOGLE_SSO', '"true"');
+                                 if (matchingAuth.facebookSso) envMap.set('NEXT_PUBLIC_AUTH_FACEBOOK_SSO', '"true"');
+                                 if (matchingAuth.appleSso) envMap.set('NEXT_PUBLIC_AUTH_APPLE_SSO', '"true"');
+                             }
+                         }
+
                          fs.writeFileSync(profilesPath, JSON.stringify(conns, null, 2), 'utf8');
                      }
                  } catch (e) {
