@@ -89,8 +89,8 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   priority: z.enum(priorities).optional(),
-  severity: z.enum(severities).optional(),
-  environmentId: z.string().optional(),
+  foundInTestPlanId: z.string().optional(),
+  relatedBugId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
   status: z.enum(statusOptions).optional(),
@@ -329,7 +329,7 @@ function StoryCard({
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings, testCases, testDate } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings, testCases, testDate, testPlans } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
@@ -341,6 +341,7 @@ export default function KanbanPage() {
   const [editParentStoryText, setEditParentStoryText] = useState('');
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   const [testCaseInputText, setTestCaseInputText] = useState('');
+  const [relatedBugInputText, setRelatedBugInputText] = useState('');
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -464,6 +465,11 @@ export default function KanbanPage() {
     label: `[${tc.testCaseId}] ${tc.title}`,
   })), [testCases]);
 
+  const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
+    value: b.id,
+    label: `[${b.storyId}] ${b.title}`,
+  })), [stories]);
+
   useEffect(() => {
     if (!selectedStory) {
         setIsEditStorySubmitting(false);
@@ -485,6 +491,8 @@ export default function KanbanPage() {
       
       const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
       setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
+      const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
+      setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
 
       editStoryForm.reset({
         title: selectedStory.title,
@@ -495,8 +503,8 @@ export default function KanbanPage() {
         assigneeId: selectedStory.assigneeId || 'unassigned',
         estimatedHours: selectedStory.estimatedHours,
         priority: selectedStory.priority || 'Medium',
-        severity: selectedStory.severity || 'Medium',
-        environmentId: selectedStory.environmentId || 'unassigned',
+        foundInTestPlanId: selectedStory.foundInTestPlanId || 'unassigned',
+        relatedBugId: selectedStory.relatedBugId || 'unassigned',
         impactedSystemIds: selectedStory.impactedSystemIds || [],
         attachments: selectedStory.attachments || '',
         status: selectedStory.status,
@@ -520,6 +528,7 @@ export default function KanbanPage() {
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
+        relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
         createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
         closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
     });
@@ -1102,20 +1111,20 @@ export default function KanbanPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <FormField
                                         control={editStoryForm.control}
-                                        name="environmentId"
+                                        name="foundInTestPlanId"
                                         render={({ field }) => (
                                           <FormItem>
-                                            <FormLabel>Environment</FormLabel>
+                                            <FormLabel>Found In Test Plan</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                               <FormControl>
                                                 <SelectTrigger>
-                                                  <SelectValue placeholder="Select an environment" />
+                                                  <SelectValue placeholder="Select a Test Plan" />
                                                 </SelectTrigger>
                                               </FormControl>
                                               <SelectContent>
                                                 <SelectItem value="unassigned">None</SelectItem>
-                                                {sortedEnvironments.map(env => (
-                                                  <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                                {testPlans.map(tp => (
+                                                  <SelectItem key={tp.id} value={tp.id}>{tp.name}</SelectItem>
                                                 ))}
                                               </SelectContent>
                                             </Select>
@@ -1143,6 +1152,39 @@ export default function KanbanPage() {
                                                 ))}
                                               </SelectContent>
                                             </Select>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editStoryForm.control}
+                                        name="relatedBugId"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Related / Original Bug</FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                list="bug-options-kanban"
+                                                placeholder="Search for a bug..."
+                                                value={relatedBugInputText}
+                                                onChange={(e) => {
+                                                  const text = e.target.value;
+                                                  setRelatedBugInputText(text);
+                                                  const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                                  field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                                }}
+                                                onBlur={() => {
+                                                  const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                                  if (!matchingOption) {
+                                                    setRelatedBugInputText('');
+                                                    field.onChange('unassigned');
+                                                  }
+                                                }}
+                                              />
+                                            </FormControl>
+                                            <datalist id="bug-options-kanban">
+                                              {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                                            </datalist>
                                             <FormMessage />
                                           </FormItem>
                                         )}

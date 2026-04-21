@@ -80,7 +80,7 @@ const testCaseFormSchema = z.object({
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
-  testPlanId: z.string().optional(),
+  testPlanIds: z.array(z.string()).optional(),
   executionDate: z.string().optional(),
   closeDate: z.string().optional(),
 });
@@ -217,18 +217,20 @@ export default function TestPlanPage() {
     if (isTestCaseDialogOpen && editingTestCase) {
         const relatedStory = storyOptions.find(opt => opt.value === editingTestCase.storyId);
         setRelatedStoryInputText(relatedStory?.label || '');
+        const planExec = editingTestCase.executions?.find(e => e.testPlanId === selectedPlanId);
         testCaseForm.reset({
             ...editingTestCase,
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
-            assigneeId: editingTestCase.assigneeId || 'unassigned',
-            testPlanId: editingTestCase.testPlanId || 'none',
-            executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
-            closeDate: editingTestCase.closeDate ? format(parseISO(editingTestCase.closeDate), 'yyyy-MM-dd') : '',
+            assigneeId: planExec?.assigneeId || 'unassigned',
+            status: planExec?.status || 'Not Run',
+            testPlanIds: editingTestCase.executions?.map(e => e.testPlanId) ?? testPlans.map(p => p.id), // default: all plans
+            executionDate: planExec?.executionDate ? format(parseISO(planExec.executionDate), 'yyyy-MM-dd') : '',
+            closeDate: planExec?.closeDate ? format(parseISO(planExec.closeDate), 'yyyy-MM-dd') : '',
         });
     }
-  }, [isTestCaseDialogOpen, editingTestCase, testCaseForm, storyOptions]);
+  }, [isTestCaseDialogOpen, editingTestCase, testCaseForm, storyOptions, testPlans, selectedPlanId]);
 
 
   const onTestPlanSubmit = async (values: z.infer<typeof refinedTestPlanSchema>) => {
@@ -253,22 +255,49 @@ export default function TestPlanPage() {
         type: values.type,
         description: values.description,
         expectedResult: values.expectedResult,
-        status: values.status,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
-        testPlanId: values.testPlanId,
-        executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
-        closeDate: values.closeDate ? new Date(values.closeDate).toISOString() : undefined,
     };
+
+    const selectedPlanIds = values.testPlanIds ?? [];
+    let updatedExecutions = [...(editingTestCase.executions || [])];
     
-    if (values.testPlanId === 'none') {
-      testCaseData.testPlanId = undefined;
-      testCaseData.executionDate = undefined;
+    // Sync checkboxes: remove executions for unchecked plans, add defaults for new ones
+    updatedExecutions = updatedExecutions.filter(ex => selectedPlanIds.includes(ex.testPlanId));
+    selectedPlanIds.forEach(planId => {
+      if (!updatedExecutions.find(ex => ex.testPlanId === planId)) {
+         updatedExecutions.push({ testPlanId: planId, status: 'Not Run' });
+      }
+    });
+
+    // Apply specific fields (Date, Status, Assignee) to the active test plan context
+    if (selectedPlanId) {
+       const targetExec = updatedExecutions.find(ex => ex.testPlanId === selectedPlanId);
+       if (targetExec) {
+          targetExec.assigneeId = values.assigneeId === 'unassigned' ? undefined : values.assigneeId;
+          targetExec.status = values.status;
+          targetExec.executionDate = values.executionDate ? new Date(values.executionDate).toISOString() : undefined;
+          targetExec.closeDate = values.closeDate ? new Date(values.closeDate).toISOString() : undefined;
+       }
     }
+    
+    testCaseData.executions = updatedExecutions;
+
+    // Sync TestPlan.testCaseIds array
+    const planUpdates = testPlans.map(plan => {
+      const alreadyIn = plan.testCaseIds?.includes(editingTestCase.id) ?? false;
+      const shouldBeIn = selectedPlanIds.includes(plan.id);
+      if (shouldBeIn && !alreadyIn) {
+        return updateTestPlan(plan.id, { testCaseIds: [...(plan.testCaseIds ?? []), editingTestCase.id] });
+      } else if (!shouldBeIn && alreadyIn) {
+        return updateTestPlan(plan.id, { testCaseIds: (plan.testCaseIds ?? []).filter(id => id !== editingTestCase.id) });
+      }
+      return Promise.resolve(true);
+    });
 
     const success = await updateTestCase(editingTestCase.id, testCaseData);
+    await Promise.all(planUpdates);
     if (success) {
       toast({ title: 'Success', description: 'Test Case updated.' });
       setIsTestCaseDialogOpen(false);
@@ -292,54 +321,70 @@ export default function TestPlanPage() {
   const handleBulkMoveToTP = () => {
     if (selectedBacklogTCs.length === 0 || !currentExecutionDay || !selectedPlan) return;
 
-    const updates = selectedBacklogTCs.map(tcId => 
-      updateTestCase(tcId, {
-        executionDate: currentExecutionDay.toISOString(),
-        testPlanId: selectedPlan.id
-      })
-    );
-    
+    const newIds = [...new Set([...(selectedPlan.testCaseIds ?? []), ...selectedBacklogTCs])];
+    updateTestPlan(selectedPlan.id, { testCaseIds: newIds });
+
+    const updates = selectedBacklogTCs.map(tcId => {
+      const existingTC = testCases.find(t => t.id === tcId);
+      const executions = [...(existingTC?.executions || [])];
+      let exec = executions.find(e => e.testPlanId === selectedPlan.id);
+      if (exec) {
+        exec.executionDate = currentExecutionDay.toISOString();
+      } else {
+        executions.push({ testPlanId: selectedPlan.id, status: 'Not Run', executionDate: currentExecutionDay.toISOString() });
+      }
+      return updateTestCase(tcId, { executions });
+    });
     Promise.all(updates).then(() => {
-        toast({ title: "Success", description: `${selectedBacklogTCs.length} test cases moved.`});
+        toast({ title: 'Success', description: `${selectedBacklogTCs.length} test cases scheduled.` });
         setSelectedBacklogTCs([]);
     });
-  }
+  };
 
   const handleBulkMoveToBacklog = () => {
-    if (selectedScheduledTCs.length === 0) return;
+    if (selectedScheduledTCs.length === 0 || !selectedPlan) return;
 
-    const updates = selectedScheduledTCs.map(tcId => 
-      updateTestCase(tcId, {
-        executionDate: undefined,
-        testPlanId: undefined
-      })
-    );
-    
+    // We do NOT remove from plan entirely, we just clear the executionDate so they drop from the "Scheduled" column.
+    const updates = selectedScheduledTCs.map(tcId => {
+      const existingTC = testCases.find(t => t.id === tcId);
+      const executions = [...(existingTC?.executions || [])];
+      let exec = executions.find(e => e.testPlanId === selectedPlan.id);
+      if (exec) {
+        exec.executionDate = undefined;
+      }
+      return updateTestCase(tcId, { executions });
+    });
     Promise.all(updates).then(() => {
-        toast({ title: "Success", description: `${selectedScheduledTCs.length} test cases moved.`});
+        toast({ title: 'Success', description: `${selectedScheduledTCs.length} test cases moved back to plan backlog.` });
         setSelectedScheduledTCs([]);
     });
-  }
+  };
 
   const { tcsForCurrentDay, backlog } = useMemo(() => {
     const dateStr = currentExecutionDay ? format(currentExecutionDay, 'yyyy-MM-dd') : null;
 
-    let backlogTCs: TestCase[] = [];
+    let backlogTCs = testCases.filter(tc => !tc.isDeleted);
     let dayTCs: TestCase[] = [];
-
-    testCases.forEach(tc => {
-        if (!tc.testPlanId) {
-            backlogTCs.push(tc);
-        } else if (tc.testPlanId === selectedPlan?.id && tc.executionDate && format(parseISO(tc.executionDate), 'yyyy-MM-dd') === dateStr) {
-            dayTCs.push(tc);
-        }
-    });
+    if (selectedPlan) {
+      const planTCIds = new Set(selectedPlan.testCaseIds ?? []);
+      dayTCs = testCases.filter(tc => {
+        if (!planTCIds.has(tc.id)) return false;
+        const exec = tc.executions?.find(e => e.testPlanId === selectedPlan.id);
+        return exec?.executionDate && format(parseISO(exec.executionDate), 'yyyy-MM-dd') === dateStr;
+      });
+    }
 
     if (sorting) {
-        const sortKey = sorting.id as keyof TestCase;
+        const sortKey = sorting.id as keyof TestCase | 'status';
         const sortFn = (a: TestCase, b: TestCase) => {
-            const valA = (a as any)[sortKey];
-            const valB = (b as any)[sortKey];
+            let valA, valB;
+            if (sortKey === 'status') {
+               valA = a.executions?.find(e => e.testPlanId === selectedPlanId)?.status || 'Not Run';
+               valB = b.executions?.find(e => e.testPlanId === selectedPlanId)?.status || 'Not Run';
+            } else {
+               valA = (a as any)[sortKey];
+               valB = (b as any)[sortKey];
+            }
             if (valA < valB) return sorting.desc ? 1 : -1;
             if (valA > valB) return sorting.desc ? -1 : 1;
             return 0;
@@ -349,7 +394,7 @@ export default function TestPlanPage() {
     }
     
     return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
-}, [selectedPlan, testCases, currentExecutionDay, sorting]);
+  }, [selectedPlan, testCases, currentExecutionDay, sorting, selectedPlanId]);
 
 
   const planDays = useMemo(() => {
@@ -452,6 +497,7 @@ export default function TestPlanPage() {
                     {backlog.map(tc => {
                       const sprint = sprints.find(s => s.id === tc.sprintId);
                       const release = releases.find(r => r.id === tc.releaseId);
+                      const execStatus = tc.executions?.find(e => e.testPlanId === selectedPlanId)?.status || 'Not Run';
                       return (
                         <TableRow key={tc.id}>
                           <TableCell>
@@ -467,7 +513,7 @@ export default function TestPlanPage() {
                           </TableCell>
                           <TableCell>{sprint?.title || 'Backlog'}</TableCell>
                           <TableCell>{release?.name || 'N/A'}</TableCell>
-                          <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
+                          <TableCell><Badge className={cn(statusStyles[execStatus])}>{execStatus}</Badge></TableCell>
                         </TableRow>
                       )
                     })}
@@ -528,6 +574,7 @@ export default function TestPlanPage() {
                                 {tcsForCurrentDay.map(tc => {
                                     const sprint = sprints.find(s => s.id === tc.sprintId);
                                     const release = releases.find(r => r.id === tc.releaseId);
+                                    const execStatus = tc.executions?.find(e => e.testPlanId === selectedPlanId)?.status || 'Not Run';
                                     return (
                                         <TableRow key={tc.id}>
                                             <TableCell>
@@ -543,7 +590,7 @@ export default function TestPlanPage() {
                                             </TableCell>
                                             <TableCell>{sprint?.title || 'Backlog'}</TableCell>
                                             <TableCell>{release?.name || 'N/A'}</TableCell>
-                                            <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
+                                            <TableCell><Badge className={cn(statusStyles[execStatus])}>{execStatus}</Badge></TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -816,27 +863,37 @@ export default function TestPlanPage() {
                   />
               </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
+               <FormField
                     control={testCaseForm.control}
-                    name="testPlanId"
+                    name="testPlanIds"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Test Plan</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'none'}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Assign to a Test Plan" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">TC Backlog</SelectItem>
-                            {testPlans.map((plan) => (
-                              <SelectItem key={plan.id} value={plan.id}>
-                                [{plan.testPlanId}] {plan.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Test Plans</FormLabel>
+                        <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                          {testPlans.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">No test plans available.</p>
+                          ) : (
+                            testPlans.map(plan => (
+                              <div key={plan.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`tp-chk-${plan.id}`}
+                                  checked={(field.value ?? []).includes(plan.id)}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value ?? [];
+                                    field.onChange(
+                                      checked
+                                        ? [...current, plan.id]
+                                        : current.filter(id => id !== plan.id)
+                                    );
+                                  }}
+                                />
+                                <label htmlFor={`tp-chk-${plan.id}`} className="text-sm cursor-pointer">
+                                  [{plan.testPlanId}] {plan.name}
+                                </label>
+                              </div>
+                            ))
+                          )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

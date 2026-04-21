@@ -1188,7 +1188,12 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             ) + 1
             : 1;
         const now = (testDate || new Date()).toISOString();
-        const payload = { ...testCase, testCaseId: `TC-${newIdNumber}`, isDeleted: false, deletedAt: null, statusHistory: [{ fromStatus: null, toStatus: testCase.status, date: now }] };
+        const payload = { 
+            ...testCase, 
+            testCaseId: `TC-${newIdNumber}`, 
+            isDeleted: false,
+            executions: testCase.executions || [] 
+        };
         await addDoc(collection(db, 'projects', projectId, 'testCases'), sanitizeForFirestore(payload));
         return true;
     } catch (e: any) {
@@ -1225,13 +1230,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             type: Math.random() > 0.3 ? 'Functional' : 'Non-functional',
             description: `Auto-generated test steps for ${environmentName}.`,
             expectedResult: 'The system should perform as expected.',
-            status: 'Not Run',
             storyId: relatedStory?.id,
-            sprintId: relatedStory?.sprintId,
-            releaseId: getRandomItem(projectReleases)?.id,
-            assigneeId: getRandomItem(employees)?.id,
-            isDeleted: false,
-            deletedAt: null,
+            sprintId: relatedStory?.sprintId || undefined,
+            releaseId: getRandomItem(projectReleases)?.id || undefined,
+            executions: [],
+            isDeleted: false
           };
           
           batch.set(newTestCaseRef, sanitizeForFirestore(newTestCase));
@@ -1259,22 +1262,24 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         return false;
       }
       
-      const { executionDate, closeDate, ...rest } = data;
-      const payload: any = { ...rest };
+      const payload: any = { ...data };
       
-      if (data.status && data.status !== testCaseToUpdate.status) {
-        const newHistoryEntry: StatusHistoryItem = {
-          fromStatus: testCaseToUpdate.status,
-          toStatus: data.status,
-          date: (testDate || new Date()).toISOString(),
-        };
-        payload.statusHistory = arrayUnion(sanitizeForFirestore(newHistoryEntry));
-      }
-
-      if (data.hasOwnProperty('executionDate')) payload.executionDate = executionDate ? new Date(executionDate).toISOString() : null;
-      if (data.hasOwnProperty('closeDate')) payload.closeDate = closeDate ? new Date(closeDate).toISOString() : null;
-      if (data.hasOwnProperty('testPlanId') && (data.testPlanId === undefined || data.testPlanId === 'none')) {
-          payload.testPlanId = null;
+      if (data.executions && testCaseToUpdate.executions) {
+        payload.executions = data.executions.map(newExec => {
+          const oldExec = testCaseToUpdate.executions?.find(e => e.testPlanId === newExec.testPlanId);
+          if (oldExec && newExec.status && newExec.status !== oldExec.status) {
+            const newHistoryEntry: StatusHistoryItem = {
+              fromStatus: oldExec.status,
+              toStatus: newExec.status,
+              date: (testDate || new Date()).toISOString(),
+            };
+            return {
+              ...newExec,
+              statusHistory: [...(oldExec.statusHistory || []), newHistoryEntry]
+            };
+          }
+          return newExec;
+        });
       }
       
       await updateDoc(testCaseRef, sanitizeForFirestore(payload));
@@ -1341,17 +1346,18 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
-      // Delete the plan
+      // Delete the plan document
       batch.delete(doc(db, 'projects', projectId, 'testPlans', id));
-      
-      const q = query(collection(db, 'projects', projectId, 'testCases'), where('testPlanId', '==', id));
-      const testCasesSnapshot = await getDocs(q);
 
-      testCasesSnapshot.forEach(tcDoc => {
+      // Remove this plan's ID from all TCs that reference it in their executions
+      const affectedTCs = testCases.filter(tc => (tc.executions || []).some(e => e.testPlanId === id));
+      affectedTCs.forEach(tc => {
+        const tcRef = doc(db, 'projects', projectId, 'testCases', tc.id);
         if (deleteTestCases) {
-            batch.update(tcDoc.ref, { isDeleted: true, deletedAt: Timestamp.now() });
+          batch.update(tcRef, { isDeleted: true, deletedAt: Timestamp.now() });
         } else {
-            batch.update(tcDoc.ref, { testPlanId: null, executionDate: null });
+          const remainingExecs = (tc.executions || []).filter(e => e.testPlanId !== id);
+          batch.update(tcRef, { executions: remainingExecs });
         }
       });
       await batch.commit();

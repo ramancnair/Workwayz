@@ -63,7 +63,8 @@ export type Story = {
   parentStoryId?: string;
   relatedTestCaseId?: string; // For Bug
   attachments?: string;
-  environmentId?: string;
+  foundInTestPlanId?: string; // For Bug tracking
+  relatedBugId?: string;      // Trace regression bugs across environments
   developmentStartDate?: string; // ISO String
   completionDate?: string; // ISO String
 };
@@ -92,6 +93,16 @@ export type TestPlan = {
   sprintId?: string;
   releaseId?: string;
   environmentId?: string;
+  testCaseIds?: string[]; // IDs of test cases included in this plan
+};
+
+export type TestExecution = {
+  testPlanId: string;
+  assigneeId?: string;
+  status: TestCaseStatus;
+  executionDate?: string; // ISO string for the date part
+  closeDate?: string; // ISO string for the date part
+  statusHistory?: StatusHistoryItem[];
 };
 
 export type TestCase = {
@@ -101,17 +112,12 @@ export type TestCase = {
   type: TestCaseType;
   description: string;
   expectedResult: string;
-  status: TestCaseStatus;
-  statusHistory?: StatusHistoryItem[];
-  assigneeId?: string;
   storyId?: string;
   releaseId?: string;
   sprintId?: string;
   isDeleted?: boolean;
   deletedAt?: string;
-  testPlanId?: string;
-  executionDate?: string; // ISO string for the date part
-  closeDate?: string; // ISO string for the date part
+  executions?: TestExecution[];
 };
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';

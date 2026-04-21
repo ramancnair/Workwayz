@@ -96,7 +96,8 @@ const storyFormSchema = z.object({
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   priority: z.enum(priorities).optional(),
-  environmentId: z.string().optional(),
+  foundInTestPlanId: z.string().optional(),
+  relatedBugId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   releaseId: z.string().optional(),
   attachments: z.string().optional(),
@@ -473,6 +474,8 @@ export default function GroomingPage() {
         holidays,
         weeklyOffDays,
         releasesAndMilestones,
+        testCases,
+        testPlans,
     } = useProject();
     const { toast } = useToast();
     
@@ -487,6 +490,8 @@ export default function GroomingPage() {
     const [viewBy, setViewBy] = useState<'story' | 'sub-task' | 'bug'>('story');
     const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
     const [editParentStoryText, setEditParentStoryText] = useState('');
+    const [testCaseInputText, setTestCaseInputText] = useState('');
+    const [relatedBugInputText, setRelatedBugInputText] = useState('');
     
     const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -595,6 +600,16 @@ export default function GroomingPage() {
         value: s.id,
         label: `[${s.storyId}] ${s.title}`
     })), [parentStories]);
+
+    const testCaseOptions = useMemo(() => testCases.map(tc => ({
+        value: tc.id,
+        label: `[${tc.testCaseId}] ${tc.title}`,
+    })), [testCases]);
+
+    const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
+        value: b.id,
+        label: `[${b.storyId}] ${b.title}`,
+    })), [stories]);
     
     const handleSetSelectedStory = (story: Story | null) => {
         if (story) {
@@ -655,7 +670,11 @@ export default function GroomingPage() {
                 releaseId: selectedStory.releaseId || 'unassigned',
             });
         } else {
-            const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
+            const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
+      setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
+      const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
+      setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
+
              editStoryForm.reset({
                 title: selectedStory.title,
                 description: selectedStory.description || '',
@@ -665,7 +684,8 @@ export default function GroomingPage() {
                 assigneeId: selectedStory.assigneeId || 'unassigned',
                 estimatedHours: selectedStory.estimatedHours,
                 priority: selectedStory.priority || 'Medium',
-                environmentId: selectedStory.environmentId || 'unassigned',
+                foundInTestPlanId: selectedStory.foundInTestPlanId || 'unassigned',
+                relatedBugId: selectedStory.relatedBugId || 'unassigned',
                 impactedSystemIds: selectedStory.impactedSystemIds || [],
                 releaseId: selectedStory.releaseId || 'unassigned',
                 attachments: selectedStory.attachments || '',
@@ -1389,47 +1409,89 @@ export default function GroomingPage() {
                             />
                             </div>
                             {['Feature Change', 'Bug'].includes(selectedStory.itemType) ? (
-                              <FormField
-                                control={editStoryForm.control}
-                                name="parentStoryId"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Parent Item</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        list="parent-story-options-edit"
-                                        placeholder="Link to a story or feature change"
-                                        value={editParentStoryText}
-                                        onChange={(e) => {
-                                          const text = e.target.value;
-                                          setEditParentStoryText(text);
-                                          const matchingOption = parentStoryOptions.find(
-                                            (opt) => opt.label === text
-                                          );
-                                          field.onChange(
-                                            matchingOption ? matchingOption.value : undefined
-                                          );
-                                        }}
-                                        onBlur={() => {
-                                          const matchingOption = parentStoryOptions.find(
-                                            (opt) => opt.label === editParentStoryText
-                                          );
-                                          if (!matchingOption) {
-                                            setEditParentStoryText('');
-                                            field.onChange(undefined);
-                                          }
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <datalist id="parent-story-options-edit">
-                                      {parentStoryOptions.map((opt) => (
-                                        <option key={opt.value} value={opt.label} />
-                                      ))}
-                                    </datalist>
-                                    <FormMessage />
-                                  </FormItem>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                  control={editStoryForm.control}
+                                  name="parentStoryId"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>{selectedStory.itemType === 'Bug' ? 'Related Test Case' : 'Parent Item'}</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          list={selectedStory.itemType === 'Bug' ? "testcase-options-grooming" : "parent-story-options-edit"}
+                                          placeholder={selectedStory.itemType === 'Bug' ? "Link to a test case" : "Link to a story or feature change"}
+                                          value={selectedStory.itemType === 'Bug' ? testCaseInputText : editParentStoryText}
+                                          onChange={(e) => {
+                                            const text = e.target.value;
+                                            if(selectedStory.itemType === 'Bug') setTestCaseInputText(text);
+                                            else setEditParentStoryText(text);
+                                            const options = selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions;
+                                            const matchingOption = options.find(
+                                              (opt) => opt.label === text
+                                            );
+                                            field.onChange(
+                                              matchingOption ? matchingOption.value : undefined
+                                            );
+                                          }}
+                                          onBlur={() => {
+                                            const options = selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions;
+                                            const text = selectedStory.itemType === 'Bug' ? testCaseInputText : editParentStoryText;
+                                            const matchingOption = options.find(
+                                              (opt) => opt.label === text
+                                            );
+                                            if (!matchingOption) {
+                                              if(selectedStory.itemType === 'Bug') setTestCaseInputText('');
+                                              else setEditParentStoryText('');
+                                              field.onChange(undefined);
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <datalist id={selectedStory.itemType === 'Bug' ? "testcase-options-grooming" : "parent-story-options-edit"}>
+                                        {(selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions).map((opt) => (
+                                          <option key={opt.value} value={opt.label} />
+                                        ))}
+                                      </datalist>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                {selectedStory.itemType === 'Bug' && (
+                                  <FormField
+                                    control={editStoryForm.control}
+                                    name="relatedBugId"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Related / Original Bug</FormLabel>
+                                        <FormControl>
+                                          <Input
+                                            list="bug-options-grooming"
+                                            placeholder="Search for a bug..."
+                                            value={relatedBugInputText}
+                                            onChange={(e) => {
+                                              const text = e.target.value;
+                                              setRelatedBugInputText(text);
+                                              const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                              field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                            }}
+                                            onBlur={() => {
+                                              const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                              if (!matchingOption) {
+                                                setRelatedBugInputText('');
+                                                field.onChange('unassigned');
+                                              }
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <datalist id="bug-options-grooming">
+                                          {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                                        </datalist>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
                                 )}
-                              />
+                              </div>
                             ) : null}
                              <FormField
                                 control={editStoryForm.control}

@@ -101,23 +101,38 @@ export default function TestingDashboard() {
     let relatedBugs: Story[] = [];
 
     if (selectedTestPlanId !== 'all') {
-      const testCaseIdsInPlan = new Set();
-      if (selectedTestPlanId === 'none') {
-        filteredTestCases = testCases.filter(tc => !tc.testPlanId);
-      } else {
-        filteredTestCases = testCases.filter(tc => tc.testPlanId === selectedTestPlanId);
-      }
-      filteredTestCases.forEach(tc => testCaseIdsInPlan.add(tc.id));
-      relatedBugs = stories.filter(story => story.itemType === 'Bug' && story.relatedTestCaseId && testCaseIdsInPlan.has(story.relatedTestCaseId));
-
-    } else {
+      const plan = testPlans.find(p => p.id === selectedTestPlanId);
+      const planTCIds = new Set(plan?.testCaseIds ?? []);
+      filteredTestCases = testCases.filter(tc => planTCIds.has(tc.id));
+    }
+    const testCaseIdsInView = new Set(filteredTestCases.map(tc => tc.id));
+    relatedBugs = stories.filter(story =>
+      story.itemType === 'Bug' &&
+      story.relatedTestCaseId &&
+      testCaseIdsInView.has(story.relatedTestCaseId)
+    );
+    if (selectedTestPlanId === 'all') {
       relatedBugs = stories.filter(story => story.itemType === 'Bug');
     }
     
     // Test Case Metrics
+    let statusesToCount: string[] = [];
+    if (selectedTestPlanId !== 'all') {
+      filteredTestCases.forEach(tc => {
+        const exec = tc.executions?.find(e => e.testPlanId === selectedTestPlanId);
+        if (exec) statusesToCount.push(exec.status || 'Not Run');
+      });
+    } else {
+      filteredTestCases.forEach(tc => {
+        if (tc.executions) {
+          tc.executions.forEach(exec => statusesToCount.push(exec.status || 'Not Run'));
+        }
+      });
+    }
+
     const testCaseStatusData = Object.entries(
-      filteredTestCases.reduce((acc, tc) => {
-        acc[tc.status] = (acc[tc.status] || 0) + 1;
+      statusesToCount.reduce((acc, status) => {
+        acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>)
     ).map(([name, value]) => ({ name, value, fill: testCaseStatusConfig[name as keyof typeof testCaseStatusConfig]?.color || '#ccc' }));
@@ -147,29 +162,40 @@ export default function TestingDashboard() {
       bugStatusData,
       openBugsBySeverityData,
     };
-  }, [testCases, stories, selectedTestPlanId]);
+  }, [testCases, stories, selectedTestPlanId, testPlans]);
   
   const dailyViewData = useMemo(() => {
     let filteredTestCases = testCases;
     let relatedBugs: Story[] = [];
 
     if (dailyViewTestPlanId !== 'all') {
-      const testCaseIdsInPlan = new Set();
-       if (dailyViewTestPlanId === 'none') {
-        filteredTestCases = testCases.filter(tc => !tc.testPlanId);
-      } else {
-        filteredTestCases = testCases.filter(tc => tc.testPlanId === dailyViewTestPlanId);
-      }
-      filteredTestCases.forEach(tc => testCaseIdsInPlan.add(tc.id));
-      relatedBugs = stories.filter(story => story.itemType === 'Bug' && story.relatedTestCaseId && testCaseIdsInPlan.has(story.relatedTestCaseId));
-    } else {
-      relatedBugs = stories.filter(story => story.itemType === 'Bug');
+      const plan = testPlans.find(p => p.id === dailyViewTestPlanId);
+      const planTCIds = new Set(plan?.testCaseIds ?? []);
+      filteredTestCases = testCases.filter(tc => planTCIds.has(tc.id));
     }
+    const testCaseIdsInView = new Set(filteredTestCases.map(tc => tc.id));
+    relatedBugs = dailyViewTestPlanId === 'all'
+      ? stories.filter(story => story.itemType === 'Bug')
+      : stories.filter(story =>
+          story.itemType === 'Bug' &&
+          story.relatedTestCaseId &&
+          testCaseIdsInView.has(story.relatedTestCaseId)
+        );
     
-    const allDates: Date[] = [];
+    const tcExecutionsInView: any[] = [];
     filteredTestCases.forEach(tc => {
-        if(tc.executionDate) allDates.push(startOfDay(parseISO(tc.executionDate)));
-        if(tc.closeDate) allDates.push(startOfDay(parseISO(tc.closeDate)));
+       if (dailyViewTestPlanId !== 'all') {
+          const exec = tc.executions?.find(e => e.testPlanId === dailyViewTestPlanId);
+          if (exec) tcExecutionsInView.push(exec);
+       } else {
+          if (tc.executions) tcExecutionsInView.push(...tc.executions);
+       }
+    });
+
+    const allDates: Date[] = [];
+    tcExecutionsInView.forEach(exec => {
+        if(exec.executionDate) allDates.push(startOfDay(parseISO(exec.executionDate)));
+        if(exec.closeDate) allDates.push(startOfDay(parseISO(exec.closeDate)));
     });
     relatedBugs.forEach(bug => {
         if(bug.createdAt) allDates.push(startOfDay(parseISO(bug.createdAt)));
@@ -186,8 +212,8 @@ export default function TestingDashboard() {
         const dateStr = format(date, 'yyyy-MM-dd');
         return {
             date: format(date, 'MMM d'),
-            executed: filteredTestCases.filter(tc => tc.executionDate && format(parseISO(tc.executionDate), 'yyyy-MM-dd') === dateStr).length,
-            closed: filteredTestCases.filter(tc => tc.closeDate && format(parseISO(tc.closeDate), 'yyyy-MM-dd') === dateStr).length,
+            executed: tcExecutionsInView.filter(exec => exec.executionDate && format(parseISO(exec.executionDate), 'yyyy-MM-dd') === dateStr).length,
+            closed: tcExecutionsInView.filter(exec => exec.closeDate && format(parseISO(exec.closeDate), 'yyyy-MM-dd') === dateStr).length,
         };
     });
 
@@ -202,7 +228,7 @@ export default function TestingDashboard() {
 
     return { tcData, bugData };
     
-  }, [testCases, stories, dailyViewTestPlanId]);
+  }, [testCases, stories, dailyViewTestPlanId, testPlans]);
 
 
   return (
@@ -220,7 +246,6 @@ export default function TestingDashboard() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Test Plans</SelectItem>
-                    <SelectItem value="none">TC Backlog (Unassigned)</SelectItem>
                     {testPlans.map(tp => <SelectItem key={tp.id} value={tp.id}>[{tp.testPlanId}] {tp.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -290,7 +315,6 @@ export default function TestingDashboard() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Test Plans</SelectItem>
-                    <SelectItem value="none">TC Backlog (Unassigned)</SelectItem>
                     {testPlans.map(tp => <SelectItem key={tp.id} value={tp.id}>[{tp.testPlanId}] {tp.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

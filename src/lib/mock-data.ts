@@ -12,7 +12,6 @@ export const employees: Employee[] = [
     role: 'Developer',
     experience: 5,
     onboardingDate: new Date('2023-02-01').toISOString(),
-    onshoreOrOffshore: 'Onshore',
     billedRate: 100,
     availability: 100,
     avatar: 'https://placehold.co/40x40.png'
@@ -27,7 +26,6 @@ export const employees: Employee[] = [
     role: 'Developer',
     experience: 3,
     onboardingDate: new Date('2023-05-20').toISOString(),
-    onshoreOrOffshore: 'Offshore',
     billedRate: 80,
     availability: 100,
     avatar: 'https://placehold.co/40x40.png'
@@ -42,7 +40,6 @@ export const employees: Employee[] = [
     role: 'Developer',
     experience: 7,
     onboardingDate: new Date('2022-11-10').toISOString(),
-    onshoreOrOffshore: 'Onshore',
     billedRate: 115,
     availability: 75,
     avatar: 'https://placehold.co/40x40.png'
@@ -57,7 +54,6 @@ export const employees: Employee[] = [
     role: 'Tester',
     experience: 4,
     onboardingDate: new Date('2023-03-15').toISOString(),
-    onshoreOrOffshore: 'Offshore',
     billedRate: 60,
     availability: 100,
     avatar: 'https://placehold.co/40x40.png'
@@ -72,7 +68,6 @@ export const employees: Employee[] = [
     role: 'Tester',
     experience: 6,
     onboardingDate: new Date('2022-09-01').toISOString(),
-    onshoreOrOffshore: 'Onshore',
     billedRate: 75,
     availability: 100,
     avatar: 'https://placehold.co/40x40.png'
@@ -89,17 +84,17 @@ export const sprints: Sprint[] = [
 ];
 
 export const stories: Story[] = [
-  { id: 'story1', storyId: 'ST-1', title: 'User Authentication', description: 'Implement user sign-up and login functionality.', itemType: 'Story', epicId: 'epic1', sprintId: 'sprint1', status: 'In Progress', acceptanceCriteria: 'A user can successfully sign up and log in. Invalid credentials show an error.', assigneeId: 'dev1' },
-  { id: 'story2', storyId: 'ST-2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.', itemType: 'Story', epicId: 'epic2', sprintId: 'sprint1', status: 'In Progress', acceptanceCriteria: 'The dashboard displays total tasks, completed tasks, and completion rate.', assigneeId: 'dev2' },
-  { id: 'story3', storyId: 'ST-3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.', itemType: 'Story', sprintId: 'sprint1', status: 'To Do', acceptanceCriteria: 'Users can drag and drop stories between columns.' },
-  { id: 'story4', storyId: 'ST-4', title: 'Password Reset', description: 'Allow users to reset their password via email.', itemType: 'Story', epicId: 'epic1', sprintId: 'sprint1', status: 'To Do', assigneeId: 'dev3' },
-  { id: 'story5', storyId: 'ST-5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', itemType: 'Story', epicId: 'epic2', sprintId: null, status: 'Done', acceptanceCriteria: 'The exported PDF matches the dashboard view.', assigneeId: 'dev2' },
+  { id: 'story1', storyId: 'ST-1', title: 'User Authentication', description: 'Implement user sign-up and login functionality.', itemType: 'Requirement/Story', epicId: 'epic1', sprintId: 'sprint1', status: 'In Progress', acceptanceCriteria: 'A user can successfully sign up and log in. Invalid credentials show an error.', assigneeId: 'dev1' },
+  { id: 'story2', storyId: 'ST-2', title: 'Project Dashboard', description: 'Create a dashboard to display project statistics.', itemType: 'Requirement/Story', epicId: 'epic2', sprintId: 'sprint1', status: 'In Progress', acceptanceCriteria: 'The dashboard displays total tasks, completed tasks, and completion rate.', assigneeId: 'dev2' },
+  { id: 'story3', storyId: 'ST-3', title: 'Kanban Board', description: 'Develop a Kanban board for task management.', itemType: 'Requirement/Story', sprintId: 'sprint1', status: 'To Do', acceptanceCriteria: 'Users can drag and drop stories between columns.' },
+  { id: 'story4', storyId: 'ST-4', title: 'Password Reset', description: 'Allow users to reset their password via email.', itemType: 'Requirement/Story', epicId: 'epic1', sprintId: 'sprint1', status: 'To Do', assigneeId: 'dev3' },
+  { id: 'story5', storyId: 'ST-5', title: 'Export Dashboard as PDF', description: 'Allow users to export dashboard as PDF.', itemType: 'Requirement/Story', epicId: 'epic2', sprintId: null, status: 'Done', acceptanceCriteria: 'The exported PDF matches the dashboard view.', assigneeId: 'dev2' },
 ];
 
 export const testCases: TestCase[] = [
-    { id: 'tc1', testCaseId: 'TC-1', title: 'Verify successful login', type: 'Functional', description: 'Enter valid credentials and click login.', expectedResult: 'User is redirected to dashboard.', status: 'Passed', assigneeId: 'tester1', storyId: 'story1', releaseId: 'rel1' },
-    { id: 'tc2', testCaseId: 'TC-2', title: 'Verify failed login', type: 'Functional', description: 'Enter invalid credentials and click login.', expectedResult: 'Error message is displayed.', status: 'Passed', assigneeId: 'tester1', storyId: 'story1', releaseId: 'rel1' },
-    { id: 'tc3', testCaseId: 'TC-3', title: 'Dashboard loading performance', type: 'Non-functional', description: 'Measure time to load dashboard with 100+ tasks.', expectedResult: 'Dashboard loads in under 2 seconds.', status: 'Not Run', assigneeId: 'tester2', storyId: 'story2', releaseId: 'rel1' },
+    { id: 'tc1', testCaseId: 'TC-1', title: 'Verify successful login', type: 'Functional', description: 'Enter valid credentials and click login.', expectedResult: 'User is redirected to dashboard.', storyId: 'story1', releaseId: 'rel1' },
+    { id: 'tc2', testCaseId: 'TC-2', title: 'Verify failed login', type: 'Functional', description: 'Enter invalid credentials and click login.', expectedResult: 'Error message is displayed.', storyId: 'story1', releaseId: 'rel1' },
+    { id: 'tc3', testCaseId: 'TC-3', title: 'Dashboard loading performance', type: 'Non-functional', description: 'Measure time to load dashboard with 100+ tasks.', expectedResult: 'Dashboard loads in under 2 seconds.', storyId: 'story2', releaseId: 'rel1' },
 ];
 
 

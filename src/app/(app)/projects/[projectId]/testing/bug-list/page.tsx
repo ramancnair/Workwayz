@@ -78,8 +78,8 @@ const bugFormSchema = z.object({
   status: z.enum(['To Do', 'In Progress', 'Done']),
   severity: z.enum(severities).optional(),
   sprintId: z.string().optional(),
-  environmentId: z.string().optional(),
   attachments: z.string().optional(),
+  relatedBugId: z.string().optional(),
   releaseId: z.string().optional(),
   createdAt: z.date().optional(),
   closedAt: z.date().optional(),
@@ -87,7 +87,7 @@ const bugFormSchema = z.object({
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs, releasesAndMilestones, testCases, testDate } = useProject();
+  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, autoGenerateBugs, releasesAndMilestones, testCases, testPlans, testDate } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -102,6 +102,7 @@ export default function BugListPage() {
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const [testCaseInputText, setTestCaseInputText] = useState('');
+  const [relatedBugInputText, setRelatedBugInputText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'storyId', desc: false });
 
   const autoGenFormSchema = useMemo(() => {
@@ -141,11 +142,18 @@ export default function BugListPage() {
     label: `[${tc.testCaseId}] ${tc.title}`,
   })), [testCases]);
 
+  const relatedBugOptions = useMemo(() => bugs.map(b => ({
+    value: b.id,
+    label: `[${b.storyId}] ${b.title}`,
+  })), [bugs]);
+
   useEffect(() => {
     if (isDialogOpen) {
       if (editingBug) {
         const testCase = testCases.find(tc => tc.id === editingBug.relatedTestCaseId);
         setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
+        const relBug = bugs.find(b => b.id === editingBug.relatedBugId);
+        setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
 
         form.reset({
           title: editingBug.title,
@@ -157,7 +165,8 @@ export default function BugListPage() {
           status: editingBug.status as StoryStatus,
           severity: editingBug.severity,
           sprintId: editingBug.sprintId || 'backlog',
-          environmentId: editingBug.environmentId || 'unassigned',
+          foundInTestPlanId: editingBug.foundInTestPlanId || 'unassigned',
+          relatedBugId: editingBug.relatedBugId || 'unassigned',
           attachments: editingBug.attachments || '',
           releaseId: editingBug.releaseId || 'unassigned',
           createdAt: editingBug.createdAt ? parseISO(editingBug.createdAt) : undefined,
@@ -165,6 +174,7 @@ export default function BugListPage() {
         });
       } else {
          setTestCaseInputText('');
+         setRelatedBugInputText('');
          form.reset({
             title: '',
             description: '',
@@ -175,7 +185,8 @@ export default function BugListPage() {
             status: 'To Do',
             severity: 'Medium',
             sprintId: 'backlog',
-            environmentId: 'unassigned',
+            foundInTestPlanId: 'unassigned',
+            relatedBugId: 'unassigned',
             attachments: '',
             releaseId: 'unassigned',
         });
@@ -202,7 +213,8 @@ export default function BugListPage() {
         status: values.status,
         severity: values.severity,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
-        environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+        foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
+        relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
         attachments: values.attachments,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
     };
@@ -347,14 +359,14 @@ export default function BugListPage() {
               <SortableHeader columnId="title">Title</SortableHeader>
               <SortableHeader columnId="status">Status</SortableHeader>
               <SortableHeader columnId="severity">Severity</SortableHeader>
-              <SortableHeader columnId="environmentId">Environment</SortableHeader>
+              <SortableHeader columnId="foundInTestPlanId">Test Plan</SortableHeader>
               <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedBugs.map((bug) => {
               const assignee = employees.find(e => e.id === bug.assigneeId);
-              const environment = environments.find(e => e.id === bug.environmentId);
+              const testPlan = testPlans.find(tp => tp.id === bug.foundInTestPlanId);
               return (
                 <TableRow key={bug.id} data-state={selectedBugs.includes(bug.id) && "selected"}>
                   <TableCell>
@@ -392,8 +404,8 @@ export default function BugListPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {environment ? (
-                       <Badge variant="outline">{environment.name}</Badge>
+                    {testPlan ? (
+                       <Badge variant="outline">{testPlan.name}</Badge>
                     ) : 'N/A'}
                   </TableCell>
                   <TableCell>
@@ -567,23 +579,56 @@ export default function BugListPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="environmentId"
+                      name="foundInTestPlanId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Environment</FormLabel>
+                          <FormLabel>Found In Test Plan</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select an environment" />
+                                <SelectValue placeholder="Select a Test Plan" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="unassigned">None</SelectItem>
-                              {sortedEnvironments.map(env => (
-                                <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                              {testPlans.map(tp => (
+                                <SelectItem key={tp.id} value={tp.id}>{tp.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="relatedBugId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Related / Original Bug</FormLabel>
+                          <FormControl>
+                            <Input
+                              list="bug-options"
+                              placeholder="Search for a bug..."
+                              value={relatedBugInputText}
+                              onChange={(e) => {
+                                const text = e.target.value;
+                                setRelatedBugInputText(text);
+                                const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                              }}
+                              onBlur={() => {
+                                const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                if (!matchingOption) {
+                                  setRelatedBugInputText('');
+                                  field.onChange('unassigned');
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <datalist id="bug-options">
+                            {relatedBugOptions.filter(opt => opt.value !== editingBug?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                          </datalist>
                           <FormMessage />
                         </FormItem>
                       )}

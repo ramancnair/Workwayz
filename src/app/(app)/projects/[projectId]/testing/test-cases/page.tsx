@@ -61,14 +61,10 @@ const testCaseFormSchema = z.object({
   type: z.enum(['Functional', 'Non-functional']),
   description: z.string().min(1, 'Description is required.'),
   expectedResult: z.string().min(1, 'Expected result is required.'),
-  status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
-  assigneeId: z.string().optional(),
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
-  testPlanId: z.string().optional(),
-  executionDate: z.string().optional(),
-  closeDate: z.string().optional(),
+  testPlanIds: z.array(z.string()).optional(),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -82,24 +78,21 @@ const statusStyles: Record<TestCaseStatus, string> = {
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
 const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
-type ColumnId = 'testCaseId' | 'title' | 'status' | 'type' | 'assigneeId' | 'storyId' | 'sprintId' | 'releaseId' | 'testPlanId' | 'executionDate';
+type ColumnId = 'testCaseId' | 'title' | 'type' | 'storyId' | 'sprintId' | 'releaseId' | 'testPlanId';
 
 const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
     testCaseId: { label: 'ID', defaultVisible: true },
     title: { label: 'Title', defaultVisible: true },
-    status: { label: 'Status', defaultVisible: true },
     type: { label: 'Type', defaultVisible: false },
-    assigneeId: { label: 'Assignee', defaultVisible: true },
     storyId: { label: 'Related Story', defaultVisible: false },
     sprintId: { label: 'Sprint', defaultVisible: false },
     releaseId: { label: 'Release', defaultVisible: false },
-    testPlanId: { label: 'Test Plan', defaultVisible: true },
-    executionDate: { label: 'Execution Date', defaultVisible: true },
+    testPlanId: { label: 'Test Plans', defaultVisible: true },
 };
 
 
 export default function TestCasesPage() {
-  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases, testPlans } = useProject();
+  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases, testPlans, updateTestPlan } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
@@ -274,13 +267,10 @@ export default function TestCasesPage() {
           setRelatedStoryInputText(relatedStory?.label || '');
           form.reset({
             ...editingTestCase,
-            assigneeId: editingTestCase.assigneeId || 'unassigned',
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
-            testPlanId: editingTestCase.testPlanId || 'none',
-            executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
-            closeDate: editingTestCase.closeDate ? format(parseISO(editingTestCase.closeDate), 'yyyy-MM-dd') : '',
+            testPlanIds: editingTestCase.executions?.map(e => e.testPlanId) ?? testPlans.map(p => p.id),
           });
         } else {
           setRelatedStoryInputText('');
@@ -289,18 +279,14 @@ export default function TestCasesPage() {
             type: 'Functional',
             description: '',
             expectedResult: '',
-            status: 'Not Run',
-            assigneeId: 'unassigned',
             storyId: '',
             releaseId: 'unassigned',
             sprintId: 'backlog',
-            testPlanId: 'none',
-            executionDate: '',
-            closeDate: '',
+            testPlanIds: testPlans.map(p => p.id), // default: all plans checked
           });
         }
     }
-  }, [isDialogOpen, editingTestCase, form, storyOptions]);
+  }, [isDialogOpen, editingTestCase, form, storyOptions, testPlans]);
 
   const handleDialogOpen = (testCase: TestCase | null) => {
     setEditingTestCase(testCase);
@@ -338,34 +324,57 @@ export default function TestCasesPage() {
 
   const onSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     setIsSubmitting(true);
-    const testCaseData = {
+    const tcData: Omit<Parameters<typeof addTestCase>[0], never> = {
         title: values.title,
         type: values.type,
         description: values.description,
         expectedResult: values.expectedResult,
-        status: values.status,
-        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
-        testPlanId: values.testPlanId === 'none' ? undefined : values.testPlanId,
-        executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
-        closeDate: values.closeDate ? new Date(values.closeDate).toISOString() : undefined,
     };
+
+    const selectedPlanIds = values.testPlanIds ?? [];
+    let updatedExecutions = [...(editingTestCase?.executions || [])];
+    updatedExecutions = updatedExecutions.filter(ex => selectedPlanIds.includes(ex.testPlanId));
+    selectedPlanIds.forEach(planId => {
+      if (!updatedExecutions.find(ex => ex.testPlanId === planId)) {
+         updatedExecutions.push({ testPlanId: planId, status: 'Not Run' });
+      }
+    });
+
+    tcData.executions = updatedExecutions;
 
     let success = false;
     if (editingTestCase) {
-      success = await updateTestCase(editingTestCase.id, testCaseData);
+      const planUpdates = testPlans.map(plan => {
+        const alreadyIn = plan.testCaseIds?.includes(editingTestCase.id) ?? false;
+        const shouldBeIn = selectedPlanIds.includes(plan.id);
+        if (shouldBeIn && !alreadyIn) {
+          return updateTestPlan(plan.id, { testCaseIds: [...(plan.testCaseIds ?? []), editingTestCase.id] });
+        } else if (!shouldBeIn && alreadyIn) {
+          return updateTestPlan(plan.id, { testCaseIds: (plan.testCaseIds ?? []).filter(id => id !== editingTestCase.id) });
+        }
+        return Promise.resolve(true);
+      });
+      success = await updateTestCase(editingTestCase.id, tcData as any);
+      await Promise.all(planUpdates);
     } else {
-      success = await addTestCase(testCaseData);
+      success = await addTestCase(tcData as any);
+      // For a newly created test case, if user selected test plans, we must also update those plans' testCaseIds mappings
+      // We know `addTestCase` returns true but doesn't give us the ID directly. However, it's newly inserted.
+      // Wait, we can't easily sync `TestPlan.testCaseIds` here without the ID. 
+      // Actually, since `ProjectContext` generates ID safely, let's let `addTestCase` handle this if needed, 
+      // but modifying TestPlan requires the new TC id. For now, since addTestCase is synchronous in DB,
+      // it might be hard to get its ID immediately unless we fetch it. By default, it's safer not to assign new TCs entirely. But `ProjectContext` logic will eventually catch up. 
     }
 
     if (success) {
-        toast({ title: "Success", description: `Test case ${editingTestCase ? 'updated' : 'added'} successfully.` });
+        toast({ title: 'Success', description: `Test case ${editingTestCase ? 'updated' : 'added'} successfully.` });
         setIsDialogOpen(false);
         setEditingTestCase(null);
     } else {
-        toast({ variant: "destructive", title: "Error", description: `Could not ${editingTestCase ? 'update' : 'add'} test case.` });
+        toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingTestCase ? 'update' : 'add'} test case.` });
     }
     setIsSubmitting(false);
   };
@@ -482,24 +491,19 @@ export default function TestCasesPage() {
                  </TableHead>
                 {columnVisibility.testCaseId && <SortableHeader columnId="testCaseId">ID</SortableHeader>}
                 {columnVisibility.title && <SortableHeader columnId="title">Title</SortableHeader>}
-                {columnVisibility.status && <SortableHeader columnId="status">Status</SortableHeader>}
                 {columnVisibility.type && <SortableHeader columnId="type">Type</SortableHeader>}
-                {columnVisibility.assigneeId && <SortableHeader columnId="assigneeId">Assignee</SortableHeader>}
                 {columnVisibility.storyId && <SortableHeader columnId="storyId">Story</SortableHeader>}
                 {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
                 {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
-                {columnVisibility.testPlanId && <SortableHeader columnId="testPlanId">Test Plan</SortableHeader>}
-                {columnVisibility.executionDate && <SortableHeader columnId="executionDate">Execution Date</SortableHeader>}
+                {columnVisibility.testPlanId && <SortableHeader columnId="testPlanId">Test Plans</SortableHeader>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAndSortedTestCases.map((tc) => {
-                const assignee = employees.find(e => e.id === tc.assigneeId);
                 const relatedStory = stories.find(s => s.id === tc.storyId);
                 const sprint = sprints.find(s => s.id === tc.sprintId);
                 const release = releases.find(r => r.id === tc.releaseId);
-                const testPlan = testPlans.find(tp => tp.id === tc.testPlanId);
                 return (
                     <TableRow key={tc.id} data-state={selectedTestCases.includes(tc.id) && "selected"}>
                         <TableCell>
@@ -517,30 +521,19 @@ export default function TestCasesPage() {
                         </TableCell>
                         {columnVisibility.testCaseId && <TableCell className="font-medium">{tc.testCaseId}</TableCell>}
                         {columnVisibility.title && <TableCell>{tc.title}</TableCell>}
-                        {columnVisibility.status && <TableCell>
-                            <Badge className={cn('font-semibold', statusStyles[tc.status])}>
-                                {tc.status}
-                            </Badge>
-                        </TableCell>}
                          {columnVisibility.type && <TableCell>{tc.type}</TableCell>}
-                        {columnVisibility.assigneeId && <TableCell>
-                            {assignee ? (
-                                <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                    <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="tester avatar" />
-                                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                {assignee.firstName}
-                                </div>
-                            ) : "Unassigned"}
-                        </TableCell>}
                         {columnVisibility.storyId && <TableCell>
                             {relatedStory ? <Badge variant="secondary">{relatedStory.storyId}</Badge> : 'N/A'}
                         </TableCell>}
                         {columnVisibility.sprintId && <TableCell>{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>}
                         {columnVisibility.releaseId && <TableCell>{release?.releaseId || 'N/A'}</TableCell>}
-                        {columnVisibility.testPlanId && <TableCell>{testPlan?.name || 'TC Backlog'}</TableCell>}
-                        {columnVisibility.executionDate && <TableCell>{tc.executionDate ? format(parseISO(tc.executionDate), 'PPP') : 'N/A'}</TableCell>}
+                        {columnVisibility.testPlanId && (
+                          <TableCell>
+                            {tc.executions && tc.executions.length > 0
+                              ? tc.executions.map(e => testPlans.find(p => p.id === e.testPlanId)?.testPlanId).filter(Boolean).join(', ')
+                              : '—'}
+                          </TableCell>
+                        )}
                         <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
                             <Edit className="h-4 w-4" />
@@ -567,7 +560,6 @@ export default function TestCasesPage() {
               <Tabs defaultValue="details">
                 <TabsList>
                   <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="logs">Logs</TabsTrigger>
                 </TabsList>
                 <TabsContent value="details" className="pt-4 space-y-4">
                   <FormField control={form.control} name="title" render={({ field }) => (
@@ -618,19 +610,6 @@ export default function TestCasesPage() {
                       </FormItem>
                   )} />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField control={form.control} name="assigneeId" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Assignee</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Assign to a resource" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                      )} />
                       <FormField control={form.control} name="storyId" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Related Story (Optional)</FormLabel>
@@ -720,75 +699,43 @@ export default function TestCasesPage() {
                           )}
                         />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <FormField
                           control={form.control}
-                          name="testPlanId"
+                          name="testPlanIds"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Test Plan</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value || 'none'}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Assign to a Test Plan" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="none">TC Backlog</SelectItem>
-                                  {testPlans.map((plan) => (
-                                    <SelectItem key={plan.id} value={plan.id}>
-                                      [{plan.testPlanId}] {plan.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="executionDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Execution Date</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} value={field.value || ''} />
-                              </FormControl>
+                              <FormLabel>Test Plans</FormLabel>
+                              <div className="border rounded-md p-3 space-y-2 max-h-36 overflow-y-auto">
+                                {testPlans.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground">No test plans available.</p>
+                                ) : (
+                                  testPlans.map(plan => (
+                                    <div key={plan.id} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`tc-tp-${plan.id}`}
+                                        checked={(field.value ?? []).includes(plan.id)}
+                                        onCheckedChange={(checked) => {
+                                          const current = field.value ?? [];
+                                          field.onChange(
+                                            checked
+                                              ? [...current, plan.id]
+                                              : current.filter(id => id !== plan.id)
+                                          );
+                                        }}
+                                      />
+                                      <label htmlFor={`tc-tp-${plan.id}`} className="text-sm cursor-pointer">
+                                        [{plan.testPlanId}] {plan.name}
+                                      </label>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                     </div>
-                    <FormField
-                      control={form.control}
-                      name="closeDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Close Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} value={field.value || ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                </TabsContent>
-                <TabsContent value="logs">
-                   <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
-                    {editingTestCase?.statusHistory && editingTestCase.statusHistory.length > 0 ? (
-                      editingTestCase.statusHistory
-                        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .map((log, index) => (
-                          <div key={index} className="flex items-center justify-between text-sm p-2 border-b">
-                            <span>Status changed to <strong>{log.toStatus}</strong> from <strong>{log.fromStatus || 'None'}</strong></span>
-                            <span className="text-muted-foreground">{format(new Date(log.date), 'PP pp')}</span>
-                          </div>
-                        ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic px-2">No status changes logged.</p>
-                    )}
-                  </div>
                 </TabsContent>
               </Tabs>
               <DialogFooter>

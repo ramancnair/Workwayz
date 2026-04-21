@@ -114,7 +114,8 @@ const storyFormSchema = z.object({
   priority: z.enum(priorities).optional(),
   severity: z.enum(severities).optional(),
   releaseId: z.string().optional(),
-  environmentId: z.string().optional(),
+  foundInTestPlanId: z.string().optional(),
+  relatedBugId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
   sprintId: z.string().optional(),
@@ -323,7 +324,6 @@ export default function BacklogPage() {
     sprints, 
     employees: users, 
     releasesAndMilestones,
-    environments,
     impactedSystems,
     moveStoryToSprint, 
     moveStoryToEpic, 
@@ -339,6 +339,7 @@ export default function BacklogPage() {
     weeklyOffDays,
     projectSettings,
     testCases,
+    testPlans,
     testDate,
   } = useProject();
   
@@ -370,6 +371,7 @@ export default function BacklogPage() {
   const [addParentStoryText, setAddParentStoryText] = useState('');
   const [editParentStoryText, setEditParentStoryText] = useState('');
   const [testCaseInputText, setTestCaseInputText] = useState('');
+  const [relatedBugInputText, setRelatedBugInputText] = useState('');
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -424,7 +426,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', severity: 'Medium', releaseId: 'unassigned', environmentId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', severity: 'Medium', releaseId: 'unassigned', foundInTestPlanId: 'unassigned', relatedBugId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -459,6 +461,11 @@ export default function BacklogPage() {
     value: tc.id,
     label: `[${tc.testCaseId}] ${tc.title}`,
   })), [testCases]);
+
+  const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
+    value: b.id,
+    label: `[${b.storyId}] {b.title}`,
+  })), [stories]);
 
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
@@ -522,6 +529,8 @@ export default function BacklogPage() {
           const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
           const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
           setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
+          const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
+          setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
           editStoryForm.reset({
               itemType: selectedStory.itemType,
               title: selectedStory.title,
@@ -536,7 +545,8 @@ export default function BacklogPage() {
               severity: selectedStory.severity || 'Medium',
               releaseId: selectedStory.releaseId || 'unassigned',
               sprintId: selectedStory.sprintId || 'backlog',
-              environmentId: selectedStory.environmentId || 'unassigned',
+              foundInTestPlanId: selectedStory.foundInTestPlanId || 'unassigned',
+              relatedBugId: selectedStory.relatedBugId || 'unassigned',
               impactedSystemIds: selectedStory.impactedSystemIds || [],
               attachments: selectedStory.attachments || '',
               relatedTestCaseId: selectedStory.relatedTestCaseId || 'unassigned',
@@ -557,6 +567,8 @@ export default function BacklogPage() {
       addStoryForm.reset();
       setAddStorySubmitting(false);
       setAddParentStoryText('');
+      setTestCaseInputText('');
+      setRelatedBugInputText('');
     }
   }, [addRequirementOpen, addStoryForm]);
 
@@ -678,7 +690,8 @@ export default function BacklogPage() {
           severity: values.severity,
           sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
           releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
-          environmentId: values.environmentId === 'unassigned' ? undefined : values.environmentId,
+          foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
+          relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
           impactedSystemIds: values.impactedSystemIds,
           attachments: values.attachments,
           isDeleted: false,
@@ -704,6 +717,8 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
         ...values,
         assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
+        foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
+        relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
         createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
         closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
     });
@@ -868,8 +883,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
       logs: selectedStory.statusHistory?.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
     };
   }, [selectedStory, subItemsByParentId]);
-
-  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
 
   const isEffortReadOnly = useMemo(() => {
     if (!selectedStory) return false;
@@ -1231,26 +1244,59 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                     control={addStoryForm.control}
-                                    name="environmentId"
+                                    name="foundInTestPlanId"
                                     render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Environment</FormLabel>
+                                        <FormLabel>Found In Test Plan</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                         <FormControl>
                                             <SelectTrigger>
-                                            <SelectValue placeholder="Select an environment" />
+                                            <SelectValue placeholder="Select a test plan" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="unassigned">None</SelectItem>
-                                            {sortedEnvironments.map(env => (
-                                            <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                            {testPlans.map(tp => (
+                                            <SelectItem key={tp.id} value={tp.id}>{tp.name}</SelectItem>
                                             ))}
                                         </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
                                     )}
+                                />
+                                <FormField
+                                  control={addStoryForm.control}
+                                  name="relatedBugId"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Related / Original Bug</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          list="bug-options-add"
+                                          placeholder="Search for a bug..."
+                                          value={relatedBugInputText}
+                                          onChange={(e) => {
+                                            const text = e.target.value;
+                                            setRelatedBugInputText(text);
+                                            const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                            field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                          }}
+                                          onBlur={() => {
+                                            const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                            if (!matchingOption) {
+                                              setRelatedBugInputText('');
+                                              field.onChange('unassigned');
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <datalist id="bug-options-add">
+                                        {relatedBugOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                                      </datalist>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
                                 />
                                 <FormField
                                     control={addStoryForm.control}
@@ -2044,23 +2090,56 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                               control={editStoryForm.control}
-                              name="environmentId"
+                              name="foundInTestPlanId"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Environment</FormLabel>
+                                  <FormLabel>Found In Test Plan</FormLabel>
                                   <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                     <FormControl>
                                       <SelectTrigger>
-                                        <SelectValue placeholder="Select an environment" />
+                                        <SelectValue placeholder="Select a test plan" />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                       <SelectItem value="unassigned">None</SelectItem>
-                                      {sortedEnvironments.map(env => (
-                                        <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                                      {testPlans.map(tp => (
+                                        <SelectItem key={tp.id} value={tp.id}>{tp.name}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={editStoryForm.control}
+                              name="relatedBugId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Related / Original Bug</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      list="bug-options-edit"
+                                      placeholder="Search for a bug..."
+                                      value={relatedBugInputText}
+                                      onChange={(e) => {
+                                        const text = e.target.value;
+                                        setRelatedBugInputText(text);
+                                        const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                        field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                      }}
+                                      onBlur={() => {
+                                        const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                        if (!matchingOption) {
+                                          setRelatedBugInputText('');
+                                          field.onChange('unassigned');
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <datalist id="bug-options-edit">
+                                    {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                                  </datalist>
                                   <FormMessage />
                                 </FormItem>
                               )}
