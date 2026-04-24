@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { SetupWizard } from "@/components/SetupWizard";
 import { 
   SidebarContent,
   SidebarHeader,
@@ -59,6 +60,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
   const [user, setUser] = useState({ name: 'Raman C Nair', email: 'ramanreadsmail@gmail.com' });
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('projectflow_user');
@@ -165,10 +167,14 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     },
     {
       id: 'setup-wizard',
-      href: '/setup-wizard',
+      href: '#',
       label: 'Setup Wizard',
       icon: Wand2,
-      group: 'portfolio'
+      group: 'portfolio',
+      onClick: (e: any) => {
+        e.preventDefault();
+        setShowWizard(true);
+      }
     },
     {
       id: 'archive',
@@ -223,17 +229,28 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       </SidebarHeader>
       <SidebarContent className="p-2 transition-all duration-300">
         <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
+          {menuItems.map((item: any) => (
+            <SidebarMenuItem key={item.id || item.href}>
+              {item.onClick ? (
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={pathname.startsWith(item.href) && item.href !== '#'}
                   tooltip={item.label}
+                  onClick={item.onClick}
                 >
                   <item.icon />
                   <span>{item.label}</span>
                 </SidebarMenuButton>
-              </Link>
+              ) : (
+                <Link href={item.href}>
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith(item.href)}
+                    tooltip={item.label}
+                  >
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </Link>
+              )}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -272,6 +289,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
+      {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}
     </>
   );
 }
