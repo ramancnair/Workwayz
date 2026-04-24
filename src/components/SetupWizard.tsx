@@ -40,6 +40,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             const activeDb = data.database.find((d: any) => d.isActive) || data.database[0];
             if (activeDb) {
               setDbProfileId(activeDb.id);
+              setDbProjectName(activeDb.profileName || 'Wizard Database');
               setDbProvider(activeDb.provider || 'postgresql');
               if (activeDb.provider === 'postgresql') setDbConnStr(activeDb.connectionString || '');
               else if (activeDb.provider === 'firebase') {
@@ -66,6 +67,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             const activeAi = data.ai.find((a: any) => a.isActive) || data.ai[0];
             if (activeAi) {
               setAiProfileId(activeAi.id);
+              setAiProjectName(activeAi.profileName || 'Wizard AI Config');
               setAiProvider(activeAi.provider || 'google');
               if (['google', 'openai', 'anthropic'].includes(activeAi.provider)) {
                 setAiApiKey(activeAi.apiKey || '');
@@ -85,6 +87,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   }, []);
 
   // DB State
+  const [dbProjectName, setDbProjectName] = useState('Wizard Database');
   const [dbProvider, setDbProvider] = useState('postgresql');
   const [dbConnStr, setDbConnStr] = useState('');
   const [fbProjectId, setFbProjectId] = useState('');
@@ -104,6 +107,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
 
   // AI State
+  const [aiProjectName, setAiProjectName] = useState('Wizard AI Config');
   const [aiProvider, setAiProvider] = useState('google');
   const [aiApiKey, setAiApiKey] = useState('');
   const [aiBaseUrl, setAiBaseUrl] = useState('');
@@ -125,7 +129,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
     setIsSaving(true);
     try {
       // Prepare DB payload
-      let dbProfile: any = { profileName: 'Wizard Database', provider: dbProvider, isActive: true };
+      let dbProfile: any = { profileName: dbProjectName || 'Wizard Database', provider: dbProvider, isActive: true };
       if (dbProfileId) dbProfile.id = dbProfileId;
       if (dbProvider === 'postgresql') dbProfile.connectionString = dbConnStr;
       else if (dbProvider === 'firebase') {
@@ -138,7 +142,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
 
       // Prepare Auth payload
       let authProfile: any = {
-        profileName: 'Wizard Authentication',
+        profileName: dbProjectName || 'Wizard Authentication',
         provider: authProvider,
         googleSso: ssoGoogle,
         githubSso: ssoGithub,
@@ -148,7 +152,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
 
       // Prepare AI payload
       let aiProfile: any = {
-        profileName: 'Wizard AI Config',
+        profileName: aiProjectName || 'Wizard AI Config',
         provider: aiProvider,
         isActive: true,
       };
@@ -314,6 +318,11 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="space-y-2">
+                  <Label>Project Name</Label>
+                  <Input placeholder="e.g. My Production DB" value={dbProjectName} onChange={e => setDbProjectName(e.target.value)} />
+                </div>
+                
+                <div className="space-y-2">
                   <Label>Database Provider</Label>
                   <Select onValueChange={setDbProvider} value={dbProvider}>
                     <SelectTrigger>
@@ -430,6 +439,11 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             {/* Step 4: AI */}
             {step === 4 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-2">
+                  <Label>Project Name</Label>
+                  <Input placeholder="e.g. Main AI Config" value={aiProjectName} onChange={e => setAiProjectName(e.target.value)} />
+                </div>
+                
                 <div className="space-y-2">
                   <Label>AI Provider</Label>
                   <Select onValueChange={setAiProvider} value={aiProvider}>

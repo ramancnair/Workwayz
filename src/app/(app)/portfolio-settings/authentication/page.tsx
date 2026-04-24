@@ -272,7 +272,7 @@ export default function AuthenticationSettingsPage() {
                             {editingProfileId === profile.id && editConfig ? (
                                 <div className="grid grid-cols-2 gap-4 pt-2">
                                     <div className="space-y-2 col-span-2">
-                                        <Label>Profile Alias</Label>
+                                        <Label>Project Name</Label>
                                         <Input value={editConfig.profileName} onChange={e => handleFieldChange('profileName', e.target.value, true)} placeholder="e.g. Prod Firebase Auth" />
                                     </div>
                                     <div className="space-y-2 col-span-2">
@@ -367,7 +367,7 @@ export default function AuthenticationSettingsPage() {
                     <CardContent className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Profile Alias (Name)</Label>
+                                <Label>Project Name</Label>
                                 <Input value={config.profileName} onChange={e => handleFieldChange('profileName', e.target.value)} placeholder="e.g. Firebase Staging Config" />
                             </div>
                             <div className="space-y-2">

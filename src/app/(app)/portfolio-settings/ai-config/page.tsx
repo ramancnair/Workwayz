@@ -256,7 +256,7 @@ export default function AIConfigPage() {
                             {editingProfileId === profile.id && editConfig ? (
                                 <div className="grid grid-cols-2 gap-4 pt-2">
                                     <div className="space-y-2 col-span-2">
-                                        <Label>Profile Alias</Label>
+                                        <Label>Project Name</Label>
                                         <Input value={editConfig.profileName} onChange={e => handleFieldChange('profileName', e.target.value, true)} />
                                     </div>
                                     <div className="space-y-2 col-span-2 sm:col-span-1">
@@ -362,7 +362,7 @@ export default function AIConfigPage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
-                            <Label>Profile Alias (Name)</Label>
+                            <Label>Project Name</Label>
                             <Input value={config.profileName} onChange={e => handleFieldChange('profileName', e.target.value)} placeholder="e.g. Local Llama Engine" />
                         </div>
                         <div className="space-y-2">
