@@ -213,6 +213,36 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         });
       }
 
+      // CREATE ADMIN USER (Using backend API to bypass masked secrets)
+      if (adminEmail && adminPassword && authProvider === 'firebase') {
+        try {
+          const setupRes = await fetch('/api/admin/setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              adminEmail,
+              adminPassword,
+              adminName,
+              dbProvider,
+              fbProjectId,
+              fbApiKey
+            })
+          });
+          
+          const setupData = await setupRes.json();
+          if (!setupRes.ok || !setupData.success) {
+            throw new Error(setupData.error || 'Failed to create admin user');
+          }
+
+          if (setupData.user) {
+            localStorage.setItem('projectflow_user', JSON.stringify(setupData.user));
+          }
+        } catch (userErr: any) {
+          console.error("Failed to create admin user:", userErr);
+          toast({ title: "Admin User Error", description: "Config saved, but admin user creation failed: " + userErr.message, variant: "destructive" });
+        }
+      }
+
       toast({
         title: "Setup Complete!",
         description: "Your configuration profiles have been saved.",

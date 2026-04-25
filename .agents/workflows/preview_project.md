@@ -1,18 +1,15 @@
-# Preview Project Workflow
+# Preview ProjectFlow
 
-This workflow details the commands required to start the local preview development server.
+This workflow describes the steps needed to run the project in a development server locally.
 
-1.  **Ensure Node is Loaded** (if using nvm):
-    ```bash
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    nvm use 24
-    ```
+1. **Start the Development Server**:
+   ```bash
+   npm run dev
+   ```
 
-2.  **Start the Next.js Development Server**:
-    ```bash
-    npm run dev
-    ```
+2. **Access the Preview**:
+   Wait for the output indicating the application has started, typically: `Ready in ...`
+   Open a browser and navigate to `http://localhost:3000`.
 
-3.  **Access the Preview**:
-    Wait for the server to start (it will display "Ready in..."). Navigate down to the URL printed in the terminal output (e.g. `http://localhost:3000`) in a web browser.
+3. **Verify Health**:
+   Make sure there are no errors in the terminal and the webpage loads correctly.

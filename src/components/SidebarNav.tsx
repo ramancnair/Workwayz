@@ -54,6 +54,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useProject } from "@/context/ProjectContext";
 import { DateTimePicker } from "./ui/datetime-picker";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ProjectSimulator } from "./ProjectSimulator";
 
 export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
@@ -331,6 +332,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       <SidebarFooter className="p-2 transition-all duration-300">
         <div className="grid grid-rows-[1fr] transition-all duration-300 group-data-[collapsible=icon]:grid-rows-[0fr] opacity-100 group-data-[collapsible=icon]:opacity-0 overflow-hidden">
           <div className="min-h-0 space-y-2 mb-2 group-data-[collapsible=icon]:mb-0 whitespace-nowrap overflow-hidden">
+            <ProjectSimulator />
             <label className="text-xs font-semibold text-sidebar-foreground/70">Test Date</label>
             <DateTimePicker date={testDate} setDate={setTestDate} />
           </div>
