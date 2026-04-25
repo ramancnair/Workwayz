@@ -217,20 +217,25 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   });
 
   // ── 7. Assign employees from global users ────────────────────────────────────
-  // Need: 2 devs per impacted system (6 devs), 1 tester, 1 PM, 1 BA, 1 arch, 1 UX  = 11 preferred
+  // Requested: 1 PM, 1 lead (Architect), 2 developers, 1 QA (Tester) = 5 users
   const rolePool = [
-    ...Array(6).fill('Developer'),
-    'Tester',
     'PM',
-    'BA',
     'Architect',
-    'BA', // UI/UX mapped to BA role if not available
+    'Developer',
+    'Developer',
+    'Tester',
   ];
 
-  const pickedUsers = [...globalUsers].slice(0, Math.min(globalUsers.length, rolePool.length));
+  // Shuffle global users to choose at random
+  const shuffledUsers = [...globalUsers].sort(() => 0.5 - Math.random());
+  const pickedUsers = shuffledUsers.slice(0, Math.min(shuffledUsers.length, rolePool.length));
   const employeeIds: string[] = [];
-  const pmUserId = pickedUsers[6]?.id ?? pickedUsers[0]?.id;
-  const testerUserId = pickedUsers[6]?.id ?? pickedUsers[0]?.id;
+  
+  // Find specific roles if available, fallback to first user
+  const pmUserIdx = pickedUsers.findIndex((_, idx) => rolePool[idx] === 'PM');
+  const testerUserIdx = pickedUsers.findIndex((_, idx) => rolePool[idx] === 'Tester');
+  const pmUserId = pickedUsers[pmUserIdx !== -1 ? pmUserIdx : 0]?.id;
+  const testerUserId = pickedUsers[testerUserIdx !== -1 ? testerUserIdx : 0]?.id;
 
   const devUserIds: string[] = [];
   pickedUsers.forEach((user, idx) => {
@@ -728,7 +733,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   // ── 18. BCP – update environments with url (already set) ────────────────────
   // Mark BCP support resources
   employeeIds.forEach((empId, idx) => {
-    const isBcp = idx < 3; // first 3 = PM, BA, Architect
+    const isBcp = idx < 2; // first 2 = PM, Architect
     const empRef = doc(pRef, 'employees', empId);
     batch.update(empRef, { isBcpSupport: isBcp });
   });

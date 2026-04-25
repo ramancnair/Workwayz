@@ -35,10 +35,6 @@ const DialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
-    <DialogPrimitive.Close className="fixed right-6 top-6 z-[60] rounded-full bg-slate-900 border border-slate-700/50 p-3 text-white shadow-xl opacity-70 transition-opacity hover:opacity-100 hover:bg-slate-800 hover:scale-105 focus:outline-none disabled:pointer-events-none">
-      <X className="h-5 w-5" />
-      <span className="sr-only">Close</span>
-    </DialogPrimitive.Close>
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
@@ -47,6 +43,14 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
+      {/* Zero-height sticky wrapper: takes no layout space but sticks to
+          the top of the scroll container, keeping the button always visible */}
+      <div className="sticky top-0 h-0 overflow-visible flex justify-end z-10">
+        <DialogPrimitive.Close className="mt-3 mr-3 flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-md transition-all hover:bg-secondary/80 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+          <X className="h-3.5 w-3.5" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      </div>
       {children}
     </DialogPrimitive.Content>
   </DialogPortal>

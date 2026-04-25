@@ -146,7 +146,8 @@ const subTaskFormSchema = z.object({
 });
 
 const bulkMoveSchema = z.object({
-  targetEpicId: z.string(),
+  targetEpicId: z.string().optional(),
+  targetReleaseId: z.string().optional(),
 });
 
 
@@ -334,7 +335,7 @@ export default function BacklogPage() {
     addStory,
     updateStory,
     bulkDeleteStories,
-    bulkMoveStoriesToEpic,
+    bulkMoveStories,
     holidays,
     weeklyOffDays,
     projectSettings,
@@ -447,6 +448,7 @@ export default function BacklogPage() {
 
   const bulkMoveForm = useForm<z.infer<typeof bulkMoveSchema>>({
     resolver: zodResolver(bulkMoveSchema),
+    defaultValues: { targetEpicId: 'no_change', targetReleaseId: 'no_change' }
   });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
@@ -802,7 +804,22 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   };
 
   const handleBulkMove = async (values: z.infer<typeof bulkMoveSchema>) => {
-    const success = await bulkMoveStoriesToEpic(storiesToMove, values.targetEpicId === 'unassigned' ? null : values.targetEpicId);
+    let epicId: string | null | undefined = undefined;
+    if (values.targetEpicId === 'unassigned') epicId = null;
+    else if (values.targetEpicId && values.targetEpicId !== 'no_change') epicId = values.targetEpicId;
+
+    let releaseId: string | null | undefined = undefined;
+    if (values.targetReleaseId === 'unassigned') releaseId = null;
+    else if (values.targetReleaseId && values.targetReleaseId !== 'no_change') releaseId = values.targetReleaseId;
+
+    if (epicId === undefined && releaseId === undefined) {
+      toast({ title: 'No changes selected.' });
+      setStoriesToMove([]);
+      bulkMoveForm.reset();
+      return;
+    }
+
+    const success = await bulkMoveStories(storiesToMove, epicId, releaseId);
     if(success) {
       toast({ title: 'Success', description: `${storiesToMove.length} stories moved.` });
       setSelectedStories(prev => prev.filter(id => !storiesToMove.includes(id)));
@@ -810,6 +827,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
       toast({ variant: "destructive", title: "Error", description: "Could not move stories." });
     }
     setStoriesToMove([]);
+    bulkMoveForm.reset();
   }
 
   const allWorkItems = stories.filter((story) => {
@@ -1594,9 +1612,34 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
+                                        <SelectItem value="no_change">No Change</SelectItem>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
                                         {epics.map(epic => (
                                             <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={bulkMoveForm.control}
+                        name="targetReleaseId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>New Release</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a release" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="no_change">No Change</SelectItem>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {releases.map(release => (
+                                            <SelectItem key={release.id} value={release.id}>{release.releaseId} - {release.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>

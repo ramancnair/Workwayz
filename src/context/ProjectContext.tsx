@@ -88,7 +88,7 @@ interface ProjectContextType {
   moveStoryToEpic: (storyId: string, epicId: string | null) => Promise<boolean>;
   bulkUpdateSubTaskReleases: (releaseId: string) => Promise<boolean>;
   bulkDeleteStories: (storyIds: string[]) => Promise<boolean>;
-  bulkMoveStoriesToEpic: (storyIds: string[], targetEpicId: string | null) => Promise<boolean>;
+  bulkMoveStories: (storyIds: string[], targetEpicId?: string | null, targetReleaseId?: string | null) => Promise<boolean>;
   bulkAssignSubTasks: (taskIds: string[], assigneeId: string | null) => Promise<boolean>;
 
 
@@ -917,13 +917,26 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const bulkMoveStoriesToEpic = async (storyIds: string[], targetEpicId: string | null): Promise<boolean> => {
+  const bulkMoveStories = async (storyIds: string[], targetEpicId?: string | null, targetReleaseId?: string | null): Promise<boolean> => {
     if (!db || !projectId || storyIds.length === 0) return false;
     try {
       const batch = writeBatch(db);
       storyIds.forEach(id => {
         const storyRef = doc(db, 'projects', projectId, 'stories', id);
-        batch.update(storyRef, { epicId: targetEpicId });
+        const updatePayload: any = {};
+        if (targetEpicId !== undefined) updatePayload.epicId = targetEpicId;
+        if (targetReleaseId !== undefined) updatePayload.releaseId = targetReleaseId;
+        
+        if (Object.keys(updatePayload).length > 0) {
+          batch.update(storyRef, updatePayload);
+
+          // Cascade to sub-tasks (mirroring updateStory behavior)
+          const subTasks = stories.filter(s => s.parentStoryId === id);
+          subTasks.forEach(subTask => {
+            const subTaskRef = doc(db, 'projects', projectId, 'stories', subTask.id);
+            batch.update(subTaskRef, updatePayload);
+          });
+        }
       });
       await batch.commit();
       return true;
@@ -2321,7 +2334,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     moveStoryToEpic,
     bulkUpdateSubTaskReleases,
     bulkDeleteStories,
-    bulkMoveStoriesToEpic,
+    bulkMoveStories,
     bulkAssignSubTasks,
     addEpic,
     updateEpic,
