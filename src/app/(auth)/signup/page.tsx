@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
@@ -134,16 +133,17 @@ export default function SignupPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="accessLevel">Access Level</Label>
-            <Select value={accessLevel} onValueChange={setAccessLevel}>
-              <SelectTrigger id="accessLevel">
-                <SelectValue placeholder="Select Access Level" />
-              </SelectTrigger>
-              <SelectContent>
-                {accessLevels.map(level => (
-                  <SelectItem key={level} value={level}>{level}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              id="accessLevel"
+              value={accessLevel}
+              onChange={(e) => setAccessLevel(e.target.value)}
+              className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center' }}
+            >
+              {accessLevels.map(level => (
+                <option key={level} value={level}>{level}</option>
+              ))}
+            </select>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">

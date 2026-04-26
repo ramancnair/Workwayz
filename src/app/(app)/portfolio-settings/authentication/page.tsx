@@ -210,7 +210,7 @@ export default function AuthenticationSettingsPage() {
             }
         } catch(e) { }
         localStorage.removeItem('projectflow_user');
-        window.location.href = '/login';
+        window.location.href = '/';
     };
 
     if (!isAdmin) {

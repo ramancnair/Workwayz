@@ -2,7 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   SidebarContent,
   SidebarHeader,
@@ -15,6 +16,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   LayoutDashboard,
   KanbanSquare,
@@ -49,17 +58,55 @@ import {
   CreditCard as BillingIcon,
   HeartPulse,
   Hourglass,
+  LogOut,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useProject } from "@/context/ProjectContext";
 import { DateTimePicker } from "./ui/datetime-picker";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProjectSimulator } from "./ProjectSimulator";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 
 export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { toggleSidebar } = useSidebar();
   const { testDate, setTestDate } = useProject();
+  const [user, setUser] = useState({ name: '', email: '' });
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('projectflow_user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user from local storage");
+      }
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      if (auth) {
+        await signOut(auth);
+      }
+      localStorage.removeItem('projectflow_user');
+      router.push('/');
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const basePath = `/projects/${projectId}`;
 
@@ -356,15 +403,27 @@ export function SidebarNav({ projectId }: { projectId: string }) {
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="flex items-center mt-4 h-10 overflow-hidden">
-          <Avatar className="h-8 w-8 shrink-0">
-            <AvatarFallback>RN</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
-            <span className="font-semibold text-sm text-sidebar-foreground truncate pr-2">Raman C Nair</span>
-            <span className="text-xs text-sidebar-foreground/70 truncate pr-2">ramanreadsmail@gmail.com</span>
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">
+              <Avatar className="h-8 w-8 shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">
+                <span className="font-semibold text-sm text-sidebar-foreground truncate">{user.name || 'User'}</span>
+                <span className="text-xs text-sidebar-foreground/70 truncate">{user.email || ''}</span>
+              </div>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="end" className="w-56">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </>
   );

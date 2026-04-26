@@ -22,6 +22,7 @@ import type {
 import {
   addDays,
   subDays,
+  differenceInDays,
   format,
   eachDayOfInterval,
   previousFriday,
@@ -337,7 +338,44 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   let storyCounter = 1;
   const now = new Date().toISOString();
 
+  // Helper: build a realistic statusHistory that transitions through statuses
+  // with dates spread across the sprint period. This is critical for burndown/burnup charts.
+  const buildStatusHistory = (finalStatus: string, sprintStartDate: Date, sprintEndDate: Date) => {
+    const history: { fromStatus: string | null; toStatus: string; date: string }[] = [];
+    const sprintDays = differenceInDays(sprintEndDate, sprintStartDate);
+    
+    // Everyone starts at 'To Do' on sprint start
+    history.push({ fromStatus: null, toStatus: 'To Do', date: sprintStartDate.toISOString() });
+    
+    if (finalStatus === 'To Do') return history;
+    
+    // Move to 'In Development' roughly 10-30% into the sprint
+    const devStartOffset = Math.max(1, Math.floor(sprintDays * (0.1 + Math.random() * 0.2)));
+    const devStartDate = addDays(sprintStartDate, devStartOffset);
+    history.push({ fromStatus: 'To Do', toStatus: 'In Development', date: devStartDate.toISOString() });
+    
+    if (finalStatus === 'In Development') return history;
+    
+    // Move to 'In QA' roughly 40-60% into the sprint
+    const qaStartOffset = Math.max(devStartOffset + 1, Math.floor(sprintDays * (0.4 + Math.random() * 0.2)));
+    const qaStartDate = addDays(sprintStartDate, qaStartOffset);
+    history.push({ fromStatus: 'In Development', toStatus: 'In QA', date: qaStartDate.toISOString() });
+    
+    if (finalStatus === 'In QA') return history;
+    
+    // Move to 'Done' roughly 60-90% into the sprint
+    const doneOffset = Math.max(qaStartOffset + 1, Math.floor(sprintDays * (0.6 + Math.random() * 0.3)));
+    const doneDate = addDays(sprintStartDate, doneOffset);
+    history.push({ fromStatus: 'In QA', toStatus: 'Done', date: doneDate.toISOString() });
+    
+    return history;
+  };
+
   const storyRefObjs: { id: string; storyId: string; sprintId: string }[] = [];
+
+  // We need the release ref early so we can assign releaseId to stories.
+  // Create it here but set its data later.
+  const releaseRef = doc(col('releases'));
 
   // 10a. Requirements / Stories
   storyTitles.forEach((title, i) => {
@@ -347,16 +385,20 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     const epicId = epicIds[i % epicIds.length];
     const assigneeId = devUserIds[i % Math.max(devUserIds.length, 1)];
     const impactedSystemIds = systemIdsLive; // all 3 systems
+    const finalStatus = rand(['To Do', 'In Development', 'In QA', 'Done']);
+    const sprintStart = sprintId === sprintRef1.id ? sprint1Start : sprint2Start;
+    const sprintEnd = sprintId === sprintRef1.id ? sprint1End : sprint2End;
 
     batch.set(stRef, clean({
       storyId,
       title,
       description: `User story: As a user I want to ${title.toLowerCase()} so that productivity improves.`,
       itemType: 'Requirement/Story',
-      status: rand(['To Do', 'In Development', 'In QA', 'Complete']),
-      statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
+      status: finalStatus,
+      statusHistory: buildStatusHistory(finalStatus, sprintStart, sprintEnd),
       epicId,
       sprintId,
+      releaseId: releaseRef.id,
       estimatedHours: randInt(8, 40),
       impactedSystemIds,
       assigneeId,
@@ -371,16 +413,18 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     systemIdsLive.forEach((sysId, sIdx) => {
       const subRef = doc(col('stories'));
       const subId = `SUB-${storyCounter++}`;
+      const subFinalStatus = rand(['To Do', 'In Development', 'Done']);
       batch.set(subRef, clean({
         storyId: subId,
         title: `${systemDefs[sIdx].name} – ${title} implementation`,
         description: `Sub-task for ${systemDefs[sIdx].name} work on: ${title}`,
         itemType: 'Sub Task',
-        status: rand(['To Do', 'In Development', 'Complete']),
-        statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
+        status: subFinalStatus,
+        statusHistory: buildStatusHistory(subFinalStatus, sprintStart, sprintEnd),
         parentStoryId: stRef.id,
         epicId,
         sprintId,
+        releaseId: releaseRef.id,
         estimatedHours: randInt(2, 16),
         impactedSystemId: sysId,
         assigneeId: devUserIds[sIdx % Math.max(devUserIds.length, 1)],
@@ -396,15 +440,17 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     const fcRef = doc(col('stories'));
     const fcId = `FC-${storyCounter++}`;
     const sprintId = sprintIds[0];
+    const fcStatus = rand(['To Do', 'In Development']);
     batch.set(fcRef, clean({
       storyId: fcId,
       title,
       description: `Feature change request: ${title}`,
       itemType: 'Feature Change',
-      status: rand(['To Do', 'In Development']),
-      statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
+      status: fcStatus,
+      statusHistory: buildStatusHistory(fcStatus, sprint1Start, sprint1End),
       epicId: epicIds[0],
       sprintId,
+      releaseId: releaseRef.id,
       estimatedHours: randInt(4, 20),
       impactedSystemIds: systemIdsLive,
       assigneeId: devUserIds[0],
@@ -426,9 +472,10 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       description: `Technical task: ${title}`,
       itemType: 'Task',
       status: 'To Do',
-      statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
+      statusHistory: buildStatusHistory('To Do', sprint2Start, sprint2End),
       epicId: epicIds[1],
       sprintId: sprintIds[1],
+      releaseId: releaseRef.id,
       estimatedHours: randInt(4, 16),
       impactedSystemIds: systemIdsLive,
       assigneeId: devUserIds[1] ?? devUserIds[0],
@@ -538,14 +585,16 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   let bugCounter = storyCounter;
   bugSeverities.forEach((severity, i) => {
     const bugRef = doc(col('stories'));
+    const bugStatus = rand(['To Do', 'In Development']);
     batch.set(bugRef, clean({
       storyId: `BUG-${bugCounter++}`,
       title: bugTitles[i],
       description: `Steps to reproduce: Log in, navigate to the affected page, observe the ${severity.toLowerCase()} issue.`,
       itemType: 'Bug',
-      status: rand(['To Do', 'In Development']),
-      statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
+      status: bugStatus,
+      statusHistory: buildStatusHistory(bugStatus, sprint1Start, sprint1End),
       sprintId: sprintIds[0],
+      releaseId: releaseRef.id,
       severity: severity as any,
       priority: severity as any,
       assigneeId: devUserIds[i % Math.max(devUserIds.length, 1)],
@@ -557,7 +606,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   });
 
   // ── 13. Release + Stages + Milestones ────────────────────────────────────────
-  const releaseRef = doc(col('releases'));
+  // releaseRef was created earlier (before stories) so stories can reference it.
 
   // Stage boundaries (using pre-calculated dates)
 

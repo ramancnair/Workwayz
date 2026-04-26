@@ -59,7 +59,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
-  const [user, setUser] = useState({ name: 'Raman C Nair', email: 'ramanreadsmail@gmail.com' });
+  const [user, setUser] = useState({ name: '', email: '' });
   const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
@@ -79,13 +79,14 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
         await signOut(auth);
       }
       localStorage.removeItem('projectflow_user');
-      router.push('/login');
+      router.push('/');
     } catch (error) {
       console.error("Error logging out:", error);
     }
   };
 
   const getInitials = (name: string) => {
+    if (!name) return '?';
     return name
       .split(' ')
       .map(n => n[0])
@@ -274,7 +275,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
                   <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col ml-3 transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">
-                  <span className="font-semibold text-sm text-sidebar-foreground truncate">{user.name}</span>
+                  <span className="font-semibold text-sm text-sidebar-foreground truncate">{user.name || 'User'}</span>
                   <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>
               </div>
             </div>
