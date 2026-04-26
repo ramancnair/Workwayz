@@ -54,8 +54,8 @@ export async function POST(request: Request) {
 
         // Initialize Firebase on Server
         const { initializeApp, deleteApp } = await import('firebase/app');
-        const { getAuth, createUserWithEmailAndPassword } = await import('firebase/auth');
-        const { getFirestore, doc, setDoc, getDocs, collection } = await import('firebase/firestore');
+        const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('firebase/auth');
+        const { getFirestore, doc, setDoc, getDocs, collection, query, where } = await import('firebase/firestore');
 
         const tempConfig = {
             apiKey,
@@ -68,38 +68,72 @@ export async function POST(request: Request) {
         const tempAuth = getAuth(tempApp);
         const tempDb = getFirestore(tempApp);
 
-        // Create user in Auth
-        const userCred = await createUserWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
-
-        // Get next employee ID
-        const usersSnapshot = await getDocs(collection(tempDb, 'employees'));
-        let highestId = 0;
-        usersSnapshot.forEach(docSnap => {
-            const id = docSnap.id;
-            if (id.startsWith('E')) {
-                const num = parseInt(id.substring(1));
-                if (!isNaN(num) && num > highestId) highestId = num;
+        // Create or Sign-in user in Auth
+        let userCred;
+        let isNewUser = true;
+        try {
+            userCred = await createUserWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
+        } catch (authError: any) {
+            if (authError.code === 'auth/email-already-in-use') {
+                try {
+                    userCred = await signInWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
+                    isNewUser = false;
+                } catch (signInErr: any) {
+                    throw new Error("Admin email already exists, but the password provided is incorrect.");
+                }
+            } else {
+                throw authError;
             }
-        });
-        const empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+        }
 
-        // Write to Firestore
+        let empId = '';
         const nameParts = (adminName || 'Admin User').trim().split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+        let firstName = nameParts[0];
+        let lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-        await setDoc(doc(tempDb, 'employees', empId), {
-            empId,
-            firstName,
-            lastName,
-            email: adminEmail,
-            phone: 'N/A',
-            experience: 0,
-            accessLevel: 'Administrator',
-            avatar: 'https://placehold.co/40x40.png',
-            isDeleted: false,
-            uid: userCred.user.uid
-        });
+        if (!isNewUser) {
+             const q = query(collection(tempDb, 'employees'), where('email', '==', adminEmail));
+             const qSnap = await getDocs(q);
+             if (!qSnap.empty) {
+                  const docSnap = qSnap.docs[0];
+                  const data = docSnap.data();
+                  empId = docSnap.id;
+                  firstName = data.firstName || firstName;
+                  lastName = data.lastName || lastName;
+                  
+                  if (data.accessLevel !== 'Administrator') {
+                      await setDoc(doc(tempDb, 'employees', docSnap.id), { accessLevel: 'Administrator' }, { merge: true });
+                  }
+             }
+        }
+
+        if (!empId) {
+            // Get next employee ID
+            const usersSnapshot = await getDocs(collection(tempDb, 'employees'));
+            let highestId = 0;
+            usersSnapshot.forEach(docSnap => {
+                const id = docSnap.id;
+                if (id.startsWith('E')) {
+                    const num = parseInt(id.substring(1));
+                    if (!isNaN(num) && num > highestId) highestId = num;
+                }
+            });
+            empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+
+            // Write to Firestore
+            await setDoc(doc(tempDb, 'employees', empId), {
+                empId,
+                firstName,
+                lastName,
+                email: adminEmail,
+                phone: 'N/A',
+                experience: 0,
+                accessLevel: 'Administrator',
+                avatar: 'https://placehold.co/40x40.png',
+                isDeleted: false,
+                uid: userCred.user.uid
+            });
+        }
 
         await deleteApp(tempApp);
 
