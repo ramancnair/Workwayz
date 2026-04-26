@@ -18,7 +18,7 @@ if (firebaseConfig.projectId && getApps().length === 0) {
   } catch (e) {
     console.error("Firebase initialization error", e);
   }
-} else {
+} else if (getApps().length > 0) {
   app = getApp();
 }
 

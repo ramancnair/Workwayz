@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -21,8 +22,8 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!auth || !db) {
-       toast({ title: 'Error', description: 'Firebase not initialized properly.', variant: 'destructive' });
+    if (!process.env.NEXT_PUBLIC_DATABASE_PROVIDER && (!auth || !db)) {
+       toast({ title: 'Error', description: 'Database not configured properly.', variant: 'destructive' });
        return;
     }
 
@@ -32,36 +33,88 @@ export default function LoginPage() {
       const emailInput = (document.getElementById('email') as HTMLInputElement)?.value;
       const passwordInput = (document.getElementById('password') as HTMLInputElement)?.value;
       
-      // 1. Sign in with Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, emailInput, passwordInput);
-      const user = userCredential.user;
+      const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || 'firebase';
 
-      // 2. Fetch user profile from Firestore 'employees' collection
-      const q = query(collection(db, 'employees'), where('email', '==', emailInput));
-      const querySnapshot = await getDocs(q);
-      
-      let userData = {
-        name: emailInput.split('@')[0],
-        email: emailInput,
-        accessLevel: 'Team Member',
-        empId: '',
-        uid: user.uid
-      };
-      
-      if (!querySnapshot.empty) {
-        const docSnap = querySnapshot.docs[0];
-        const data = docSnap.data();
-        userData = {
-          name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-          email: data.email || emailInput,
-          accessLevel: data.accessLevel || 'Team Member',
-          empId: data.empId || docSnap.id,
+      if (dbProvider === 'supabase') {
+        if (!supabase) {
+           throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
+        }
+
+        // 1. Sign in with Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: emailInput,
+          password: passwordInput,
+        });
+
+        if (authError) throw authError;
+        if (!authData.user) throw new Error("Could not log in with Supabase.");
+
+        const user = authData.user;
+
+        // 2. Fetch user profile from Supabase 'employees' collection
+        const { data: employees, error: fetchError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', emailInput);
+
+        let userData = {
+          name: emailInput.split('@')[0],
+          email: emailInput,
+          accessLevel: 'Team Member',
+          empId: '',
+          uid: user.id
+        };
+
+        if (employees && employees.length > 0) {
+          const data = employees[0];
+          userData = {
+            name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+            email: data.email || emailInput,
+            accessLevel: data.accessLevel || 'Team Member',
+            empId: data.empId || data.id,
+            uid: user.id
+          };
+        }
+
+        // 3. Update localStorage
+        localStorage.setItem('projectflow_user', JSON.stringify(userData));
+
+      } else {
+        if (!auth || !db) {
+            throw new Error("Firebase not initialized properly.");
+        }
+
+        // 1. Sign in with Firebase Auth
+        const userCredential = await signInWithEmailAndPassword(auth, emailInput, passwordInput);
+        const user = userCredential.user;
+
+        // 2. Fetch user profile from Firestore 'employees' collection
+        const q = query(collection(db, 'employees'), where('email', '==', emailInput));
+        const querySnapshot = await getDocs(q);
+        
+        let userData = {
+          name: emailInput.split('@')[0],
+          email: emailInput,
+          accessLevel: 'Team Member',
+          empId: '',
           uid: user.uid
         };
-      }
+        
+        if (!querySnapshot.empty) {
+          const docSnap = querySnapshot.docs[0];
+          const data = docSnap.data();
+          userData = {
+            name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+            email: data.email || emailInput,
+            accessLevel: data.accessLevel || 'Team Member',
+            empId: data.empId || docSnap.id,
+            uid: user.uid
+          };
+        }
 
-      // 3. Update localStorage
-      localStorage.setItem('projectflow_user', JSON.stringify(userData));
+        // 3. Update localStorage
+        localStorage.setItem('projectflow_user', JSON.stringify(userData));
+      }
 
       toast({
         title: "Welcome back!",

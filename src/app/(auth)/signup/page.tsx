@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
 
@@ -23,13 +24,6 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !db) {
-       toast({ title: 'Error', description: 'Firebase not initialized properly.', variant: 'destructive' });
-       return;
-    }
-
-    setIsLoading(true);
-    
     try {
       const nameInput = (document.getElementById('name') as HTMLInputElement)?.value || 'New User';
       const emailInput = (document.getElementById('email') as HTMLInputElement)?.value;
@@ -38,51 +32,128 @@ export default function SignupPage() {
       const nameParts = nameInput.trim().split(' ');
       const firstName = nameParts[0];
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      
+      const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || 'firebase';
 
-      // 1. Create User in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, emailInput, passwordInput);
-      const user = userCredential.user;
+      if (dbProvider === 'supabase') {
+        if (!supabase) {
+           throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
+        }
 
-      // 2. Determine highest empId
-      const usersSnapshot = await getDocs(collection(db, 'employees'));
-      let highestId = 0;
-      usersSnapshot.forEach(docSnap => {
-          const empId = docSnap.id;
-          if (empId.startsWith('E')) {
-              const numPart = parseInt(empId.substring(1));
-              if (!isNaN(numPart) && numPart > highestId) {
-                  highestId = numPart;
-              }
-          }
-      });
-      const currentIdCounter = highestId + 1;
-      const empId = `E${currentIdCounter.toString().padStart(3, '0')}`;
-
-      // 3. Save to Firestore
-      const newUser = {
-          empId,
-          firstName,
-          lastName,
+        // 1. Create User in Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
           email: emailInput,
-          phone: 'N/A',
-          experience: 0,
+          password: passwordInput,
+        });
+
+        if (authError) throw authError;
+        if (!authData.user) throw new Error("Could not create Supabase account.");
+
+        const user = authData.user;
+
+        // 2. Determine highest empId
+        const { data: employees, error: fetchError } = await supabase.from('employees').select('empId');
+        if (fetchError) {
+             console.warn("Could not fetch employees (table might not exist yet):", fetchError);
+        }
+        
+        let highestId = 0;
+        if (employees) {
+            employees.forEach((emp: any) => {
+                if (emp.empId && emp.empId.startsWith('E')) {
+                    const numPart = parseInt(emp.empId.substring(1));
+                    if (!isNaN(numPart) && numPart > highestId) {
+                        highestId = numPart;
+                    }
+                }
+            });
+        }
+        const currentIdCounter = highestId + 1;
+        const empId = `E${currentIdCounter.toString().padStart(3, '0')}`;
+
+        // 3. Save to Supabase DB
+        const newUser = {
+            id: empId,
+            empId,
+            firstName,
+            lastName,
+            email: emailInput,
+            phone: 'N/A',
+            experience: 0,
+            accessLevel: accessLevel,
+            avatar: 'https://placehold.co/40x40.png',
+            isDeleted: false,
+            uid: user.id
+        };
+
+        const { error: insertError } = await supabase.from('employees').insert([newUser]);
+        if (insertError) {
+             console.error("Supabase insert error:", JSON.stringify(insertError, null, 2));
+             if (insertError.code === '42P01') {
+                 throw new Error("The 'employees' table does not exist in your Supabase database. Please create it first.");
+             }
+             throw new Error(`Database error: ${insertError.message || 'Failed to save user profile.'}`);
+        }
+
+        // 4. Update localStorage
+        localStorage.setItem('projectflow_user', JSON.stringify({
+          name: `${firstName} ${lastName}`.trim(),
+          email: emailInput,
           accessLevel: accessLevel,
-          avatar: 'https://placehold.co/40x40.png',
-          isDeleted: false,
+          empId,
+          uid: user.id
+        }));
+
+      } else {
+        if (!auth || !db) {
+            throw new Error("Firebase not initialized properly.");
+        }
+
+        // 1. Create User in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, emailInput, passwordInput);
+        const user = userCredential.user;
+
+        // 2. Determine highest empId
+        const usersSnapshot = await getDocs(collection(db, 'employees'));
+        let highestId = 0;
+        usersSnapshot.forEach(docSnap => {
+            const empId = docSnap.id;
+            if (empId.startsWith('E')) {
+                const numPart = parseInt(empId.substring(1));
+                if (!isNaN(numPart) && numPart > highestId) {
+                    highestId = numPart;
+                }
+            }
+        });
+        const currentIdCounter = highestId + 1;
+        const empId = `E${currentIdCounter.toString().padStart(3, '0')}`;
+
+        // 3. Save to Firestore
+        const newUser = {
+            empId,
+            firstName,
+            lastName,
+            email: emailInput,
+            phone: 'N/A',
+            experience: 0,
+            accessLevel: accessLevel,
+            avatar: 'https://placehold.co/40x40.png',
+            isDeleted: false,
+            uid: user.uid
+        };
+        
+        const userRef = doc(db, 'employees', empId);
+        await setDoc(userRef, newUser);
+        
+        // 4. Update localStorage
+        localStorage.setItem('projectflow_user', JSON.stringify({
+          name: `${firstName} ${lastName}`.trim(),
+          email: emailInput,
+          accessLevel: accessLevel,
+          empId,
           uid: user.uid
-      };
-      
-      const userRef = doc(db, 'employees', empId);
-      await setDoc(userRef, newUser);
-      
-      // 4. Update localStorage
-      localStorage.setItem('projectflow_user', JSON.stringify({
-        name: `${firstName} ${lastName}`.trim(),
-        email: emailInput,
-        accessLevel: accessLevel,
-        empId,
-        uid: user.uid
-      }));
+        }));
+      }
 
       toast({
         title: "Account created!",
