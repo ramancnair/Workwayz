@@ -33,9 +33,11 @@ export default function SignupPage() {
       const firstName = nameParts[0];
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
       
-      const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || 'firebase';
+      const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
 
-      if (dbProvider === 'supabase') {
+      if (authProvider === 'keycloak') {
+         throw new Error("Signup is managed by Keycloak. Please sign up via your organization's portal.");
+      } else if (process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
         if (!supabase) {
            throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
         }
@@ -190,37 +192,47 @@ export default function SignupPage() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input id="name" type="text" placeholder="John Doe" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="accessLevel">Access Level</Label>
-            <select
-              id="accessLevel"
-              value={accessLevel}
-              onChange={(e) => setAccessLevel(e.target.value)}
-              className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center' }}
-            >
-              {accessLevels.map(level => (
-                <option key={level} value={level}>{level}</option>
-              ))}
-            </select>
-          </div>
+          {process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'keycloak' ? (
+              <div className="p-4 text-center text-sm text-muted-foreground border rounded-md bg-muted/20">
+                  Account creation is managed by Keycloak. Please contact your administrator.
+              </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" type="text" placeholder="John Doe" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="m@example.com" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="accessLevel">Access Level</Label>
+                <select
+                  id="accessLevel"
+                  value={accessLevel}
+                  onChange={(e) => setAccessLevel(e.target.value)}
+                  className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center' }}
+                >
+                  {accessLevels.map(level => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Creating account...' : 'Sign up'}
-          </Button>
+          {process.env.NEXT_PUBLIC_AUTH_PROVIDER !== 'keycloak' && (
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Creating account...' : 'Sign up'}
+              </Button>
+          )}
           <div className="text-center text-sm text-muted-foreground content-center">
             Already have an account?{' '}
             <Link href="/login" className="text-primary hover:underline font-medium">

@@ -60,6 +60,12 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               setAuthProvider(activeAuth.provider || 'firebase');
               setSsoGoogle(!!activeAuth.googleSso);
               setSsoGithub(!!activeAuth.githubSso);
+              if (activeAuth.provider === 'keycloak') {
+                 setKcUrl(activeAuth.keycloakUrl || '');
+                 setKcRealm(activeAuth.keycloakRealm || '');
+                 setKcClientId(activeAuth.keycloakClientId || '');
+                 setKcAdminSecret(activeAuth.keycloakAdminClientSecret || '');
+              }
             }
           }
 
@@ -99,6 +105,10 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [authProvider, setAuthProvider] = useState('firebase');
   const [ssoGoogle, setSsoGoogle] = useState(false);
   const [ssoGithub, setSsoGithub] = useState(false);
+  const [kcUrl, setKcUrl] = useState('');
+  const [kcRealm, setKcRealm] = useState('');
+  const [kcClientId, setKcClientId] = useState('');
+  const [kcAdminSecret, setKcAdminSecret] = useState('');
 
   // Admin State
   const [adminName, setAdminName] = useState('');
@@ -149,6 +159,12 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         isActive: true,
       };
       if (authProfileId) authProfile.id = authProfileId;
+      if (authProvider === 'keycloak') {
+        authProfile.keycloakUrl = kcUrl;
+        authProfile.keycloakRealm = kcRealm;
+        authProfile.keycloakClientId = kcClientId;
+        authProfile.keycloakAdminClientSecret = kcAdminSecret;
+      }
 
       // Prepare AI payload
       let aiProfile: any = {
@@ -416,13 +432,35 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="firebase">Firebase Auth</SelectItem>
-                      <SelectItem value="local">Local JWT / Database</SelectItem>
+                      <SelectItem value="keycloak">Keycloak</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
                     Defines how users sign into ProjectFlow.
                   </p>
                 </div>
+
+                {authProvider === 'keycloak' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Keycloak URL</Label>
+                      <Input placeholder="http://localhost:8080" value={kcUrl} onChange={e => setKcUrl(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Realm</Label>
+                      <Input placeholder="myrealm" value={kcRealm} onChange={e => setKcRealm(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Client ID (Public)</Label>
+                      <Input placeholder="myclient" value={kcClientId} onChange={e => setKcClientId(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Admin Client Secret (For User Autogen)</Label>
+                      <Input type="password" placeholder="Enter service account secret" value={kcAdminSecret} onChange={e => setKcAdminSecret(e.target.value)} />
+                      <p className="text-xs text-muted-foreground mt-1">Required if you want to create Keycloak users directly from the ProjectFlow User panel.</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-4 pt-4 border-t border-border">
                   <h4 className="text-sm font-semibold">Single Sign-On (SSO)</h4>

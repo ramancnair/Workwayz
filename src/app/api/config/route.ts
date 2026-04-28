@@ -79,7 +79,6 @@ export async function POST(request: Request) {
                 if (db.connectionString) envMap.set('DATABASE_URL', `"${db.connectionString}"`);
             }
             envMap.set('NEXT_PUBLIC_DATABASE_PROVIDER', `"${db.provider}"`);
-            envMap.set('NEXT_PUBLIC_AUTH_PROVIDER', `"${db.provider === 'firebase' ? 'firebase' : 'local'}"`);
         }
 
         if (type === 'ai') {
@@ -95,13 +94,29 @@ export async function POST(request: Request) {
             envMap.set('NEXT_PUBLIC_AI_PROVIDER', `"${ai.provider}"`);
         }
         
-        const authKeys = ['NEXT_PUBLIC_AUTH_GOOGLE_SSO', 'NEXT_PUBLIC_AUTH_FACEBOOK_SSO', 'NEXT_PUBLIC_AUTH_APPLE_SSO'];
+        const authKeys = [
+            'NEXT_PUBLIC_AUTH_PROVIDER',
+            'NEXT_PUBLIC_AUTH_GOOGLE_SSO', 
+            'NEXT_PUBLIC_AUTH_FACEBOOK_SSO', 
+            'NEXT_PUBLIC_AUTH_APPLE_SSO',
+            'NEXT_PUBLIC_KEYCLOAK_URL',
+            'NEXT_PUBLIC_KEYCLOAK_REALM',
+            'NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
+            'KEYCLOAK_ADMIN_CLIENT_SECRET'
+        ];
         if (type === 'authentication') {
             const auth = payload;
             authKeys.forEach(k => envMap.set(k, '""'));
+            if (auth.provider) envMap.set('NEXT_PUBLIC_AUTH_PROVIDER', `"${auth.provider}"`);
             if (auth.googleSso) envMap.set('NEXT_PUBLIC_AUTH_GOOGLE_SSO', '"true"');
             if (auth.facebookSso) envMap.set('NEXT_PUBLIC_AUTH_FACEBOOK_SSO', '"true"');
             if (auth.appleSso) envMap.set('NEXT_PUBLIC_AUTH_APPLE_SSO', '"true"');
+            if (auth.provider === 'keycloak') {
+                if (auth.keycloakUrl) envMap.set('NEXT_PUBLIC_KEYCLOAK_URL', `"${auth.keycloakUrl}"`);
+                if (auth.keycloakRealm) envMap.set('NEXT_PUBLIC_KEYCLOAK_REALM', `"${auth.keycloakRealm}"`);
+                if (auth.keycloakClientId) envMap.set('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID', `"${auth.keycloakClientId}"`);
+                if (auth.keycloakAdminClientSecret) envMap.set('KEYCLOAK_ADMIN_CLIENT_SECRET', `"${auth.keycloakAdminClientSecret}"`);
+            }
         }
 
         // Update isActive flags in connections.json if we mapped via an ID
@@ -120,21 +135,8 @@ export async function POST(request: Request) {
                              p.isActive = (p.id === body.makeActiveId);
                          });
 
-                         // If activating a database profile, also activate the matching authentication profile by index
-                         if (type === 'database' && conns['authentication']) {
-                             const dbIndex = conns['database'].findIndex((p: any) => p.id === body.makeActiveId);
-                             if (dbIndex !== -1 && conns['authentication'][dbIndex]) {
-                                 const matchingAuth = conns['authentication'][dbIndex];
-                                 conns['authentication'].forEach((p: any) => {
-                                     p.isActive = (p.id === matchingAuth.id);
-                                 });
-                                 // Also apply its SSO config to envMap
-                                 authKeys.forEach(k => envMap.set(k, '""'));
-                                 if (matchingAuth.googleSso) envMap.set('NEXT_PUBLIC_AUTH_GOOGLE_SSO', '"true"');
-                                 if (matchingAuth.facebookSso) envMap.set('NEXT_PUBLIC_AUTH_FACEBOOK_SSO', '"true"');
-                                 if (matchingAuth.appleSso) envMap.set('NEXT_PUBLIC_AUTH_APPLE_SSO', '"true"');
-                             }
-                         }
+                         // Authentication explicitly not tied to database anymore
+
 
                          fs.writeFileSync(profilesPath, JSON.stringify(conns, null, 2), 'utf8');
                      }
@@ -224,7 +226,20 @@ export async function GET() {
             ai.model = envMap.get('AI_DEFAULT_MODEL')?.replace(/"/g, '');
         }
 
-        return NextResponse.json({ db, ai });
+        // Parse Auth
+        let authProvider = envMap.get('NEXT_PUBLIC_AUTH_PROVIDER')?.replace(/"/g, '');
+        let auth: any = null;
+        if (authProvider) {
+            auth = { provider: authProvider };
+            if (authProvider === 'keycloak') {
+                auth.keycloakUrl = envMap.get('NEXT_PUBLIC_KEYCLOAK_URL')?.replace(/"/g, '');
+                auth.keycloakRealm = envMap.get('NEXT_PUBLIC_KEYCLOAK_REALM')?.replace(/"/g, '');
+                auth.keycloakClientId = envMap.get('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID')?.replace(/"/g, '');
+                auth.keycloakAdminClientSecret = envMap.get('KEYCLOAK_ADMIN_CLIENT_SECRET')?.replace(/"/g, '');
+            }
+        }
+
+        return NextResponse.json({ db, ai, auth });
     } catch (e) {
         return NextResponse.json({ db: null, ai: null });
     }
@@ -248,11 +263,23 @@ export async function DELETE(request: Request) {
 
         const dbKeys = ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'DATABASE_URL', 'NEXT_PUBLIC_DATABASE_PROVIDER'];
         const aiKeys = ['GEMINI_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'LOCAL_AI_BASE_URL', 'AI_DEFAULT_MODEL', 'NEXT_PUBLIC_AI_PROVIDER'];
+        const authKeys = [
+            'NEXT_PUBLIC_AUTH_PROVIDER',
+            'NEXT_PUBLIC_AUTH_GOOGLE_SSO', 
+            'NEXT_PUBLIC_AUTH_FACEBOOK_SSO', 
+            'NEXT_PUBLIC_AUTH_APPLE_SSO',
+            'NEXT_PUBLIC_KEYCLOAK_URL',
+            'NEXT_PUBLIC_KEYCLOAK_REALM',
+            'NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
+            'KEYCLOAK_ADMIN_CLIENT_SECRET'
+        ];
 
         if (type === 'database') {
             dbKeys.forEach(k => envMap.delete(k));
         } else if (type === 'ai') {
             aiKeys.forEach(k => envMap.delete(k));
+        } else if (type === 'authentication') {
+            authKeys.forEach(k => envMap.delete(k));
         }
 
         let newContent = '';

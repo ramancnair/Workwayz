@@ -28,7 +28,11 @@ type AuthProvider = 'firebase' | 'local';
 interface AuthConfig {
     id?: string;
     profileName: string;
-    provider?: AuthProvider;
+    provider?: string;
+    keycloakUrl?: string;
+    keycloakRealm?: string;
+    keycloakClientId?: string;
+    keycloakAdminClientSecret?: string;
     googleSso: boolean;
     facebookSso: boolean;
     appleSso: boolean;
@@ -37,6 +41,7 @@ interface AuthConfig {
 
 const defaultConfig: AuthConfig = {
     profileName: '',
+    provider: 'firebase',
     googleSso: false,
     facebookSso: false,
     appleSso: false
@@ -44,7 +49,6 @@ const defaultConfig: AuthConfig = {
 
 export default function AuthenticationSettingsPage() {
     const [profiles, setProfiles] = useState<AuthConfig[]>([]);
-    const [dbProvider, setDbProvider] = useState<string>('firebase');
     
     // UI states
     const [config, setConfig] = useState<AuthConfig>({ ...defaultConfig });
@@ -77,12 +81,6 @@ export default function AuthenticationSettingsPage() {
 
     const loadData = async () => {
         try {
-            const envRes = await fetch('/api/config');
-            const envData = await envRes.json();
-            if (envData.db && envData.db.provider) {
-                setDbProvider(envData.db.provider === 'firebase' ? 'firebase' : 'local');
-            }
-
             const profRes = await fetch('/api/config/profiles');
             const profData = await profRes.json();
             setProfiles(profData.authentication || []);
@@ -113,7 +111,7 @@ export default function AuthenticationSettingsPage() {
         try {
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'authentication', profile: { ...config, provider: dbProvider } }),
+                body: JSON.stringify({ type: 'authentication', profile: { ...config } }),
                 headers: { 'Content-Type': 'application/json' }
             });
 
@@ -138,7 +136,7 @@ export default function AuthenticationSettingsPage() {
         try {
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'authentication', profile: { ...editConfig, provider: dbProvider } }),
+                body: JSON.stringify({ type: 'authentication', profile: { ...editConfig } }),
                 headers: { 'Content-Type': 'application/json' }
             });
             if (!res.ok) throw new Error('Failed to update profile');
@@ -242,14 +240,7 @@ export default function AuthenticationSettingsPage() {
                 )}
             </PageHeader>
 
-            {/* Existing environment status */}
-            <Alert className="max-w-3xl bg-slate-100 border-slate-200 dark:bg-slate-900/40 dark:border-slate-800">
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertTitle>Current Environment Active State</AlertTitle>
-                <AlertDescription>
-                    Automatically bound and inherited from the Database configuration. The current active engine matches <strong>{dbProvider === 'firebase' ? 'Firebase' : 'Local Authentication'}</strong>. Restart node engine if you swap active SSO profiles below.
-                </AlertDescription>
-            </Alert>
+
 
             {/* Saved Profiles List */}
             <div className="space-y-4">
@@ -277,10 +268,35 @@ export default function AuthenticationSettingsPage() {
                                     </div>
                                     <div className="space-y-2 col-span-2">
                                         <Label>Primary Authentication Method</Label>
-                                        <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground items-center">
-                                            Inherited from Active Database ({dbProvider === 'firebase' ? 'Firebase Native Auth' : 'Local PostgreSQL/DB'})
-                                        </div>
+                                        <Select value={editConfig.provider || 'firebase'} onValueChange={v => handleFieldChange('provider', v, true)}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="firebase">Firebase Auth</SelectItem>
+                                                <SelectItem value="keycloak">Keycloak</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
+                                    {editConfig.provider === 'keycloak' && (
+                                        <>
+                                            <div className="space-y-2 col-span-2">
+                                                <Label>Keycloak URL</Label>
+                                                <Input value={editConfig.keycloakUrl || ''} onChange={e => handleFieldChange('keycloakUrl', e.target.value, true)} placeholder="http://localhost:8080" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Realm</Label>
+                                                <Input value={editConfig.keycloakRealm || ''} onChange={e => handleFieldChange('keycloakRealm', e.target.value, true)} placeholder="myrealm" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Client ID (Public)</Label>
+                                                <Input value={editConfig.keycloakClientId || ''} onChange={e => handleFieldChange('keycloakClientId', e.target.value, true)} placeholder="myclient" />
+                                            </div>
+                                            <div className="space-y-2 col-span-2">
+                                                <Label>Admin Client Secret (For User Autogen)</Label>
+                                                <Input type="password" value={editConfig.keycloakAdminClientSecret || ''} onChange={e => handleFieldChange('keycloakAdminClientSecret', e.target.value, true)} placeholder="Enter service account secret" />
+                                                <p className="text-xs text-muted-foreground mt-1">Required if you want to create Keycloak users directly from the ProjectFlow User panel.</p>
+                                            </div>
+                                        </>
+                                    )}
                                     <div className="col-span-2 mt-4">
                                         <Label className="text-muted-foreground mb-4 block uppercase tracking-wider text-xs font-bold">Enabled SSO Providers</Label>
                                         <div className="flex flex-col gap-4 bg-muted/20 p-4 border rounded">
@@ -303,7 +319,7 @@ export default function AuthenticationSettingsPage() {
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground">Provider:</span>
-                                        <p className="font-medium capitalize text-emerald-600">Inherited from Database</p>
+                                        <p className="font-medium capitalize text-emerald-600">{profile.provider === 'keycloak' ? 'Keycloak' : 'Firebase Auth'}</p>
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground">SSO Configured:</span>
@@ -372,10 +388,35 @@ export default function AuthenticationSettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Primary Method</Label>
-                                <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground items-center">
-                                    Inherits naturally from the Active Database configuration.
-                                </div>
+                                <Select value={config.provider || 'firebase'} onValueChange={v => handleFieldChange('provider', v)}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="firebase">Firebase Auth</SelectItem>
+                                        <SelectItem value="keycloak">Keycloak</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
+                            {config.provider === 'keycloak' && (
+                                <>
+                                    <div className="space-y-2 col-span-2">
+                                        <Label>Keycloak URL</Label>
+                                        <Input value={config.keycloakUrl || ''} onChange={e => handleFieldChange('keycloakUrl', e.target.value)} placeholder="http://localhost:8080" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Realm</Label>
+                                        <Input value={config.keycloakRealm || ''} onChange={e => handleFieldChange('keycloakRealm', e.target.value)} placeholder="myrealm" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Client ID (Public)</Label>
+                                        <Input value={config.keycloakClientId || ''} onChange={e => handleFieldChange('keycloakClientId', e.target.value)} placeholder="myclient" />
+                                    </div>
+                                    <div className="space-y-2 col-span-2">
+                                        <Label>Admin Client Secret (For User Autogen)</Label>
+                                        <Input type="password" value={config.keycloakAdminClientSecret || ''} onChange={e => handleFieldChange('keycloakAdminClientSecret', e.target.value)} placeholder="Enter service account secret" />
+                                        <p className="text-xs text-muted-foreground mt-1">Required if you want to create Keycloak users directly from the ProjectFlow User panel.</p>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <div className="col-span-2 mt-4 pt-4 border-t">

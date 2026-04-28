@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, getDocs, deleteDoc, collectionGroup, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, getDocs, deleteDoc, collectionGroup, orderBy, Timestamp, getDoc } from 'firebase/firestore';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -145,6 +145,18 @@ export default function TrashPage() {
                 } else if (item.type === 'Project') {
                     await deleteProjectAndSubcollections(item.id);
                 } else { // User
+                    // Try to delete from auth provider first
+                    const userDoc = await getDoc(doc(db, 'employees', item.id));
+                    if (userDoc.exists()) {
+                        const email = userDoc.data().email;
+                        if (email) {
+                            try {
+                                await fetch(`/api/users?email=${encodeURIComponent(email)}`, { method: 'DELETE' });
+                            } catch (e) {
+                                console.error("Failed to delete identity from auth pool:", e);
+                            }
+                        }
+                    }
                     await deleteDoc(doc(db, 'employees', item.id));
                 }
             }

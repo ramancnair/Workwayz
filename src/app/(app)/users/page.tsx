@@ -161,17 +161,18 @@ export default function UsersPage() {
     setIsDialogOpen(true);
   };
   
-  const createIdentityInAuthPool = async (email: string) => {
+  const createIdentityInAuthPool = async (email: string, firstName?: string, lastName?: string, accessLevel?: string) => {
       try {
-          if (!firebaseConfig?.apiKey) return;
-          const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+          const res = await fetch('/api/users', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password: 'P@ssw0rd', returnSecureToken: false })
+              body: JSON.stringify({ email, firstName, lastName, accessLevel })
           });
-          if (!res.ok) console.warn(`Auth pool creation failed for ${email}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to create identity');
       } catch (e) {
           console.error("Identity push failed", e);
+          toast({ variant: "destructive", title: "Auth Sync Warning", description: "User saved to DB but identity creation failed. See console." });
       }
   };
   
@@ -220,7 +221,7 @@ export default function UsersPage() {
                 batch.set(userRef, sanitizeForFirestore(newUser));
                 
                 // Construct shadow identity in the auth pool
-                await createIdentityInAuthPool(email);
+                await createIdentityInAuthPool(email, firstName, lastName, level);
                 
                 currentIdCounter++;
             }
@@ -307,8 +308,8 @@ export default function UsersPage() {
             isDeleted: false,
         });
         
-        // Push single identity to auth tool
-        await createIdentityInAuthPool(values.email);
+        // Push single identity to auth pool
+        await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
         
         toast({ title: "Success", description: `User added to database and Authentication cache.` });
       }

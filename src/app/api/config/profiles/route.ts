@@ -61,7 +61,7 @@ const autoSeedFromEnv = (conns: any): boolean => {
     }
 
     if (!conns.authentication || conns.authentication.length === 0) {
-        let authProvider = envMap.get('NEXT_PUBLIC_AUTH_PROVIDER') || (envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : 'local');
+        let authProvider = envMap.get('NEXT_PUBLIC_AUTH_PROVIDER') || (envMap.get('NEXT_PUBLIC_KEYCLOAK_URL') ? 'keycloak' : 'firebase');
         const auth: any = { 
              id: crypto.randomUUID(), 
              profileName: 'Primary .env Auth', 
@@ -71,6 +71,12 @@ const autoSeedFromEnv = (conns: any): boolean => {
              appleSso: false,
              isActive: true 
         };
+        if (authProvider === 'keycloak') {
+             auth.keycloakUrl = envMap.get('NEXT_PUBLIC_KEYCLOAK_URL');
+             auth.keycloakRealm = envMap.get('NEXT_PUBLIC_KEYCLOAK_REALM');
+             auth.keycloakClientId = envMap.get('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID');
+             auth.keycloakAdminClientSecret = envMap.get('KEYCLOAK_ADMIN_CLIENT_SECRET');
+        }
         conns.authentication = [auth];
         changed = true;
     }

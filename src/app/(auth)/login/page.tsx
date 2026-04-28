@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,20 @@ import { auth, db } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import Keycloak from 'keycloak-js';
+
+const determineAccessLevel = (keycloak: any) => {
+    const roles = keycloak.realmAccess?.roles || [];
+    const lowerRoles = roles.map((r: string) => r.toLowerCase());
+    
+    if (lowerRoles.includes('admin') || lowerRoles.includes('administrator')) return 'Administrator';
+    if (lowerRoles.includes('senior management') || lowerRoles.includes('seniormanagement')) return 'Senior Management';
+    if (lowerRoles.includes('project manager') || lowerRoles.includes('pm')) return 'Project Manager';
+    if (lowerRoles.includes('lead')) return 'Lead';
+    if (lowerRoles.includes('pmo')) return 'PMO';
+    
+    return 'Team Member'; // Default for Dev, QA, or unassigned
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,9 +47,11 @@ export default function LoginPage() {
       const emailInput = (document.getElementById('email') as HTMLInputElement)?.value;
       const passwordInput = (document.getElementById('password') as HTMLInputElement)?.value;
       
-      const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || 'firebase';
+      const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
 
-      if (dbProvider === 'supabase') {
+      if (authProvider === 'keycloak') {
+         throw new Error("Keycloak should use the dedicated login button.");
+      } else if (process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
         if (!supabase) {
            throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
         }
@@ -143,6 +159,86 @@ export default function LoginPage() {
     }
   };
 
+  const handleKeycloakLogin = async () => {
+    setIsLoading(true);
+    try {
+        const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
+        const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
+        const keycloakClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
+        
+        if (!keycloakUrl || !keycloakRealm || !keycloakClientId) {
+             throw new Error("Keycloak configuration is missing.");
+        }
+
+        const keycloak = new Keycloak({
+            url: keycloakUrl,
+            realm: keycloakRealm,
+            clientId: keycloakClientId
+        });
+
+        // Initialize keycloak first, without forcing redirect on load
+        const authenticated = await keycloak.init({ checkLoginIframe: false });
+        
+        if (!authenticated) {
+             // Force redirect to Keycloak login page
+             await keycloak.login();
+        } else {
+            // If already authenticated (e.g. they hit the button after returning from a redirect)
+            const userProfile = await keycloak.loadUserProfile();
+            const userData = {
+               name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || userProfile.username,
+               email: userProfile.email,
+               accessLevel: determineAccessLevel(keycloak),
+               empId: keycloak.subject,
+               uid: keycloak.subject
+            };
+            localStorage.setItem('projectflow_user', JSON.stringify(userData));
+            toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
+            router.push('/project-home');
+        }
+    } catch (error: any) {
+        toast({ title: "Login failed", description: error.message || "Could not authenticate with Keycloak.", variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+     if (process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'keycloak') {
+         // Always initialize on load to catch hash fragments (#state=..., #code=...)
+         const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
+         const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
+         const keycloakClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
+         
+         if (keycloakUrl && keycloakRealm && keycloakClientId) {
+             const keycloak = new Keycloak({
+                 url: keycloakUrl,
+                 realm: keycloakRealm,
+                 clientId: keycloakClientId
+             });
+
+             keycloak.init({ checkLoginIframe: false }).then(authenticated => {
+                 if (authenticated) {
+                     keycloak.loadUserProfile().then(userProfile => {
+                         const userData = {
+                            name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || userProfile.username,
+                            email: userProfile.email,
+                            accessLevel: determineAccessLevel(keycloak),
+                            empId: keycloak.subject,
+                            uid: keycloak.subject
+                         };
+                         localStorage.setItem('projectflow_user', JSON.stringify(userData));
+                         toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
+                         router.push('/project-home');
+                     });
+                 }
+             }).catch(e => {
+                 console.error("Keycloak auto-login failed", e);
+             });
+         }
+     }
+  }, []);
+
   return (
     <Card className="w-full shadow-lg border-border/50">
       <CardHeader className="space-y-3 text-center">
@@ -161,24 +257,38 @@ export default function LoginPage() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <Link href="#" className="text-sm font-medium text-primary hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-            <Input id="password" type="password" required />
-          </div>
+          {process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'keycloak' ? (
+              <div className="p-4 text-center text-sm text-muted-foreground border rounded-md bg-muted/20">
+                  Authentication is managed by Keycloak. Click the button below to sign in via your organization's portal.
+              </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="m@example.com" required />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link href="#" className="text-sm font-medium text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <Input id="password" type="password" required />
+              </div>
+            </>
+          )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Log in'}
-          </Button>
+          {process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'keycloak' ? (
+              <Button type="button" onClick={handleKeycloakLogin} className="w-full" disabled={isLoading}>
+                {isLoading ? 'Redirecting...' : 'Sign in with Keycloak'}
+              </Button>
+          ) : (
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Log in'}
+              </Button>
+          )}
           <div className="text-center text-sm text-muted-foreground content-center">
             Don't have an account?{' '}
             <Link href="/signup" className="text-primary hover:underline font-medium">
