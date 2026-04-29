@@ -563,7 +563,31 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const updateProject = async (data: Partial<Omit<Project, 'id'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      await updateDoc(doc(db, 'projects', projectId), sanitizeForFirestore(data));
+      let payload: any = { ...data };
+      const now = (testDate || new Date()).toISOString();
+
+      if (project && (data.overallStatus !== undefined || data.scopeStatus !== undefined || data.costStatus !== undefined || data.timeStatus !== undefined || data.statusComments !== undefined)) {
+        const hasChanged = 
+          (data.overallStatus !== undefined && data.overallStatus !== project.overallStatus) ||
+          (data.scopeStatus !== undefined && data.scopeStatus !== project.scopeStatus) ||
+          (data.costStatus !== undefined && data.costStatus !== project.costStatus) ||
+          (data.timeStatus !== undefined && data.timeStatus !== project.timeStatus) ||
+          (data.statusComments !== undefined && data.statusComments !== project.statusComments);
+          
+        if (hasChanged) {
+          const newHistoryEntry = {
+            date: now,
+            overallStatus: data.overallStatus !== undefined ? data.overallStatus : project.overallStatus,
+            scopeStatus: data.scopeStatus !== undefined ? data.scopeStatus : project.scopeStatus,
+            costStatus: data.costStatus !== undefined ? data.costStatus : project.costStatus,
+            timeStatus: data.timeStatus !== undefined ? data.timeStatus : project.timeStatus,
+            statusComments: data.statusComments !== undefined ? data.statusComments : project.statusComments,
+          };
+          payload.statusHistory = arrayUnion(sanitizeForFirestore(newHistoryEntry));
+        }
+      }
+
+      await updateDoc(doc(db, 'projects', projectId), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update project.", { code: e.code, message: e.message, fullError: e });

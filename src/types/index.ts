@@ -313,6 +313,15 @@ export type PricingModel = 'Fixed Price' | 'T&M' | 'Fixed Capacity';
 export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Initial Estimation';
 export type RagStatus = 'Red' | 'Amber' | 'Green';
 
+export type ProjectStatusHistoryItem = {
+  date: string; // ISO String
+  overallStatus?: RagStatus;
+  scopeStatus?: RagStatus;
+  costStatus?: RagStatus;
+  timeStatus?: RagStatus;
+  statusComments?: string;
+};
+
 export type Project = {
   id: string;
   name: string;
@@ -332,6 +341,7 @@ export type Project = {
   costStatus?: RagStatus;
   timeStatus?: RagStatus;
   statusComments?: string;
+  statusHistory?: ProjectStatusHistoryItem[];
   isArchived?: boolean;
   archivedAt?: string; // ISO String
 };

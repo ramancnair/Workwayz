@@ -21,6 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Edit, Circle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const ragStatuses: RagStatus[] = ['Green', 'Amber', 'Red'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
@@ -299,6 +301,53 @@ export default function ProjectSynopsisPage() {
                                    <RagStatusIndicator status={project.timeStatus} label="Time" />
                                </div>
                             </div>
+                            {project.statusHistory && project.statusHistory.length > 0 && (
+                                <div className="col-span-1 md:col-span-2 mt-4 pt-4 border-t">
+                                    <Accordion type="single" collapsible className="w-full">
+                                        <AccordionItem value="history" className="border-none">
+                                            <AccordionTrigger className="py-2 text-sm hover:no-underline">View Status History</AccordionTrigger>
+                                            <AccordionContent>
+                                                <div className="overflow-x-auto">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Date</TableHead>
+                                                                <TableHead>Overall</TableHead>
+                                                                <TableHead>Scope</TableHead>
+                                                                <TableHead>Cost</TableHead>
+                                                                <TableHead>Time</TableHead>
+                                                                <TableHead>Comments</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {[...project.statusHistory].reverse().map((historyItem, idx) => (
+                                                                <TableRow key={idx}>
+                                                                    <TableCell className="whitespace-nowrap">{format(parseISO(historyItem.date), 'MMM dd, yyyy HH:mm')}</TableCell>
+                                                                    <TableCell>
+                                                                        {historyItem.overallStatus ? <RagStatusIndicator status={historyItem.overallStatus} label={historyItem.overallStatus} /> : 'N/A'}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {historyItem.scopeStatus ? <RagStatusIndicator status={historyItem.scopeStatus} label={historyItem.scopeStatus} /> : 'N/A'}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {historyItem.costStatus ? <RagStatusIndicator status={historyItem.costStatus} label={historyItem.costStatus} /> : 'N/A'}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {historyItem.timeStatus ? <RagStatusIndicator status={historyItem.timeStatus} label={historyItem.timeStatus} /> : 'N/A'}
+                                                                    </TableCell>
+                                                                    <TableCell className="max-w-[200px] truncate" title={historyItem.statusComments}>
+                                                                        {historyItem.statusComments || 'No comments'}
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                     <DialogContent className="sm:max-w-3xl">
