@@ -155,6 +155,15 @@ function StoryCard({
     return story.impactedSystemIds.every(id => subTaskSystemIds.has(id));
   }, [story.estimatedHours, story.impactedSystemIds, subTasks]);
 
+  const displayEffort = useMemo(() => {
+    if (['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType)) {
+      if (subTasks.length > 0 || bugs.length > 0) {
+        return [...subTasks, ...bugs].reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+      }
+    }
+    return story.estimatedHours;
+  }, [story.itemType, story.estimatedHours, subTasks, bugs]);
+
 
   return (
     <Collapsible>
@@ -216,10 +225,10 @@ function StoryCard({
                     </Tooltip>
                 </TooltipProvider>
             )}
-            {story.estimatedHours !== undefined && (
+            {displayEffort !== undefined && (
                 <div className="flex items-center gap-1" title="Development effort">
                     <Clock className="h-3 w-3" />
-                    <span>{story.estimatedHours}h</span>
+                    <span>{displayEffort}h</span>
                 </div>
             )}
             {showSubItems && (
@@ -597,6 +606,17 @@ export default function KanbanPage() {
       logs: selectedStory.statusHistory?.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
     };
   }, [selectedStory, subItemsByStoryId]);
+
+  const subItemsEffort = useMemo(() => {
+    if (!selectedStory) return 0;
+    return selectedStorySubItems.subTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0) + 
+           selectedStorySubItems.bugs.reduce((sum, bug) => sum + (bug.estimatedHours || 0), 0);
+  }, [selectedStory, selectedStorySubItems]);
+
+  const isEffortReadOnly = useMemo(() => {
+    if (!selectedStory) return false;
+    return subItemsEffort > 0;
+  }, [selectedStory, subItemsEffort]);
   
   const sortedEnvironments = useMemo(() => [...environments].sort((a,b) => a.order - b.order), [environments]);
 
@@ -1278,19 +1298,20 @@ export default function KanbanPage() {
                                             </div>
                                       </>
                                   )}
-                                  <FormField
-                                      control={editStoryForm.control}
-                                      name="estimatedHours"
-                                      render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Estimated Hours</FormLabel>
-                                          <FormControl>
-                                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                                          </FormControl>
-                                          <FormMessage />
-                                      </FormItem>
-                                      )}
-                                  />
+                                      <FormField
+                                          control={editStoryForm.control}
+                                          name="estimatedHours"
+                                          render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Effort (hours)</FormLabel>
+                                              <FormControl>
+                                              <Input type="number" placeholder="0" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
+                                              </FormControl>
+                                              {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
+                                              <FormMessage />
+                                          </FormItem>
+                                          )}
+                                      />
                               </div>
                           </TabsContent>
                           <TabsContent value="subTasks">

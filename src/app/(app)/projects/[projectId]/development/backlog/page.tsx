@@ -164,6 +164,15 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
     return story.impactedSystemIds.every(id => subTaskSystemIds.has(id));
   }, [story.estimatedHours, story.impactedSystemIds, subTasks]);
 
+  const displayEffort = useMemo(() => {
+    if (['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType)) {
+      if (subTasks.length > 0 || bugs.length > 0) {
+        return [...subTasks, ...bugs].reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+      }
+    }
+    return story.estimatedHours;
+  }, [story.itemType, story.estimatedHours, subTasks, bugs]);
+
   return (
     <Collapsible>
       <Card
@@ -277,10 +286,10 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
                       </div>
                     </CollapsibleTrigger>
                   )}
-                  {story.estimatedHours !== undefined && (
+                  {displayEffort !== undefined && (
                   <div className="flex items-center gap-1" title="Development effort">
                       <Clock className="h-3 w-3" />
-                      <span>{story.estimatedHours}h</span>
+                      <span>{displayEffort}h</span>
                   </div>
                   )}
               </div>
@@ -902,10 +911,16 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     };
   }, [selectedStory, subItemsByParentId]);
 
+  const subItemsEffort = useMemo(() => {
+    if (!selectedStory) return 0;
+    return selectedStorySubItems.subTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0) + 
+           selectedStorySubItems.bugs.reduce((sum, bug) => sum + (bug.estimatedHours || 0), 0);
+  }, [selectedStory, selectedStorySubItems]);
+
   const isEffortReadOnly = useMemo(() => {
     if (!selectedStory) return false;
-    return (selectedStorySubItems.subTasks.length > 0);
-  }, [selectedStory, selectedStorySubItems]);
+    return subItemsEffort > 0;
+  }, [selectedStory, subItemsEffort]);
 
   return (
     <>
@@ -2263,7 +2278,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormItem>
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} readOnly={isEffortReadOnly} />
+                                    <Input type="number" placeholder="0" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
                                 </FormControl>
                                 {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
                                 <FormMessage />
