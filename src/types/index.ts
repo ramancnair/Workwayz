@@ -4,7 +4,7 @@
 export type TaskStatus = 'To Do' | 'In Development' | 'In QA' | 'Complete';
 
 export type Task = {
-  id:string;
+  id: string;
   title: string;
   description: string;
   status: TaskStatus;
@@ -58,6 +58,7 @@ export type Story = {
   impactedSystemId?: string; // For Sub-Task
   impactedSystemIds?: string[]; // For Story/Feature Change/Bug
   releaseId?: string;
+  predecessorId?: string; // ID of the requirement type which should be completed before the item can start
   isDeleted?: boolean;
   deletedAt?: string;
   parentStoryId?: string;
@@ -233,21 +234,21 @@ export type KanbanColumn = {
 export type HolidayType = 'National' | 'Regional' | 'Optional';
 
 export type Holiday = {
-    id: string;
-    date: string; // ISO String
-    description: string;
-    type?: HolidayType;
+  id: string;
+  date: string; // ISO String
+  description: string;
+  type?: HolidayType;
 };
 
 export type ProjectSettings = {
-    id: 'main';
-    weeklyOffDays?: number[]; // 0 for Sunday, 6 for Saturday
-    sprintDurationInWeeks?: number;
-    sprintStartDay?: number; // 0 for Sunday, 1 for Monday etc.
-    overrideGlobalHolidays?: boolean;
-    manMonthToDays?: number;
-    manDayToHours?: number;
-    storyPointToHours?: number;
+  id: 'main';
+  weeklyOffDays?: number[]; // 0 for Sunday, 6 for Saturday
+  sprintDurationInWeeks?: number;
+  sprintStartDay?: number; // 0 for Sunday, 1 for Monday etc.
+  overrideGlobalHolidays?: boolean;
+  manMonthToDays?: number;
+  manDayToHours?: number;
+  storyPointToHours?: number;
 };
 
 export type ImpactedSystemCategory = 'Technology' | 'Function';
@@ -409,10 +410,10 @@ export type FixedCost = {
 };
 
 export type ArchiveSettings = {
-    id?: string;
-    autoArchiveCompletedProjects: boolean;
-    autoArchiveAfterMonths: string;
-    autoDeleteArchivedProjects: boolean;
-    autoDeleteAfterMonths: string;
-    customDeleteMonths?: number;
+  id?: string;
+  autoArchiveCompletedProjects: boolean;
+  autoArchiveAfterMonths: string;
+  autoDeleteArchivedProjects: boolean;
+  autoDeleteAfterMonths: string;
+  customDeleteMonths?: number;
 };

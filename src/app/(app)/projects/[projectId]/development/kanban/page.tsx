@@ -96,6 +96,7 @@ const storyFormSchema = z.object({
   status: z.enum(statusOptions).optional(),
   sprintId: z.string().optional(),
   releaseId: z.string().optional(),
+  predecessorId: z.string().optional(),
   createdAt: z.date().optional(),
   closedAt: z.date().optional(),
   relatedTestCaseId: z.string().optional(),
@@ -351,6 +352,7 @@ export default function KanbanPage() {
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
   const [testCaseInputText, setTestCaseInputText] = useState('');
   const [relatedBugInputText, setRelatedBugInputText] = useState('');
+  const [editPredecessorText, setEditPredecessorText] = useState('');
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
@@ -479,6 +481,11 @@ export default function KanbanPage() {
     label: `[${b.storyId}] ${b.title}`,
   })), [stories]);
 
+  const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && s.itemType !== 'Sub Task').map(s => ({
+    value: s.id,
+    label: `[${s.storyId}] ${s.title}`,
+  })), [stories, selectedStory]);
+
   useEffect(() => {
     if (!selectedStory) {
         setIsEditStorySubmitting(false);
@@ -502,6 +509,8 @@ export default function KanbanPage() {
       setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
       const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
       setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
+      const predStory = stories.find(s => s.id === selectedStory.predecessorId);
+      setEditPredecessorText(predStory ? `[${predStory.storyId}] ${predStory.title}` : '');
 
       editStoryForm.reset({
         title: selectedStory.title,
@@ -519,6 +528,7 @@ export default function KanbanPage() {
         status: selectedStory.status,
         sprintId: selectedStory.sprintId || 'backlog',
         releaseId: selectedStory.releaseId || 'unassigned',
+        predecessorId: selectedStory.predecessorId || 'unassigned',
         createdAt: selectedStory.createdAt ? parseISO(selectedStory.createdAt) : undefined,
         closedAt: selectedStory.closedAt ? parseISO(selectedStory.closedAt) : undefined,
         relatedTestCaseId: selectedStory.relatedTestCaseId,
@@ -1308,6 +1318,39 @@ export default function KanbanPage() {
                                               <Input type="number" placeholder="0" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
                                               </FormControl>
                                               {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
+                                              <FormMessage />
+                                          </FormItem>
+                                          )}
+                                      />
+                                      <FormField
+                                          control={editStoryForm.control}
+                                          name="predecessorId"
+                                          render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Predecessor</FormLabel>
+                                              <FormControl>
+                                                <Input
+                                                  list="predecessor-options-edit"
+                                                  placeholder="Link to a predecessor requirement"
+                                                  value={editPredecessorText}
+                                                  onChange={(e) => {
+                                                    const text = e.target.value;
+                                                    setEditPredecessorText(text);
+                                                    const matchingOption = predecessorOptions.find(opt => opt.label === text);
+                                                    field.onChange(matchingOption ? matchingOption.value : undefined);
+                                                  }}
+                                                  onBlur={() => {
+                                                    const matchingOption = predecessorOptions.find(opt => opt.label === editPredecessorText);
+                                                    if (!matchingOption) {
+                                                      setEditPredecessorText('');
+                                                      field.onChange(undefined);
+                                                    }
+                                                  }}
+                                                />
+                                              </FormControl>
+                                              <datalist id="predecessor-options-edit">
+                                                {predecessorOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                                              </datalist>
                                               <FormMessage />
                                           </FormItem>
                                           )}

@@ -120,6 +120,7 @@ const storyFormSchema = z.object({
   attachments: z.string().optional(),
   sprintId: z.string().optional(),
   relatedTestCaseId: z.string().optional(),
+  predecessorId: z.string().optional(),
   createdAt: z.date().optional(),
   closedAt: z.date().optional(),
 });
@@ -382,6 +383,8 @@ export default function BacklogPage() {
   const [editParentStoryText, setEditParentStoryText] = useState('');
   const [testCaseInputText, setTestCaseInputText] = useState('');
   const [relatedBugInputText, setRelatedBugInputText] = useState('');
+  const [addPredecessorText, setAddPredecessorText] = useState('');
+  const [editPredecessorText, setEditPredecessorText] = useState('');
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -436,7 +439,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', severity: 'Medium', releaseId: 'unassigned', foundInTestPlanId: 'unassigned', relatedBugId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned' },
+    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', severity: 'Medium', releaseId: 'unassigned', foundInTestPlanId: 'unassigned', relatedBugId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned', predecessorId: 'unassigned' },
   });
   
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
@@ -477,6 +480,11 @@ export default function BacklogPage() {
     value: b.id,
     label: `[${b.storyId}] {b.title}`,
   })), [stories]);
+
+  const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && s.itemType !== 'Sub Task').map(s => ({
+    value: s.id,
+    label: `[${s.storyId}] ${s.title}`,
+  })), [stories, selectedStory]);
 
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
@@ -561,6 +569,7 @@ export default function BacklogPage() {
               impactedSystemIds: selectedStory.impactedSystemIds || [],
               attachments: selectedStory.attachments || '',
               relatedTestCaseId: selectedStory.relatedTestCaseId || 'unassigned',
+              predecessorId: selectedStory.predecessorId || 'unassigned',
               createdAt: selectedStory.createdAt ? parseISO(selectedStory.createdAt) : undefined,
               closedAt: selectedStory.closedAt ? parseISO(selectedStory.closedAt) : undefined,
           });
@@ -570,6 +579,8 @@ export default function BacklogPage() {
           } else {
               setEditParentStoryText('');
           }
+          const predStory = stories.find(s => s.id === selectedStory.predecessorId);
+          setEditPredecessorText(predStory ? `[${predStory.storyId}] ${predStory.title}` : '');
       }
   }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases]);
   
@@ -580,6 +591,7 @@ export default function BacklogPage() {
       setAddParentStoryText('');
       setTestCaseInputText('');
       setRelatedBugInputText('');
+      setAddPredecessorText('');
     }
   }, [addRequirementOpen, addStoryForm]);
 
@@ -1377,6 +1389,39 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     ))}
                                     </SelectContent>
                                 </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                            <FormField
+                            control={addStoryForm.control}
+                            name="predecessorId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Predecessor</FormLabel>
+                                <FormControl>
+                                    <Input
+                                      list="predecessor-options-add"
+                                      placeholder="Link to a predecessor requirement"
+                                      value={addPredecessorText}
+                                      onChange={(e) => {
+                                        const text = e.target.value;
+                                        setAddPredecessorText(text);
+                                        const matchingOption = predecessorOptions.find(opt => opt.label === text);
+                                        field.onChange(matchingOption ? matchingOption.value : undefined);
+                                      }}
+                                      onBlur={() => {
+                                        const matchingOption = predecessorOptions.find(opt => opt.label === addPredecessorText);
+                                        if (!matchingOption) {
+                                          setAddPredecessorText('');
+                                          field.onChange(undefined);
+                                        }
+                                      }}
+                                    />
+                                </FormControl>
+                                <datalist id="predecessor-options-add">
+                                    {predecessorOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                                </datalist>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -2267,6 +2312,39 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     ))}
                                     </SelectContent>
                                 </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                            <FormField
+                            control={editStoryForm.control}
+                            name="predecessorId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Predecessor</FormLabel>
+                                <FormControl>
+                                    <Input
+                                      list="predecessor-options-edit"
+                                      placeholder="Link to a predecessor requirement"
+                                      value={editPredecessorText}
+                                      onChange={(e) => {
+                                        const text = e.target.value;
+                                        setEditPredecessorText(text);
+                                        const matchingOption = predecessorOptions.find(opt => opt.label === text);
+                                        field.onChange(matchingOption ? matchingOption.value : undefined);
+                                      }}
+                                      onBlur={() => {
+                                        const matchingOption = predecessorOptions.find(opt => opt.label === editPredecessorText);
+                                        if (!matchingOption) {
+                                          setEditPredecessorText('');
+                                          field.onChange(undefined);
+                                        }
+                                      }}
+                                    />
+                                </FormControl>
+                                <datalist id="predecessor-options-edit">
+                                    {predecessorOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                                </datalist>
                                 <FormMessage />
                                 </FormItem>
                             )}
