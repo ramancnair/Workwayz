@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2, User, X, Save } from 'lucide-react';
+import { Sparkles, Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2, User, X, Save, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function SetupWizard({ onClose }: { onClose?: () => void }) {
@@ -61,10 +61,10 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               setSsoGoogle(!!activeAuth.googleSso);
               setSsoGithub(!!activeAuth.githubSso);
               if (activeAuth.provider === 'keycloak') {
-                 setKcUrl(activeAuth.keycloakUrl || '');
-                 setKcRealm(activeAuth.keycloakRealm || '');
-                 setKcClientId(activeAuth.keycloakClientId || '');
-                 setKcAdminSecret(activeAuth.keycloakAdminClientSecret || '');
+                setKcUrl(activeAuth.keycloakUrl || '');
+                setKcRealm(activeAuth.keycloakRealm || '');
+                setKcClientId(activeAuth.keycloakClientId || '');
+                setKcAdminSecret(activeAuth.keycloakAdminClientSecret || '');
               }
             }
           }
@@ -110,11 +110,12 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [kcClientId, setKcClientId] = useState('');
   const [kcAdminSecret, setKcAdminSecret] = useState('');
 
-  // Admin State
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showAdminConfirmPassword, setShowAdminConfirmPassword] = useState(false);
 
   // AI State
   const [aiProjectName, setAiProjectName] = useState('Wizard AI Config');
@@ -244,7 +245,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               fbApiKey
             })
           });
-          
+
           const setupData = await setupRes.json();
           if (!setupRes.ok || !setupData.success) {
             throw new Error(setupData.error || 'Failed to create admin user');
@@ -297,8 +298,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
       <div className={cn("w-full max-w-3xl space-y-8", !isFirstRun && "bg-background border rounded-xl p-6 shadow-2xl relative max-h-[90vh] flex flex-col")}>
         {!isFirstRun && (
           <Button variant="ghost" size="icon" className="absolute right-4 top-4 z-10" onClick={() => {
-             if (onClose) onClose();
-             else router.push('/project-home');
+            if (onClose) onClose();
+            else router.push('/project-home');
           }}>
             <X className="w-4 h-4" />
           </Button>
@@ -314,14 +315,14 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         {/* Stepper Header */}
         <div className="flex items-center justify-between relative px-2">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-border -z-10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-500 ease-in-out" 
+            <div
+              className="h-full bg-primary transition-all duration-500 ease-in-out"
               style={{ width: `${((step - 1) / 4) * 100}%` }}
             />
           </div>
           {steps.map((s) => (
-            <div 
-              key={s.num} 
+            <div
+              key={s.num}
               className={cn("flex flex-col items-center flex-1 gap-2 text-center transition-transform", !isFirstRun || step >= s.num ? "cursor-pointer hover:scale-105" : "cursor-not-allowed opacity-70")}
               onClick={() => {
                 if (!isFirstRun || step >= s.num) setStep(s.num);
@@ -330,8 +331,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               <div
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
-                  step >= s.num 
-                    ? "bg-primary border-primary text-primary-foreground shadow-sm" 
+                  step >= s.num
+                    ? "bg-primary border-primary text-primary-foreground shadow-sm"
                     : "bg-background border-border text-muted-foreground"
                 )}
               >
@@ -367,7 +368,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                   <Label>Project Name</Label>
                   <Input placeholder="e.g. My Production DB" value={dbProjectName} onChange={e => setDbProjectName(e.target.value)} />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Database Provider</Label>
                   <Select onValueChange={setDbProvider} value={dbProvider}>
@@ -385,10 +386,10 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                 {dbProvider === 'postgresql' && (
                   <div className="space-y-2">
                     <Label>Connection String</Label>
-                    <Input 
-                      placeholder="postgresql://user:pass@host:5432/db" 
-                      value={dbConnStr} 
-                      onChange={e => setDbConnStr(e.target.value)} 
+                    <Input
+                      placeholder="postgresql://user:pass@host:5432/db"
+                      value={dbConnStr}
+                      onChange={e => setDbConnStr(e.target.value)}
                     />
                   </div>
                 )}
@@ -494,11 +495,41 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                   </div>
                   <div className="space-y-2">
                     <Label>Password</Label>
-                    <Input type="password" placeholder="••••••••" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} />
+                    <div className="relative">
+                      <Input
+                        type={showAdminPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={adminPassword}
+                        onChange={e => setAdminPassword(e.target.value)}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Re-enter Password</Label>
-                    <Input type="password" placeholder="••••••••" value={adminConfirmPassword} onChange={e => setAdminConfirmPassword(e.target.value)} />
+                    <div className="relative">
+                      <Input
+                        type={showAdminConfirmPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={adminConfirmPassword}
+                        onChange={e => setAdminConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminConfirmPassword(!showAdminConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showAdminConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -511,7 +542,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                   <Label>Project Name</Label>
                   <Input placeholder="e.g. Main AI Config" value={aiProjectName} onChange={e => setAiProjectName(e.target.value)} />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>AI Provider</Label>
                   <Select onValueChange={setAiProvider} value={aiProvider}>
@@ -542,10 +573,10 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <Input placeholder="http://localhost:11434" value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)} />
                   </div>
                 )}
-                
+
                 <div className="space-y-2">
-                   <Label>Default Model Override (Optional)</Label>
-                   <Input placeholder="e.g. gpt-4o, gemini-1.5-pro" value={aiModel} onChange={e => setAiModel(e.target.value)} />
+                  <Label>Default Model Override (Optional)</Label>
+                  <Input placeholder="e.g. gpt-4o, gemini-1.5-pro" value={aiModel} onChange={e => setAiModel(e.target.value)} />
                 </div>
               </div>
             )}
@@ -585,14 +616,14 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             )}
           </CardContent>
           <CardFooter className="flex justify-between border-t border-border/50 bg-muted/10 rounded-b-lg p-4">
-            <Button 
-              variant="outline" 
-              onClick={handleBack} 
+            <Button
+              variant="outline"
+              onClick={handleBack}
               disabled={step === 1 || isSaving}
             >
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>
-            
+
             <div className="flex gap-2">
               {!isFirstRun && step < 5 && (
                 <Button onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white">
@@ -605,7 +636,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                 </Button>
               ) : (
                 <Button onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white">
-                  {isSaving ? "Saving..." : (!isFirstRun ? "Save Changes" : "Complete Setup")} 
+                  {isSaving ? "Saving..." : (!isFirstRun ? "Save Changes" : "Complete Setup")}
                   {!isFirstRun ? <Save className="w-4 h-4 ml-2" /> : <CheckCircle2 className="w-4 h-4 ml-2" />}
                 </Button>
               )}
