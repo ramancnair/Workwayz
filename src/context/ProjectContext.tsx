@@ -281,11 +281,11 @@ const standardDocs = [
 type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
-    '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
-    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
-    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
-    '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'testCases'],
-    '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
+    '/agile-dev/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
+    '/agile-dev/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
+    '/agile-dev/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
+    '/agile-dev/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'testCases'],
+    '/agile-dev/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testPlans'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints', 'environments'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testPlans'],

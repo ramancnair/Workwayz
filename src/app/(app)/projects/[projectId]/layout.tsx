@@ -27,10 +27,10 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = pathname.startsWith(`${basePath}/pmo`);
   
-  const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
+  const isAgileDevPath = pathname.startsWith(`${basePath}/agile-dev`);
 
   const getTabValue = () => {
-    if (isDevelopmentPath) return 'development';
+    if (isAgileDevPath) return 'agile-dev';
     if (isTestingPath) return 'testing';
     if (isProjectPath) return 'project';
     if (isInitialEstimationPath) return 'initial-estimation';
@@ -43,8 +43,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   };
 
   const onTabChange = (value: string) => {
-    if (value === 'development') {
-      router.push(`${basePath}/development/dashboard`);
+    if (value === 'agile-dev') {
+      router.push(`${basePath}/agile-dev/dashboard`);
     } else if (value === 'testing') {
       router.push(`${basePath}/testing/dashboard`);
     } else if (value === 'project') {
@@ -87,7 +87,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                           <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
                           <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
                           <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
-                          <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
+                          <TabsTrigger value="agile-dev" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Agile Dev</TabsTrigger>
                           <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
                           <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
                           <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>

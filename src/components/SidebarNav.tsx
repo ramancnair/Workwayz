@@ -112,27 +112,27 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const devMenuItems = [
     {
-      href: `${basePath}/development/dashboard`,
-      label: "Development Dashboard",
+      href: `${basePath}/agile-dev/dashboard`,
+      label: "Agile Dev Dashboard",
       icon: LayoutDashboard,
     },
     {
-      href: `${basePath}/development/backlog`,
+      href: `${basePath}/agile-dev/backlog`,
       label: "Product Backlog",
       icon: Layers,
     },
     {
-      href: `${basePath}/development/grooming`,
+      href: `${basePath}/agile-dev/grooming`,
       label: "Grooming",
       icon: ChevronsUpDown,
     },
     {
-      href: `${basePath}/development/kanban`,
+      href: `${basePath}/agile-dev/kanban`,
       label: "Kanban Board",
       icon: KanbanSquare,
     },
     {
-      href: `${basePath}/development/development-tasks`,
+      href: `${basePath}/agile-dev/development-tasks`,
       label: "Sub-Tasks",
       icon: Component,
     },
@@ -309,7 +309,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = ['/pmo/documents', '/pmo/payment-milestones', '/pmo/business-continuity', '/pmo/resource-billing'].some(p => pathname.startsWith(basePath + p));
-  const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
+  const isAgileDevPath = pathname.startsWith(`${basePath}/agile-dev`);
 
 
   const menuItems = isSettingsPath ? settingsMenuItems
@@ -321,7 +321,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
               : isGovernancePath ? governanceMenuItems
                 : isHolidaysPath ? holidaysMenuItems
                   : isPmoPath ? pmoMenuItems
-                    : isDevelopmentPath ? devMenuItems
+                    : isAgileDevPath ? devMenuItems
                       : devMenuItems;
 
   return (
