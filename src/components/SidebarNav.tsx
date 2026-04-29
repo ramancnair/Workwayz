@@ -50,6 +50,7 @@ import {
   FileText,
   Server,
   ChevronsUpDown,
+  ListTree,
   Trash2,
   DollarSign,
   Component,
@@ -133,6 +134,29 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
     {
       href: `${basePath}/agile-dev/development-tasks`,
+      label: "Sub-Tasks",
+      icon: Component,
+    },
+  ];
+
+  const waterfallMenuItems = [
+    {
+      href: `${basePath}/waterfall/dashboard`,
+      label: "Waterfall Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      href: `${basePath}/waterfall/requirements`,
+      label: "Requirements",
+      icon: Layers,
+    },
+    {
+      href: `${basePath}/waterfall/gantt`,
+      label: "Project Plan",
+      icon: ListTree,
+    },
+    {
+      href: `${basePath}/waterfall/development-tasks`,
       label: "Sub-Tasks",
       icon: Component,
     },
@@ -310,6 +334,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = ['/pmo/documents', '/pmo/payment-milestones', '/pmo/business-continuity', '/pmo/resource-billing'].some(p => pathname.startsWith(basePath + p));
   const isAgileDevPath = pathname.startsWith(`${basePath}/agile-dev`);
+  const isWaterfallPath = pathname.startsWith(`${basePath}/waterfall`);
 
 
   const menuItems = isSettingsPath ? settingsMenuItems
@@ -322,7 +347,8 @@ export function SidebarNav({ projectId }: { projectId: string }) {
                 : isHolidaysPath ? holidaysMenuItems
                   : isPmoPath ? pmoMenuItems
                     : isAgileDevPath ? devMenuItems
-                      : devMenuItems;
+                      : isWaterfallPath ? waterfallMenuItems
+                        : devMenuItems;
 
   return (
     <>
