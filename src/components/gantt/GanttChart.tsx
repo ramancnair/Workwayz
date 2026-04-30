@@ -1,801 +1,436 @@
 'use client';
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { useProject } from '@/context/ProjectContext';
-import { format, parseISO, differenceInDays, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isWeekend, isSameDay } from 'date-fns';
-import { ChevronRight, ChevronDown, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight } from 'lucide-react';
-import { Story, Release, StatusHistoryItem } from '@/types';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-
-// Hierarchical types for Gantt
-type GanttRowType = 'Release' | 'Requirement' | 'SubTask' | 'Milestone';
-
-export interface GanttRow {
-  id: string;
-  type: GanttRowType;
-  wbs: string;
-  title: string;
-  startDate: Date | null;
-  endDate: Date | null;
-  duration: number | null; // in business days
-  estimatedHours: number | null;
-  status: string;
-  assigneeName?: string;
-  progress: number;
-  predecessorId?: string;
-  
-  // Hierarchy
-  parentId?: string;
-  isExpanded: boolean;
-  childrenIds: string[];
-  
-  // Original Item
-  originalItem: Story | Release;
-}
-
-const SYSTEM_COLORS = [
-  'bg-blue-500',
-  'bg-green-500',
-  'bg-purple-500',
-  'bg-pink-500',
-  'bg-yellow-500',
-  'bg-indigo-500',
-  'bg-orange-500',
-  'bg-teal-500',
-  'bg-cyan-500',
-];
+import {
+  format, parseISO, differenceInDays, addDays,
+  startOfWeek, endOfWeek, eachDayOfInterval, isWeekend, isSameDay,
+} from 'date-fns';
+import { PanelLeftClose, PanelLeft, PanelRightClose, PanelRight } from 'lucide-react';
+import { Story, Release } from '@/types';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { GanttRow, SYSTEM_COLORS, ColKey, DEFAULT_COL_WIDTHS, DAY_WIDTH, ROW_HEIGHT } from './gantt-types';
+import { GanttLeftPanel } from './GanttLeftPanel';
 
 export function GanttChart() {
-  const { stories, releasesAndMilestones, projectSettings, holidays, weeklyOffDays, employees, impactedSystems } = useProject();
-  
+  const {
+    stories, releasesAndMilestones, holidays, weeklyOffDays,
+    employees, impactedSystems, updateStory, updateReleaseOrMilestone,
+  } = useProject();
+
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-  
-  // Column widths state
-  const [colWidths, setColWidths] = useState({
-    wbs: 60,
-    name: 240,
-    predecessor: 90,
-    duration: 80,
-    start: 110,
-    end: 110
-  });
-
-  const rightPaneRef = useRef<HTMLDivElement>(null);
+  const [colWidths, setColWidths] = useState<Record<ColKey, number>>(DEFAULT_COL_WIDTHS);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingCell, setEditingCell] = useState<{ rowId: string; field: string } | null>(null);
+  const lastClickedIndex = useRef<number>(-1);
+  const rightHeaderRef = useRef<HTMLDivElement>(null);
   const leftPaneRef = useRef<HTMLDivElement>(null);
-
-  // Panel refs for collapse/expand
+  const rightPaneRef = useRef<HTMLDivElement>(null);
   const leftPanelRef = useRef<any>(null);
   const rightPanelRef = useRef<any>(null);
-
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
-  // Sync scrolling between left table and right gantt area
-  
-  const { updateStory, updateReleaseOrMilestone } = useProject();
+  // ─── Business days helper ────────────────────────────────────────────────
+  const calcBizDays = useCallback((start: Date, end: Date): number => {
+    if (!start || !end) return 0;
+    const hdDates = holidays.map(h => parseISO(h.date));
+    return eachDayOfInterval({ start, end }).filter(d =>
+      !weeklyOffDays.includes(d.getDay()) && !hdDates.some(h => isSameDay(d, h))
+    ).length;
+  }, [holidays, weeklyOffDays]);
 
-  const handleCellEdit = async (rowId: string, field: string, value: string) => {
-    const row = rows.find(r => r.id === rowId);
-    if (!row) return;
-
-    try {
-      if (row.type === 'Release' || row.type === 'Stage' || row.type === 'Milestone') {
-         if (!updateReleaseOrMilestone) return;
-         await updateReleaseOrMilestone(row.originalItem.id, { [field]: value });
-      } else {
-         if (!updateStory) return;
-         if (field === 'predecessorWbs') {
-            const predecessorRow = rows.find(r => r.wbs === value);
-            if (predecessorRow && predecessorRow.type !== 'Release' && predecessorRow.type !== 'Stage') {
-               await updateStory(row.originalItem.id, { predecessorId: predecessorRow.originalItem.id });
-            } else if (value === '') {
-               await updateStory(row.originalItem.id, { predecessorId: '' });
-            }
-         } else {
-            await updateStory(row.originalItem.id, { [field]: value });
-         }
-      }
-    } catch (error) {
-       console.error("Failed to update cell", error);
-    }
-  };
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement, UIEvent>, pane: 'left' | 'right') => {
-    if (pane === 'right' && leftPaneRef.current) {
-        leftPaneRef.current.scrollTop = e.currentTarget.scrollTop;
-    } else if (pane === 'left' && rightPaneRef.current) {
-        rightPaneRef.current.scrollTop = e.currentTarget.scrollTop;
-    }
-  };
-
-  const toggleExpand = (id: string) => {
-    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  // Helper to calculate business days
-  const calculateBusinessDays = (start: Date, end: Date): number => {
-    if(!start || !end) return 0;
-    const holidayDates = holidays.map(h => parseISO(h.date));
-    const interval = eachDayOfInterval({ start, end });
-    
-    return interval.filter(day => {
-      const dayOfWeek = day.getDay();
-      const isWeekEnd = weeklyOffDays.includes(dayOfWeek);
-      const isHoliday = holidayDates.some(h => isSameDay(day, h));
-      return !isWeekEnd && !isHoliday;
-    }).length;
-  };
-
-  // Process data into flat list of hierarchical rows
-  const rows = useMemo(() => {
+  // ─── Build flat row list ─────────────────────────────────────────────────
+  const rows = useMemo<GanttRow[]>(() => {
     const result: GanttRow[] = [];
-    
-    // Filter out Bugs
-    const nonBugStories = stories.filter(s => s.itemType !== 'Bug');
-    
-    const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
-    const stages = releasesAndMilestones.filter(r => r.itemType === 'Stage');
-    const milestones = releasesAndMilestones.filter(r => r.itemType === 'Milestone');
-    
-    // Sort releases by date
-    const sortedReleases = [...releases].sort((a, b) => {
-      if (!a.startDate) return 1;
-      if (!b.startDate) return -1;
-      return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-    });
+    const nonBug = stories.filter(s => s.itemType !== 'Bug');
+    const releases = releasesAndMilestones
+      .filter(r => r.itemType === 'Release')
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-    // Helper to process subtasks
-    const processSubTasks = (req: Story, reqWbs: string) => {
-       const subTasks = nonBugStories.filter(s => s.parentStoryId === req.id && s.itemType === 'Sub Task');
-       const processedSubTasks: GanttRow[] = [];
-       
-       let reqStart: Date | null = null;
-       let reqEnd: Date | null = null;
-       let reqEffort = 0;
+    let releaseWbsIdx = 0;
 
-       let subWbsCounter = 1;
-       subTasks.forEach(st => {
-           let stStart = st.startDate ? parseISO(st.startDate) : null;
-           let stEnd = st.endDate ? parseISO(st.endDate) : null;
-           const stDuration = (stStart && stEnd) ? calculateBusinessDays(stStart, stEnd) : null;
-           
-           if (stStart && (!reqStart || stStart < reqStart)) reqStart = stStart;
-           if (stEnd && (!reqEnd || stEnd > reqEnd)) reqEnd = stEnd;
-           reqEffort += (st.estimatedHours || 0);
+    for (const release of releases) {
+      releaseWbsIdx++;
+      const releaseId = `release-${release.id}`;
+      const releaseWbs = `${releaseWbsIdx}`;
 
-           const assignee = employees.find(e => e.id === st.assigneeId);
+      // Requirements that belong to this release (no parentStoryId)
+      const reqs = nonBug
+        .filter(s =>
+          s.releaseId === release.id &&
+          ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType)
+        )
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-           processedSubTasks.push({
-             id: `sub-${st.id}`,
-             type: 'SubTask',
-             wbs: `${reqWbs}.${subWbsCounter}`,
-             title: st.title,
-             startDate: stStart,
-             endDate: stEnd,
-             duration: stDuration,
-             estimatedHours: st.estimatedHours || null,
-             status: st.status,
-             assigneeName: assignee ? `${assignee.firstName} ${assignee.lastName}` : undefined,
-             progress: st.status === 'Done' ? 100 : (st.status === 'In Progress' ? 50 : 0),
-             predecessorId: st.predecessorId,
-             parentId: `req-${req.id}`,
-             isExpanded: false,
-             childrenIds: [],
-             originalItem: st
-           });
-           subWbsCounter++;
-       });
-       return { processedSubTasks, subTaskChildrenIds: subTasks.map(st => `sub-${st.id}`), reqStart, reqEnd, reqEffort };
-    };
+      let relMinStart: Date | null = release.startDate ? parseISO(release.startDate) : null;
+      let relMaxEnd: Date | null = release.endDate ? parseISO(release.endDate) : null;
+      const reqIds: string[] = [];
+      const reqRows: GanttRow[] = [];
+      let reqIdx = 0;
 
-    let wbsCounter = 1;
+      for (const req of reqs) {
+        reqIdx++;
+        const reqId = `req-${req.id}`;
+        const reqWbs = `${releaseWbs}.${reqIdx}`;
+        reqIds.push(reqId);
 
-    sortedReleases.forEach(release => {
-      const releaseRowId = `release-${release.id}`;
-      const releaseWBS = `${wbsCounter}`;
-      
-      let releaseMinStart: Date | null = release.startDate ? parseISO(release.startDate) : null;
-      let releaseMaxEnd: Date | null = release.endDate ? parseISO(release.endDate) : null;
+        // Sub-tasks
+        const subs = nonBug
+          .filter(s => s.parentStoryId === req.id && s.itemType === 'Sub Task')
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-      const stagesInRelease = stages.filter(stg => stg.parentReleaseId === release.id);
-      const reqsDirectToRelease = nonBugStories.filter(s => s.releaseId === release.id && ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType));
-      
-      const releaseChildrenIds: string[] = [];
-      const releaseChildrenRows: GanttRow[] = [];
+        let rStart: Date | null = req.startDate ? parseISO(req.startDate) : null;
+        let rEnd: Date | null = req.endDate ? parseISO(req.endDate) : null;
+        let rEffort = req.estimatedHours ?? 0;
+        const subIds: string[] = [];
+        const subRows: GanttRow[] = [];
+        let subIdx = 0;
 
-      let childWbsCounter = 1;
-
-      // 1. Process Stages
-      stagesInRelease.forEach(stage => {
-          const stageRowId = `stage-${stage.id}`;
-          const stageWBS = `${releaseWBS}.${childWbsCounter}`;
-          releaseChildrenIds.push(stageRowId);
-          
-          const reqsInStage = nonBugStories.filter(s => s.releaseId === stage.id && ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType));
-          const stageChildrenIds: string[] = [];
-          const stageChildrenRows: GanttRow[] = [];
-          
-          let stageMinStart: Date | null = stage.startDate ? parseISO(stage.startDate) : null;
-          let stageMaxEnd: Date | null = stage.endDate ? parseISO(stage.endDate) : null;
-          
-          let reqWbsCounter = 1;
-          reqsInStage.forEach(req => {
-              const reqWbs = `${stageWBS}.${reqWbsCounter}`;
-              stageChildrenIds.push(`req-${req.id}`);
-              
-              const subTaskResult = processSubTasks(req, reqWbs);
-              
-              let rStart = subTaskResult.reqStart;
-              let rEnd = subTaskResult.reqEnd;
-              if (!rStart && req.startDate) rStart = parseISO(req.startDate);
-              if (!rEnd && req.endDate) rEnd = parseISO(req.endDate);
-              let rEffort = subTaskResult.reqEffort || req.estimatedHours || 0;
-              
-              if (rStart && (!stageMinStart || rStart < stageMinStart)) stageMinStart = rStart;
-              if (rEnd && (!stageMaxEnd || rEnd > stageMaxEnd)) stageMaxEnd = rEnd;
-
-              const reqRow: GanttRow = {
-                  id: `req-${req.id}`,
-                  type: 'Requirement',
-                  wbs: reqWbs,
-                  title: req.title,
-                  startDate: rStart,
-                  endDate: rEnd,
-                  duration: (rStart && rEnd) ? calculateBusinessDays(rStart, rEnd) : null,
-                  estimatedHours: rEffort,
-                  status: req.status,
-                  progress: req.status === 'Done' ? 100 : (req.status === 'In Progress' ? 50 : 0),
-                  predecessorId: req.predecessorId,
-                  parentId: stageRowId,
-                  isExpanded: expandedRows[`req-${req.id}`] || false,
-                  childrenIds: subTaskResult.subTaskChildrenIds,
-                  originalItem: req
-              };
-              
-              stageChildrenRows.push(reqRow);
-              if (reqRow.isExpanded) {
-                  stageChildrenRows.push(...subTaskResult.processedSubTasks);
-              }
-              reqWbsCounter++;
+        for (const sub of subs) {
+          subIdx++;
+          const sStart = sub.startDate ? parseISO(sub.startDate) : null;
+          const sEnd = sub.endDate ? parseISO(sub.endDate) : null;
+          if (sStart && (!rStart || sStart < rStart)) rStart = sStart;
+          if (sEnd && (!rEnd || sEnd > rEnd)) rEnd = sEnd;
+          rEffort += sub.estimatedHours ?? 0;
+          const emp = employees.find(e => e.id === sub.assigneeId);
+          const subId = `sub-${sub.id}`;
+          subIds.push(subId);
+          subRows.push({
+            id: subId, type: 'SubTask', wbs: `${reqWbs}.${subIdx}`,
+            title: sub.title, startDate: sStart, endDate: sEnd,
+            duration: sStart && sEnd ? calcBizDays(sStart, sEnd) : null,
+            estimatedHours: sub.estimatedHours ?? null,
+            status: sub.status,
+            assigneeName: emp ? `${emp.firstName} ${emp.lastName}` : undefined,
+            progress: sub.status === 'Done' ? 100 : sub.status === 'In Progress' ? 50 : 0,
+            predecessorId: sub.predecessorId,
+            parentId: reqId, isExpanded: false, childrenIds: [],
+            originalItem: sub, sortOrder: sub.sortOrder ?? subIdx, level: 2,
           });
-          
-          if (stageMinStart && (!releaseMinStart || stageMinStart < releaseMinStart)) releaseMinStart = stageMinStart;
-          if (stageMaxEnd && (!releaseMaxEnd || stageMaxEnd > releaseMaxEnd)) releaseMaxEnd = stageMaxEnd;
-
-          const stageRow: GanttRow = {
-              id: stageRowId,
-              type: 'Stage',
-              wbs: stageWBS,
-              title: stage.name,
-              startDate: stageMinStart,
-              endDate: stageMaxEnd,
-              duration: (stageMinStart && stageMaxEnd) ? calculateBusinessDays(stageMinStart, stageMaxEnd) : null,
-              estimatedHours: null,
-              status: stage.isCompleted ? 'Done' : 'In Progress',
-              progress: 0,
-              parentId: releaseRowId,
-              isExpanded: expandedRows[stageRowId] || false,
-              childrenIds: stageChildrenIds,
-              originalItem: stage
-          };
-          
-          releaseChildrenRows.push(stageRow);
-          if (stageRow.isExpanded) {
-              releaseChildrenRows.push(...stageChildrenRows);
-          }
-          childWbsCounter++;
-      });
-
-      // 2. Process Direct Requirements
-      reqsDirectToRelease.forEach(req => {
-          const reqWbs = `${releaseWBS}.${childWbsCounter}`;
-          releaseChildrenIds.push(`req-${req.id}`);
-          
-          const subTaskResult = processSubTasks(req, reqWbs);
-          
-          let rStart = subTaskResult.reqStart;
-          let rEnd = subTaskResult.reqEnd;
-          if (!rStart && req.startDate) rStart = parseISO(req.startDate);
-          if (!rEnd && req.endDate) rEnd = parseISO(req.endDate);
-          let rEffort = subTaskResult.reqEffort || req.estimatedHours || 0;
-          
-          if (rStart && (!releaseMinStart || rStart < releaseMinStart)) releaseMinStart = rStart;
-          if (rEnd && (!releaseMaxEnd || rEnd > releaseMaxEnd)) releaseMaxEnd = rEnd;
-
-          const reqRow: GanttRow = {
-              id: `req-${req.id}`,
-              type: 'Requirement',
-              wbs: reqWbs,
-              title: req.title,
-              startDate: rStart,
-              endDate: rEnd,
-              duration: (rStart && rEnd) ? calculateBusinessDays(rStart, rEnd) : null,
-              estimatedHours: rEffort,
-              status: req.status,
-              progress: req.status === 'Done' ? 100 : (req.status === 'In Progress' ? 50 : 0),
-              predecessorId: req.predecessorId,
-              parentId: releaseRowId,
-              isExpanded: expandedRows[`req-${req.id}`] || false,
-              childrenIds: subTaskResult.subTaskChildrenIds,
-              originalItem: req
-          };
-          
-          releaseChildrenRows.push(reqRow);
-          if (reqRow.isExpanded) {
-              releaseChildrenRows.push(...subTaskResult.processedSubTasks);
-          }
-          childWbsCounter++;
-      });
-
-      // Assembly for Release
-      result.push({
-          id: releaseRowId,
-          type: 'Release',
-          wbs: releaseWBS,
-          title: release.name,
-          startDate: releaseMinStart,
-          endDate: releaseMaxEnd,
-          duration: (releaseMinStart && releaseMaxEnd) ? calculateBusinessDays(releaseMinStart, releaseMaxEnd) : null,
-          estimatedHours: null,
-          status: release.isCompleted ? 'Done' : 'In Progress',
-          progress: 0,
-          parentId: undefined,
-          isExpanded: expandedRows[releaseRowId] !== false,
-          childrenIds: releaseChildrenIds,
-          originalItem: release
-      });
-
-      if (expandedRows[releaseRowId] !== false) {
-          result.push(...releaseChildrenRows);
-      }
-      
-      wbsCounter++;
-    });
-
-    // Add standalone Milestones
-    milestones.forEach(milestone => {
-        let mStart = milestone.startDate ? parseISO(milestone.startDate) : null;
-        if (!mStart && milestone.milestoneDate) mStart = parseISO(milestone.milestoneDate);
-        
-        if (mStart) {
-            result.push({
-                id: `milestone-${milestone.id}`,
-                type: 'Milestone',
-                wbs: `${wbsCounter}`,
-                title: milestone.name,
-                startDate: mStart,
-                endDate: mStart,
-                duration: 0,
-                estimatedHours: null,
-                status: milestone.isCompleted ? 'Done' : 'In Progress',
-                progress: 0,
-                parentId: undefined,
-                isExpanded: false,
-                childrenIds: [],
-                originalItem: milestone
-            });
-            wbsCounter++;
         }
-    });
 
+        if (rStart && (!relMinStart || rStart < relMinStart)) relMinStart = rStart;
+        if (rEnd && (!relMaxEnd || rEnd > relMaxEnd)) relMaxEnd = rEnd;
+
+        const reqRow: GanttRow = {
+          id: reqId, type: 'Requirement', wbs: reqWbs,
+          title: req.title, startDate: rStart, endDate: rEnd,
+          duration: rStart && rEnd ? calcBizDays(rStart, rEnd) : null,
+          estimatedHours: rEffort, status: req.status,
+          progress: req.status === 'Done' ? 100 : req.status === 'In Progress' ? 50 : 0,
+          predecessorId: req.predecessorId,
+          parentId: releaseId, isExpanded: expandedRows[reqId] ?? false,
+          childrenIds: subIds, originalItem: req,
+          sortOrder: req.sortOrder ?? reqIdx, level: 1,
+        };
+        reqRows.push(reqRow);
+        if (reqRow.isExpanded) reqRows.push(...subRows);
+      }
+
+      const releaseRow: GanttRow = {
+        id: releaseId, type: 'Release', wbs: releaseWbs,
+        title: release.name,
+        startDate: relMinStart, endDate: relMaxEnd,
+        duration: relMinStart && relMaxEnd ? calcBizDays(relMinStart, relMaxEnd) : null,
+        estimatedHours: null,
+        status: release.isCompleted ? 'Done' : 'In Progress',
+        progress: 0, parentId: undefined,
+        isExpanded: expandedRows[releaseId] !== false,
+        childrenIds: reqIds, originalItem: release,
+        sortOrder: release.sortOrder ?? releaseWbsIdx, level: 0,
+      };
+
+      result.push(releaseRow);
+      if (releaseRow.isExpanded) result.push(...reqRows);
+    }
     return result;
-  }, [stories, releasesAndMilestones, expandedRows, holidays, weeklyOffDays, employees]);
+  }, [stories, releasesAndMilestones, expandedRows, employees, calcBizDays]);
 
-  // Determine Gantt Chart overall timeline
-  const { minDate, maxDate, totalDays } = useMemo(() => {
-     let min: Date | null = null;
-     let max: Date | null = null;
-
-     rows.forEach(r => {
-         if (r.startDate) {
-             if (!min || r.startDate < min) min = r.startDate;
-         }
-         if (r.endDate) {
-             if (!max || r.endDate > max) max = r.endDate;
-         }
-     });
-
-     if (!min) min = new Date();
-     if (!max) max = addDays(min, 30);
-
-     // Pad by a week on both sides
-     min = addDays(startOfWeek(min), -7);
-     max = addDays(endOfWeek(max), 7);
-
-     return {
-         minDate: min,
-         maxDate: max,
-         totalDays: differenceInDays(max, min) + 1
-     };
+  // ─── Timeline bounds ─────────────────────────────────────────────────────
+  const { minDate, maxDate, totalDays, timelineDays } = useMemo(() => {
+    let min: Date | null = null, max: Date | null = null;
+    rows.forEach(r => {
+      if (r.startDate && (!min || r.startDate < min)) min = r.startDate;
+      if (r.endDate && (!max || r.endDate > max)) max = r.endDate;
+    });
+    if (!min) min = new Date();
+    if (!max) max = addDays(min, 30);
+    min = addDays(startOfWeek(min), -7);
+    max = addDays(endOfWeek(max), 7);
+    return {
+      minDate: min, maxDate: max,
+      totalDays: differenceInDays(max, min) + 1,
+      timelineDays: eachDayOfInterval({ start: min, end: max }),
+    };
   }, [rows]);
 
-  const timelineDays = useMemo(() => {
-      return eachDayOfInterval({ start: minDate, end: maxDate });
-  }, [minDate, maxDate]);
-
-  const DAY_WIDTH = 24; // pixels per day
-  const ROW_HEIGHT = 40; // pixels per row
-
-  // Build coordinate map for predecessor arrows
-  const coordinates = useMemo(() => {
-    const coords: Record<string, { x: number, y: number, width: number }> = {};
-    rows.forEach((row, index) => {
+  // ─── Coordinates for predecessor arrows ─────────────────────────────────
+  const coords = useMemo(() => {
+    const m: Record<string, { x: number; y: number; width: number }> = {};
+    rows.forEach((row, i) => {
       const eDate = row.endDate || row.startDate;
       if (row.startDate && eDate) {
-         const leftOffset = differenceInDays(row.startDate, minDate) * DAY_WIDTH;
-         const width = (differenceInDays(eDate, row.startDate) + 1) * DAY_WIDTH;
-         coords[row.id] = {
-            x: leftOffset,
-            y: index * ROW_HEIGHT + ROW_HEIGHT / 2,
-            width
-         };
+        m[row.id] = {
+          x: differenceInDays(row.startDate, minDate) * DAY_WIDTH,
+          y: i * ROW_HEIGHT + ROW_HEIGHT / 2,
+          width: (differenceInDays(eDate, row.startDate) + 1) * DAY_WIDTH,
+        };
       }
     });
-    return coords;
+    return m;
   }, [rows, minDate]);
 
-  // Column resizer helper
-  const handleColumnResize = (e: React.MouseEvent, colKey: keyof typeof colWidths) => {
-    e.preventDefault();
-    const startX = e.pageX;
-    const startWidth = colWidths[colKey];
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const delta = moveEvent.pageX - startX;
-      setColWidths(prev => ({
-        ...prev,
-        [colKey]: Math.max(30, startWidth + delta) // minimum width 30px
-      }));
-    };
-
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+  // ─── Handlers ────────────────────────────────────────────────────────────
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>, pane: 'left' | 'right') => {
+    const other = pane === 'left' ? rightPaneRef.current : leftPaneRef.current;
+    if (other) other.scrollTop = e.currentTarget.scrollTop;
+    // sync right panel header horizontal scroll
+    if (pane === 'right' && rightHeaderRef.current) {
+      rightHeaderRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
   };
 
-  const totalTableWidth = Object.values(colWidths).reduce((sum, w) => sum + w, 0);
+  const handleSelect = (id: string, e: React.MouseEvent, index: number) => {
+    if (editingCell) return;
+    if (e.ctrlKey || e.metaKey) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      });
+    } else if (e.shiftKey && lastClickedIndex.current >= 0) {
+      const lo = Math.min(lastClickedIndex.current, index);
+      const hi = Math.max(lastClickedIndex.current, index);
+      setSelectedIds(new Set(rows.slice(lo, hi + 1).map(r => r.id)));
+    } else {
+      setSelectedIds(new Set([id]));
+    }
+    lastClickedIndex.current = index;
+  };
+
+  const handleDoubleClick = (rowId: string, field: string) => {
+    setEditingCell({ rowId, field });
+  };
+
+  const handleCellBlur = async (rowId: string, field: string, value: string) => {
+    setEditingCell(null);
+    const row = rows.find(r => r.id === rowId);
+    if (!row) return;
+    try {
+      if (row.type === 'Release') {
+        if (updateReleaseOrMilestone) await updateReleaseOrMilestone(row.originalItem.id, { [field]: value });
+      } else {
+        if (!updateStory) return;
+        if (field === 'predecessorWbs') {
+          const predRow = rows.find(r => r.wbs === value);
+          await updateStory(row.originalItem.id, { predecessorId: predRow?.originalItem.id ?? '' });
+        } else {
+          await updateStory(row.originalItem.id, { [field]: value });
+        }
+      }
+    } catch (err) { console.error('Cell update failed', err); }
+  };
+
+  const handleColResize = (e: React.MouseEvent, col: ColKey) => {
+    e.preventDefault();
+    const startX = e.pageX, startW = colWidths[col];
+    const onMove = (mv: MouseEvent) =>
+      setColWidths(p => ({ ...p, [col]: Math.max(40, startW + mv.pageX - startX) }));
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  function getAllDescendantIds(parentId: string, allRows: GanttRow[]): string[] {
+    const parent = allRows.find(r => r.id === parentId);
+    if (!parent) return [];
+    const ids: string[] = [...parent.childrenIds];
+    for (const cid of parent.childrenIds) {
+      ids.push(...getAllDescendantIds(cid, allRows));
+    }
+    return ids;
+  }
+
+  const toggleExpand = (id: string) =>
+    setExpandedRows(p => ({ ...p, [id]: !p[id] }));
 
   const toggleLeftPanel = () => {
-    const panel = leftPanelRef.current;
-    if (panel) {
-      if (leftCollapsed) {
-        panel.expand();
-        setLeftCollapsed(false);
-      } else {
-        panel.collapse();
-        setLeftCollapsed(true);
-      }
-    }
+    const p = leftPanelRef.current;
+    if (!p) return;
+    if (leftCollapsed) { p.expand(); setLeftCollapsed(false); }
+    else { p.collapse(); setLeftCollapsed(true); }
   };
-
   const toggleRightPanel = () => {
-    const panel = rightPanelRef.current;
-    if (panel) {
-      if (rightCollapsed) {
-        panel.expand();
-        setRightCollapsed(false);
-      } else {
-        panel.collapse();
-        setRightCollapsed(true);
-      }
-    }
+    const p = rightPanelRef.current;
+    if (!p) return;
+    if (rightCollapsed) { p.expand(); setRightCollapsed(false); }
+    else { p.collapse(); setRightCollapsed(true); }
   };
 
+  // ─── Month grouping for header ────────────────────────────────────────────
+  const monthGroups = useMemo(() => {
+    const groups: { label: string; days: number }[] = [];
+    let cur = '';
+    let cnt = 0;
+    for (const d of timelineDays) {
+      const lbl = format(d, 'MMM yyyy');
+      if (lbl === cur) { cnt++; }
+      else { if (cur) groups.push({ label: cur, days: cnt }); cur = lbl; cnt = 1; }
+    }
+    if (cur) groups.push({ label: cur, days: cnt });
+    return groups;
+  }, [timelineDays]);
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-background border rounded-md shadow-sm overflow-hidden relative min-w-0">
-      
-      {/* Header Toolbar */}
-      <div className="flex items-center justify-between border-b p-2 bg-muted/10 h-12 shrink-0">
-        <div className="text-sm font-medium px-2">Project Schedule</div>
-        <div className="flex items-center space-x-1">
-          <button 
-            onClick={toggleLeftPanel}
-            className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-            title={leftCollapsed ? 'Expand Left Panel' : 'Collapse Left Panel'}
-          >
+    <div className="flex flex-col h-full bg-background border rounded-md shadow-sm overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between border-b px-3 bg-muted/20 h-10 shrink-0">
+        <span className="text-sm font-semibold">Project Schedule</span>
+        <div className="flex items-center gap-1">
+          <button onClick={toggleLeftPanel} className="p-1.5 rounded hover:bg-muted text-muted-foreground"
+            title={leftCollapsed ? 'Show Table' : 'Hide Table'}>
             {leftCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
-          <button 
-            onClick={toggleRightPanel}
-            className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-            title={rightCollapsed ? 'Expand Right Panel' : 'Collapse Right Panel'}
-          >
+          <button onClick={toggleRightPanel} className="p-1.5 rounded hover:bg-muted text-muted-foreground"
+            title={rightCollapsed ? 'Show Chart' : 'Hide Chart'}>
             {rightCollapsed ? <PanelRight className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 relative min-w-0">
-        <div className="absolute inset-0">
-          <ResizablePanelGroup direction="horizontal">
-            {/* Left Pane - Table */}
-            <ResizablePanel 
-              ref={leftPanelRef}
-              defaultSize={45} 
-              minSize={20} 
-              collapsible={true}
-              onCollapse={() => setLeftCollapsed(true)}
-              onExpand={() => setLeftCollapsed(false)}
-            >
-              <div className="h-full flex flex-col bg-card relative z-10 overflow-x-auto hide-scrollbar">
-            {/* Header */}
-            <div className="flex items-center h-12 border-b bg-muted/30 text-xs font-semibold text-muted-foreground w-max min-w-full relative">
-              <div style={{ width: colWidths.wbs }} className="relative px-2 flex items-center h-full border-r">
-                WBS
+      {/* Absolute container: fills space below toolbar, clips all overflow */}
+      <div className="flex-1 relative min-h-0">
+        <div className="absolute inset-0 overflow-hidden">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            {/* LEFT */}
+            <ResizablePanel ref={leftPanelRef} defaultSize={45} minSize={15} collapsible
+              onCollapse={() => setLeftCollapsed(true)} onExpand={() => setLeftCollapsed(false)}>
+              <div className="h-full overflow-hidden">
+                <GanttLeftPanel
+                  rows={rows} selectedIds={selectedIds} editingCell={editingCell}
+                  colWidths={colWidths}
+                  onSelect={handleSelect}
+                  onDoubleClick={handleDoubleClick}
+                  onCellBlur={handleCellBlur}
+                  onToggleExpand={toggleExpand}
+                  onColResize={handleColResize}
+                  scrollRef={leftPaneRef}
+                  onScroll={(e) => handleScroll(e, 'left')}
+                />
               </div>
-              <div style={{ width: colWidths.name }} className="relative px-2 flex items-center h-full border-r">
-                Task Name
-              </div>
-              <div style={{ width: colWidths.predecessor }} className="relative px-2 flex items-center h-full border-r">
-                Predecessor
-              </div>
-              <div style={{ width: colWidths.duration }} className="relative px-2 flex items-center h-full border-r">
-                Duration
-              </div>
-              <div style={{ width: colWidths.start }} className="relative px-2 flex items-center h-full border-r">
-                Start Date
-              </div>
-              <div style={{ width: colWidths.end }} className="relative px-2 flex items-center h-full border-r">
-                End Date
-              </div>
-            </div>
+            </ResizablePanel>
 
-            {/* Body */}
-            <div 
-              className="flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar" 
-              ref={leftPaneRef} 
-              onScroll={(e) => handleScroll(e, 'left')}
-            >
-              <div style={{ height: rows.length * ROW_HEIGHT, width: totalTableWidth }} className="relative">
-                {rows.map((row, index) => (
-                  <div 
-                    key={row.id} 
-                    className={`absolute flex items-center h-[40px] text-sm border-b hover:bg-muted/50 transition-colors cursor-pointer ${!row.startDate ? 'bg-red-500/5' : ''}`}
-                    style={{ top: index * ROW_HEIGHT, width: '100%' }}
-                    onClick={() => {
-                      if (row.childrenIds.length > 0) {
-                        toggleExpand(row.id);
-                      }
-                    }}
-                  >
-                    <div style={{ width: colWidths.wbs }} className="px-2 text-xs text-muted-foreground truncate">{row.wbs}</div>
-                    <div style={{ width: colWidths.name }} className="px-2 flex items-center truncate">
-                      <div style={{ width: row.type === 'Requirement' ? 16 : row.type === 'SubTask' ? 32 : 0 }} className="flex-shrink-0" />
-                      {(row.type === 'Release' || row.type === 'Requirement') && row.childrenIds.length > 0 ? (
-                        <button 
-                          className="mr-1 flex-shrink-0 h-4 w-4 flex items-center justify-center rounded hover:bg-muted"
-                        >
-                          {row.isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        </button>
-                      ) : (
-                        <div className="mr-1 w-4 h-4 flex-shrink-0" />
-                      )}
-                      <span className={`truncate ${row.type === 'Release' ? 'font-semibold' : ''} ${!row.startDate && row.type === 'Requirement' ? 'text-red-500 font-medium' : ''}`}>
-                        {row.title}
-                      </span>
-                    </div>
-                    <div style={{ width: colWidths.predecessor }} className="px-2 text-xs text-muted-foreground truncate">
-                      {row.type !== 'Release' && row.type !== 'Stage' && row.type !== 'Milestone' ? (
-                          <input 
-                             type="text"
-                             className="w-full bg-transparent border-none p-0 focus:ring-0 text-xs text-foreground"
-                             defaultValue={row.predecessorId ? (rows.find(r => r.originalItem?.id === row.predecessorId)?.wbs || '') : ''}
-                             onBlur={(e) => handleCellEdit(row.id, 'predecessorWbs', e.target.value)}
-                          />
-                      ) : '-'}
-                    </div>
-                    <div style={{ width: colWidths.duration }} className="px-2 text-xs text-muted-foreground truncate">
-                      {row.type !== 'Release' && row.type !== 'Stage' && row.type !== 'Milestone' ? (
-                          <input 
-                             type="number"
-                             className="w-16 bg-transparent border-none p-0 focus:ring-0 text-xs text-foreground"
-                             defaultValue={row.duration !== null ? row.duration : ''}
-                             onBlur={(e) => handleCellEdit(row.id, 'effortDays', e.target.value)}
-                          />
-                      ) : (row.duration !== null ? `${row.duration} d` : '-')}
-                    </div>
-                    <div style={{ width: colWidths.start }} className="px-2 text-xs text-muted-foreground truncate">
-                      {row.type !== 'Release' && row.type !== 'Stage' && row.type !== 'Milestone' ? (
-                          <input 
-                             type="date"
-                             className="w-[100px] bg-transparent border-none p-0 focus:ring-0 text-xs text-foreground"
-                             defaultValue={row.startDate ? format(row.startDate, 'yyyy-MM-dd') : ''}
-                             onBlur={(e) => handleCellEdit(row.id, 'startDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
-                          />
-                      ) : (row.startDate ? format(row.startDate, 'MM/dd/yyyy') : '-')}
-                    </div>
-                    <div style={{ width: colWidths.end }} className="px-2 text-xs text-muted-foreground truncate">
-                      {row.type !== 'Release' && row.type !== 'Stage' && row.type !== 'Milestone' ? (
-                          <input 
-                             type="date"
-                             className="w-[100px] bg-transparent border-none p-0 focus:ring-0 text-xs text-foreground"
-                             defaultValue={row.endDate ? format(row.endDate, 'yyyy-MM-dd') : ''}
-                             onBlur={(e) => handleCellEdit(row.id, 'endDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
-                          />
-                      ) : (row.endDate ? format(row.endDate, 'MM/dd/yyyy') : '-')}
-                    </div>
+            <ResizableHandle withHandle />
+
+            {/* RIGHT – Gantt bars */}
+            <ResizablePanel ref={rightPanelRef} defaultSize={55} minSize={15} collapsible
+              onCollapse={() => setRightCollapsed(true)} onExpand={() => setRightCollapsed(false)}>
+              <div className="h-full w-full flex flex-col overflow-hidden">
+              {/* Timeline header — overflow hidden, scroll position synced via ref */}
+              <div ref={rightHeaderRef} className="h-9 border-b bg-muted shrink-0 overflow-hidden">
+                <div style={{ width: totalDays * DAY_WIDTH }} className="h-full flex flex-col">
+                  {/* Month row */}
+                  <div className="flex h-4 border-b border-border">
+                    {monthGroups.map((mg, i) => (
+                      <div key={i} style={{ width: mg.days * DAY_WIDTH }}
+                        className="border-r border-border flex items-center px-1 overflow-hidden">
+                        <span className="text-[10px] font-semibold text-muted-foreground truncate">{mg.label}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                  {/* Day row */}
+                  <div className="flex h-5">
+                    {timelineDays.map((day, i) => (
+                      <div key={i} style={{ width: DAY_WIDTH }}
+                        className="border-r border-border flex items-center justify-center">
+                        <span className="text-[9px] text-muted-foreground">{format(day, 'd')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart body */}
+              <div ref={rightPaneRef} onScroll={(e) => handleScroll(e, 'right')}
+                className="flex-1 overflow-auto">
+                <div style={{ width: totalDays * DAY_WIDTH, height: rows.length * ROW_HEIGHT }} className="relative">
+                  {/* Grid */}
+                  <div className="absolute inset-0 flex pointer-events-none">
+                    {timelineDays.map((day, i) => (
+                      <div key={i} style={{ width: DAY_WIDTH }}
+                        className={`h-full border-r border-border/30 ${isWeekend(day) ? 'bg-muted/40' : ''}`} />
+                    ))}
+                  </div>
+
+                  {/* Predecessor arrows */}
+                  <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
+                    <defs>
+                      <marker id="arr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                        <path d="M0 0 L10 5 L0 10z" fill="hsl(var(--muted-foreground))" />
+                      </marker>
+                    </defs>
+                    {rows.map(row => {
+                      if (!row.predecessorId) return null;
+                      const pId = coords[`req-${row.predecessorId}`] ? `req-${row.predecessorId}` : `sub-${row.predecessorId}`;
+                      const pc = coords[pId], cc = coords[row.id];
+                      if (!pc || !cc) return null;
+                      const sx = pc.x + pc.width, sy = pc.y, ex = cc.x, ey = cc.y;
+                      return (
+                        <path key={`lnk-${row.id}`}
+                          d={`M${sx} ${sy} L${sx + 10} ${sy} L${sx + 10} ${ey} L${ex} ${ey}`}
+                          fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="1.5" markerEnd="url(#arr)" />
+                      );
+                    })}
+                  </svg>
+
+                  {/* Bars */}
+                  {rows.map((row, index) => {
+                    if (!row.startDate) return null;
+                    const eDate = row.endDate || row.startDate;
+                    const left = differenceInDays(row.startDate, minDate) * DAY_WIDTH;
+                    const width = (differenceInDays(eDate, row.startDate) + 1) * DAY_WIDTH;
+
+                    let barColor = 'bg-slate-500';
+                    if (row.type === 'Release') {
+                      barColor = 'bg-primary';
+                    } else {
+                      const item = row.originalItem as Story;
+                      const sysId = item.impactedSystemId || item.impactedSystemIds?.[0];
+                      if (sysId && impactedSystems) {
+                        const idx = impactedSystems.findIndex(s => s.id === sysId);
+                        barColor = idx >= 0 ? SYSTEM_COLORS[idx % SYSTEM_COLORS.length]
+                          : (row.type === 'Requirement' ? 'bg-blue-500' : 'bg-green-500');
+                      } else {
+                        barColor = row.type === 'Requirement' ? 'bg-blue-500' : 'bg-green-500';
+                      }
+                    }
+
+                    return (
+                      <div key={row.id} className="absolute flex items-center group"
+                        style={{ top: index * ROW_HEIGHT, height: ROW_HEIGHT, left }}>
+                        <div className={`relative flex items-center h-5 rounded-sm shadow-sm ${barColor}`} style={{ width }}>
+                          <div className="absolute top-0 left-0 h-full bg-white/20 rounded-l-sm"
+                            style={{ width: `${row.progress}%` }} />
+                        </div>
+                        <span className="ml-2 text-[10px] whitespace-nowrap text-muted-foreground hidden group-hover:block bg-background/80 px-1 rounded z-20">
+                          {row.title}{row.assigneeName ? ` (${row.assigneeName})` : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        </ResizablePanel>
-        
-        <ResizableHandle withHandle />
-
-        {/* Right Pane - Gantt Chart */}
-        <ResizablePanel 
-          ref={rightPanelRef}
-          defaultSize={55} 
-          minSize={20} 
-          collapsible={true}
-          onCollapse={() => setRightCollapsed(true)}
-          onExpand={() => setRightCollapsed(false)}
-        >
-          <div className="h-full flex flex-col bg-background overflow-hidden relative">
-           {/* Timeline Header */}
-           <div className="h-12 border-b bg-muted/30 flex overflow-hidden">
-             <div className="relative h-full" style={{ width: totalDays * DAY_WIDTH }}>
-                {/* Months */}
-                {/* Simplified timeline header for now: just Days */}
-                <div className="absolute top-0 w-full h-6 flex border-b">
-                   {/* We could group by month here */}
-                </div>
-                {/* Days */}
-                <div className="absolute bottom-0 w-full h-6 flex">
-                  {timelineDays.map((day, i) => (
-                    <div 
-                      key={i} 
-                      className="h-full border-r flex items-center justify-center text-[10px] text-muted-foreground"
-                      style={{ width: DAY_WIDTH }}
-                    >
-                      {format(day, 'd')}
-                    </div>
-                  ))}
-                </div>
-             </div>
-           </div>
-
-           {/* Timeline Body */}
-           <div 
-             className="flex-1 overflow-auto"
-             ref={rightPaneRef}
-             onScroll={(e) => handleScroll(e, 'right')}
-           >
-             <div 
-                className="relative" 
-                style={{ 
-                  width: totalDays * DAY_WIDTH, 
-                  height: rows.length * ROW_HEIGHT 
-                }}
-             >
-                {/* Grid Background */}
-                <div className="absolute inset-0 flex pointer-events-none">
-                  {timelineDays.map((day, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-full border-r ${isWeekend(day) ? 'bg-muted/30' : ''}`}
-                      style={{ width: DAY_WIDTH }}
-                    />
-                  ))}
-                </div>
-
-                {/* Predecessor Lines */}
-                <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
-                   {rows.map(row => {
-                     if (!row.predecessorId) return null;
-                     
-                     // Predecessor could be a requirement or subtask.
-                     // The ID saved in predecessorId is the story ID.
-                     // Our gantt IDs are prefixed with req- or sub-.
-                     let predId = `req-${row.predecessorId}`;
-                     let pCoords = coordinates[predId];
-                     if (!pCoords) {
-                        predId = `sub-${row.predecessorId}`;
-                        pCoords = coordinates[predId];
-                     }
-                     
-                     const cCoords = coordinates[row.id];
-
-                     if (!pCoords || !cCoords) return null;
-
-                     // Draw line from end of predecessor to start of current
-                     const startX = pCoords.x + pCoords.width;
-                     const startY = pCoords.y;
-                     const endX = cCoords.x;
-                     const endY = cCoords.y;
-
-                     return (
-                       <path 
-                         key={`link-${row.id}`}
-                         d={`M ${startX} ${startY} L ${startX + 10} ${startY} L ${startX + 10} ${endY} L ${endX} ${endY}`}
-                         fill="none"
-                         stroke="hsl(var(--muted-foreground))"
-                         strokeWidth="1.5"
-                         markerEnd="url(#arrow)"
-                       />
-                     );
-                   })}
-                   <defs>
-                     <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                       <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--muted-foreground))" />
-                     </marker>
-                   </defs>
-                </svg>
-
-                {/* Task Bars */}
-                {rows.map((row, index) => {
-                  if (!row.startDate) return null;
-                  const eDate = row.endDate || row.startDate;
-
-                  const leftOffset = differenceInDays(row.startDate, minDate) * DAY_WIDTH;
-                  // +1 to include the end date day fully
-                  const width = (differenceInDays(eDate, row.startDate) + 1) * DAY_WIDTH;
-
-                  let barColorClass = 'bg-slate-500';
-                  if (row.type === 'Release' || row.type === 'Stage') {
-                     barColorClass = 'bg-primary';
-                  } else if (row.type === 'Requirement' || row.type === 'SubTask') {
-                     const item = row.originalItem as Story;
-                     const systemId = item.impactedSystemId || (item.impactedSystemIds?.[0]);
-                     if (systemId && impactedSystems) {
-                        const sysIndex = impactedSystems.findIndex(sys => sys.id === systemId);
-                        if (sysIndex !== -1) {
-                           barColorClass = SYSTEM_COLORS[sysIndex % SYSTEM_COLORS.length];
-                        } else {
-                           barColorClass = row.type === 'Requirement' ? 'bg-blue-500' : 'bg-green-500';
-                        }
-                     } else {
-                        barColorClass = row.type === 'Requirement' ? 'bg-blue-500' : 'bg-green-500';
-                     }
-                  }
-
-                  return (
-                    <div 
-                      key={row.id}
-                      className="absolute group flex items-center"
-                      style={{ 
-                        top: index * ROW_HEIGHT, 
-                        height: ROW_HEIGHT,
-                        left: leftOffset,
-                      }}
-                    >
-                       {row.type === 'Milestone' ? (
-                         <div className="relative flex items-center justify-center" style={{ width: DAY_WIDTH }}>
-                            <div className="w-4 h-4 bg-slate-800 rotate-45 border border-white z-10" />
-                         </div>
-                       ) : (
-                         <div 
-                            className={`relative flex items-center h-5 rounded-sm shadow-sm ${barColorClass}`}
-                            style={{ width }}
-                         >
-                           {/* Progress indicator */}
-                           <div 
-                              className="absolute top-0 left-0 h-full bg-white/20 rounded-l-sm"
-                              style={{ width: `${row.progress}%` }}
-                           />
-                         </div>
-                       )}
-                       
-                       {/* Right label */}
-                       <span className="ml-2 text-xs whitespace-nowrap text-muted-foreground hidden group-hover:block z-20 bg-background/80 px-1 rounded">
-                          {row.title} {row.assigneeName ? `(${row.assigneeName})` : ''}
-                       </span>
-                    </div>
-                  )
-                })}
-             </div>
-           </div>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-        </div>
-      </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+        </div>{/* end absolute inset-0 */}
+      </div>{/* end flex-1 relative */}
     </div>
   );
 }

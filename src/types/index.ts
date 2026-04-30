@@ -36,6 +36,7 @@ export type StatusHistoryItem = {
 export type Story = {
   id: string;
   storyId: string;
+  sortOrder?: number; // Used for Gantt chart ordering within parent group
   title: string;
   description: string;
   itemType: WorkItemType;
@@ -268,6 +269,7 @@ export type ReleaseItemType = 'Release' | 'Stage' | 'Milestone';
 export type Release = {
   id: string;
   releaseId: string;
+  sortOrder?: number; // Used for Gantt chart ordering
   name: string;
   description: string;
   startDate?: string; // ISO String
