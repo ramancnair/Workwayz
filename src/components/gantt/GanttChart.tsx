@@ -1,27 +1,35 @@
 'use client';
 
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import {
   format, parseISO, differenceInDays, addDays,
   startOfWeek, endOfWeek, eachDayOfInterval, isWeekend, isSameDay,
 } from 'date-fns';
-import { PanelLeftClose, PanelLeft, PanelRightClose, PanelRight } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Plus, Scissors, Copy, ClipboardPaste, Trash2 } from 'lucide-react';
 import { Story, Release } from '@/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { GanttRow, SYSTEM_COLORS, ColKey, DEFAULT_COL_WIDTHS, DAY_WIDTH, ROW_HEIGHT } from './gantt-types';
 import { GanttLeftPanel } from './GanttLeftPanel';
+import { GanttContextMenu, ContextMenuAction } from './GanttContextMenu';
 
 export function GanttChart() {
   const {
     stories, releasesAndMilestones, holidays, weeklyOffDays,
-    employees, impactedSystems, updateStory, updateReleaseOrMilestone,
+    employees, impactedSystems,
+    updateStory, updateReleaseOrMilestone,
+    addStory, deleteStory, bulkDeleteStories,
+    addReleaseOrMilestone, deleteReleaseOrMilestone,
   } = useProject();
 
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [colWidths, setColWidths] = useState<Record<ColKey, number>>(DEFAULT_COL_WIDTHS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingCell, setEditingCell] = useState<{ rowId: string; field: string } | null>(null);
+  // Clipboard: holds copied/cut rows (in-memory, not system clipboard)
+  const [clipboard, setClipboard] = useState<{ mode: 'copy' | 'cut'; rows: GanttRow[] } | null>(null);
+  // Context menu
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const lastClickedIndex = useRef<number>(-1);
   const rightHeaderRef = useRef<HTMLDivElement>(null);
   const leftPaneRef = useRef<HTMLDivElement>(null);
@@ -30,6 +38,7 @@ export function GanttChart() {
   const rightPanelRef = useRef<any>(null);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // ─── Business days helper ────────────────────────────────────────────────
   const calcBizDays = useCallback((start: Date, end: Date): number => {
@@ -286,13 +295,194 @@ export function GanttChart() {
     return groups;
   }, [timelineDays]);
 
+  // ─── Row operations ──────────────────────────────────────────────────────
+
+  // Get the "primary" selected row (first selected, or last right-clicked)
+  const getSelectedRows = () => rows.filter(r => selectedIds.has(r.id));
+
+  const handleAddRow = async (below = true) => {
+    const sel = getSelectedRows();
+    const anchor = below ? sel[sel.length - 1] : sel[0];
+    if (!anchor) {
+      // No selection: add a blank Requirement under the first release
+      const firstRelease = rows.find(r => r.type === 'Release');
+      if (firstRelease && addStory) {
+        await addStory({
+          title: 'New Task',
+          itemType: 'Requirement/Story',
+          status: 'To Do',
+          releaseId: firstRelease.originalItem.id,
+          sortOrder: rows.length + 1,
+          isDeleted: false, deletedAt: null,
+        } as any);
+      }
+      return;
+    }
+
+    if (anchor.type === 'Release') {
+      if (addReleaseOrMilestone) {
+        await addReleaseOrMilestone({
+          title: 'New Release',
+          itemType: 'Release',
+          sortOrder: (anchor.originalItem as Release).sortOrder ?? 0 + (below ? 1 : 0),
+        } as any);
+      }
+    } else if (anchor.type === 'Requirement') {
+      if (addStory) {
+        const rel = rows.find(r => r.type === 'Release' && r.childrenIds.some(c => c === anchor.id));
+        await addStory({
+          title: 'New Task',
+          itemType: 'Requirement/Story',
+          status: 'To Do',
+          releaseId: rel ? rel.originalItem.id : (anchor.originalItem as Story).releaseId,
+          sortOrder: (anchor.originalItem as Story).sortOrder ?? 0 + (below ? 1 : 0),
+          isDeleted: false, deletedAt: null,
+        } as any);
+      }
+    } else {
+      // SubTask
+      if (addStory) {
+        const parent = anchor.originalItem as Story;
+        await addStory({
+          title: 'New Sub-Task',
+          itemType: 'Sub Task',
+          status: 'To Do',
+          parentStoryId: parent.parentStoryId ?? parent.id,
+          releaseId: parent.releaseId,
+          sortOrder: parent.sortOrder ?? 0 + (below ? 1 : 0),
+          isDeleted: false, deletedAt: null,
+        } as any);
+      }
+    }
+  };
+
+  const handleDeleteRows = async () => {
+    if (selectedIds.size === 0) return;
+    const sel = getSelectedRows();
+    const storyIds = sel.filter(r => r.type !== 'Release').map(r => r.originalItem.id);
+    const releaseIds = sel.filter(r => r.type === 'Release').map(r => r.originalItem.id);
+    const ops: Promise<any>[] = [];
+    if (storyIds.length > 0 && bulkDeleteStories) ops.push(bulkDeleteStories(storyIds));
+    releaseIds.forEach(id => { if (deleteReleaseOrMilestone) ops.push(deleteReleaseOrMilestone(id)); });
+    await Promise.all(ops);
+    setSelectedIds(new Set());
+  };
+
+  const handleCopyRows = () => {
+    const sel = getSelectedRows();
+    if (sel.length === 0) return;
+    setClipboard({ mode: 'copy', rows: sel });
+  };
+
+  const handleCutRows = () => {
+    const sel = getSelectedRows();
+    if (sel.length === 0) return;
+    setClipboard({ mode: 'cut', rows: sel });
+  };
+
+  const handlePasteRows = async () => {
+    if (!clipboard || clipboard.rows.length === 0) return;
+    const anchor = getSelectedRows()[0] ?? rows[rows.length - 1];
+    const targetReleaseId = anchor?.type === 'Release'
+      ? anchor.originalItem.id
+      : (anchor?.originalItem as Story)?.releaseId ?? rows.find(r => r.type === 'Release')?.originalItem.id;
+
+    const ops: Promise<any>[] = [];
+    for (const r of clipboard.rows) {
+      if (r.type === 'Release') continue; // don't paste releases
+      const src = r.originalItem as Story;
+      if (addStory) {
+        ops.push(addStory({
+          title: clipboard.mode === 'copy' ? `Copy of ${src.title}` : src.title,
+          itemType: src.itemType,
+          status: 'To Do',
+          releaseId: targetReleaseId,
+          parentStoryId: src.itemType === 'Sub Task' ? src.parentStoryId : undefined,
+          effortDays: src.effortDays,
+          isDeleted: false, deletedAt: null,
+        } as any));
+      }
+    }
+
+    if (clipboard.mode === 'cut') {
+      // Delete originals after paste
+      const storyIds = clipboard.rows.filter(r => r.type !== 'Release').map(r => r.originalItem.id);
+      if (storyIds.length > 0 && bulkDeleteStories) ops.push(bulkDeleteStories(storyIds));
+      setClipboard(null);
+    }
+    await Promise.all(ops);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, rowId: string) => {
+    // Ensure right-clicked row is selected
+    if (!selectedIds.has(rowId)) {
+      setSelectedIds(new Set([rowId]));
+      lastClickedIndex.current = rows.findIndex(r => r.id === rowId);
+    }
+    setCtxMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  // ─── Keyboard shortcuts ──────────────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (editingCell) return; // don't intercept while editing
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key === 'c') { e.preventDefault(); handleCopyRows(); }
+      if (ctrl && e.key === 'x') { e.preventDefault(); handleCutRows(); }
+      if (ctrl && e.key === 'v') { e.preventDefault(); handlePasteRows(); }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedIds.size > 0 && document.activeElement?.tagName !== 'INPUT') {
+          e.preventDefault(); handleDeleteRows();
+        }
+      }
+      if (e.key === 'Insert' || (ctrl && e.key === 'Enter')) { e.preventDefault(); handleAddRow(true); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingCell, selectedIds, rows, clipboard]);
+
+  // ─── Context menu actions ─────────────────────────────────────────────────
+  const ctxActions: ContextMenuAction[] = [
+    { label: 'Add Row Below',  icon: <Plus className="w-3.5 h-3.5" />,            shortcut: 'Insert',  onClick: () => handleAddRow(true) },
+    { label: 'Add Row Above',  icon: <Plus className="w-3.5 h-3.5" />,            shortcut: '',        onClick: () => handleAddRow(false) },
+    { label: 'Cut',            icon: <Scissors className="w-3.5 h-3.5" />,        shortcut: 'Ctrl+X',  divider: true, disabled: selectedIds.size === 0, onClick: handleCutRows },
+    { label: 'Copy',           icon: <Copy className="w-3.5 h-3.5" />,            shortcut: 'Ctrl+C',  disabled: selectedIds.size === 0, onClick: handleCopyRows },
+    { label: 'Paste',          icon: <ClipboardPaste className="w-3.5 h-3.5" />,  shortcut: 'Ctrl+V',  disabled: !clipboard, onClick: handlePasteRows },
+    { label: 'Delete',         icon: <Trash2 className="w-3.5 h-3.5" />,          shortcut: 'Del',     divider: true, disabled: selectedIds.size === 0, danger: true, onClick: handleDeleteRows },
+  ];
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-background border rounded-md shadow-sm overflow-hidden">
+    <div ref={containerRef} className="flex flex-col h-full bg-background border rounded-md shadow-sm overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center justify-between border-b px-3 bg-muted/20 h-10 shrink-0">
         <span className="text-sm font-semibold">Project Schedule</span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
+          {/* Row operation buttons */}
+          <div className="flex items-center gap-0.5 mr-2 border-r border-border pr-2">
+            <button onClick={() => handleAddRow(true)} title="Add Row (Insert)"
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground">
+              <Plus className="h-4 w-4" />
+            </button>
+            <button onClick={handleCutRows} disabled={selectedIds.size === 0} title="Cut (Ctrl+X)"
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground disabled:opacity-40">
+              <Scissors className="h-4 w-4" />
+            </button>
+            <button onClick={handleCopyRows} disabled={selectedIds.size === 0} title="Copy (Ctrl+C)"
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground disabled:opacity-40">
+              <Copy className="h-4 w-4" />
+            </button>
+            <button onClick={handlePasteRows} disabled={!clipboard} title="Paste (Ctrl+V)"
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground disabled:opacity-40">
+              <ClipboardPaste className="h-4 w-4" />
+            </button>
+            <button onClick={handleDeleteRows} disabled={selectedIds.size === 0} title="Delete (Del)"
+              className="p-1.5 rounded hover:bg-destructive/10 hover:text-destructive text-muted-foreground disabled:opacity-40">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+          {/* Panel toggles */}
           <button onClick={toggleLeftPanel} className="p-1.5 rounded hover:bg-muted text-muted-foreground"
             title={leftCollapsed ? 'Show Table' : 'Hide Table'}>
             {leftCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
@@ -313,9 +503,16 @@ export function GanttChart() {
               onCollapse={() => setLeftCollapsed(true)} onExpand={() => setLeftCollapsed(false)}>
               <div className="h-full overflow-hidden">
                 <GanttLeftPanel
-                  rows={rows} selectedIds={selectedIds} editingCell={editingCell}
+                  rows={rows.map(r => ({
+                    ...r,
+                    // Visual indicator for cut rows
+                    title: clipboard?.mode === 'cut' && clipboard.rows.some(c => c.id === r.id)
+                      ? `✂ ${r.title}` : r.title,
+                  }))}
+                  selectedIds={selectedIds} editingCell={editingCell}
                   colWidths={colWidths}
                   onSelect={handleSelect}
+                  onContextMenu={handleContextMenu}
                   onDoubleClick={handleDoubleClick}
                   onCellBlur={handleCellBlur}
                   onToggleExpand={toggleExpand}
@@ -431,6 +628,15 @@ export function GanttChart() {
         </ResizablePanelGroup>
         </div>{/* end absolute inset-0 */}
       </div>{/* end flex-1 relative */}
+
+      {/* Context menu — rendered inside main div so it clips to viewport via fixed positioning in the component */}
+      {ctxMenu && (
+        <GanttContextMenu
+          x={ctxMenu.x} y={ctxMenu.y}
+          actions={ctxActions}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </div>
   );
 }

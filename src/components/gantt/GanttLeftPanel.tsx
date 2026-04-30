@@ -10,6 +10,7 @@ interface Props {
   editingCell: { rowId: string; field: string } | null;
   colWidths: Record<ColKey, number>;
   onSelect: (id: string, e: React.MouseEvent, index: number) => void;
+  onContextMenu: (e: React.MouseEvent, rowId: string) => void;
   onDoubleClick: (rowId: string, field: string) => void;
   onCellBlur: (rowId: string, field: string, value: string) => void;
   onToggleExpand: (id: string) => void;
@@ -71,7 +72,7 @@ function Cell({ width, col, onResize, onDblClick, children, center }: {
 
 export function GanttLeftPanel({
   rows, selectedIds, editingCell, colWidths,
-  onSelect, onDoubleClick, onCellBlur, onToggleExpand, onColResize,
+  onSelect, onContextMenu, onDoubleClick, onCellBlur, onToggleExpand, onColResize,
   scrollRef, onScroll,
 }: Props) {
   const totalWidth = Object.values(colWidths).reduce((s, w) => s + w, 0);
@@ -152,6 +153,7 @@ export function GanttLeftPanel({
                   style={{ height: ROW_HEIGHT }}
                   className={`${rowBg} border-b border-border cursor-pointer hover:bg-primary/5 select-none ${isSelected ? 'outline outline-1 outline-primary/50' : ''}`}
                   onClick={(e) => onSelect(row.id, e, index)}
+                  onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, row.id); }}
                 >
                   {/* WBS */}
                   <Cell width={colWidths.wbs} col="wbs" onResize={onColResize} center>
