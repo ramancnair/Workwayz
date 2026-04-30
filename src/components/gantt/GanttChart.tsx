@@ -34,8 +34,20 @@ export interface GanttRow {
   originalItem: Story | Release;
 }
 
+const SYSTEM_COLORS = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-yellow-500',
+  'bg-indigo-500',
+  'bg-orange-500',
+  'bg-teal-500',
+  'bg-cyan-500',
+];
+
 export function GanttChart() {
-  const { stories, releasesAndMilestones, projectSettings, holidays, weeklyOffDays, employees } = useProject();
+  const { stories, releasesAndMilestones, projectSettings, holidays, weeklyOffDays, employees, impactedSystems } = useProject();
   
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   
@@ -725,6 +737,24 @@ export function GanttChart() {
                   // +1 to include the end date day fully
                   const width = (differenceInDays(eDate, row.startDate) + 1) * DAY_WIDTH;
 
+                  let barColorClass = 'bg-slate-500';
+                  if (row.type === 'Release' || row.type === 'Stage') {
+                     barColorClass = 'bg-primary';
+                  } else if (row.type === 'Requirement' || row.type === 'SubTask') {
+                     const item = row.originalItem as Story;
+                     const systemId = item.impactedSystemId || (item.impactedSystemIds?.[0]);
+                     if (systemId && impactedSystems) {
+                        const sysIndex = impactedSystems.findIndex(sys => sys.id === systemId);
+                        if (sysIndex !== -1) {
+                           barColorClass = SYSTEM_COLORS[sysIndex % SYSTEM_COLORS.length];
+                        } else {
+                           barColorClass = row.type === 'Requirement' ? 'bg-blue-500' : 'bg-green-500';
+                        }
+                     } else {
+                        barColorClass = row.type === 'Requirement' ? 'bg-blue-500' : 'bg-green-500';
+                     }
+                  }
+
                   return (
                     <div 
                       key={row.id}
@@ -741,11 +771,7 @@ export function GanttChart() {
                          </div>
                        ) : (
                          <div 
-                            className={`relative flex items-center h-5 rounded-sm shadow-sm ${
-                              row.type === 'Release' ? 'bg-primary' : 
-                              row.type === 'Requirement' ? 'bg-blue-500' : 
-                              'bg-green-500'
-                            }`}
+                            className={`relative flex items-center h-5 rounded-sm shadow-sm ${barColorClass}`}
                             style={{ width }}
                          >
                            {/* Progress indicator */}
