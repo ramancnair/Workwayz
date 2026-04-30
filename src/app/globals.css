@@ -156,44 +156,61 @@ body {
     --shadow-strength: 25%;
   }
 
+  /* ── Blue Combo: dark navy + periwinkle ── */
   .blue {
-    --background: 200 65% 94%;
-    --foreground: 200 90% 15%;
-    --card: 200 60% 98%;
-    --card-foreground: 200 90% 15%;
-    --popover: 200 60% 98%;
-    --popover-foreground: 200 90% 15%;
-    --primary: 200 85% 45%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 200 70% 85%;
-    --secondary-foreground: 200 90% 20%;
-    --muted: 200 65% 87%;
-    --muted-foreground: 200 85% 35%;
-    --accent: 200 75% 85%;
-    --accent-foreground: 200 90% 20%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 200 60% 78%;
-    --input: 200 60% 85%;
-    --ring: 200 85% 45%;
-    --topbar-background: 200 80% 40%;
-    --topbar-foreground: 0 0% 100%;
-    --chart-1: 200 85% 45%;
-    --chart-2: 190 70% 40%;
-    --chart-3: 205 80% 50%;
-    --chart-4: 180 60% 35%;
-    --chart-5: 220 50% 60%;
-    --sidebar-background: 200 80% 40%;
-    --sidebar-foreground: 200 50% 92%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 200 80% 40%;
-    --sidebar-accent: 200 70% 48%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 200 80% 30%;
-    --sidebar-ring: 0 0% 100%;
+    /* Main surfaces — dark navy (right swatch of the circled combo) */
+    --background:         237 52% 14%;   /* #121638 – deep navy          */
+    --foreground:         230 50% 94%;   /* near-white                   */
 
-    --shadow-color: 200 80% 20%;
-    --shadow-strength: 8%;
+    --card:               237 48% 19%;   /* #191F4A – slightly lighter   */
+    --card-foreground:    230 50% 94%;
+
+    --popover:            237 48% 19%;
+    --popover-foreground: 230 50% 94%;
+
+    /* Primary — periwinkle (left swatch of the circled combo) */
+    --primary:            234 55% 62%;   /* #6268CB – periwinkle blue    */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:          237 44% 27%;   /* #252B62 – mid navy           */
+    --secondary-foreground: 230 50% 94%;
+
+    --muted:              237 44% 25%;
+    --muted-foreground:   230 30% 62%;
+
+    --accent:             237 44% 27%;
+    --accent-foreground:  230 50% 94%;
+
+    --destructive:        0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border:             237 40% 28%;
+    --input:              237 44% 30%;   /* mid-navy — visible on dark sidebar */
+    --ring:               234 55% 62%;
+
+    /* Topbar — darkest layer */
+    --topbar-background:  237 62% 9%;
+    --topbar-foreground:  230 50% 92%;
+
+    /* Charts */
+    --chart-1: 234 55% 62%;
+    --chart-2: 210 65% 55%;
+    --chart-3: 250 50% 65%;
+    --chart-4: 200 70% 58%;
+    --chart-5: 220 60% 50%;
+
+    /* Sidebar — darkest layer, same as topbar */
+    --sidebar-background:         237 62% 9%;
+    --sidebar-foreground:         230 50% 90%;
+    --sidebar-primary:            234 55% 62%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:             237 50% 20%;
+    --sidebar-accent-foreground:  230 50% 94%;
+    --sidebar-border:             237 55% 14%;
+    --sidebar-ring:               234 55% 62%;
+
+    --shadow-color: 237 70% 4%;
+    --shadow-strength: 35%;
   }
 }
 
@@ -214,5 +231,25 @@ body {
 
   input[type=number] {
     -moz-appearance: textfield;
+  }
+
+  /* ── Sidebar input visibility fix ─────────────────────────────────────
+     Shadcn Input uses bg-background which is the page background.
+     Inside the near-black sidebar, these appear invisible.
+     Override: use sidebar-accent (mid-navy) as the input surface.    */
+  [data-sidebar] input,
+  [data-sidebar] select,
+  [data-sidebar] textarea,
+  aside input,
+  aside select,
+  aside textarea {
+    background-color: hsl(var(--sidebar-accent)) !important;
+    border-color:     hsl(var(--sidebar-border, var(--border))) !important;
+    color:            hsl(var(--sidebar-foreground)) !important;
+  }
+
+  [data-sidebar] input::placeholder,
+  aside input::placeholder {
+    color: hsl(var(--muted-foreground));
   }
 }
