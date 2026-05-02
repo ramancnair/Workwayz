@@ -362,7 +362,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
 
   const getCollectionsForPage = useCallback((path: string): CollectionName[] => {
       const pageKey = Object.keys(pageToCollectionMap).find(key => path.endsWith(key));
-      const baseCollections: CollectionName[] = ['project', 'settings'];
+      const baseCollections: CollectionName[] = ['project', 'settings', 'kanbanColumns'];
       if (!pageKey) return baseCollections;
       const mappedCollections = pageToCollectionMap[pageKey] || [];
       return [...new Set([...baseCollections, ...mappedCollections])];

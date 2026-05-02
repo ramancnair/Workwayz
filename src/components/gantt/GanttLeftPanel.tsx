@@ -95,7 +95,8 @@ export function GanttLeftPanel({
     { label: 'WBS', col: 'wbs', center: true },
     { label: 'Task Name', col: 'name' },
     { label: 'Pred.', col: 'predecessor', center: true },
-    { label: 'Days', col: 'duration', center: true },
+    { label: 'Effort', col: 'effort', center: true },
+    { label: 'Duration', col: 'scheduleDuration', center: true },
     { label: 'Start', col: 'start', center: true },
     { label: 'Finish', col: 'end', center: true },
   ];
@@ -204,21 +205,28 @@ export function GanttLeftPanel({
                     )}
                   </Cell>
 
-                  {/* Duration */}
+                  {/* Effort (editable — saves to effortDays) */}
                   <Cell
-                    width={colWidths.duration} col="duration" onResize={onColResize} center
-                    onDblClick={(e) => { e.stopPropagation(); if (!isRelease) onDoubleClick(row.id, 'duration'); }}
+                    width={colWidths.effort} col="effort" onResize={onColResize} center
+                    onDblClick={(e) => { e.stopPropagation(); if (!isRelease) onDoubleClick(row.id, 'effort'); }}
                   >
-                    {isEditing(row.id, 'duration') && !isRelease ? (
+                    {isEditing(row.id, 'effort') && !isRelease ? (
                       <CellInput
                         value={row.duration?.toString() ?? ''}
-                        width={colWidths.duration - 8}
+                        width={colWidths.effort - 8}
                         type="number"
                         onBlur={(v) => onCellBlur(row.id, 'effortDays', v)}
                       />
                     ) : (
                       <span className="text-muted-foreground">{row.duration != null ? `${row.duration}d` : ''}</span>
                     )}
+                  </Cell>
+
+                  {/* Duration (read-only — max of children for stories, same as effort for leaves) */}
+                  <Cell width={colWidths.scheduleDuration} col="scheduleDuration" onResize={onColResize} center>
+                    <span className="text-muted-foreground">
+                      {row.scheduleDuration != null ? `${row.scheduleDuration}d` : ''}
+                    </span>
                   </Cell>
 
                   {/* Start */}

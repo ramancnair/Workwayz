@@ -3,10 +3,12 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import {
-  format, parseISO, differenceInDays, addDays,
+  format, parseISO, differenceInDays, addDays, startOfDay,
   startOfWeek, endOfWeek, eachDayOfInterval, isWeekend, isSameDay,
 } from 'date-fns';
-import { PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Plus, Scissors, Copy, ClipboardPaste, Trash2 } from 'lucide-react';
+import { PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Plus, Scissors, Copy, ClipboardPaste, Trash2, Wand2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Story, Release } from '@/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { GanttRow, SYSTEM_COLORS, ColKey, DEFAULT_COL_WIDTHS, DAY_WIDTH, ROW_HEIGHT } from './gantt-types';
@@ -16,11 +18,13 @@ import { GanttContextMenu, ContextMenuAction } from './GanttContextMenu';
 export function GanttChart() {
   const {
     stories, releasesAndMilestones, holidays, weeklyOffDays,
-    employees, impactedSystems,
+    employees, impactedSystems, projectSettings,
     updateStory, updateReleaseOrMilestone,
     addStory, deleteStory, bulkDeleteStories,
     addReleaseOrMilestone, deleteReleaseOrMilestone,
   } = useProject();
+
+  const hoursPerDay = projectSettings?.manDayToHours ?? 8;
 
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [colWidths, setColWidths] = useState<Record<ColKey, number>>(DEFAULT_COL_WIDTHS);
@@ -39,6 +43,9 @@ export function GanttChart() {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [autogenOpen, setAutogenOpen] = useState(false);
+  const [autogenStartDate, setAutogenStartDate] = useState('');
+  const [autogenLoading, setAutogenLoading] = useState(false);
 
   // ─── Business days helper ────────────────────────────────────────────────
   const calcBizDays = useCallback((start: Date, end: Date): number => {
@@ -57,6 +64,37 @@ export function GanttChart() {
       .filter(r => r.itemType === 'Release')
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
+    // Sub-task effort in days
+    const getSubEffort = (s: Story): number =>
+      s.effortDays ?? (s.estimatedHours != null ? Math.ceil(s.estimatedHours / hoursPerDay) : 0);
+
+    // Story is "finalised" (ready for dev) — matches the green-check logic used in
+    // grooming/backlog/kanban: must have hours, and every impacted system covered by a sub-task.
+    const isFinalised = (req: Story, subTasks: Story[]): boolean => {
+      if (!req.estimatedHours || req.estimatedHours <= 0) return false;
+      if (!req.impactedSystemIds || req.impactedSystemIds.length === 0) return true;
+      const covered = new Set(subTasks.map(s => s.impactedSystemId).filter(Boolean));
+      return req.impactedSystemIds.every(id => covered.has(id));
+    };
+
+    // Critical path: sub-tasks sharing an assignee or impacted system are sequential.
+    // Duration = max(sum-by-assignee, sum-by-system, max-of-ungrouped).
+    const computeStoryDuration = (subTasks: Story[]): number => {
+      if (subTasks.length === 0) return 0;
+      const byAssignee = new Map<string, number>();
+      const bySystem = new Map<string, number>();
+      let ungroupedMax = 0;
+      for (const s of subTasks) {
+        const e = getSubEffort(s);
+        if (s.assigneeId) byAssignee.set(s.assigneeId, (byAssignee.get(s.assigneeId) ?? 0) + e);
+        if (s.impactedSystemId) bySystem.set(s.impactedSystemId, (bySystem.get(s.impactedSystemId) ?? 0) + e);
+        if (!s.assigneeId && !s.impactedSystemId) ungroupedMax = Math.max(ungroupedMax, e);
+      }
+      const maxA = byAssignee.size > 0 ? Math.max(...byAssignee.values()) : 0;
+      const maxS = bySystem.size > 0 ? Math.max(...bySystem.values()) : 0;
+      return Math.max(maxA, maxS, ungroupedMax);
+    };
+
     let releaseWbsIdx = 0;
 
     for (const release of releases) {
@@ -64,7 +102,6 @@ export function GanttChart() {
       const releaseId = `release-${release.id}`;
       const releaseWbs = `${releaseWbsIdx}`;
 
-      // Requirements that belong to this release (no parentStoryId)
       const reqs = nonBug
         .filter(s =>
           s.releaseId === release.id &&
@@ -77,21 +114,25 @@ export function GanttChart() {
       const reqIds: string[] = [];
       const reqRows: GanttRow[] = [];
       let reqIdx = 0;
+      let releaseEffortSum = 0;
+      let releaseDurationSum = 0;
 
       for (const req of reqs) {
+        // Sub-tasks (Sub Task only — bugs are excluded by the type filter)
+        const subs = nonBug
+          .filter(s => s.parentStoryId === req.id && s.itemType === 'Sub Task')
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+        // Only display finalised stories
+        if (!isFinalised(req, subs)) continue;
+
         reqIdx++;
         const reqId = `req-${req.id}`;
         const reqWbs = `${releaseWbs}.${reqIdx}`;
         reqIds.push(reqId);
 
-        // Sub-tasks
-        const subs = nonBug
-          .filter(s => s.parentStoryId === req.id && s.itemType === 'Sub Task')
-          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-
         let rStart: Date | null = req.startDate ? parseISO(req.startDate) : null;
         let rEnd: Date | null = req.endDate ? parseISO(req.endDate) : null;
-        let rEffort = req.estimatedHours ?? 0;
         const subIds: string[] = [];
         const subRows: GanttRow[] = [];
         let subIdx = 0;
@@ -102,14 +143,15 @@ export function GanttChart() {
           const sEnd = sub.endDate ? parseISO(sub.endDate) : null;
           if (sStart && (!rStart || sStart < rStart)) rStart = sStart;
           if (sEnd && (!rEnd || sEnd > rEnd)) rEnd = sEnd;
-          rEffort += sub.estimatedHours ?? 0;
           const emp = employees.find(e => e.id === sub.assigneeId);
           const subId = `sub-${sub.id}`;
           subIds.push(subId);
+          const subEffort = getSubEffort(sub);
           subRows.push({
             id: subId, type: 'SubTask', wbs: `${reqWbs}.${subIdx}`,
             title: sub.title, startDate: sStart, endDate: sEnd,
-            duration: sStart && sEnd ? calcBizDays(sStart, sEnd) : null,
+            duration: subEffort || null,
+            scheduleDuration: subEffort || null,
             estimatedHours: sub.estimatedHours ?? null,
             status: sub.status,
             assigneeName: emp ? `${emp.firstName} ${emp.lastName}` : undefined,
@@ -123,11 +165,22 @@ export function GanttChart() {
         if (rStart && (!relMinStart || rStart < relMinStart)) relMinStart = rStart;
         if (rEnd && (!relMaxEnd || rEnd > relMaxEnd)) relMaxEnd = rEnd;
 
+        // Effort = sum of sub-task efforts; for childless stories, the story's own effort
+        const ownEffort = req.estimatedHours != null ? Math.ceil(req.estimatedHours / hoursPerDay) : 0;
+        const reqEffort = subs.length > 0
+          ? subs.reduce((sum, s) => sum + getSubEffort(s), 0)
+          : ownEffort;
+
+        // Duration = critical path; for childless stories, same as effort
+        const reqDuration = subs.length > 0 ? computeStoryDuration(subs) : ownEffort;
+
         const reqRow: GanttRow = {
           id: reqId, type: 'Requirement', wbs: reqWbs,
           title: req.title, startDate: rStart, endDate: rEnd,
-          duration: rStart && rEnd ? calcBizDays(rStart, rEnd) : null,
-          estimatedHours: rEffort, status: req.status,
+          duration: reqEffort || null,
+          scheduleDuration: reqDuration || null,
+          estimatedHours: req.estimatedHours ?? 0,
+          status: req.status,
           progress: req.status === 'Done' ? 100 : req.status === 'In Progress' ? 50 : 0,
           predecessorId: req.predecessorId,
           parentId: releaseId, isExpanded: expandedRows[reqId] ?? false,
@@ -136,13 +189,19 @@ export function GanttChart() {
         };
         reqRows.push(reqRow);
         if (reqRow.isExpanded) reqRows.push(...subRows);
+
+        releaseEffortSum += reqEffort;
+        releaseDurationSum += reqDuration;
       }
 
+      // Release effort = sum of story efforts; duration = sum of story durations
+      // (stories cascade sequentially, so calendar time accumulates)
       const releaseRow: GanttRow = {
         id: releaseId, type: 'Release', wbs: releaseWbs,
         title: release.name,
         startDate: relMinStart, endDate: relMaxEnd,
-        duration: relMinStart && relMaxEnd ? calcBizDays(relMinStart, relMaxEnd) : null,
+        duration: releaseEffortSum > 0 ? releaseEffortSum : null,
+        scheduleDuration: releaseDurationSum > 0 ? releaseDurationSum : null,
         estimatedHours: null,
         status: release.isCompleted ? 'Done' : 'In Progress',
         progress: 0, parentId: undefined,
@@ -155,7 +214,7 @@ export function GanttChart() {
       if (releaseRow.isExpanded) result.push(...reqRows);
     }
     return result;
-  }, [stories, releasesAndMilestones, expandedRows, employees, calcBizDays]);
+  }, [stories, releasesAndMilestones, expandedRows, employees, calcBizDays, hoursPerDay]);
 
   // ─── Timeline bounds ─────────────────────────────────────────────────────
   const { minDate, maxDate, totalDays, timelineDays } = useMemo(() => {
@@ -452,6 +511,133 @@ export function GanttChart() {
     { label: 'Delete',         icon: <Trash2 className="w-3.5 h-3.5" />,          shortcut: 'Del',     divider: true, disabled: selectedIds.size === 0, danger: true, onClick: handleDeleteRows },
   ];
 
+  // ─── Autogen Dates ───────────────────────────────────────────────────────
+  const handleAutogenDates = useCallback(async () => {
+    if (!autogenStartDate || !updateStory) return;
+    setAutogenLoading(true);
+    try {
+      const hdDates = holidays.map(h => parseISO(h.date));
+
+      const nextBizDay = (date: Date): Date => {
+        let next = addDays(date, 1);
+        while (weeklyOffDays.includes(next.getDay()) || hdDates.some(h => isSameDay(h, next)))
+          next = addDays(next, 1);
+        return next;
+      };
+
+      // Returns the date that is `n` additional business days after `start` (n=0 → same day)
+      const endFromStart = (start: Date, n: number): Date => {
+        let remaining = Math.max(n, 0);
+        let cur = start;
+        while (remaining > 0) {
+          cur = addDays(cur, 1);
+          if (!weeklyOffDays.includes(cur.getDay()) && !hdDates.some(h => isSameDay(h, cur)))
+            remaining--;
+        }
+        return cur;
+      };
+
+      // Snap to next valid business day if start falls on weekend/holiday
+      let devStart = startOfDay(new Date(autogenStartDate + 'T00:00:00'));
+      while (weeklyOffDays.includes(devStart.getDay()) || hdDates.some(h => isSameDay(h, devStart)))
+        devStart = addDays(devStart, 1);
+
+      // Sub-task effort in days (mirror of the rows-builder helper)
+      const getSubEffort = (s: Story): number =>
+        s.effortDays ?? (s.estimatedHours != null ? Math.ceil(s.estimatedHours / hoursPerDay) : 0);
+
+      // Build units from `rows` (already filtered to finalised stories) but pull each
+      // story's sub-tasks from RAW data so collapsed stories' children also get scheduled.
+      type StoryUnit = { reqRow: GanttRow; subTasks: Story[] };
+      const units: StoryUnit[] = [];
+      const seenReqIds = new Set<string>();
+      for (const row of rows) {
+        if (row.type !== 'Requirement') continue;
+        if (seenReqIds.has(row.id)) continue;
+        seenReqIds.add(row.id);
+        const subTasks = stories
+          .filter(s =>
+            s.parentStoryId === row.originalItem.id &&
+            s.itemType === 'Sub Task' &&
+            !s.isDeleted
+          )
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        units.push({ reqRow: row, subTasks });
+      }
+
+      const endByReqId = new Map<string, Date>();
+      let prevEnd: Date | null = null;
+      let prevReqOriginalId: string | null = null;
+
+      for (const { reqRow, subTasks } of units) {
+        let effectivePrevEnd = prevEnd;
+        if (reqRow.predecessorId) {
+          const predUnit = units.find(u => u.reqRow.originalItem.id === reqRow.predecessorId);
+          if (predUnit && endByReqId.has(predUnit.reqRow.id))
+            effectivePrevEnd = endByReqId.get(predUnit.reqRow.id)!;
+        }
+
+        const storyStart = effectivePrevEnd ? nextBizDay(effectivePrevEnd) : devStart;
+        let storyEnd = storyStart;
+
+        if (subTasks.length > 0) {
+          // Critical-path scheduling within the story:
+          //   sub-tasks sharing an assignee or impacted system are sequential;
+          //   independent sub-tasks start in parallel at storyStart.
+          const lastEndByAssignee = new Map<string, Date>();
+          const lastEndBySystem = new Map<string, Date>();
+
+          for (const sub of subTasks) {
+            let subStart = storyStart;
+            if (sub.assigneeId && lastEndByAssignee.has(sub.assigneeId)) {
+              const candidate = nextBizDay(lastEndByAssignee.get(sub.assigneeId)!);
+              if (candidate > subStart) subStart = candidate;
+            }
+            if (sub.impactedSystemId && lastEndBySystem.has(sub.impactedSystemId)) {
+              const candidate = nextBizDay(lastEndBySystem.get(sub.impactedSystemId)!);
+              if (candidate > subStart) subStart = candidate;
+            }
+
+            const subEffort = getSubEffort(sub);
+            const subEnd = endFromStart(subStart, Math.max(0, subEffort - 1));
+
+            if (sub.assigneeId) lastEndByAssignee.set(sub.assigneeId, subEnd);
+            if (sub.impactedSystemId) lastEndBySystem.set(sub.impactedSystemId, subEnd);
+            if (subEnd > storyEnd) storyEnd = subEnd;
+
+            await updateStory(sub.id, {
+              startDate: subStart.toISOString(),
+              endDate: subEnd.toISOString(),
+            });
+          }
+
+          // Update the parent: span its children, set predecessor link
+          await updateStory(reqRow.originalItem.id, {
+            startDate: storyStart.toISOString(),
+            endDate: storyEnd.toISOString(),
+            predecessorId: prevReqOriginalId ?? '',
+          });
+        } else {
+          // Leaf story: schedule directly using its own duration
+          const duration = reqRow.scheduleDuration ?? reqRow.duration ?? 1;
+          storyEnd = endFromStart(storyStart, Math.max(0, duration - 1));
+          await updateStory(reqRow.originalItem.id, {
+            startDate: storyStart.toISOString(),
+            endDate: storyEnd.toISOString(),
+            predecessorId: prevReqOriginalId ?? '',
+          });
+        }
+
+        endByReqId.set(reqRow.id, storyEnd);
+        prevEnd = storyEnd;
+        prevReqOriginalId = reqRow.originalItem.id;
+      }
+    } finally {
+      setAutogenLoading(false);
+      setAutogenOpen(false);
+    }
+  }, [autogenStartDate, rows, stories, holidays, weeklyOffDays, updateStory, hoursPerDay]);
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div ref={containerRef} className="flex flex-col h-full bg-background border rounded-md shadow-sm overflow-hidden">
@@ -482,6 +668,12 @@ export function GanttChart() {
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
+          {/* Autogen Dates */}
+          <button onClick={() => setAutogenOpen(true)} title="Auto-generate dates from effort estimates"
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium hover:bg-muted text-muted-foreground border border-border mr-1">
+            <Wand2 className="h-3.5 w-3.5" />
+            Autogen Dates
+          </button>
           {/* Panel toggles */}
           <button onClick={toggleLeftPanel} className="p-1.5 rounded hover:bg-muted text-muted-foreground"
             title={leftCollapsed ? 'Show Table' : 'Hide Table'}>
@@ -637,6 +829,38 @@ export function GanttChart() {
           onClose={() => setCtxMenu(null)}
         />
       )}
+
+      {/* Autogen Dates Dialog */}
+      <Dialog open={autogenOpen} onOpenChange={setAutogenOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Auto-generate Dates</DialogTitle>
+            <DialogDescription>
+              Stories will be scheduled sequentially starting from the development start date,
+              using each item&apos;s estimated effort. Predecessor links are respected.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Development Start Date</label>
+              <input
+                type="date"
+                value={autogenStartDate}
+                onChange={e => setAutogenStartDate(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAutogenOpen(false)} disabled={autogenLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleAutogenDates} disabled={!autogenStartDate || autogenLoading}>
+              {autogenLoading ? 'Generating…' : 'Generate'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

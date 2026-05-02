@@ -9,7 +9,10 @@ export interface GanttRow {
   title: string;
   startDate: Date | null;
   endDate: Date | null;
+  /** Effort: total person-days (sum of all hours ÷ hoursPerDay for parents; own effort for leaves) */
   duration: number | null;
+  /** Duration: calendar days (max of children for parents running in parallel; same as effort for leaves) */
+  scheduleDuration: number | null;
   estimatedHours: number | null;
   status: string;
   assigneeName?: string;
@@ -28,11 +31,11 @@ export const SYSTEM_COLORS = [
   'bg-yellow-500','bg-indigo-500','bg-orange-500','bg-teal-500','bg-cyan-500',
 ];
 
-export const COL_KEYS = ['wbs','name','predecessor','duration','start','end'] as const;
+export const COL_KEYS = ['wbs','name','predecessor','effort','scheduleDuration','start','end'] as const;
 export type ColKey = typeof COL_KEYS[number];
 
 export const DEFAULT_COL_WIDTHS: Record<ColKey, number> = {
-  wbs: 60, name: 240, predecessor: 80, duration: 70, start: 100, end: 100,
+  wbs: 60, name: 240, predecessor: 80, effort: 70, scheduleDuration: 80, start: 100, end: 100,
 };
 
 export const DAY_WIDTH = 24;
