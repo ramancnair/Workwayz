@@ -68,6 +68,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     }
   };
 
+  const { open, setOpen } = useSidebarPersistedState();
+
   if (isLoading) {
     // You might want a more sophisticated loading skeleton here
     return <div className="flex h-screen w-full items-center justify-center">Loading project...</div>;
@@ -109,7 +111,6 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     );
   };
 
-  const { open, setOpen } = useSidebarPersistedState();
 
   return (
       <SidebarProvider open={open} onOpenChange={setOpen}>
