@@ -1,12 +1,18 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { openAI } from '@genkit-ai/compat-oai/openai';
+import { anthropic, claude35Sonnet, claude37Sonnet, claude3Opus, claude3Haiku, claude45Sonnet } from 'genkitx-anthropic';
 
 const provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'google';
-const defaultModel = process.env.AI_DEFAULT_MODEL || 'gemini-3-flash-preview';
+
+let fallbackModel = 'gemini-3-flash-preview';
+if (provider === 'openai') fallbackModel = 'gpt-4o';
+if (provider === 'anthropic') fallbackModel = 'claude-sonnet-4-6';
+
+let defaultModel = process.env.AI_DEFAULT_MODEL || fallbackModel;
 
 const plugins: any[] = [];
-let mappedModel = defaultModel;
+let mappedModel: any = defaultModel;
 
 if (provider === 'google') {
   if (process.env.GEMINI_API_KEY) {
@@ -14,17 +20,40 @@ if (provider === 'google') {
   } else {
     plugins.push(googleAI()); 
   }
-  if (!mappedModel.startsWith('googleai/')) {
+  if (typeof mappedModel === 'string' && !mappedModel.startsWith('googleai/')) {
     mappedModel = `googleai/${defaultModel}`;
   }
 } else if (provider === 'openai') {
   if (process.env.OPENAI_API_KEY) {
     plugins.push(openAI({ apiKey: process.env.OPENAI_API_KEY }));
   }
-  if (!mappedModel.startsWith('openai/')) {
+  if (typeof mappedModel === 'string' && !mappedModel.startsWith('openai/')) {
     mappedModel = `openai/${defaultModel}`;
   }
+} else if (provider === 'anthropic') {
+  if (process.env.ANTHROPIC_API_KEY) {
+    plugins.push(anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }));
+  }
+  
+  // Dynamically map the user's string to the correct ModelReference
+  let version = defaultModel;
+  
+  if (version.includes('sonnet-4-6') || version.includes('4-5-sonnet')) {
+    // There is no explicit claude46Sonnet export yet in this version of the plugin, 
+    // but the 4.5 schema perfectly maps the parameters.
+    mappedModel = claude45Sonnet.withVersion(version);
+  } else if (version.includes('3-7-sonnet')) {
+    mappedModel = claude37Sonnet.withVersion(version);
+  } else if (version.includes('opus')) {
+    mappedModel = claude3Opus.withVersion(version);
+  } else if (version.includes('haiku')) {
+    mappedModel = claude3Haiku.withVersion(version);
+  } else {
+    mappedModel = claude35Sonnet.withVersion(version);
+  }
 }
+
+export const activeModel = mappedModel;
 
 export const ai = genkit({
   plugins: plugins,

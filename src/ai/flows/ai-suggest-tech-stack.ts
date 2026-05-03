@@ -4,7 +4,7 @@
  * @fileOverview A Genkit flow for suggesting technology stacks based on a project summary.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, activeModel } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const TechStackSuggestionInputSchema = z.object({
@@ -38,6 +38,7 @@ export async function aiSuggestTechStack(input: TechStackSuggestionInput): Promi
 
 const prompt = ai.definePrompt({
   name: 'aiSuggestTechStackPrompt',
+  model: activeModel,
   input: { schema: TechStackSuggestionInputSchema },
   output: { schema: TechStackSuggestionOutputSchema },
   prompt: `You are an expert Solutions Architect.

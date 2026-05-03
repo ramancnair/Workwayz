@@ -23,9 +23,9 @@ interface AIConfig {
 }
 
 const defaultConfigs: Record<AIProvider, Partial<AIConfig>> = {
-    openai: { provider: 'openai', apiKey: '', model: 'gpt-4o' },
-    anthropic: { provider: 'anthropic', apiKey: '', model: 'claude-3-5-sonnet-20240620' },
-    google: { provider: 'google', apiKey: '', model: 'gemini-1.5-pro' },
+    openai: { provider: 'openai', apiKey: '', model: '' },
+    anthropic: { provider: 'anthropic', apiKey: '', model: '' },
+    google: { provider: 'google', apiKey: '', model: '' },
     lmstudio: { provider: 'lmstudio', baseUrl: 'http://localhost:1234/v1', model: 'local-model' },
     ollama: { provider: 'ollama', baseUrl: 'http://localhost:11434', model: 'llama3' },
 };
