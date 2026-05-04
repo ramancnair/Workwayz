@@ -1,6 +1,6 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import { openAI } from '@genkit-ai/compat-oai/openai';
+import { openAI, openAICompatible } from '@genkit-ai/compat-oai';
 import { anthropic, claude35Sonnet, claude37Sonnet, claude3Opus, claude3Haiku, claude45Sonnet } from 'genkitx-anthropic';
 
 const provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'google';
@@ -8,6 +8,7 @@ const provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'google';
 let fallbackModel = 'gemini-3-flash-preview';
 if (provider === 'openai') fallbackModel = 'gpt-4o';
 if (provider === 'anthropic') fallbackModel = 'claude-sonnet-4-6';
+if (provider === 'lmstudio') fallbackModel = 'local-model';
 
 let defaultModel = process.env.AI_DEFAULT_MODEL || fallbackModel;
 
@@ -29,6 +30,12 @@ if (provider === 'google') {
   }
   if (typeof mappedModel === 'string' && !mappedModel.startsWith('openai/')) {
     mappedModel = `openai/${defaultModel}`;
+  }
+} else if (provider === 'lmstudio') {
+  const baseUrl = process.env.LOCAL_AI_BASE_URL || 'http://localhost:1234/v1';
+  plugins.push(openAICompatible({ name: 'lmstudio', apiKey: 'lm-studio', baseURL: baseUrl }));
+  if (typeof mappedModel === 'string' && !mappedModel.startsWith('lmstudio/')) {
+    mappedModel = `lmstudio/${defaultModel}`;
   }
 } else if (provider === 'anthropic') {
   if (process.env.ANTHROPIC_API_KEY) {

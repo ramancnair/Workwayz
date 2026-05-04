@@ -40,7 +40,7 @@ const prompt = ai.definePrompt({
   name: 'aiSuggestTechStackPrompt',
   model: activeModel,
   input: { schema: TechStackSuggestionInputSchema },
-  output: { schema: TechStackSuggestionOutputSchema },
+  output: { format: 'json', schema: TechStackSuggestionOutputSchema },
   prompt: `You are an expert Solutions Architect.
 Based on the provided Project Summary below, suggest exactly 3 different, highly suitable technology stacks that could be used to build the system. 
 For each stack, provide a clear name, a brief description of why it's a good fit, and then decompose it into the individual impacted systems (e.g., Frontend, Backend API, Database, Auth system) specifying the technology for each.
