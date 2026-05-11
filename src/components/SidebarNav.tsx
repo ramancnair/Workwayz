@@ -151,14 +151,19 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Layers,
     },
     {
+      href: `${basePath}/waterfall/development-tasks`,
+      label: "Sub-Tasks",
+      icon: Component,
+    },
+    {
       href: `${basePath}/waterfall/gantt`,
       label: "Project Plan",
       icon: ListTree,
     },
     {
-      href: `${basePath}/waterfall/development-tasks`,
-      label: "Sub-Tasks",
-      icon: Component,
+      href: `${basePath}/waterfall/cpm`,
+      label: "CPM",
+      icon: Network,
     },
   ];
 
