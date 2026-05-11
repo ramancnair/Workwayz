@@ -1,21 +1,29 @@
 'use client';
 
-import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import {
   format, parseISO, differenceInDays, addDays, startOfDay,
   startOfWeek, endOfWeek, eachDayOfInterval, isWeekend, isSameDay,
 } from 'date-fns';
-import { PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Plus, Scissors, Copy, ClipboardPaste, Trash2, Wand2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SelectLabel } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Story, Release } from '@/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Plus, Scissors, Copy, ClipboardPaste, Trash2, Wand2, Filter } from 'lucide-react';
 import { GanttRow, SYSTEM_COLORS, ColKey, DEFAULT_COL_WIDTHS, DAY_WIDTH, ROW_HEIGHT } from './gantt-types';
 import { GanttLeftPanel } from './GanttLeftPanel';
 import { GanttContextMenu, ContextMenuAction } from './GanttContextMenu';
+import { StoryEditDialog } from '../kanban/StoryEditDialog';
 
-export function GanttChart() {
+export interface GanttChartRef {
+  openAutogenDialog: () => void;
+}
+
+export const GanttChart = forwardRef<GanttChartRef, {}>((props, ref) => {
   const {
     stories, releasesAndMilestones, holidays, weeklyOffDays,
     employees, impactedSystems, projectSettings,
@@ -34,6 +42,7 @@ export function GanttChart() {
   const [clipboard, setClipboard] = useState<{ mode: 'copy' | 'cut'; rows: GanttRow[] } | null>(null);
   // Context menu
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
   const lastClickedIndex = useRef<number>(-1);
   const rightHeaderRef = useRef<HTMLDivElement>(null);
   const leftPaneRef = useRef<HTMLDivElement>(null);
@@ -46,6 +55,14 @@ export function GanttChart() {
   const [autogenOpen, setAutogenOpen] = useState(false);
   const [autogenStartDate, setAutogenStartDate] = useState('');
   const [autogenLoading, setAutogenLoading] = useState(false);
+
+  const [levelFilter, setLevelFilter] = useState<'Requirement' | 'Sub Tasks'>('Sub Tasks');
+  const [entityTypeFilter, setEntityTypeFilter] = useState<'System' | 'Resource'>('System');
+  const [selectedEntities, setSelectedEntities] = useState<Set<string>>(new Set());
+
+  useImperativeHandle(ref, () => ({
+    openAutogenDialog: () => setAutogenOpen(true)
+  }));
 
   // ─── Business days helper ────────────────────────────────────────────────
   const calcBizDays = useCallback((start: Date, end: Date): number => {
@@ -119,12 +136,35 @@ export function GanttChart() {
 
       for (const req of reqs) {
         // Sub-tasks (Sub Task only — bugs are excluded by the type filter)
-        const subs = nonBug
+        const allSubs = nonBug
           .filter(s => s.parentStoryId === req.id && s.itemType === 'Sub Task')
           .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
         // Only display finalised stories
-        if (!isFinalised(req, subs)) continue;
+        if (!isFinalised(req, allSubs)) continue;
+
+        // Apply entity filter
+        let reqMatchesEntity = true;
+        let matchingSubs = allSubs;
+
+        if (levelFilter === 'Sub Tasks' && selectedEntities.size > 0) {
+          reqMatchesEntity = 
+            selectedEntities.has(req.assigneeId || '') || 
+            selectedEntities.has(req.impactedSystemId || '') || 
+            (req.impactedSystemIds && req.impactedSystemIds.some(id => selectedEntities.has(id))) || false;
+
+          matchingSubs = allSubs.filter(sub => 
+            selectedEntities.has(sub.assigneeId || '') || 
+            selectedEntities.has(sub.impactedSystemId || '') || 
+            (sub.impactedSystemIds && sub.impactedSystemIds.some(id => selectedEntities.has(id)))
+          );
+
+          if (!reqMatchesEntity && matchingSubs.length === 0) continue;
+        }
+
+        const subs = levelFilter === 'Requirement' 
+          ? [] 
+          : (selectedEntities.size > 0 ? matchingSubs : allSubs);
 
         reqIdx++;
         const reqId = `req-${req.id}`;
@@ -211,10 +251,16 @@ export function GanttChart() {
       };
 
       result.push(releaseRow);
-      if (releaseRow.isExpanded) result.push(...reqRows);
+      // If we filtered out all reqs due to Entity Filter, do we hide the release? 
+      // If it has no children after filter, we probably shouldn't render the empty release.
+      if (reqRows.length > 0 || selectedEntities.size === 0) {
+        if (releaseRow.isExpanded) result.push(...reqRows);
+      } else {
+        result.pop(); // Remove release if empty
+      }
     }
     return result;
-  }, [stories, releasesAndMilestones, expandedRows, employees, calcBizDays, hoursPerDay]);
+  }, [stories, releasesAndMilestones, expandedRows, employees, calcBizDays, hoursPerDay, levelFilter, entityTypeFilter, selectedEntities]);
 
   // ─── Timeline bounds ─────────────────────────────────────────────────────
   const { minDate, maxDate, totalDays, timelineDays } = useMemo(() => {
@@ -274,6 +320,11 @@ export function GanttChart() {
       setSelectedIds(new Set(rows.slice(lo, hi + 1).map(r => r.id)));
     } else {
       setSelectedIds(new Set([id]));
+      
+      const row = rows[index];
+      if (row && (row.type === 'Requirement' || row.type === 'SubTask') && row.originalItem?.id) {
+        setEditingStoryId(row.originalItem.id);
+      }
     }
     lastClickedIndex.current = index;
   };
@@ -639,11 +690,106 @@ export function GanttChart() {
   }, [autogenStartDate, rows, stories, holidays, weeklyOffDays, updateStory, hoursPerDay]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  const getSelectedEntitiesLabel = () => {
+    if (selectedEntities.size === 0) return 'Select...';
+    if (selectedEntities.size === 1) {
+      const id = Array.from(selectedEntities)[0];
+      if (entityTypeFilter === 'System') {
+        const sys = impactedSystems?.find(s => s.id === id);
+        if (sys) return sys.name;
+      } else {
+        const emp = employees?.find(e => e.id === id);
+        if (emp) return `${emp.firstName} ${emp.lastName}`;
+      }
+    }
+    return `${selectedEntities.size} selected`;
+  };
+
   return (
     <div ref={containerRef} className="flex flex-col h-full bg-background border rounded-md shadow-sm overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center justify-between border-b px-3 bg-muted/20 h-10 shrink-0">
-        <span className="text-sm font-semibold">Project Schedule</span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-semibold">Project Schedule</span>
+          {/* Filters */}
+          <div className="flex items-center gap-2 border-l border-border pl-4">
+            <Select value={levelFilter} onValueChange={(v: any) => {
+              setLevelFilter(v);
+              if (v === 'Requirement') setSelectedEntities(new Set());
+            }}>
+              <SelectTrigger className="h-7 text-xs w-[130px]">
+                <SelectValue placeholder="Level Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Requirement">Requirements</SelectItem>
+                <SelectItem value="Sub Tasks">Sub Tasks</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select 
+              value={entityTypeFilter} 
+              onValueChange={(v: any) => { setEntityTypeFilter(v); setSelectedEntities(new Set()); }}
+              disabled={levelFilter === 'Requirement'}
+            >
+              <SelectTrigger className="h-7 text-xs w-[110px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="System">System</SelectItem>
+                <SelectItem value="Resource">Resource</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {levelFilter === 'Sub Tasks' && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-7 text-xs px-2 flex gap-1 font-normal" disabled={levelFilter === 'Requirement'}>
+                    <Filter className="h-3 w-3" />
+                    <span className="truncate max-w-[150px]">{getSelectedEntitiesLabel()}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 max-h-[300px] overflow-y-auto" align="start">
+                  {entityTypeFilter === 'System' && impactedSystems?.map(s => {
+                    const isChecked = selectedEntities.has(s.id);
+                    return (
+                      <DropdownMenuItem 
+                        key={s.id} 
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          const next = new Set(selectedEntities);
+                          if (isChecked) next.delete(s.id); else next.add(s.id);
+                          setSelectedEntities(next);
+                        }}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <Checkbox checked={isChecked} />
+                        <span>{s.name}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  {entityTypeFilter === 'Resource' && employees?.map(e => {
+                    const isChecked = selectedEntities.has(e.id);
+                    return (
+                      <DropdownMenuItem 
+                        key={e.id} 
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          const next = new Set(selectedEntities);
+                          if (isChecked) next.delete(e.id); else next.add(e.id);
+                          setSelectedEntities(next);
+                        }}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <Checkbox checked={isChecked} />
+                        <span>{e.firstName} {e.lastName}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-0.5">
           {/* Row operation buttons */}
           <div className="flex items-center gap-0.5 mr-2 border-r border-border pr-2">
@@ -668,12 +814,6 @@ export function GanttChart() {
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
-          {/* Autogen Dates */}
-          <button onClick={() => setAutogenOpen(true)} title="Auto-generate dates from effort estimates"
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium hover:bg-muted text-muted-foreground border border-border mr-1">
-            <Wand2 className="h-3.5 w-3.5" />
-            Autogen Dates
-          </button>
           {/* Panel toggles */}
           <button onClick={toggleLeftPanel} className="p-1.5 rounded hover:bg-muted text-muted-foreground"
             title={leftCollapsed ? 'Show Table' : 'Hide Table'}>
@@ -861,6 +1001,7 @@ export function GanttChart() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <StoryEditDialog storyId={editingStoryId} onClose={() => setEditingStoryId(null)} />
     </div>
   );
-}
+});
