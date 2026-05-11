@@ -2,6 +2,7 @@ import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { openAI, openAICompatible } from '@genkit-ai/compat-oai';
 import { anthropic, claude35Sonnet, claude37Sonnet, claude3Opus, claude3Haiku, claude45Sonnet } from 'genkitx-anthropic';
+import { ollama } from 'genkitx-ollama';
 
 const provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'google';
 
@@ -9,6 +10,7 @@ let fallbackModel = 'gemini-3-flash-preview';
 if (provider === 'openai') fallbackModel = 'gpt-4o';
 if (provider === 'anthropic') fallbackModel = 'claude-sonnet-4-6';
 if (provider === 'lmstudio') fallbackModel = 'local-model';
+if (provider === 'ollama') fallbackModel = 'llama3';
 
 let defaultModel = process.env.AI_DEFAULT_MODEL || fallbackModel;
 
@@ -37,6 +39,33 @@ if (provider === 'google') {
   if (typeof mappedModel === 'string' && !mappedModel.startsWith('lmstudio/')) {
     mappedModel = `lmstudio/${defaultModel}`;
   }
+} else if (provider === 'ollama') {
+  const baseUrl = process.env.LOCAL_AI_BASE_URL || 'http://localhost:11434';
+  let autoModel = defaultModel;
+  
+  try {
+    const psRes = await fetch(`${baseUrl}/api/ps`);
+    if (psRes.ok) {
+      const psData = await psRes.json();
+      if (psData.models && psData.models.length > 0) {
+        autoModel = psData.models[0].name;
+      } else {
+        const tagsRes = await fetch(`${baseUrl}/api/tags`);
+        const tagsData = await tagsRes.json();
+        if (tagsData.models && tagsData.models.length > 0) {
+          autoModel = tagsData.models[0].name;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to auto-detect Ollama model:', e);
+  }
+
+  plugins.push(ollama({
+    models: [{ name: autoModel }],
+    serverAddress: baseUrl,
+  }));
+  mappedModel = `ollama/${autoModel}`;
 } else if (provider === 'anthropic') {
   if (process.env.ANTHROPIC_API_KEY) {
     plugins.push(anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }));

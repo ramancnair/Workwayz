@@ -49,6 +49,7 @@
     "firebase": "^11.9.1",
     "genkit": "^1.20.0",
     "genkitx-anthropic": "^0.30.0",
+    "genkitx-ollama": "^1.32.0",
     "keycloak-js": "^26.2.4",
     "lucide-react": "^0.475.0",
     "next": "latest",
