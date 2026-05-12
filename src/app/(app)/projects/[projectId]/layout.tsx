@@ -118,7 +118,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
           <SidebarNav projectId={projectId} />
         </Sidebar>
         <SidebarInset>
-          <div className="h-screen flex flex-col">
+          <div className="h-screen flex flex-col overflow-hidden">
             {renderContent()}
           </div>
         </SidebarInset>
