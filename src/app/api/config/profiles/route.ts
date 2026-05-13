@@ -75,6 +75,7 @@ const autoSeedFromEnv = (conns: any): boolean => {
              auth.keycloakUrl = envMap.get('NEXT_PUBLIC_KEYCLOAK_URL');
              auth.keycloakRealm = envMap.get('NEXT_PUBLIC_KEYCLOAK_REALM');
              auth.keycloakClientId = envMap.get('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID');
+             auth.keycloakAdminClientId = envMap.get('NEXT_PUBLIC_KEYCLOAK_ADMIN_CLIENT_ID') || envMap.get('KEYCLOAK_ADMIN_CLIENT_ID');
              auth.keycloakAdminClientSecret = envMap.get('KEYCLOAK_ADMIN_CLIENT_SECRET');
         }
         conns.authentication = [auth];

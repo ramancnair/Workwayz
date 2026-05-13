@@ -5,7 +5,7 @@ import path from 'path';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { adminEmail, adminPassword, adminName, dbProvider, fbApiKey, fbProjectId } = body;
+        const { adminEmail, adminPassword, adminName, dbProvider, fbApiKey, fbProjectId, authProvider, kcUrl, kcRealm, kcClientId, kcAdminSecret } = body;
 
         if (!adminEmail || !adminPassword) {
             return NextResponse.json({ success: false, error: 'Missing email or password' }, { status: 400 });
@@ -69,27 +69,112 @@ export async function POST(request: Request) {
         const tempDb = getFirestore(tempApp);
 
         // Create or Sign-in user in Auth
-        let userCred;
+        let uid = '';
         let isNewUser = true;
-        try {
-            userCred = await createUserWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
-        } catch (authError: any) {
-            if (authError.code === 'auth/email-already-in-use') {
-                try {
-                    userCred = await signInWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
-                    isNewUser = false;
-                } catch (signInErr: any) {
-                    throw new Error("Admin email already exists, but the password provided is incorrect.");
-                }
-            } else {
-                throw authError;
-            }
-        }
-
         let empId = '';
         const nameParts = (adminName || 'Admin User').trim().split(' ');
         let firstName = nameParts[0];
         let lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+        if (authProvider === 'keycloak') {
+            if (!kcUrl || !kcRealm || !kcAdminSecret || !kcClientId) {
+                return NextResponse.json({ success: false, error: 'Keycloak configuration missing' }, { status: 400 });
+            }
+            
+            // 1. Get Admin Token
+            const tokenParams = new URLSearchParams();
+            tokenParams.append('client_id', kcClientId);
+            tokenParams.append('client_secret', kcAdminSecret);
+            tokenParams.append('grant_type', 'client_credentials');
+            
+            const tokenRes = await fetch(`${kcUrl.replace(/\/$/, '')}/realms/${kcRealm}/protocol/openid-connect/token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: tokenParams.toString()
+            });
+            
+            if (!tokenRes.ok) throw new Error('Failed to get Keycloak token');
+            const token = (await tokenRes.json()).access_token;
+            
+            // 2. Create User
+            const userPayload = {
+                username: adminEmail,
+                email: adminEmail,
+                firstName: firstName,
+                lastName: lastName,
+                enabled: true,
+                credentials: [{ type: 'password', value: adminPassword, temporary: false }]
+            };
+            
+            const createRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(userPayload)
+            });
+            
+            if (!createRes.ok && createRes.status !== 409) {
+                throw new Error('Failed to create Keycloak user: ' + await createRes.text());
+            }
+            if (createRes.status === 409) isNewUser = false;
+            
+            // 3. Lookup user to get ID and assign role
+            const lookupRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users?email=${encodeURIComponent(adminEmail)}&exact=true`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const users = await lookupRes.json();
+            if (users && users.length > 0) {
+                uid = users[0].id;
+                
+                // Assign Administrator role
+                let roleRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles/Administrator`, {
+                     headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!roleRes.ok && roleRes.status === 404) {
+                     await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles`, {
+                         method: 'POST',
+                         headers: {
+                             'Authorization': `Bearer ${token}`,
+                             'Content-Type': 'application/json'
+                         },
+                         body: JSON.stringify({ name: 'Administrator' })
+                     });
+                     
+                     roleRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles/Administrator`, {
+                         headers: { 'Authorization': `Bearer ${token}` }
+                     });
+                }
+                
+                if (roleRes.ok) {
+                     const roleData = await roleRes.json();
+                     await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users/${uid}/role-mappings/realm`, {
+                         method: 'POST',
+                         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                         body: JSON.stringify([{ id: roleData.id, name: roleData.name }])
+                     });
+                }
+            } else {
+                uid = adminEmail;
+            }
+        } else {
+            // Firebase Auth
+            try {
+                const userCred = await createUserWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
+                uid = userCred.user.uid;
+            } catch (authError: any) {
+                if (authError.code === 'auth/email-already-in-use') {
+                    try {
+                        const userCred = await signInWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
+                        uid = userCred.user.uid;
+                        isNewUser = false;
+                    } catch (signInErr: any) {
+                        throw new Error("Admin email already exists, but the password provided is incorrect.");
+                    }
+                } else {
+                    throw authError;
+                }
+            }
+        }
 
         if (!isNewUser) {
              const q = query(collection(tempDb, 'employees'), where('email', '==', adminEmail));
@@ -131,7 +216,7 @@ export async function POST(request: Request) {
                 accessLevel: 'Administrator',
                 avatar: 'https://placehold.co/40x40.png',
                 isDeleted: false,
-                uid: userCred.user.uid
+                uid: uid
             });
         }
 
@@ -144,7 +229,7 @@ export async function POST(request: Request) {
                 email: adminEmail,
                 accessLevel: 'Administrator',
                 empId,
-                uid: userCred.user.uid
+                uid: uid
             }
         });
 

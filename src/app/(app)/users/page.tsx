@@ -290,6 +290,10 @@ export default function UsersPage() {
     try {
       if (editingUser) {
         await updateDoc(doc(db, 'employees', editingUser.id), sanitizedValues);
+        
+        // Also push updates to Auth pool to ensure roles are synced
+        await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
+        
         toast({ title: "Success", description: `User updated successfully.` });
       } else {
         // Check for unique Emp ID when creating a new user

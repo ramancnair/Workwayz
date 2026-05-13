@@ -13,7 +13,7 @@ export async function POST(request: Request) {
             const keycloakUrl = (process.env.NEXT_PUBLIC_KEYCLOAK_URL || '').replace(/\/$/, '');
             const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
             const adminSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET;
-            const clientId = 'projectflow-admin';
+            const clientId = process.env.KEYCLOAK_ADMIN_CLIENT_ID || 'projectflow-admin';
             
             if (!keycloakUrl || !realm || !adminSecret) {
                 return NextResponse.json({ error: 'Keycloak admin configuration is missing in the environment variables.' }, { status: 500 });
@@ -83,12 +83,50 @@ export async function POST(request: Request) {
             if (accessLevel) {
                  const targetRole = accessLevel;
                  
-                 const roleRes = await fetch(`${keycloakUrl}/admin/realms/${realm}/roles/${encodeURIComponent(targetRole)}`, {
+                 let roleRes = await fetch(`${keycloakUrl}/admin/realms/${realm}/roles/${encodeURIComponent(targetRole)}`, {
                      headers: { 'Authorization': `Bearer ${token}` }
                  });
                  
+                 if (!roleRes.ok && roleRes.status === 404) {
+                     await fetch(`${keycloakUrl}/admin/realms/${realm}/roles`, {
+                         method: 'POST',
+                         headers: {
+                             'Authorization': `Bearer ${token}`,
+                             'Content-Type': 'application/json'
+                         },
+                         body: JSON.stringify({ name: targetRole })
+                     });
+                     
+                     roleRes = await fetch(`${keycloakUrl}/admin/realms/${realm}/roles/${encodeURIComponent(targetRole)}`, {
+                         headers: { 'Authorization': `Bearer ${token}` }
+                     });
+                 }
+                 
                  if (roleRes.ok) {
                      const roleData = await roleRes.json();
+                     
+                     // Fetch and remove existing managed roles before assigning the new one
+                     const existingRolesRes = await fetch(`${keycloakUrl}/admin/realms/${realm}/users/${userId}/role-mappings/realm`, {
+                         headers: { 'Authorization': `Bearer ${token}` }
+                     });
+                     
+                     if (existingRolesRes.ok) {
+                         const existingRoles = await existingRolesRes.json();
+                         const managedRoles = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
+                         const rolesToRemove = existingRoles.filter((r: any) => managedRoles.includes(r.name) && r.name !== targetRole);
+                         
+                         if (rolesToRemove.length > 0) {
+                             await fetch(`${keycloakUrl}/admin/realms/${realm}/users/${userId}/role-mappings/realm`, {
+                                 method: 'DELETE',
+                                 headers: {
+                                     'Authorization': `Bearer ${token}`,
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(rolesToRemove.map((r: any) => ({ id: r.id, name: r.name })))
+                             });
+                         }
+                     }
+                     
                      await fetch(`${keycloakUrl}/admin/realms/${realm}/users/${userId}/role-mappings/realm`, {
                          method: 'POST',
                          headers: {
@@ -101,7 +139,7 @@ export async function POST(request: Request) {
                          }])
                      });
                  } else {
-                     console.warn(`Role ${targetRole} not found in Keycloak. Skipping role assignment.`);
+                     console.warn(`Role ${targetRole} could not be found or created in Keycloak.`);
                  }
             }
             
@@ -162,7 +200,7 @@ export async function DELETE(request: Request) {
             const keycloakUrl = (process.env.NEXT_PUBLIC_KEYCLOAK_URL || '').replace(/\/$/, '');
             const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
             const adminSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET;
-            const clientId = 'projectflow-admin';
+            const clientId = process.env.KEYCLOAK_ADMIN_CLIENT_ID || 'projectflow-admin';
             
             if (!keycloakUrl || !realm || !adminSecret) return NextResponse.json({ error: 'Keycloak config missing' }, { status: 500 });
 

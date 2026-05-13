@@ -102,6 +102,7 @@ export async function POST(request: Request) {
             'NEXT_PUBLIC_KEYCLOAK_URL',
             'NEXT_PUBLIC_KEYCLOAK_REALM',
             'NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
+            'KEYCLOAK_ADMIN_CLIENT_ID',
             'KEYCLOAK_ADMIN_CLIENT_SECRET'
         ];
         if (type === 'authentication') {
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
                 if (auth.keycloakUrl) envMap.set('NEXT_PUBLIC_KEYCLOAK_URL', `"${auth.keycloakUrl}"`);
                 if (auth.keycloakRealm) envMap.set('NEXT_PUBLIC_KEYCLOAK_REALM', `"${auth.keycloakRealm}"`);
                 if (auth.keycloakClientId) envMap.set('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID', `"${auth.keycloakClientId}"`);
+                if (auth.keycloakAdminClientId) envMap.set('KEYCLOAK_ADMIN_CLIENT_ID', `"${auth.keycloakAdminClientId}"`);
                 if (auth.keycloakAdminClientSecret) envMap.set('KEYCLOAK_ADMIN_CLIENT_SECRET', `"${auth.keycloakAdminClientSecret}"`);
             }
         }
@@ -235,6 +237,7 @@ export async function GET() {
                 auth.keycloakUrl = envMap.get('NEXT_PUBLIC_KEYCLOAK_URL')?.replace(/"/g, '');
                 auth.keycloakRealm = envMap.get('NEXT_PUBLIC_KEYCLOAK_REALM')?.replace(/"/g, '');
                 auth.keycloakClientId = envMap.get('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID')?.replace(/"/g, '');
+                auth.keycloakAdminClientId = envMap.get('KEYCLOAK_ADMIN_CLIENT_ID')?.replace(/"/g, '') || envMap.get('NEXT_PUBLIC_KEYCLOAK_ADMIN_CLIENT_ID')?.replace(/"/g, '');
                 auth.keycloakAdminClientSecret = envMap.get('KEYCLOAK_ADMIN_CLIENT_SECRET')?.replace(/"/g, '');
             }
         }
@@ -271,6 +274,7 @@ export async function DELETE(request: Request) {
             'NEXT_PUBLIC_KEYCLOAK_URL',
             'NEXT_PUBLIC_KEYCLOAK_REALM',
             'NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
+            'KEYCLOAK_ADMIN_CLIENT_ID',
             'KEYCLOAK_ADMIN_CLIENT_SECRET'
         ];
 

@@ -64,6 +64,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                 setKcUrl(activeAuth.keycloakUrl || '');
                 setKcRealm(activeAuth.keycloakRealm || '');
                 setKcClientId(activeAuth.keycloakClientId || '');
+                setKcAdminClientId(activeAuth.keycloakAdminClientId || '');
                 setKcAdminSecret(activeAuth.keycloakAdminClientSecret || '');
               }
             }
@@ -108,6 +109,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [kcUrl, setKcUrl] = useState('');
   const [kcRealm, setKcRealm] = useState('');
   const [kcClientId, setKcClientId] = useState('');
+  const [kcAdminClientId, setKcAdminClientId] = useState('');
   const [kcAdminSecret, setKcAdminSecret] = useState('');
 
   const [adminName, setAdminName] = useState('');
@@ -164,6 +166,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         authProfile.keycloakUrl = kcUrl;
         authProfile.keycloakRealm = kcRealm;
         authProfile.keycloakClientId = kcClientId;
+        authProfile.keycloakAdminClientId = kcAdminClientId;
         authProfile.keycloakAdminClientSecret = kcAdminSecret;
       }
 
@@ -231,7 +234,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
       }
 
       // CREATE ADMIN USER (Using backend API to bypass masked secrets)
-      if (adminEmail && adminPassword && authProvider === 'firebase') {
+      if (adminEmail && adminPassword) {
         try {
           const setupRes = await fetch('/api/admin/setup', {
             method: 'POST',
@@ -242,7 +245,12 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               adminName,
               dbProvider,
               fbProjectId,
-              fbApiKey
+              fbApiKey,
+              authProvider,
+              kcUrl,
+              kcRealm,
+              kcClientId: kcAdminClientId,
+              kcAdminSecret
             })
           });
 
@@ -304,7 +312,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             <X className="w-4 h-4" />
           </Button>
         )}
-        <div className="text-center space-y-2 pt-4">
+        <div className="text-center space-y-2 pt-4 shrink-0">
           <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-2">
             <Sparkles className="w-8 h-8 text-primary" />
           </div>
@@ -313,7 +321,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         </div>
 
         {/* Stepper Header */}
-        <div className="flex items-center justify-between relative px-2">
+        <div className="flex items-center justify-between relative px-2 shrink-0">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-border -z-10 rounded-full overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500 ease-in-out"
@@ -347,8 +355,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         </div>
 
         {/* Forms */}
-        <Card className="shadow-lg border-border/60">
-          <CardHeader>
+        <Card className="shadow-lg border-border/60 flex flex-col min-h-0">
+          <CardHeader className="shrink-0">
             <CardTitle className="text-xl flex items-center gap-2">
               {steps[step - 1].title} Setup
             </CardTitle>
@@ -454,6 +462,10 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <div className="space-y-2">
                       <Label>Client ID (Public)</Label>
                       <Input placeholder="myclient" value={kcClientId} onChange={e => setKcClientId(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Admin Client ID</Label>
+                      <Input placeholder="projectflow-admin" value={kcAdminClientId} onChange={e => setKcAdminClientId(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label>Admin Client Secret (For User Autogen)</Label>
@@ -615,7 +627,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex justify-between border-t border-border/50 bg-muted/10 rounded-b-lg p-4">
+          <CardFooter className="shrink-0 flex justify-between border-t border-border/50 bg-muted/10 rounded-b-lg p-4">
             <Button
               variant="outline"
               onClick={handleBack}
