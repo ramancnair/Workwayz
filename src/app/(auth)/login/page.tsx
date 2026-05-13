@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import Keycloak from 'keycloak-js';
 
 const determineAccessLevel = (keycloak: any) => {
@@ -26,6 +26,110 @@ const determineAccessLevel = (keycloak: any) => {
     if (lowerRoles.includes('pmo')) return 'PMO';
     
     return 'Team Member'; // Default for Dev, QA, or unassigned
+};
+
+const syncKeycloakUserWithDatabase = async (userProfile: any, accessLevel: string, subject: string) => {
+    let empId = subject;
+    let finalUserData = {
+        name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || userProfile.username,
+        email: userProfile.email,
+        accessLevel: accessLevel,
+        empId: subject,
+        uid: subject
+    };
+
+    if (process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
+        if (!supabase) return finalUserData;
+        const { data: employees } = await supabase.from('employees').select('*').eq('email', userProfile.email);
+        if (employees && employees.length > 0) {
+            const data = employees[0];
+            return {
+                name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+                email: data.email || userProfile.email,
+                accessLevel: data.accessLevel || accessLevel,
+                empId: data.empId || data.id,
+                uid: subject
+            };
+        }
+        
+        // Create new user in Supabase
+        const { data: allEmps } = await supabase.from('employees').select('empId');
+        let highestId = 0;
+        if (allEmps) {
+            allEmps.forEach((emp: any) => {
+                if (emp.empId && emp.empId.startsWith('E')) {
+                    const numPart = parseInt(emp.empId.substring(1));
+                    if (!isNaN(numPart) && numPart > highestId) highestId = numPart;
+                }
+            });
+        }
+        empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+        
+        const firstName = userProfile.firstName || userProfile.username || 'Keycloak User';
+        const lastName = userProfile.lastName || '';
+        
+        await supabase.from('employees').insert([{
+            id: empId,
+            empId,
+            firstName,
+            lastName,
+            email: userProfile.email,
+            phone: 'N/A',
+            experience: 0,
+            accessLevel,
+            avatar: 'https://placehold.co/40x40.png',
+            isDeleted: false,
+            uid: subject
+        }]);
+        
+        return { name: `${firstName} ${lastName}`.trim(), email: userProfile.email, accessLevel, empId, uid: subject };
+    } else {
+        if (!db) return finalUserData;
+        const q = query(collection(db, 'employees'), where('email', '==', userProfile.email));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            const docSnap = querySnapshot.docs[0];
+            const data = docSnap.data();
+            return {
+                name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || userProfile.username,
+                email: data.email || userProfile.email,
+                accessLevel: data.accessLevel || accessLevel,
+                empId: docSnap.id,
+                uid: subject
+            };
+        }
+        
+        // Create new user in Firestore
+        const usersSnapshot = await getDocs(collection(db, 'employees'));
+        let highestId = 0;
+        usersSnapshot.forEach(docSnap => {
+            const id = docSnap.id;
+            if (id.startsWith('E')) {
+                const numPart = parseInt(id.substring(1));
+                if (!isNaN(numPart) && numPart > highestId) highestId = numPart;
+            }
+        });
+        empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+        
+        const firstName = userProfile.firstName || userProfile.username || 'Keycloak User';
+        const lastName = userProfile.lastName || '';
+        
+        await setDoc(doc(db, 'employees', empId), {
+            empId,
+            firstName,
+            lastName,
+            email: userProfile.email,
+            phone: 'N/A',
+            experience: 0,
+            accessLevel,
+            avatar: 'https://placehold.co/40x40.png',
+            isDeleted: false,
+            uid: subject
+        });
+        
+        return { name: `${firstName} ${lastName}`.trim(), email: userProfile.email, accessLevel, empId, uid: subject };
+    }
 };
 
 export default function LoginPage() {
@@ -185,13 +289,9 @@ export default function LoginPage() {
         } else {
             // If already authenticated (e.g. they hit the button after returning from a redirect)
             const userProfile = await keycloak.loadUserProfile();
-            const userData = {
-               name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || userProfile.username,
-               email: userProfile.email,
-               accessLevel: determineAccessLevel(keycloak),
-               empId: keycloak.subject,
-               uid: keycloak.subject
-            };
+            const level = determineAccessLevel(keycloak);
+            const userData = await syncKeycloakUserWithDatabase(userProfile, level, keycloak.subject || '');
+            
             localStorage.setItem('projectflow_user', JSON.stringify(userData));
             toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
             router.push('/project-home');
@@ -219,14 +319,10 @@ export default function LoginPage() {
 
              keycloak.init({ checkLoginIframe: false }).then(authenticated => {
                  if (authenticated) {
-                     keycloak.loadUserProfile().then(userProfile => {
-                         const userData = {
-                            name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || userProfile.username,
-                            email: userProfile.email,
-                            accessLevel: determineAccessLevel(keycloak),
-                            empId: keycloak.subject,
-                            uid: keycloak.subject
-                         };
+                     keycloak.loadUserProfile().then(async userProfile => {
+                         const level = determineAccessLevel(keycloak);
+                         const userData = await syncKeycloakUserWithDatabase(userProfile, level, keycloak.subject || '');
+                         
                          localStorage.setItem('projectflow_user', JSON.stringify(userData));
                          toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
                          router.push('/project-home');

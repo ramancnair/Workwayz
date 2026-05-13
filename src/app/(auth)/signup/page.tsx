@@ -13,6 +13,7 @@ import { auth, db } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import Keycloak from 'keycloak-js';
 
 const accessLevels = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
@@ -174,6 +175,31 @@ export default function SignupPage() {
     }
   };
 
+  const handleKeycloakRegister = async () => {
+    setIsLoading(true);
+    try {
+        const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
+        const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
+        const keycloakClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
+        
+        if (!keycloakUrl || !keycloakRealm || !keycloakClientId) {
+             throw new Error("Keycloak configuration is missing.");
+        }
+
+        const keycloak = new Keycloak({
+            url: keycloakUrl,
+            realm: keycloakRealm,
+            clientId: keycloakClientId
+        });
+
+        await keycloak.init({ checkLoginIframe: false });
+        await keycloak.register();
+    } catch (error: any) {
+        toast({ title: "Registration failed", description: error.message || "Could not redirect to Keycloak.", variant: "destructive" });
+        setIsLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full shadow-lg border-border/50">
       <CardHeader className="space-y-3 text-center">
@@ -194,7 +220,7 @@ export default function SignupPage() {
         <CardContent className="space-y-4">
           {process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'keycloak' ? (
               <div className="p-4 text-center text-sm text-muted-foreground border rounded-md bg-muted/20">
-                  Account creation is managed by Keycloak. Please contact your administrator.
+                  Click the button below to create an account via your organization's portal.
               </div>
           ) : (
             <>
@@ -228,7 +254,11 @@ export default function SignupPage() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          {process.env.NEXT_PUBLIC_AUTH_PROVIDER !== 'keycloak' && (
+          {process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'keycloak' ? (
+              <Button type="button" onClick={handleKeycloakRegister} className="w-full" disabled={isLoading}>
+                {isLoading ? 'Redirecting...' : 'Register with Keycloak'}
+              </Button>
+          ) : (
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Creating account...' : 'Sign up'}
               </Button>
