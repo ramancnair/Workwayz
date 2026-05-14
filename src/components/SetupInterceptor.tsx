@@ -9,11 +9,6 @@ export function SetupInterceptor() {
   const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    // Prevent interfering if we are already on the setup wizard.
-    if (pathname.startsWith('/setup-wizard')) {
-      return;
-    }
-
     const checkConfig = async () => {
       try {
         const res = await fetch('/api/config/profiles');
@@ -23,9 +18,31 @@ export function SetupInterceptor() {
           const authSetup = Array.isArray(data.authentication) && data.authentication.length > 0;
           const aiSetup = Array.isArray(data.ai) && data.ai.length > 0;
 
-          if (!dbSetup && !authSetup && !aiSetup) {
+          const isConfigured = dbSetup || authSetup || aiSetup;
+
+          if (!isConfigured) {
             // First time run detected, nothing configured.
-            router.push('/setup-wizard');
+            if (!pathname.startsWith('/setup-wizard')) {
+              router.push('/setup-wizard');
+            }
+          } else {
+            // It is configured.
+            if (pathname.startsWith('/setup-wizard')) {
+              // Check if user is authenticated and is an Administrator
+              const userStr = localStorage.getItem('projectflow_user');
+              if (!userStr) {
+                router.push('/login');
+              } else {
+                try {
+                  const user = JSON.parse(userStr);
+                  if (user.accessLevel !== 'Administrator') {
+                    router.push('/project-home');
+                  }
+                } catch(e) {
+                  router.push('/login');
+                }
+              }
+            }
           }
         }
       } catch (error) {

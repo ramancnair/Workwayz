@@ -7,6 +7,7 @@ import { type PropsWithChildren } from "react";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PmSidebarNav } from '@/components/PmSidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
+import { AuthGuard } from '@/components/AuthGuard';
 
 export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -47,34 +48,36 @@ export default function AppLayout({ children }: PropsWithChildren) {
   };
 
   if (isProjectPage) {
-    return <>{children}</>;
+    return <AuthGuard>{children}</AuthGuard>;
   }
 
   const activeTab = getTabValue();
 
   return (
-    <SidebarProvider open={open} onOpenChange={setOpen}>
-      <Sidebar collapsible="icon">
-        <PmSidebarNav activeTab={activeTab} />
-      </Sidebar>
-      <SidebarInset>
-        <div className="h-screen flex flex-col">
-          <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4">
-              <Tabs value={activeTab} onValueChange={onTabChange}>
-                  <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                      <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
-                      <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
-                      <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
-                      <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
-                      <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio Settings</TabsTrigger>
-                  </TabsList>
-              </Tabs>
+    <AuthGuard>
+      <SidebarProvider open={open} onOpenChange={setOpen}>
+        <Sidebar collapsible="icon">
+          <PmSidebarNav activeTab={activeTab} />
+        </Sidebar>
+        <SidebarInset>
+          <div className="h-screen flex flex-col">
+            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4">
+                <Tabs value={activeTab} onValueChange={onTabChange}>
+                    <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
+                        <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
+                        <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
+                        <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
+                        <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                        <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio Settings</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {children}
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            {children}
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+        </SidebarInset>
+      </SidebarProvider>
+    </AuthGuard>
   );
 }
