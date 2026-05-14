@@ -60,6 +60,7 @@ import {
   HeartPulse,
   Hourglass,
   LogOut,
+  TrendingUp,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useProject } from "@/context/ProjectContext";
@@ -144,6 +145,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/waterfall/dashboard`,
       label: "Waterfall Dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      href: `${basePath}/waterfall/pm-dashboard`,
+      label: "PM WF Dashboard",
+      icon: TrendingUp,
     },
     {
       href: `${basePath}/waterfall/requirements`,
