@@ -762,26 +762,26 @@ export const GanttChart = forwardRef<GanttChartRef, {}>((props, ref) => {
                         }}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <Checkbox checked={isChecked} />
+                        <Checkbox checked={isChecked} className="pointer-events-none" />
                         <span>{s.name}</span>
                       </DropdownMenuItem>
                     );
                   })}
-                  {entityTypeFilter === 'Resource' && employees?.map(e => {
-                    const isChecked = selectedEntities.has(e.id);
+                  {entityTypeFilter === 'Resource' && employees?.map(emp => {
+                    const isChecked = selectedEntities.has(emp.id);
                     return (
                       <DropdownMenuItem 
-                        key={e.id} 
+                        key={emp.id} 
                         onSelect={(e) => {
                           e.preventDefault();
                           const next = new Set(selectedEntities);
-                          if (isChecked) next.delete(e.id); else next.add(e.id);
+                          if (isChecked) next.delete(emp.id); else next.add(emp.id);
                           setSelectedEntities(next);
                         }}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <Checkbox checked={isChecked} />
-                        <span>{e.firstName} {e.lastName}</span>
+                        <Checkbox checked={isChecked} className="pointer-events-none" />
+                        <span>{emp.firstName} {emp.lastName}</span>
                       </DropdownMenuItem>
                     );
                   })}
