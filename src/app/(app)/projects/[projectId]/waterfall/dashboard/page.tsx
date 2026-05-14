@@ -276,39 +276,7 @@ export default function WaterfallDashboardPage() {
         <StatsCard title="Tasks" value={itemStats.tasks.total.toString()} icon={CheckSquare} description={getCompletionDesc(itemStats.tasks.total, itemStats.tasks.completed)} />
         <StatsCard title="Bugs" value={itemStats.bugs.total.toString()} icon={Bug} description={getCompletionDesc(itemStats.bugs.total, itemStats.bugs.completed)} />
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Sprint Burndown</CardTitle>
-              <div className="grid gap-2 w-[200px]">
-                  <Label htmlFor="sprint-filter" className="sr-only">Select Sprint</Label>
-                  <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-                      <SelectTrigger id="sprint-filter" className="h-8">
-                          <SelectValue placeholder="Select a sprint" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                      </SelectContent>
-                  </Select>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-             {burndownData.length > 0 ? (
-                <ChartContainer config={burndownChartConfig} className="h-full w-full">
-                    <LineChart data={burndownData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
-                        <CartesianGrid vertical={false} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => format(new Date(value), 'dd/MM')} />
-                        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                        <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
-                        <Line dataKey="remaining" type="monotone" stroke="var(--color-remaining)" strokeWidth={2} dot={false} name="Remaining Effort" connectNulls={false} />
-                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} strokeDasharray="3 3" name="Ideal Burndown" />
-                    </LineChart>
-                </ChartContainer>
-            ) : <p className="text-center text-muted-foreground">Select a sprint with dates to view burndown.</p>}
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 grid-cols-1">
         <Card>
           <CardHeader>
              <div className="flex justify-between items-center">

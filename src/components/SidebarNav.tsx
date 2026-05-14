@@ -449,6 +449,13 @@ export function SidebarNav({ projectId }: { projectId: string }) {
           <DropdownMenuContent side="right" align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/my-account">
+                <Users className="mr-2 h-4 w-4" />
+                <span>Profile & Account</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>

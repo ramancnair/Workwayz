@@ -71,6 +71,12 @@ export default function BusinessContinuityPage() {
   
   const bcpSupportResources = employees.filter(emp => emp.isBcpSupport);
 
+  const safeParseDate = (dateVal: any) => {
+    if (!dateVal) return new Date();
+    if (typeof dateVal.toDate === 'function') return dateVal.toDate();
+    if (typeof dateVal === 'string') return parseISO(dateVal);
+    return new Date(dateVal);
+  };
 
   useEffect(() => {
     if (isEnvDialogOpen) {
@@ -78,7 +84,7 @@ export default function BusinessContinuityPage() {
         envForm.reset({
           name: editingEnvironment.name,
           url: editingEnvironment.url || '',
-          renewalDate: editingEnvironment.renewalDate ? format(parseISO(editingEnvironment.renewalDate), 'yyyy-MM-dd') : '',
+          renewalDate: editingEnvironment.renewalDate ? format(safeParseDate(editingEnvironment.renewalDate), 'yyyy-MM-dd') : '',
         });
       } else {
         envForm.reset({ name: '', url: '', renewalDate: '' });
@@ -92,7 +98,7 @@ export default function BusinessContinuityPage() {
         repoForm.reset({
           name: editingRepository.name,
           url: editingRepository.url,
-          expiryDate: editingRepository.expiryDate ? format(parseISO(editingRepository.expiryDate), 'yyyy-MM-dd') : '',
+          expiryDate: editingRepository.expiryDate ? format(safeParseDate(editingRepository.expiryDate), 'yyyy-MM-dd') : '',
         });
       } else {
         repoForm.reset({ name: '', url: '', expiryDate: '' });
@@ -192,7 +198,7 @@ export default function BusinessContinuityPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {env.renewalDate ? format(parseISO(env.renewalDate), 'PPP') : <span className="text-muted-foreground">Not set</span>}
+                      {env.renewalDate ? format(safeParseDate(env.renewalDate), 'PPP') : <span className="text-muted-foreground">Not set</span>}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => openEnvDialog(env)}>
@@ -238,7 +244,7 @@ export default function BusinessContinuityPage() {
                       </a>
                     </TableCell>
                     <TableCell>
-                      {repo.expiryDate ? format(parseISO(repo.expiryDate), 'PPP') : <span className="text-muted-foreground">Not set</span>}
+                      {repo.expiryDate ? format(safeParseDate(repo.expiryDate), 'PPP') : <span className="text-muted-foreground">Not set</span>}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => openRepoDialog(repo)}>

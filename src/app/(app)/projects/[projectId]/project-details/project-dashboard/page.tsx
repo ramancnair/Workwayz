@@ -322,11 +322,10 @@ export default function ProjectDashboardPage() {
                 <PieChart>
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                     <Pie data={releaseChartData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={100} strokeWidth={5}>
-                        <LabelList
-                            dataKey="value"
-                            className="fill-foreground text-2xl font-bold"
+                        <Label
+                            value={releaseChartData.reduce((acc, curr) => acc + curr.value, 0).toString()}
                             position="center"
-                            formatter={(value: string) => releaseChartData.reduce((acc, curr) => acc + curr.value, 0).toString()}
+                            className="fill-foreground text-3xl font-bold"
                         />
                          {releaseChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -360,11 +359,10 @@ export default function ProjectDashboardPage() {
                 <PieChart>
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                     <Pie data={sprintChartData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={100} strokeWidth={5}>
-                        <LabelList
-                            dataKey="value"
-                            className="fill-foreground text-2xl font-bold"
+                        <Label
+                            value={sprintChartData.reduce((acc, curr) => acc + curr.value, 0).toString()}
                             position="center"
-                            formatter={(value: string) => sprintChartData.reduce((acc, curr) => acc + curr.value, 0).toString()}
+                            className="fill-foreground text-3xl font-bold"
                         />
                          {sprintChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
