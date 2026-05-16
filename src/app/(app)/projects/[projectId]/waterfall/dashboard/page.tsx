@@ -38,7 +38,7 @@ const getStatusOnDate = (item: Story, targetDate: Date): string | null => {
     
     // The first entry in history is the creation status.
     const creationEntry = sortedHistory[0];
-    let effectiveStatus: string | null = creationEntry.toStatus;
+    let effectiveStatus: string | null = creationEntry.fromStatus; // Initialize to what it was BEFORE the first recorded transition
 
     for (const historyItem of sortedHistory) {
         if (startOfDay(new Date(historyItem.date)) <= startOfDay(targetDate)) {
@@ -53,7 +53,9 @@ const getStatusOnDate = (item: Story, targetDate: Date): string | null => {
 
 
 export default function WaterfallDashboardPage() {
-  const { stories, sprints, releasesAndMilestones, holidays, weeklyOffDays, testDate } = useProject();
+  const { stories, sprints, releasesAndMilestones, holidays, weeklyOffDays, testDate, kanbanColumns } = useProject();
+  
+  const doneColumnName = useMemo(() => kanbanColumns.find(c => c.isDoneColumn)?.name || 'Done', [kanbanColumns]);
   
   const [selectedSprintId, setSelectedSprintId] = useState<string | undefined>();
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | undefined>();
@@ -129,7 +131,7 @@ export default function WaterfallDashboardPage() {
               
               const checkCompletion = (item: Story) => {
                   const statusOnDate = getStatusOnDate(item, date);
-                  return statusOnDate === 'Done' ? (item.estimatedHours || 0) : 0;
+                  return statusOnDate === doneColumnName ? (item.estimatedHours || 0) : 0;
               }
 
               if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
@@ -195,7 +197,7 @@ export default function WaterfallDashboardPage() {
               
               const checkCompletion = (item: Story) => {
                   const statusOnDate = getStatusOnDate(item, date);
-                  return statusOnDate === 'Done' ? (item.estimatedHours || 0) : 0;
+                  return statusOnDate === doneColumnName ? (item.estimatedHours || 0) : 0;
               }
 
               if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {

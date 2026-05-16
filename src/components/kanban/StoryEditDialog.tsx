@@ -32,6 +32,7 @@ import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { usePathname } from 'next/navigation';
 import type { Story, WorkItemType, StoryStatus, Priority, BugSeverity } from '@/types';
 
 const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
@@ -50,6 +51,7 @@ const priorityStyles: Record<Priority, string> = {
 const storyFormSchema = z.object({
   itemType: z.enum(workItemTypes as [string, ...string[]]),
   title: z.string().min(1, 'Title is required.'),
+  status: z.enum(statusOptions as [string, ...string[]]).optional(),
   description: z.string().optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
@@ -109,6 +111,8 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   } = useProject();
   
   const { toast } = useToast();
+  const pathname = usePathname();
+  const isWaterfall = pathname.includes('/waterfall');
 
   const selectedStory = useMemo(() => stories.find(s => s.id === storyId) || null, [stories, storyId]);
 
@@ -217,6 +221,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
           editStoryForm.reset({
               itemType: selectedStory.itemType as any,
               title: selectedStory.title,
+              status: selectedStory.status as any || 'To Do',
               description: selectedStory.description || '',
               acceptanceCriteria: selectedStory.acceptanceCriteria || '',
               epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
@@ -789,6 +794,30 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             </FormItem>
                             )}
                         />
+                         <FormField
+                            control={editStoryForm.control}
+                            name="status"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Set status" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {statusOptions.map((s) => (
+                                    <SelectItem key={s} value={s}>
+                                        {s}
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                         {selectedStory.itemType === 'Bug' && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
@@ -873,26 +902,28 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             />
                           </div>
                         )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <FormField
-                                control={editStoryForm.control}
-                                name="sprintId"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Sprint</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                        <SelectItem value="backlog">Backlog</SelectItem>
-                                        {sprints.map(sprint => (
-                                            <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                                        ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {!isWaterfall && (
+                              <FormField
+                                  control={editStoryForm.control}
+                                  name="sprintId"
+                                  render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Sprint</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                          <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                          <SelectContent>
+                                          <SelectItem value="backlog">Backlog</SelectItem>
+                                          {sprints.map(sprint => (
+                                              <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                          ))}
+                                          </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                  </FormItem>
+                                  )}
+                              />
+                            )}
                             <FormField
                             control={editStoryForm.control}
                             name="releaseId"

@@ -10,7 +10,10 @@ import {
 import { format, isBefore, isAfter, startOfWeek, addWeeks, parseISO, differenceInDays } from 'date-fns';
 
 export default function PmWaterfallDashboard() {
-  const { stories, worklogs, employees, project, horizontals } = useProject();
+  const { stories, worklogs, employees, project, fixedCosts, kanbanColumns, testDate } = useProject();
+
+  // Determine the done column name dynamically from Kanban configuration
+  const doneColumnName = kanbanColumns.find(c => c.isDoneColumn)?.name || 'Done';
 
   // 1. Process Data for EVM
   // We bucket the project timeline into weeks.
@@ -24,17 +27,32 @@ export default function PmWaterfallDashboard() {
   const sCurveData = [];
   const costPerReqData = [];
 
-  // Helper to get employee hourly cost
+  // Helper: hourly COST rate (what it costs the company)
   const getEmployeeHourlyCost = (empId: string) => {
     const emp = employees.find(e => e.id === empId);
     if (!emp) return 0;
-    // convert daily cost rate to hourly. Assume 8 hours/day.
-    return (emp.costRate || 0) / 8;
+    return (emp.costRate || 0) / 8; // daily cost → hourly
   };
+
+  // Helper: hourly BILLING rate (what the work earns / is worth to the client)
+  // Falls back to cost rate if billing rate is not configured.
+  const getEmployeeHourlyBillingRate = (empId: string) => {
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return 0;
+    return (emp.billedRate || emp.costRate || 0) / 8;
+  };
+
+  // Find resources who are NOT assigned to any subtask
+  const assignedResourceIds = new Set(
+    stories.filter(s => s.itemType === 'Sub Task' && !!s.assigneeId).map(s => s.assigneeId)
+  );
+  const unassignedResources = employees.filter(e => !assignedResourceIds.has(e.id));
 
   let cumulativePV = 0;
   let cumulativeEV = 0;
   let cumulativeAC = 0;
+
+  const totalFixedCost = fixedCosts?.reduce((sum, fc) => sum + (fc.cost || 0), 0) || 0;
 
   for (let i = 0; i < weeksCount; i++) {
     const weekStart = addWeeks(projectStart, i);
@@ -43,53 +61,46 @@ export default function PmWaterfallDashboard() {
     // Calculate PV (Planned Value): Estimated cost of work planned to be done up to this week
     let weeklyPV = 0;
     let weeklyEV = 0;
+    let weeklyAC = 0;
 
-    // Add Horizontals Planned Value
-    // Calculated at 8 hours per day (which equates to 1x dailyBillingRate per working day)
-    // Assuming 5 working days per week
-    const workingDaysInWeek = 5;
-    horizontals?.filter(h => h.isEnabled).forEach(h => {
-      const dailyRate = h.dailyBillingRate || 0;
-      weeklyPV += dailyRate * workingDaysInWeek;
+    // Add fixed costs at the very beginning to Actual Cost
+    if (i === 0) {
+      weeklyAC += totalFixedCost;
+    }
+
+    // PV for resources NOT assigned subtasks (8 hrs/day * billed value * working days)
+    unassignedResources.forEach(emp => {
+       const dailyBilling = emp.billedRate || emp.costRate || 0;
+       // Assuming 5 working days per week
+       weeklyPV += dailyBilling * 5; 
     });
 
-    stories.forEach(story => {
-      // Find the assigned employee to determine the cost rate
+    // PV: estimate of the subtasks multiplied by billing rate of assigned resource
+    stories.filter(s => s.itemType === 'Sub Task').forEach(story => {
       const assignee = employees.find(e => e.id === story.assigneeId);
-      const dailyRate = assignee ? (assignee.costRate || 0) : 0;
-      const hourlyRate = dailyRate / 8;
+      const dailyBilling = assignee ? (assignee.billedRate || assignee.costRate || 0) : 0;
+      const hourlyBilling = dailyBilling / 8;
 
-      // Calculate story total estimated cost using the assignee's actual rate
-      const storyValue = story.effortDays 
-        ? story.effortDays * dailyRate 
-        : (story.estimatedHours || 0) * hourlyRate;
+      const storyValue = story.effortDays
+        ? story.effortDays * dailyBilling
+        : (story.estimatedHours || 0) * hourlyBilling;
 
-      const storyStart = story.startDate ? new Date(story.startDate) : weekStart;
-      const storyEnd = story.endDate ? new Date(story.endDate) : weekStart;
-      
+      const storyStart = story.startDate ? new Date(story.startDate) : projectStart;
+      const storyEnd = story.endDate ? new Date(story.endDate) : projectEnd;
       const storyDuration = Math.max(differenceInDays(storyEnd, storyStart), 1);
-      
-      // If the story overlaps with this week, add proportional PV
+
       if (!isBefore(storyEnd, weekStart) && !isAfter(storyStart, weekEnd)) {
         weeklyPV += storyValue / Math.ceil(storyDuration / 7);
       }
-
-      // If the story was completed this week, add its full value to EV
-      if (story.status === 'Complete' && story.updatedAt) {
-        const completedDate = new Date(story.updatedAt);
-        if (completedDate >= weekStart && completedDate < weekEnd) {
-          weeklyEV += storyValue;
-        }
-      }
     });
 
-    // Calculate AC (Actual Cost) from worklogs for this week
-    let weeklyAC = 0;
+    // EV + AC: both derived from worklogs in a single pass
+    // EV = hours × billing rate (value earned); AC = hours × cost rate (money spent)
     worklogs.forEach(log => {
       const logDate = new Date(log.date);
       if (logDate >= weekStart && logDate < weekEnd) {
-        const empCost = getEmployeeHourlyCost(log.employeeId);
-        weeklyAC += log.totalHours * empCost;
+        weeklyEV += log.totalHours * getEmployeeHourlyBillingRate(log.employeeId);
+        weeklyAC += log.totalHours * getEmployeeHourlyCost(log.employeeId);
       }
     });
 
@@ -97,22 +108,26 @@ export default function PmWaterfallDashboard() {
     cumulativeEV += weeklyEV;
     cumulativeAC += weeklyAC;
 
+    // Use the calendar date of each week start as the X-axis label (e.g. "May 1")
+    const weekLabel = format(weekStart, 'MMM d');
+
     evmData.push({
-      week: `Wk ${i + 1}`,
+      week: weekLabel,
       PV: Math.round(cumulativePV),
       EV: Math.round(cumulativeEV),
       AC: Math.round(cumulativeAC),
     });
 
     sCurveData.push({
-      week: `Wk ${i + 1}`,
+      week: weekLabel,
       CumulativeCost: Math.round(cumulativeAC),
       PlannedCost: Math.round(cumulativePV),
     });
   }
 
   // 2. Cost per completed requirement
-  const completedReqs = stories.filter(s => s.itemType === 'Requirement/Story' && s.status === 'Complete');
+  // Use closedAt to identify completed requirements (set when story moves to the Done column)
+  const completedReqs = stories.filter(s => s.itemType === 'Requirement/Story' && !!s.closedAt);
   
   let totalReqCost = 0;
   
@@ -153,14 +168,14 @@ export default function PmWaterfallDashboard() {
         <Card className="col-span-2">
           <CardHeader>
             <CardTitle>Earned Value Management (EVM)</CardTitle>
-            <CardDescription>Tracks Planned Value (PV), Earned Value (EV), and Actual Cost (AC) over time.</CardDescription>
+            <CardDescription>PV = planned cost of scheduled work. EV = value earned from actual hours logged (hours × billing rate). AC = actual cost incurred (hours × cost rate).</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={evmData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={evmData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="week" className="text-xs" />
+                  <XAxis dataKey="week" className="text-xs" angle={-45} textAnchor="end" height={55} interval="preserveStartEnd" />
                   <YAxis className="text-xs" tickFormatter={(value) => `$${value}`} />
                   <RechartsTooltip formatter={(value) => [`$${value}`, undefined]} />
                   <Legend />
@@ -193,7 +208,7 @@ export default function PmWaterfallDashboard() {
                       <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="week" className="text-xs" />
+                  <XAxis dataKey="week" className="text-xs" angle={-45} textAnchor="end" height={55} interval="preserveStartEnd" />
                   <YAxis className="text-xs" tickFormatter={(value) => `$${value}`} />
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <RechartsTooltip formatter={(value) => [`$${value}`, undefined]} />

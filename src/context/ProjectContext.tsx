@@ -283,6 +283,7 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/agile-dev/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
     '/waterfall/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
+    '/waterfall/pm-dashboard': ['stories', 'worklogs', 'employees', 'fixedCosts', 'kanbanColumns'],
     '/waterfall/gantt': ['stories', 'releases', 'employees', 'holidays', 'weeklyOffDays', 'impactedSystems', 'projectSettings', 'epics'],
     '/waterfall/cpm': ['stories', 'releases', 'employees', 'holidays', 'weeklyOffDays', 'impactedSystems', 'projectSettings'],
     '/agile-dev/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
@@ -300,7 +301,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays', 'horizontals'],
-    '/resources/resource-gantt': ['employees', 'worklogs', 'holidays', 'weeklyOffDays'],
+    '/resources/resource-gantt': ['employees', 'worklogs', 'stories', 'holidays', 'weeklyOffDays'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'holidays', 'weeklyOffDays'],
     '/resources/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
     '/resources/leave-calendar': ['employees', 'holidays', 'weeklyOffDays'],
@@ -842,15 +843,37 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                 const allSubTasksSnapshot = await getDocs(
                     query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyToUpdate.parentStoryId))
                 );
-                const allSubTasks = allSubTasksSnapshot.docs.map(d => ({id: d.id, ...d.data() as Story}));
+                const allSubTasks = allSubTasksSnapshot.docs
+                  .map(d => ({id: d.id, ...d.data() as Story}))
+                  .filter(t => !t.isDeleted);
                 
                 const updatedSubTasks = allSubTasks.map(t => t.id === storyId ? { ...t, status: data.status! } : t);
 
-                const firstStatus = updatedSubTasks[0]?.status;
-                if (updatedSubTasks.length > 0 && updatedSubTasks.every(t => t.status === firstStatus)) {
-                    const parentStory = stories.find(s => s.id === storyToUpdate.parentStoryId);
-                    if (parentStory && parentStory.status !== firstStatus) {
-                        await updateStory(parentStory.id, { status: firstStatus });
+                // If no active subtasks remain, don't change parent status automatically.
+                if (updatedSubTasks.length > 0) {
+                    // Check if all subtasks are "Done"
+                    const allDone = updatedSubTasks.every(t => t.status === 'Done');
+                    if (allDone) {
+                        const parentStory = stories.find(s => s.id === storyToUpdate.parentStoryId);
+                        if (parentStory && parentStory.status !== 'Done') {
+                            await updateStory(parentStory.id, { status: 'Done' });
+                        }
+                    } else {
+                        // Optionally: if all subtasks have the same status (e.g. 'To Do' or 'In Progress')
+                        const firstStatus = updatedSubTasks[0]?.status;
+                        if (updatedSubTasks.every(t => t.status === firstStatus)) {
+                             const parentStory = stories.find(s => s.id === storyToUpdate.parentStoryId);
+                             if (parentStory && parentStory.status !== firstStatus) {
+                                 await updateStory(parentStory.id, { status: firstStatus });
+                             }
+                        } else {
+                            // If mixed, but at least one is in progress or done, move parent to In Progress if it's To Do
+                            const anyInProgressOrDone = updatedSubTasks.some(t => t.status === 'In Progress' || t.status === 'Done');
+                            const parentStory = stories.find(s => s.id === storyToUpdate.parentStoryId);
+                            if (anyInProgressOrDone && parentStory && parentStory.status === 'To Do') {
+                                await updateStory(parentStory.id, { status: 'In Progress' });
+                            }
+                        }
                     }
                 }
             }
