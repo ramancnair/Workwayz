@@ -11,7 +11,7 @@ import { LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import Keycloak from 'keycloak-js';
 
@@ -197,43 +197,50 @@ export default function LoginPage() {
         }
 
         // 3. Update localStorage
-        localStorage.setItem('projectflow_user', JSON.stringify(userData));
+        localStorage.setItem('projectflow_user', JSON.stringify({
+          ...userData,
+          authProvider: 'supabase',
+          issuedAt: Date.now(),
+        }));
 
       } else {
         if (!auth || !db) {
             throw new Error("Firebase not initialized properly.");
         }
 
-        // 1. Sign in with Firebase Auth
+        // 1. Sign in with Firebase Auth (password verification only)
         const userCredential = await signInWithEmailAndPassword(auth, emailInput, passwordInput);
         const user = userCredential.user;
 
-        // 2. Fetch user profile from Firestore 'employees' collection
+        // 2. Cross-reference against the app's employees collection.
+        //    Firebase Auth is ONLY used for password verification.
+        //    If the user has no employee record, they are not authorised
+        //    to access this application — revoke the Firebase session immediately.
         const q = query(collection(db, 'employees'), where('email', '==', emailInput));
         const querySnapshot = await getDocs(q);
-        
-        let userData = {
-          name: emailInput.split('@')[0],
-          email: emailInput,
-          accessLevel: 'Team Member',
-          empId: '',
-          uid: user.uid
-        };
-        
-        if (!querySnapshot.empty) {
-          const docSnap = querySnapshot.docs[0];
-          const data = docSnap.data();
-          userData = {
-            name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-            email: data.email || emailInput,
-            accessLevel: data.accessLevel || 'Team Member',
-            empId: data.empId || docSnap.id,
-            uid: user.uid
-          };
+
+        if (querySnapshot.empty) {
+          // Revoke the Firebase session so the user can't exploit it later
+          await firebaseSignOut(auth);
+          throw new Error('Your account is not registered in this system. Please contact your administrator.');
         }
 
-        // 3. Update localStorage
-        localStorage.setItem('projectflow_user', JSON.stringify(userData));
+        const docSnap = querySnapshot.docs[0];
+        const data = docSnap.data();
+        const userData = {
+          name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || emailInput.split('@')[0],
+          email: data.email || emailInput,
+          accessLevel: data.accessLevel || 'Team Member',
+          empId: data.empId || docSnap.id,
+          uid: user.uid
+        };
+
+        // 3. Write session only after DB authorisation confirmed
+        localStorage.setItem('projectflow_user', JSON.stringify({
+          ...userData,
+          authProvider: 'firebase',
+          issuedAt: Date.now(),
+        }));
       }
 
       toast({
@@ -292,7 +299,11 @@ export default function LoginPage() {
             const level = determineAccessLevel(keycloak);
             const userData = await syncKeycloakUserWithDatabase(userProfile, level, keycloak.subject || '');
             
-            localStorage.setItem('projectflow_user', JSON.stringify(userData));
+            localStorage.setItem('projectflow_user', JSON.stringify({
+              ...userData,
+              authProvider: 'keycloak',
+              issuedAt: Date.now(),
+            }));
             toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
             router.push('/project-home');
         }
@@ -323,7 +334,11 @@ export default function LoginPage() {
                          const level = determineAccessLevel(keycloak);
                          const userData = await syncKeycloakUserWithDatabase(userProfile, level, keycloak.subject || '');
                          
-                         localStorage.setItem('projectflow_user', JSON.stringify(userData));
+                         localStorage.setItem('projectflow_user', JSON.stringify({
+                           ...userData,
+                           authProvider: 'keycloak',
+                           issuedAt: Date.now(),
+                         }));
                          toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
                          router.push('/project-home');
                      });

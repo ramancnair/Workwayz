@@ -104,7 +104,9 @@ export default function SignupPage() {
           email: emailInput,
           accessLevel: accessLevel,
           empId,
-          uid: user.id
+          uid: user.id,
+          authProvider: 'supabase',
+          issuedAt: Date.now(),
         }));
 
       } else {
@@ -154,7 +156,9 @@ export default function SignupPage() {
           email: emailInput,
           accessLevel: accessLevel,
           empId,
-          uid: user.uid
+          uid: user.uid,
+          authProvider: 'firebase',
+          issuedAt: Date.now(),
         }));
       }
 

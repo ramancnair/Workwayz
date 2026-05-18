@@ -260,7 +260,11 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           }
 
           if (setupData.user) {
-            localStorage.setItem('projectflow_user', JSON.stringify(setupData.user));
+            localStorage.setItem('projectflow_user', JSON.stringify({
+              ...setupData.user,
+              authProvider: authProvider,
+              issuedAt: Date.now(),
+            }));
           }
         } catch (userErr: any) {
           console.error("Failed to create admin user:", userErr);

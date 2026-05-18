@@ -90,15 +90,45 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const handleLogout = async () => {
     try {
-      if (auth) {
+      // Read current session before clearing so we know which provider to terminate
+      const userStr = localStorage.getItem('projectflow_user');
+      const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
+
+      // Always clear local session first
+      localStorage.removeItem('projectflow_user');
+
+      if (sessionProvider === 'keycloak') {
+        // Terminate the Keycloak SSO session server-side to prevent re-entry via session cookie
+        const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
+        const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
+        const keycloakClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
+        if (keycloakUrl && keycloakRealm && keycloakClientId) {
+          try {
+            const Keycloak = (await import('keycloak-js')).default;
+            const keycloak = new Keycloak({ url: keycloakUrl, realm: keycloakRealm, clientId: keycloakClientId });
+            await keycloak.init({ checkLoginIframe: false });
+            if (keycloak.authenticated) {
+              await keycloak.logout({ redirectUri: window.location.origin + '/' });
+              return; // keycloak.logout() triggers a redirect, so stop here
+            }
+          } catch (kcErr) {
+            console.warn('[Logout] Keycloak session termination failed:', kcErr);
+          }
+        }
+      } else if (auth) {
+        // Firebase signOut
         await signOut(auth);
       }
-      localStorage.removeItem('projectflow_user');
+
       router.push('/');
     } catch (error) {
       console.error("Error logging out:", error);
+      // Even on error, ensure local session is cleared and redirect
+      localStorage.removeItem('projectflow_user');
+      router.push('/');
     }
   };
+
 
   const getInitials = (name: string) => {
     if (!name) return '?';

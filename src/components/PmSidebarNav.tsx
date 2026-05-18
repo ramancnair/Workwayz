@@ -75,13 +75,37 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
 
   const handleLogout = async () => {
     try {
-      if (auth) {
+      const userStr = localStorage.getItem('projectflow_user');
+      const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
+
+      localStorage.removeItem('projectflow_user');
+
+      if (sessionProvider === 'keycloak') {
+        const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
+        const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
+        const keycloakClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
+        if (keycloakUrl && keycloakRealm && keycloakClientId) {
+          try {
+            const Keycloak = (await import('keycloak-js')).default;
+            const keycloak = new Keycloak({ url: keycloakUrl, realm: keycloakRealm, clientId: keycloakClientId });
+            await keycloak.init({ checkLoginIframe: false });
+            if (keycloak.authenticated) {
+              await keycloak.logout({ redirectUri: window.location.origin + '/' });
+              return;
+            }
+          } catch (kcErr) {
+            console.warn('[Logout] Keycloak session termination failed:', kcErr);
+          }
+        }
+      } else if (auth) {
         await signOut(auth);
       }
-      localStorage.removeItem('projectflow_user');
+
       router.push('/');
     } catch (error) {
       console.error("Error logging out:", error);
+      localStorage.removeItem('projectflow_user');
+      router.push('/');
     }
   };
 
