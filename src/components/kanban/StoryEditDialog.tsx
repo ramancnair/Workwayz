@@ -32,7 +32,6 @@ import { DatePicker } from '@/components/ui/datepicker';
 import { cn } from '@/lib/utils';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { usePathname } from 'next/navigation';
 import type { Story, WorkItemType, StoryStatus, Priority, BugSeverity } from '@/types';
 
 const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
@@ -68,7 +67,6 @@ const storyFormSchema = z.object({
   attachments: z.string().optional(),
   sprintId: z.string().optional(),
   relatedTestCaseId: z.string().optional(),
-  predecessorId: z.string().optional(),
   createdAt: z.date().optional(),
   closedAt: z.date().optional(),
 });
@@ -109,10 +107,8 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     testCases,
     testPlans,
   } = useProject();
-  
+
   const { toast } = useToast();
-  const pathname = usePathname();
-  const isWaterfall = pathname.includes('/waterfall');
 
   const selectedStory = useMemo(() => stories.find(s => s.id === storyId) || null, [stories, storyId]);
 
@@ -121,7 +117,6 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   const [editParentStoryText, setEditParentStoryText] = useState('');
   const [testCaseInputText, setTestCaseInputText] = useState('');
   const [relatedBugInputText, setRelatedBugInputText] = useState('');
-  const [editPredecessorText, setEditPredecessorText] = useState('');
 
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
 
@@ -187,10 +182,6 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     label: `[${b.storyId}] ${b.title}`,
   })), [stories]);
 
-  const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && s.itemType !== 'Sub Task').map(s => ({
-    value: s.id,
-    label: `[${s.storyId}] ${s.title}`,
-  })), [stories, selectedStory]);
 
   useEffect(() => {
       if (!selectedStory) {
@@ -238,7 +229,6 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
               impactedSystemIds: selectedStory.impactedSystemIds || [],
               attachments: selectedStory.attachments || '',
               relatedTestCaseId: selectedStory.relatedTestCaseId || 'unassigned',
-              predecessorId: selectedStory.predecessorId || 'unassigned',
               createdAt: selectedStory.createdAt ? parseISO(selectedStory.createdAt) : undefined,
               closedAt: selectedStory.closedAt ? parseISO(selectedStory.closedAt) : undefined,
           });
@@ -248,8 +238,6 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
           } else {
               setEditParentStoryText('');
           }
-          const predStory = stories.find(s => s.id === selectedStory.predecessorId);
-          setEditPredecessorText(predStory ? `[${predStory.storyId}] ${predStory.title}` : '');
       }
   }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases, stories]);
 
@@ -326,19 +314,18 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
 
   return (
     <Dialog open={!!storyId} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
           {selectedStory && (
             <>
               {selectedStory.itemType === 'Sub Task' ? (
                 <>
                   <DialogHeader>
-                    <div className="flex items-center gap-2">
-                        <DialogTitle>Edit Sub Task</DialogTitle>
-                    </div>
+                    <DialogTitle>Edit Sub Task</DialogTitle>
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
-                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 py-4">
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)}>
+                      <div className="overflow-y-auto px-6 py-4 space-y-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -486,11 +473,12 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                 </div>
                             </TabsContent>
                         </Tabs>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isEditStorySubmitting}>
-                                {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                            </Button>
-                        </DialogFooter>
+                      </div>
+                      <DialogFooter>
+                          <Button type="submit" disabled={isEditStorySubmitting}>
+                              {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                          </Button>
+                      </DialogFooter>
                     </form>
                   </Form>
                 </>
@@ -503,7 +491,8 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                 </DialogDescription>
               </DialogHeader>
               <Form {...editStoryForm}>
-                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4">
+                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)}>
+                  <div className="overflow-y-auto px-6 py-4 space-y-4">
                   <FormField
                       control={editStoryForm.control}
                       name="itemType"
@@ -903,27 +892,25 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                           </div>
                         )}
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {!isWaterfall && (
-                              <FormField
-                                  control={editStoryForm.control}
-                                  name="sprintId"
-                                  render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Sprint</FormLabel>
-                                      <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
-                                          <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
-                                          <SelectContent>
-                                          <SelectItem value="backlog">Backlog</SelectItem>
-                                          {sprints.map(sprint => (
-                                              <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                                          ))}
-                                          </SelectContent>
-                                      </Select>
-                                      <FormMessage />
-                                  </FormItem>
-                                  )}
-                              />
-                            )}
+                            <FormField
+                                control={editStoryForm.control}
+                                name="sprintId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Sprint</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                        <SelectItem value="backlog">Backlog</SelectItem>
+                                        {sprints.map(sprint => (
+                                            <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
                             <FormField
                             control={editStoryForm.control}
                             name="releaseId"
@@ -943,39 +930,6 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                     ))}
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
-                            control={editStoryForm.control}
-                            name="predecessorId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Predecessor</FormLabel>
-                                <FormControl>
-                                    <Input
-                                      list="predecessor-options-edit"
-                                      placeholder="Link to a predecessor requirement"
-                                      value={editPredecessorText}
-                                      onChange={(e) => {
-                                        const text = e.target.value;
-                                        setEditPredecessorText(text);
-                                        const matchingOption = predecessorOptions.find(opt => opt.label === text);
-                                        field.onChange(matchingOption ? matchingOption.value : undefined);
-                                      }}
-                                      onBlur={() => {
-                                        const matchingOption = predecessorOptions.find(opt => opt.label === editPredecessorText);
-                                        if (!matchingOption) {
-                                          setEditPredecessorText('');
-                                          field.onChange(undefined);
-                                        }
-                                      }}
-                                    />
-                                </FormControl>
-                                <datalist id="predecessor-options-edit">
-                                    {predecessorOptions.map(opt => <option key={opt.value} value={opt.label} />)}
-                                </datalist>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -1122,11 +1076,12 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                         </div>
                     </TabsContent>
                     </Tabs>
-                    <DialogFooter>
-                      <Button type="submit" disabled={isEditStorySubmitting}>
-                        {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                      </Button>
-                    </DialogFooter>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={isEditStorySubmitting}>
+                      {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </DialogFooter>
                 </form>
               </Form>
               </>

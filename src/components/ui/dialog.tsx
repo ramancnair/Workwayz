@@ -29,6 +29,11 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+/**
+ * DialogContent — flex-column layout so the header stays sticky and only the
+ * body scrolls. No internal padding: each section (header, body, footer) owns
+ * its own padding for clean separation.
+ */
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
@@ -38,46 +43,59 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        "fixed left-[50%] top-[50%] z-50 flex flex-col w-full max-w-lg translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 overflow-hidden sm:rounded-lg" +
+        " data-[state=open]:animate-in data-[state=closed]:animate-out" +
+        " data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" +
+        " data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95" +
+        " data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]" +
+        " data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
         className
       )}
       {...props}
     >
-      {/* Zero-height sticky wrapper: takes no layout space but sticks to
-          the top of the scroll container, keeping the button always visible */}
-      <div className="sticky top-0 h-0 overflow-visible flex justify-end z-10">
-        <DialogPrimitive.Close className="mt-3 mr-3 flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-md transition-all hover:bg-secondary/80 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-3.5 w-3.5" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      </div>
       {children}
     </DialogPrimitive.Content>
   </DialogPortal>
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
+/**
+ * DialogHeader — sticky, with the close button on the right side of the heading row.
+ * Children (DialogTitle + DialogDescription) are wrapped in a flex column on the left.
+ */
 const DialogHeader = ({
   className,
+  children,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-1.5 text-center sm:text-left",
+      "sticky top-0 z-10 flex flex-row items-start justify-between gap-4 bg-background px-6 py-4 border-b shrink-0",
       className
     )}
     {...props}
-  />
+  >
+    <div className="flex flex-col space-y-1 min-w-0 flex-1 text-left">
+      {children}
+    </div>
+    <DialogPrimitive.Close className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-sm transition-all hover:bg-secondary/80 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none mt-0.5">
+      <X className="h-3.5 w-3.5" />
+      <span className="sr-only">Close</span>
+    </DialogPrimitive.Close>
+  </div>
 )
 DialogHeader.displayName = "DialogHeader"
 
+/**
+ * DialogFooter — sticky at the bottom, with a top border.
+ */
 const DialogFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      "sticky bottom-0 bg-background border-t px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 shrink-0",
       className
     )}
     {...props}

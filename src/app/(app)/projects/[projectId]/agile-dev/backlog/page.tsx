@@ -1395,39 +1395,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             />
                             <FormField
                             control={addStoryForm.control}
-                            name="predecessorId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Predecessor</FormLabel>
-                                <FormControl>
-                                    <Input
-                                      list="predecessor-options-add"
-                                      placeholder="Link to a predecessor requirement"
-                                      value={addPredecessorText}
-                                      onChange={(e) => {
-                                        const text = e.target.value;
-                                        setAddPredecessorText(text);
-                                        const matchingOption = predecessorOptions.find(opt => opt.label === text);
-                                        field.onChange(matchingOption ? matchingOption.value : undefined);
-                                      }}
-                                      onBlur={() => {
-                                        const matchingOption = predecessorOptions.find(opt => opt.label === addPredecessorText);
-                                        if (!matchingOption) {
-                                          setAddPredecessorText('');
-                                          field.onChange(undefined);
-                                        }
-                                      }}
-                                    />
-                                </FormControl>
-                                <datalist id="predecessor-options-add">
-                                    {predecessorOptions.map(opt => <option key={opt.value} value={opt.label} />)}
-                                </datalist>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
-                            control={addStoryForm.control}
                             name="estimatedHours"
                             render={({ field }) => (
                                 <FormItem>
@@ -2312,39 +2279,6 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     ))}
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
-                            control={editStoryForm.control}
-                            name="predecessorId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Predecessor</FormLabel>
-                                <FormControl>
-                                    <Input
-                                      list="predecessor-options-edit"
-                                      placeholder="Link to a predecessor requirement"
-                                      value={editPredecessorText}
-                                      onChange={(e) => {
-                                        const text = e.target.value;
-                                        setEditPredecessorText(text);
-                                        const matchingOption = predecessorOptions.find(opt => opt.label === text);
-                                        field.onChange(matchingOption ? matchingOption.value : undefined);
-                                      }}
-                                      onBlur={() => {
-                                        const matchingOption = predecessorOptions.find(opt => opt.label === editPredecessorText);
-                                        if (!matchingOption) {
-                                          setEditPredecessorText('');
-                                          field.onChange(undefined);
-                                        }
-                                      }}
-                                    />
-                                </FormControl>
-                                <datalist id="predecessor-options-edit">
-                                    {predecessorOptions.map(opt => <option key={opt.value} value={opt.label} />)}
-                                </datalist>
                                 <FormMessage />
                                 </FormItem>
                             )}

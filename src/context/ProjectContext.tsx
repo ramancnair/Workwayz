@@ -282,16 +282,10 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/agile-dev/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
-    '/waterfall/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
-    '/waterfall/pm-dashboard': ['stories', 'worklogs', 'employees', 'fixedCosts', 'kanbanColumns'],
-    '/waterfall/gantt': ['stories', 'releases', 'employees', 'holidays', 'weeklyOffDays', 'impactedSystems', 'projectSettings', 'epics'],
-    '/waterfall/cpm': ['stories', 'releases', 'employees', 'holidays', 'weeklyOffDays', 'impactedSystems', 'projectSettings'],
     '/agile-dev/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
     '/agile-dev/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
     '/agile-dev/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'testCases'],
-    '/waterfall/requirements': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'testCases', 'testPlans'],
     '/agile-dev/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
-    '/waterfall/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testPlans'],
     '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints', 'environments'],
     '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testPlans'],

@@ -26,13 +26,11 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = pathname.startsWith(`${basePath}/pmo`);
-  
+
   const isAgileDevPath = pathname.startsWith(`${basePath}/agile-dev`);
-  const isWaterfallPath = pathname.startsWith(`${basePath}/waterfall`);
 
   const getTabValue = () => {
     if (isAgileDevPath) return 'agile-dev';
-    if (isWaterfallPath) return 'waterfall';
     if (isTestingPath) return 'testing';
     if (isProjectPath) return 'project';
     if (isInitialEstimationPath) return 'initial-estimation';
@@ -47,8 +45,6 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const onTabChange = (value: string) => {
     if (value === 'agile-dev') {
       router.push(`${basePath}/agile-dev/dashboard`);
-    } else if (value === 'waterfall') {
-      router.push(`${basePath}/waterfall/dashboard`);
     } else if (value === 'testing') {
       router.push(`${basePath}/testing/dashboard`);
     } else if (value === 'project') {
@@ -79,50 +75,49 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     const isInitialStatus = project?.status === 'Initial Estimation';
 
     return (
-       <>
+      <>
         <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4">
-              <div>
-                <h1 className="text-xl font-bold">{project?.name || 'Loading Project...'}</h1>
-                <p className="text-xs text-muted-foreground">{project?.id}</p>
-              </div>
-              <Tabs value={getTabValue()} onValueChange={onTabChange}>
-                  <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                      <TabsTrigger value="initial-estimation" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Initial Estimation</TabsTrigger>
-                      {!isInitialStatus && (
-                        <>
-                          <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
-                          <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
-                          <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
-                          <TabsTrigger value="agile-dev" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Agile Dev</TabsTrigger>
-                          <TabsTrigger value="waterfall" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Waterfall</TabsTrigger>
-                          <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
-                          <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
-                          <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
-                          <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
-                        </>
-                      )}
-                  </TabsList>
-              </Tabs>
-            </div>
-            <div className="flex-1 overflow-auto">
-                {children}
-            </div>
-       </>
+          <div>
+            <h1 className="text-xl font-bold">{project?.name || 'Loading Project...'}</h1>
+            <p className="text-xs text-muted-foreground">{project?.id}</p>
+          </div>
+          <Tabs value={getTabValue()} onValueChange={onTabChange}>
+            <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
+              <TabsTrigger value="initial-estimation" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Initial Estimation</TabsTrigger>
+              {!isInitialStatus && (
+                <>
+                  <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
+                  <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
+                  <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
+                  <TabsTrigger value="agile-dev" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Agile Dev</TabsTrigger>
+                  <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
+                  <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
+                  <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                  <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
+                </>
+              )}
+            </TabsList>
+          </Tabs>
+        </div>
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
+      </>
     );
   };
 
 
   return (
-      <SidebarProvider open={open} onOpenChange={setOpen}>
-        <Sidebar collapsible="icon">
-          <SidebarNav projectId={projectId} />
-        </Sidebar>
-        <SidebarInset>
-          <div className="h-screen flex flex-col overflow-hidden">
-            {renderContent()}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+    <SidebarProvider open={open} onOpenChange={setOpen}>
+      <Sidebar collapsible="icon">
+        <SidebarNav projectId={projectId} />
+      </Sidebar>
+      <SidebarInset>
+        <div className="h-screen flex flex-col overflow-hidden">
+          {renderContent()}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

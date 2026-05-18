@@ -60,7 +60,6 @@ import {
   HeartPulse,
   Hourglass,
   LogOut,
-  TrendingUp,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useProject } from "@/context/ProjectContext";
@@ -167,39 +166,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/agile-dev/development-tasks`,
       label: "Sub-Tasks",
       icon: Component,
-    },
-  ];
-
-  const waterfallMenuItems = [
-    {
-      href: `${basePath}/waterfall/dashboard`,
-      label: "Waterfall Dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      href: `${basePath}/waterfall/pm-dashboard`,
-      label: "PM WF Dashboard",
-      icon: TrendingUp,
-    },
-    {
-      href: `${basePath}/waterfall/requirements`,
-      label: "Requirements",
-      icon: Layers,
-    },
-    {
-      href: `${basePath}/waterfall/development-tasks`,
-      label: "Sub-Tasks",
-      icon: Component,
-    },
-    {
-      href: `${basePath}/waterfall/gantt`,
-      label: "Project Plan",
-      icon: ListTree,
-    },
-    {
-      href: `${basePath}/waterfall/cpm`,
-      label: "CPM",
-      icon: Network,
     },
   ];
 
@@ -375,7 +341,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = ['/pmo/documents', '/pmo/payment-milestones', '/pmo/business-continuity', '/pmo/resource-billing'].some(p => pathname.startsWith(basePath + p));
   const isAgileDevPath = pathname.startsWith(`${basePath}/agile-dev`);
-  const isWaterfallPath = pathname.startsWith(`${basePath}/waterfall`);
 
 
   const menuItems = isSettingsPath ? settingsMenuItems
@@ -388,8 +353,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
                 : isHolidaysPath ? holidaysMenuItems
                   : isPmoPath ? pmoMenuItems
                     : isAgileDevPath ? devMenuItems
-                      : isWaterfallPath ? waterfallMenuItems
-                        : devMenuItems;
+                      : devMenuItems;
 
   return (
     <>
