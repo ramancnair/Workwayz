@@ -731,7 +731,7 @@ export default function KanbanPage() {
       </div>
 
       <Dialog open={!!selectedStory} onOpenChange={(isOpen) => !isOpen && handleSetSelectedStory(null)}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
           {selectedStory && (
             <>
               {selectedStory.itemType === 'Sub Task' ? (
@@ -748,7 +748,7 @@ export default function KanbanPage() {
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
-                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 py-4">
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 overflow-y-auto px-6 py-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -892,7 +892,7 @@ export default function KanbanPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...editStoryForm}>
-                  <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4">
+                  <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4 overflow-y-auto px-6 py-4">
                       <FormField
                           control={editStoryForm.control}
                           name="title"
