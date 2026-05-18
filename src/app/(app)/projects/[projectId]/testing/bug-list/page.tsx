@@ -359,7 +359,7 @@ export default function BugListPage() {
     </div>
 
     <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingBug(null); setIsDialogOpen(open); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{editingBug ? 'Edit Bug' : 'Add New Bug'}</DialogTitle>
             <DialogDescription>

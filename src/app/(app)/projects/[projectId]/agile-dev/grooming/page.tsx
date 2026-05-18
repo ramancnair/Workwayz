@@ -1005,7 +1005,7 @@ export default function GroomingPage() {
                     <DialogTitle>{editingSprint ? 'Edit Sprint' : 'Create New Sprint'}</DialogTitle>
                 </DialogHeader>
                 <Form {...sprintForm}>
-                    <form onSubmit={sprintForm.handleSubmit(handleSprintSubmit)} className="space-y-4 px-6 py-4">
+                    <form onSubmit={sprintForm.handleSubmit(handleSprintSubmit)} className="space-y-4 py-4">
                         <FormField
                             control={sprintForm.control}
                             name="title"
@@ -1109,7 +1109,7 @@ export default function GroomingPage() {
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
-                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 overflow-y-auto px-6 py-4">
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 py-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -1269,7 +1269,7 @@ export default function GroomingPage() {
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...editStoryForm}>
-                    <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4 overflow-y-auto px-6 py-4">
+                    <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4 py-4">
                     <FormField
                         control={editStoryForm.control}
                         name="title"

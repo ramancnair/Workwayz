@@ -30,38 +30,86 @@ const DialogOverlay = React.forwardRef<
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 /**
- * DialogContent — flex-column layout so the header stays sticky and only the
- * body scrolls. No internal padding: each section (header, body, footer) owns
- * its own padding for clean separation.
+ * DialogContent — flex-column layout with sticky header/footer.
+ * Content between DialogHeader and DialogFooter is automatically wrapped
+ * in a scrollable padded container. Use max-h-[Xvh] on DialogContent to
+ * control the max height.
  */
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 flex flex-col w-full max-w-lg translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 overflow-hidden sm:rounded-lg" +
-        " data-[state=open]:animate-in data-[state=closed]:animate-out" +
-        " data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" +
-        " data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95" +
-        " data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]" +
-        " data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </DialogPrimitive.Content>
-  </DialogPortal>
-))
+>(({ className, children, ...props }, ref) => {
+  // Separate header/footer (sticky) from body content (scrollable+padded)
+  const header: React.ReactNode[] = [];
+  const footer: React.ReactNode[] = [];
+  const body: React.ReactNode[] = [];
+
+  React.Children.forEach(children, (child) => {
+    if (!React.isValidElement(child)) {
+      body.push(child);
+      return;
+    }
+    const displayName =
+      (child.type as any)?.displayName ||
+      (child.type as any)?.name ||
+      "";
+    if (displayName === "DialogHeader") header.push(child);
+    else if (displayName === "DialogFooter") footer.push(child);
+    else body.push(child);
+  });
+
+  const hasHeader = header.length > 0;
+  const hasFooter = footer.length > 0;
+
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed left-[50%] top-[50%] z-50 flex flex-col w-full max-w-lg translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 overflow-hidden sm:rounded-lg" +
+          " data-[state=open]:animate-in data-[state=closed]:animate-out" +
+          " data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" +
+          " data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95" +
+          " data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]" +
+          " data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+          className
+        )}
+        {...props}
+      >
+        {header}
+        {body.length > 0 && (
+          <div className={cn(
+            "flex-1 overflow-y-auto px-6",
+            hasHeader || hasFooter ? "py-4" : "py-6"
+          )}>
+            {body}
+          </div>
+        )}
+        {footer}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+})
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 /**
- * DialogHeader — sticky, with the close button on the right side of the heading row.
- * Children (DialogTitle + DialogDescription) are wrapped in a flex column on the left.
+ * DialogBody — explicit scrollable body wrapper (optional, same as the auto-wrapper).
+ * Use when you need custom className on the scroll container.
+ */
+const DialogBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn("flex-1 overflow-y-auto px-6 py-4", className)}
+    {...props}
+  />
+)
+DialogBody.displayName = "DialogBody"
+
+/**
+ * DialogHeader — sticky at the top, with the close button integrated on the right.
  */
 const DialogHeader = ({
   className,
@@ -137,6 +185,7 @@ export {
   DialogClose,
   DialogTrigger,
   DialogContent,
+  DialogBody,
   DialogHeader,
   DialogFooter,
   DialogTitle,

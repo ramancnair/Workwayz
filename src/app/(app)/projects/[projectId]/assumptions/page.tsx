@@ -293,7 +293,7 @@ export default function AssumptionsPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingAssumption(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{editingAssumption ? 'Edit Assumption' : 'Add New Assumption'}</DialogTitle>
           </DialogHeader>

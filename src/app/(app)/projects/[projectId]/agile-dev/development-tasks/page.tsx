@@ -703,7 +703,7 @@ export default function DevelopmentTasksPage() {
     </div>
 
     <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingSubTask(null); }}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{editingSubTask ? 'Edit Sub-Task' : 'Add New Sub-Task'}</DialogTitle>
             <DialogDescription>Make changes to the sub-task details here.</DialogDescription>

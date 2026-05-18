@@ -741,7 +741,7 @@ export default function InitialEstimationPage() {
       </div>
 
       <Dialog open={isSystemDialogOpen} onOpenChange={(open) => { setIsSystemDialogOpen(open); if (!open) setEditingSystem(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{editingSystem ? 'Edit System' : 'Add New System'}</DialogTitle>
           </DialogHeader>
@@ -860,7 +860,7 @@ export default function InitialEstimationPage() {
       </AlertDialog>
 
       <Dialog open={isSuggestStackDialogOpen} onOpenChange={setIsSuggestStackDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh]">
           <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>AI Tech Stack Suggestions</DialogTitle>
             <Button variant="outline" size="sm" onClick={() => handleSuggestTechStack(true)} disabled={isAiSuggestingStack}>
@@ -910,7 +910,7 @@ export default function InitialEstimationPage() {
         </DialogContent>
       </Dialog>
       <Dialog open={isSuggestHorizontalsDialogOpen} onOpenChange={setIsSuggestHorizontalsDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh]">
           <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>AI Horizontal Strategy Suggestions</DialogTitle>
             <Button variant="outline" size="sm" onClick={() => handleSuggestHorizontals(true)} disabled={isAiSuggestingHorizontals}>

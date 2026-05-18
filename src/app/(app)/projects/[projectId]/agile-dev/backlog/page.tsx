@@ -1025,7 +1025,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                 <DialogTitle>Add New Requirement</DialogTitle>
               </DialogHeader>
               <Form {...addStoryForm}>
-                <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="space-y-4 overflow-y-auto px-6 py-4">
+                <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="space-y-4 py-4">
                      <FormField
                         control={addStoryForm.control}
                         name="itemType"
@@ -1700,7 +1700,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
-                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 overflow-y-auto px-6 py-4">
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 py-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -1865,7 +1865,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                 </DialogDescription>
               </DialogHeader>
               <Form {...editStoryForm}>
-                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4 overflow-y-auto px-6 py-4">
+                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4 py-4">
                   <FormField
                       control={editStoryForm.control}
                       name="itemType"

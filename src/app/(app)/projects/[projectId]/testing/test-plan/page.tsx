@@ -706,7 +706,7 @@ export default function TestPlanPage() {
     </Dialog>
     
     <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Edit Test Case</DialogTitle>
         </DialogHeader>

@@ -296,7 +296,7 @@ export default function DependenciesPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingDependency(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{editingDependency ? 'Edit Dependency' : 'Add New Dependency'}</DialogTitle>
           </DialogHeader>
