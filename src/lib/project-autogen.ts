@@ -227,11 +227,14 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     'Tester',
   ];
 
-  // Shuffle global users to choose at random
-  const shuffledUsers = [...globalUsers].sort(() => 0.5 - Math.random());
+  // Filter out Administrator and PMO users so they are never assigned to projects
+  const eligibleUsers = globalUsers.filter(u => u.accessLevel !== 'Administrator' && u.accessLevel !== 'PMO');
+
+  // Shuffle eligible users to choose at random
+  const shuffledUsers = [...eligibleUsers].sort(() => 0.5 - Math.random());
   const pickedUsers = shuffledUsers.slice(0, Math.min(shuffledUsers.length, rolePool.length));
   const employeeIds: string[] = [];
-  
+
   // Find specific roles if available, fallback to first user
   const pmUserIdx = pickedUsers.findIndex((_, idx) => rolePool[idx] === 'PM');
   const testerUserIdx = pickedUsers.findIndex((_, idx) => rolePool[idx] === 'Tester');
@@ -343,31 +346,31 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const buildStatusHistory = (finalStatus: string, sprintStartDate: Date, sprintEndDate: Date) => {
     const history: { fromStatus: string | null; toStatus: string; date: string }[] = [];
     const sprintDays = differenceInDays(sprintEndDate, sprintStartDate);
-    
+
     // Everyone starts at 'To Do' on sprint start
     history.push({ fromStatus: null, toStatus: 'To Do', date: sprintStartDate.toISOString() });
-    
+
     if (finalStatus === 'To Do') return history;
-    
+
     // Move to 'In Development' roughly 10-30% into the sprint
     const devStartOffset = Math.max(1, Math.floor(sprintDays * (0.1 + Math.random() * 0.2)));
     const devStartDate = addDays(sprintStartDate, devStartOffset);
     history.push({ fromStatus: 'To Do', toStatus: 'In Development', date: devStartDate.toISOString() });
-    
+
     if (finalStatus === 'In Development') return history;
-    
+
     // Move to 'In QA' roughly 40-60% into the sprint
     const qaStartOffset = Math.max(devStartOffset + 1, Math.floor(sprintDays * (0.4 + Math.random() * 0.2)));
     const qaStartDate = addDays(sprintStartDate, qaStartOffset);
     history.push({ fromStatus: 'In Development', toStatus: 'In QA', date: qaStartDate.toISOString() });
-    
+
     if (finalStatus === 'In QA') return history;
-    
+
     // Move to 'Done' roughly 60-90% into the sprint
     const doneOffset = Math.max(qaStartOffset + 1, Math.floor(sprintDays * (0.6 + Math.random() * 0.3)));
     const doneDate = addDays(sprintStartDate, doneOffset);
     history.push({ fromStatus: 'In QA', toStatus: 'Done', date: doneDate.toISOString() });
-    
+
     return history;
   };
 
@@ -495,7 +498,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const prodEnd = addDays(prodStart, 2);
 
   const tpRefs: { id: string; name: string }[] = [];
-  
+
   // SIT Plan
   const sitTpRef = doc(col('testPlans'));
   batch.set(sitTpRef, {
@@ -537,11 +540,11 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
 
   let tcCounter = 1;
   const tpTestCaseIds: string[] = [];
-  
+
   storyRefObjs.forEach(st => {
     const tcRef = doc(col('testCases'));
     tpTestCaseIds.push(tcRef.id);
-    
+
     // Create executions for all 3 plans
     const executions = tpRefs.map(tp => {
       const generatedStatus = rand(['Passed', 'Passed', 'Failed', 'Not Run']); // Weight towards passed for realism
