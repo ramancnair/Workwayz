@@ -37,7 +37,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, CheckCircle2, Coins } from 'lucide-react';
 import { type PaymentMilestone, type PaymentMilestoneStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -81,6 +81,8 @@ export default function BillingPage() {
   const [projectValueInput, setProjectValueInput] = useState('');
   const [monthlyBilledInput, setMonthlyBilledInput] = useState('');
   const [isSavingVal, setIsSavingVal] = useState(false);
+  const [isEditingValue, setIsEditingValue] = useState(false);
+  const [hasInitializedEditState, setHasInitializedEditState] = useState(false);
   
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'milestoneId', desc: false });
 
@@ -131,6 +133,27 @@ export default function BillingPage() {
     return sorted;
   }, [paymentMilestones, sorting]);
 
+  const { realisedAmount, remainingAmount } = useMemo(() => {
+    if (!paymentMilestones) return { realisedAmount: 0, remainingAmount: 0 };
+    
+    let realised = 0;
+    let remaining = 0;
+
+    paymentMilestones.forEach(m => {
+      const amount = project?.pricingModel === 'Fixed Bid'
+        ? ((m.billingPercentage / 100) * (project.projectValue || 0))
+        : (m.amount || 0);
+
+      if (m.status === 'Payment Completed') {
+        realised += amount;
+      } else {
+        remaining += amount;
+      }
+    });
+
+    return { realisedAmount: realised, remainingAmount: remaining };
+  }, [paymentMilestones, project]);
+
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>
       <Button variant="ghost" onClick={() => handleSort(columnId)} className="-ml-4 hover:bg-transparent">
@@ -140,13 +163,21 @@ export default function BillingPage() {
     </TableHead>
   );
 
-  // Initialize Project value forms
+  // Initialize Project value forms & editing state
   useEffect(() => {
     if (project) {
       setProjectValueInput(project.projectValue !== undefined ? String(project.projectValue) : '');
       setMonthlyBilledInput(project.monthlyBilledValue !== undefined ? String(project.monthlyBilledValue) : '');
+      
+      if (!hasInitializedEditState) {
+        const hasValue = project.pricingModel === 'Fixed Bid' 
+          ? (project.projectValue !== undefined && project.projectValue !== null && project.projectValue !== 0)
+          : (project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null && project.monthlyBilledValue !== 0);
+        setIsEditingValue(!hasValue);
+        setHasInitializedEditState(true);
+      }
     }
-  }, [project]);
+  }, [project, hasInitializedEditState]);
 
   // Form watcher for billing percentage auto-calculation in Fixed Bid
   const billingPct = form.watch('billingPercentage');
@@ -207,9 +238,10 @@ export default function BillingPage() {
         return updatePaymentMilestone(milestone.id, { amount: Math.round(computedAmount * 100) / 100 });
       });
       await Promise.all(promises);
-      toast({ title: "Success", description: "Total Project Value and milestone amounts updated successfully." });
+      toast({ title: "Success", description: "Final Contract Value and milestone amounts updated successfully." });
+      setIsEditingValue(false);
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not save project value." });
+      toast({ variant: "destructive", title: "Error", description: "Could not save final contract value." });
     }
     setIsSavingVal(false);
   };
@@ -225,6 +257,7 @@ export default function BillingPage() {
     const success = await updateProject({ monthlyBilledValue: val });
     if (success) {
       toast({ title: "Success", description: "Monthly Billed Value updated successfully." });
+      setIsEditingValue(false);
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not save monthly billed value." });
     }
@@ -254,7 +287,7 @@ export default function BillingPage() {
   return (
     <>
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-        <PageHeader title="Payment Milestones" description="Manage and track project billing milestones.">
+        <PageHeader title="FB Payment Milestones" description="Manage and track project billing milestones.">
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Payment Milestone
@@ -264,46 +297,151 @@ export default function BillingPage() {
         {project && (
           <Card className="bg-card/60 backdrop-blur-sm shadow-sm border border-border/40">
             <CardContent className="p-6">
-              <h3 className="text-base font-bold text-foreground mb-4">Project Value</h3>
+              <h3 className="text-base font-bold text-foreground mb-4">Final Contract Value</h3>
               {project.pricingModel === 'Fixed Bid' ? (
-                <div className="flex flex-col md:flex-row items-end gap-4 max-w-xl">
-                  <div className="flex-1 space-y-2 w-full">
-                    <label className="text-sm font-semibold text-muted-foreground">Total Project Value (USD)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={projectValueInput}
-                        onChange={(e) => setProjectValueInput(e.target.value)}
-                        className="pl-8 bg-background/50 border-muted"
-                      />
+                !isEditingValue ? (
+                  <div className="flex flex-col md:flex-row items-end gap-4 max-w-xl">
+                    <div className="flex-1 space-y-2 w-full">
+                      <label className="text-sm font-semibold text-muted-foreground">Final Contract Value (USD)</label>
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl font-black text-foreground tracking-tight py-1 bg-background/30 rounded px-3 border border-border/40 flex-1 flex items-center h-10">
+                          ${(project.projectValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => setIsEditingValue(true)} 
+                          className="h-10 w-10 shrink-0 border-muted-foreground/30 hover:border-foreground/50 transition-colors"
+                          title="Edit Contract Value"
+                        >
+                          <Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <Button onClick={handleSaveProjectValue} disabled={isSavingVal} className="w-full md:w-auto shadow-sm">
-                    {isSavingVal ? 'Saving...' : 'Save Value'}
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex flex-col md:flex-row items-end gap-4 max-w-xl">
+                    <div className="flex-1 space-y-2 w-full">
+                      <label className="text-sm font-semibold text-muted-foreground">Final Contract Value (USD)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={projectValueInput}
+                          onChange={(e) => setProjectValueInput(e.target.value)}
+                          className="pl-8 bg-background/50 border-muted"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <Button onClick={handleSaveProjectValue} disabled={isSavingVal} className="shadow-sm">
+                        {isSavingVal ? 'Saving...' : 'Save Value'}
+                      </Button>
+                      {(project.projectValue !== undefined && project.projectValue !== null && project.projectValue !== 0) && (
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => {
+                            setProjectValueInput(String(project.projectValue || ''));
+                            setIsEditingValue(false);
+                          }}
+                          disabled={isSavingVal}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
               ) : (
-                <div className="flex flex-col md:flex-row items-end gap-4 max-w-xl">
-                  <div className="flex-1 space-y-2 w-full">
-                    <label className="text-sm font-semibold text-muted-foreground">Monthly Billed Value (USD)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={monthlyBilledInput}
-                        onChange={(e) => setMonthlyBilledInput(e.target.value)}
-                        className="pl-8 bg-background/50 border-muted"
-                      />
+                !isEditingValue ? (
+                  <div className="flex flex-col md:flex-row items-end gap-4 max-w-xl">
+                    <div className="flex-1 space-y-2 w-full">
+                      <label className="text-sm font-semibold text-muted-foreground">Monthly Billed Value (USD)</label>
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl font-black text-foreground tracking-tight py-1 bg-background/30 rounded px-3 border border-border/40 flex-1 flex items-center h-10">
+                          ${(project.monthlyBilledValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => setIsEditingValue(true)} 
+                          className="h-10 w-10 shrink-0 border-muted-foreground/30 hover:border-foreground/50 transition-colors"
+                          title="Edit Monthly Value"
+                        >
+                          <Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <Button onClick={handleSaveMonthlyBilled} disabled={isSavingVal} className="w-full md:w-auto shadow-sm">
-                    {isSavingVal ? 'Saving...' : 'Save Value'}
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex flex-col md:flex-row items-end gap-4 max-w-xl">
+                    <div className="flex-1 space-y-2 w-full">
+                      <label className="text-sm font-semibold text-muted-foreground">Monthly Billed Value (USD)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={monthlyBilledInput}
+                          onChange={(e) => setMonthlyBilledInput(e.target.value)}
+                          className="pl-8 bg-background/50 border-muted"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <Button onClick={handleSaveMonthlyBilled} disabled={isSavingVal} className="shadow-sm">
+                        {isSavingVal ? 'Saving...' : 'Save Value'}
+                      </Button>
+                      {(project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null && project.monthlyBilledValue !== 0) && (
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => {
+                            setMonthlyBilledInput(String(project.monthlyBilledValue || ''));
+                            setIsEditingValue(false);
+                          }}
+                          disabled={isSavingVal}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
               )}
+
+              {/* Premium realised and remaining balance cards */}
+              <div className="mt-6 pt-6 border-t border-border/40 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+                <div className="relative overflow-hidden bg-emerald-500/[0.03] hover:bg-emerald-500/[0.06] border border-emerald-500/10 hover:border-emerald-500/20 rounded-xl p-4 flex items-center gap-4 transition-all duration-300 group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] to-transparent pointer-events-none" />
+                  <div className="h-10 w-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400 group-hover:scale-110 transition-transform duration-300">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-emerald-500/70">Total Realised</span>
+                    <div className="text-xl font-extrabold text-emerald-400 tracking-tight">
+                      ${realisedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative overflow-hidden bg-blue-500/[0.03] hover:bg-blue-500/[0.06] border border-blue-500/10 hover:border-blue-500/20 rounded-xl p-4 flex items-center gap-4 transition-all duration-300 group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />
+                  <div className="h-10 w-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-blue-400 group-hover:scale-110 transition-transform duration-300">
+                    <Coins className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-500/70">Remaining Amount</span>
+                    <div className="text-xl font-extrabold text-blue-400 tracking-tight">
+                      ${remainingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}

@@ -413,7 +413,7 @@ export default function BillingPage() {
                     <TableRow key={project.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell className="font-semibold text-foreground min-w-[200px]">
                         <Link 
-                          href={`/projects/${project.id}/pmo/resource-billing`}
+                          href={`/projects/${project.id}/pmo/fb-billing`}
                           className="hover:text-blue-500 flex items-center gap-1.5 transition-colors group cursor-pointer"
                         >
                           {project.name}
@@ -445,7 +445,7 @@ export default function BillingPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" asChild className="hover:border-blue-500 hover:text-blue-500 cursor-pointer">
-                          <Link href={`/projects/${project.id}/pmo/resource-billing`}>
+                          <Link href={`/projects/${project.id}/pmo/fb-billing`}>
                             Manage PMO
                           </Link>
                         </Button>
