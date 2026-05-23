@@ -151,6 +151,8 @@ export type User = {
   accessLevel?: AccessLevel;
   billedRate?: number;
   costRate?: number;
+  costAmount?: number;
+  costCurrency?: string;
   availability?: number;
   leavePeriods?: LeavePeriod[];
   isDeleted?: boolean;

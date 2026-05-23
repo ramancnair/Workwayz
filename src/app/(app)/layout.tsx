@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PmSidebarNav } from '@/components/PmSidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 import { AuthGuard } from '@/components/AuthGuard';
+import { Settings } from 'lucide-react';
 
 export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -68,7 +69,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
                         <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
                         <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
-                        <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Portfolio Settings</TabsTrigger>
+                        <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+                            <Settings className="h-4 w-4" />
+                            Portfolio Settings
+                        </TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>

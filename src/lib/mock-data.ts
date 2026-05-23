@@ -14,6 +14,8 @@ export const employees: Employee[] = [
     onboardingDate: new Date('2023-02-01').toISOString(),
     billedRate: 100,
     availability: 100,
+    costAmount: 110000,
+    costCurrency: 'USD',
     avatar: 'https://placehold.co/40x40.png'
   },
   {
@@ -28,6 +30,8 @@ export const employees: Employee[] = [
     onboardingDate: new Date('2023-05-20').toISOString(),
     billedRate: 80,
     availability: 100,
+    costAmount: 90000,
+    costCurrency: 'USD',
     avatar: 'https://placehold.co/40x40.png'
   },
   {
@@ -42,6 +46,8 @@ export const employees: Employee[] = [
     onboardingDate: new Date('2022-11-10').toISOString(),
     billedRate: 115,
     availability: 75,
+    costAmount: 135000,
+    costCurrency: 'USD',
     avatar: 'https://placehold.co/40x40.png'
   },
   {
@@ -56,6 +62,8 @@ export const employees: Employee[] = [
     onboardingDate: new Date('2023-03-15').toISOString(),
     billedRate: 60,
     availability: 100,
+    costAmount: 85000,
+    costCurrency: 'USD',
     avatar: 'https://placehold.co/40x40.png'
   },
   {
@@ -70,6 +78,8 @@ export const employees: Employee[] = [
     onboardingDate: new Date('2022-09-01').toISOString(),
     billedRate: 75,
     availability: 100,
+    costAmount: 95000,
+    costCurrency: 'USD',
     avatar: 'https://placehold.co/40x40.png'
   },
 ];

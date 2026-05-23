@@ -59,6 +59,8 @@ const userFormSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   experience: z.coerce.number().optional(),
   accessLevel: z.enum(['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO']).optional(),
+  costAmount: z.coerce.number().optional(),
+  costCurrency: z.string().optional(),
 });
 
 const autoGenFormSchema = z.object({
@@ -141,6 +143,8 @@ export default function UsersPage() {
         if (editingUser) {
         form.reset({
             ...editingUser,
+            costAmount: editingUser.costAmount ?? 0,
+            costCurrency: editingUser.costCurrency ?? 'USD',
         });
         } else {
         form.reset({
@@ -151,6 +155,8 @@ export default function UsersPage() {
             phone: '',
             experience: 0,
             accessLevel: undefined,
+            costAmount: 0,
+            costCurrency: 'USD',
         });
         }
     }
@@ -215,6 +221,8 @@ export default function UsersPage() {
                     accessLevel: level,
                     avatar: 'https://placehold.co/40x40.png',
                     isDeleted: false,
+                    costCurrency: 'USD',
+                    costAmount: (Math.floor(Math.random() * 80) + 40) * 1000,
                 };
                 
                 const userRef = doc(db, 'employees', empId);
@@ -494,7 +502,8 @@ export default function UsersPage() {
                   <SortableHeader columnId="empId">Emp ID</SortableHeader>
                   <SortableHeader columnId="name">Name</SortableHeader>
                   <SortableHeader columnId="email">Email</SortableHeader>
-                   <SortableHeader columnId="accessLevel">Access Level</SortableHeader>
+                  <SortableHeader columnId="accessLevel">Access Level</SortableHeader>
+                  <SortableHeader columnId="costAmount">Annual Cost</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -518,6 +527,15 @@ export default function UsersPage() {
                     <TableCell>{user.firstName} {user.lastName}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.accessLevel || 'N/A'}</TableCell>
+                    <TableCell>
+                      {user.costCurrency && user.costAmount !== undefined ? (
+                        <span>
+                          {user.costCurrency} {user.costAmount.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(user)}>
                         <Edit className="h-4 w-4" />
@@ -602,6 +620,40 @@ export default function UsersPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
+                <div className="space-y-2">
+                  <FormLabel>Cost</FormLabel>
+                  <div className="flex h-10 w-full items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
+                    <FormField control={form.control} name="costCurrency" render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value || 'USD'}>
+                        <FormControl>
+                          <SelectTrigger className="w-[125px] border-0 focus:ring-0 focus:ring-offset-0 rounded-r-none shadow-none h-full bg-transparent pr-2 pl-3">
+                            <SelectValue placeholder="USD" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="USD">USD ($)</SelectItem>
+                          <SelectItem value="EUR">EUR (€)</SelectItem>
+                          <SelectItem value="GBP">GBP (£)</SelectItem>
+                          <SelectItem value="INR">INR (₹)</SelectItem>
+                          <SelectItem value="CAD">CAD ($)</SelectItem>
+                          <SelectItem value="AUD">AUD ($)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )} />
+                    <div className="h-6 w-px bg-input shrink-0" />
+                    <FormField control={form.control} name="costAmount" render={({ field }) => (
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-l-none shadow-none h-full bg-transparent px-3"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                    )} />
+                  </div>
+                </div>
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={isSubmitting}>
