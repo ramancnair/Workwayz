@@ -37,7 +37,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, CheckCircle2, Coins } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, CheckCircle2, Coins, Calendar } from 'lucide-react';
 import { type PaymentMilestone, type PaymentMilestoneStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -49,6 +49,7 @@ const milestoneSchema = z.object({
   billingPercentage: z.coerce.number().min(0).max(100, "Percentage must be between 0 and 100."),
   amount: z.coerce.number().min(0, "Amount must be a positive number."),
   status: z.enum(['TBD', 'In Progress', 'Milestone completed', 'Invoice raised', 'Payment Completed']),
+  statusDate: z.string().optional().or(z.literal('')),
   attachments: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
@@ -181,6 +182,12 @@ export default function BillingPage() {
 
   // Form watcher for billing percentage auto-calculation in Fixed Bid
   const billingPct = form.watch('billingPercentage');
+  const watchedStatus = form.watch('status');
+  const isStatusChanged = useMemo(() => {
+    if (!watchedStatus) return false;
+    if (!editingMilestone) return true;
+    return watchedStatus !== editingMilestone.status;
+  }, [watchedStatus, editingMilestone]);
   useEffect(() => {
     if (project?.pricingModel === 'Fixed Bid') {
       const pct = parseFloat(billingPct as any) || 0;
@@ -193,13 +200,21 @@ export default function BillingPage() {
   useEffect(() => {
     if (isDialogOpen) {
       if (editingMilestone) {
-        form.reset(editingMilestone);
+        form.reset({
+          name: editingMilestone.name,
+          billingPercentage: editingMilestone.billingPercentage,
+          amount: editingMilestone.amount,
+          status: editingMilestone.status,
+          statusDate: '',
+          attachments: editingMilestone.attachments || '',
+        });
       } else {
         form.reset({
           name: '',
           billingPercentage: 0,
           amount: 0,
           status: 'TBD',
+          statusDate: new Date().toISOString().split('T')[0],
           attachments: '',
         });
       }
@@ -266,11 +281,38 @@ export default function BillingPage() {
   
   const onSubmit = async (values: z.infer<typeof milestoneSchema>) => {
     setIsSubmitting(true);
-    const payload = { ...values };
+    const { statusDate, ...payloadData } = values;
+    const payload = { ...payloadData } as any;
+
     if (project?.pricingModel === 'Fixed Bid') {
       const totalVal = parseFloat(projectValueInput) || project.projectValue || 0;
       payload.amount = Math.round(((values.billingPercentage / 100) * totalVal) * 100) / 100;
     }
+
+    const originalStatus = editingMilestone?.status;
+    const newStatus = values.status;
+    const resolvedDate = statusDate || new Date().toISOString().split('T')[0];
+
+    let updatedHistory = [...(editingMilestone?.statusHistory || [])];
+
+    if (editingMilestone) {
+      if (newStatus !== originalStatus) {
+        updatedHistory.push({
+          status: newStatus,
+          date: resolvedDate
+        });
+      }
+    } else {
+      updatedHistory.push({
+        status: newStatus,
+        date: resolvedDate
+      });
+    }
+
+    // Sort history chronologically
+    updatedHistory.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    payload.statusHistory = updatedHistory;
+
     const success = editingMilestone
       ? await updatePaymentMilestone(editingMilestone.id, payload)
       : await addPaymentMilestone(payload);
@@ -569,6 +611,74 @@ export default function BillingPage() {
                     </FormItem>
                   )}
                 />
+
+              {/* Dynamic Status Date input shown only if status changes or new milestone */}
+              {isStatusChanged && (
+                <FormField
+                  control={form.control}
+                  name="statusDate"
+                  render={({ field }) => (
+                    <FormItem className="animate-in fade-in slide-in-from-top-2 duration-200">
+                      <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mt-1">
+                        <Calendar className="h-3.5 w-3.5" /> Date of Status Change
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          className="bg-background/50 border-muted focus:border-primary/50 transition-colors" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Status History Timeline (The Marked Section) */}
+              {editingMilestone && (
+                <div className="space-y-3 py-3 border-t border-b border-border/40 my-4 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Status History Log</h4>
+                    <span className="text-[10px] text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full font-medium">
+                      {editingMilestone.statusHistory?.length || 0} entries
+                    </span>
+                  </div>
+                  
+                  {editingMilestone.statusHistory && editingMilestone.statusHistory.length > 0 ? (
+                    <div className="relative pl-6 space-y-4 max-h-[160px] overflow-y-auto pr-2 py-1 scrollbar-thin scrollbar-thumb-muted">
+                      {/* Vertical timeline line */}
+                      <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gradient-to-b from-primary/30 to-muted/20" />
+                      
+                      {editingMilestone.statusHistory.map((item, idx) => (
+                        <div key={idx} className="relative flex items-center justify-between group">
+                          {/* Timeline Dot */}
+                          <div className="absolute -left-[20.5px] h-3 w-3 rounded-full border-2 border-background bg-primary ring-2 ring-primary/20 scale-100 group-hover:scale-125 transition-transform duration-200" />
+                          
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-semibold text-foreground capitalize">
+                              {item.status}
+                            </span>
+                          </div>
+                          
+                          <div className="text-[11px] font-semibold text-muted-foreground bg-background/50 border border-border/30 rounded px-2 py-0.5">
+                            {new Date(item.date).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground italic py-3 text-center bg-muted/10 rounded-lg border border-dashed border-border/40">
+                      No status change history recorded yet.
+                    </div>
+                  )}
+                </div>
+              )}
+
                <FormField
                 control={form.control}
                 name="attachments"

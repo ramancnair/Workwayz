@@ -398,6 +398,10 @@ export type PaymentMilestone = {
   amount: number;
   status: PaymentMilestoneStatus;
   attachments?: string;
+  statusHistory?: {
+    status: PaymentMilestoneStatus;
+    date: string;
+  }[];
 };
 
 export type CodeRepository = {
