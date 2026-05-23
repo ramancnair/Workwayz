@@ -314,7 +314,7 @@ export type Portfolio = {
 };
 
 export type ProjectMethodology = 'Agile' | 'SDLC' | 'Hybrid';
-export type PricingModel = 'Fixed Price' | 'T&M' | 'Fixed Capacity';
+export type PricingModel = 'Fixed Bid' | 'T&M';
 export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Initial Estimation';
 export type RagStatus = 'Red' | 'Amber' | 'Green';
 
@@ -349,6 +349,8 @@ export type Project = {
   statusHistory?: ProjectStatusHistoryItem[];
   isArchived?: boolean;
   archivedAt?: string; // ISO String
+  projectValue?: number;
+  monthlyBilledValue?: number;
 };
 
 export type AccessControlSetting = {
@@ -411,6 +413,7 @@ export type FixedCost = {
   id: string;
   name: string;
   cost: number;
+  type?: 'One time' | 'Monthly';
 };
 
 export type ArchiveSettings = {

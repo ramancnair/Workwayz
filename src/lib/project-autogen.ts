@@ -746,9 +746,9 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
 
   // ── 15. Fixed Costs ──────────────────────────────────────────────────────────
   const fixedCostDefs = [
-    { name: 'Software (Licenses)', cost: randInt(200, 5000) },
-    { name: 'Hardware (Hosting / GIT)', cost: randInt(200, 5000) },
-    { name: 'Miscellaneous', cost: randInt(100, 1000) },
+    { name: 'Software (Licenses)', cost: randInt(200, 5000), type: 'Monthly' as const },
+    { name: 'Hardware (Hosting / GIT)', cost: randInt(200, 5000), type: 'Monthly' as const },
+    { name: 'Miscellaneous', cost: randInt(100, 1000), type: 'One time' as const },
   ];
   fixedCostDefs.forEach(fc => {
     const fcRef = doc(col('fixedCosts'));

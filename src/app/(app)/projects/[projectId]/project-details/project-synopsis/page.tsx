@@ -27,7 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const ragStatuses: RagStatus[] = ['Green', 'Amber', 'Red'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC', 'Hybrid'];
-const pricingModels: PricingModel[] = ['Fixed Price', 'T&M', 'Fixed Capacity'];
+const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M'];
 
 
 const statusUpdateSchema = z.object({

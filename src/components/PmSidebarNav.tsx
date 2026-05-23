@@ -135,9 +135,9 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'projects'
     },
     {
-      id: 'billing-rate',
-      href: '/billing-rate',
-      label: 'Billing Rate',
+      id: 'billing',
+      href: '/billing',
+      label: 'Billing',
       icon: DollarSign,
       group: 'billing',
     },
