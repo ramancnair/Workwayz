@@ -13,7 +13,10 @@ export function ProjectSimulator() {
   const [isSimulating, setIsSimulating] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const subTasks = stories.filter(s => s.itemType === 'Sub Task' && !s.isDeleted);
+  // Simulate both Sub Tasks and Feature Changes
+  const simulatedItems = stories.filter(s => 
+    (s.itemType === 'Sub Task' || s.itemType === 'Feature Change') && !s.isDeleted
+  );
   const orderedColumns = [...kanbanColumns].sort((a, b) => a.order - b.order);
   const doneColumn = orderedColumns.find(c => c.isDoneColumn);
 
@@ -68,10 +71,10 @@ export function ProjectSimulator() {
         const stepDays = Math.max(1, Math.ceil(totalDays / 15));
         const nextTestDate = new Date(Math.min(targetEnd.getTime(), currentTestDate.getTime() + stepDays * 24 * 60 * 60 * 1000));
 
-        // Find all sub-tasks needing status update at this next test date
+        // Find all simulated items needing status update at this next test date
         const tasksNeedingUpdate: { id: string; targetStatus: string }[] = [];
 
-        subTasks.forEach(task => {
+        simulatedItems.forEach(task => {
           const sprint = sprints.find(s => s.id === task.sprintId);
           const taskStart = sprint?.startDate ? new Date(sprint.startDate) : start;
           const taskEnd = sprint?.endDate ? new Date(sprint.endDate) : end;
@@ -108,7 +111,7 @@ export function ProjectSimulator() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isSimulating, percentage, subTasks, orderedColumns, doneColumn, sprints, updateStory, testDate, setTestDate, project]);
+  }, [isSimulating, percentage, simulatedItems, orderedColumns, doneColumn, sprints, updateStory, testDate, setTestDate, project]);
 
   const handleStartStop = () => {
     if (!isSimulating) {
