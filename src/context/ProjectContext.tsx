@@ -561,6 +561,46 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   }, [projectId, pathname, getCollectionsForPage]);
 
+  // Auto-repair: If employee capabilities are unpopulated (e.g. for older seeded projects),
+  // automatically map capabilities to the project's impacted systems so capacity bars show correctly.
+  useEffect(() => {
+    if (!db || !projectId || isLoading || employees.length === 0 || impactedSystems.length === 0) {
+      return;
+    }
+
+    const anyEmployeeHasCapabilities = employees.some(
+      (emp) => emp.capabilities && emp.capabilities.length > 0
+    );
+
+    if (!anyEmployeeHasCapabilities) {
+      console.log(`[AutoRepair] Assigning default capabilities for project ${projectId}`);
+      const database = db;
+      const batch = writeBatch(database);
+      employees.forEach((emp) => {
+        const empRef = doc(database, 'projects', projectId, 'employees', emp.id);
+        
+        let capabilities: string[] = [];
+        if (emp.role === 'Developer') {
+          // Assign 1 or 2 random system IDs
+          const numCapabilities = Math.random() > 0.5 ? 2 : 1;
+          const shuffled = [...impactedSystems].sort(() => 0.5 - Math.random());
+          capabilities = shuffled.slice(0, numCapabilities).map(sys => sys.id);
+        } else {
+          // Architects, PMs, Testers get access to all systems
+          capabilities = impactedSystems.map(sys => sys.id);
+        }
+        
+        batch.update(empRef, { capabilities });
+      });
+
+      batch.commit().then(() => {
+        console.log(`[AutoRepair] Successfully populated capabilities for project ${projectId}`);
+      }).catch(err => {
+        console.error(`[AutoRepair] Failed to populate capabilities for project ${projectId}:`, err);
+      });
+    }
+  }, [isLoading, employees, impactedSystems, projectId]);
+
 
   const updateProject = async (data: Partial<Omit<Project, 'id'>>): Promise<boolean> => {
     if (!db || !projectId) return false;

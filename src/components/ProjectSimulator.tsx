@@ -13,9 +13,9 @@ export function ProjectSimulator() {
   const [isSimulating, setIsSimulating] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Simulate both Sub Tasks and Feature Changes
+  // Simulate Sub Tasks, Feature Changes, Tasks, and Bugs
   const simulatedItems = stories.filter(s => 
-    (s.itemType === 'Sub Task' || s.itemType === 'Feature Change') && !s.isDeleted
+    (s.itemType === 'Sub Task' || s.itemType === 'Feature Change' || s.itemType === 'Task' || s.itemType === 'Bug') && !s.isDeleted
   );
   const orderedColumns = [...kanbanColumns].sort((a, b) => a.order - b.order);
   const doneColumn = orderedColumns.find(c => c.isDoneColumn);

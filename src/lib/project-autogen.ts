@@ -254,6 +254,17 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       assignedRole === 'BA' ||
       assignedRole === 'Architect';
 
+    // Developers get 1 or 2 random system IDs
+    // Non-developers get all system IDs
+    let capabilities: string[] = [];
+    if (assignedRole === 'Developer') {
+      const numCapabilities = Math.random() > 0.5 ? 2 : 1;
+      const shuffled = [...systemIdsLive].sort(() => 0.5 - Math.random());
+      capabilities = shuffled.slice(0, numCapabilities);
+    } else {
+      capabilities = [...systemIdsLive];
+    }
+
     batch.set(empRef, clean({
       ...user,
       role: assignedRole as any,
@@ -263,6 +274,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       costRate: randInt(4000, 10000),
       availability: 100,
       isBcpSupport,
+      capabilities,
       leavePeriods: [],
     }));
     employeeIds.push(user.id);
