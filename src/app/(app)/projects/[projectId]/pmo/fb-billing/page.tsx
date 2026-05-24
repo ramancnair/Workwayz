@@ -523,14 +523,10 @@ export default function ResourceBillingPage() {
           </div>
 
           {/* Grand Total */}
-          <div className="border-t border-border/60 pt-4 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Invoice Statement</span>
+          <div className="border-t border-border/60 pt-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex flex-col gap-2">
             </div>
             <div className="flex items-center gap-4">
-              <Button onClick={() => window.print()} variant="outline" className="no-print gap-2">
-                <Printer className="h-4 w-4" /> Print as PDF
-              </Button>
               <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-3 rounded-lg flex items-center gap-6">
                 <span className="text-sm font-bold text-emerald-400 uppercase tracking-wider">Total Bill</span>
                 <span className="text-2xl font-black text-emerald-400">
@@ -544,23 +540,84 @@ export default function ResourceBillingPage() {
 
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          @page {
+            size: landscape;
+            margin: 10mm;
           }
-          #invoice-print-area, #invoice-print-area * {
-            visibility: visible;
-          }
-          #invoice-print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            background: #09090b !important;
-            color: #fafafa !important;
-            border: none !important;
-          }
-          .no-print {
+
+          /* Hide UI elements that aren't the invoice */
+          aside, nav, header, button, .no-print {
             display: none !important;
+          }
+
+          /* Target the page container's children and hide everything except the invoice */
+          .flex-1 > *:not(#invoice-print-area) {
+            display: none !important;
+          }
+
+          /* Fix layout wrappers that might have h-screen or overflow-hidden */
+          html, body, main, [data-sidebar-provider], .sidebar-inset, #root, #__next {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+            background: white !important;
+          }
+
+          /* Force all text in the print area to be black */
+          body {
+            color: black !important;
+          }
+          
+          #invoice-print-area, #invoice-print-area * {
+            color: black !important;
+            border-color: #e5e7eb !important;
+          }
+
+          #invoice-print-area {
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+          }
+
+          /* DISABLE OVERFLOW AND FORCE EXPANSION OF TABLES */
+          .overflow-x-auto {
+            overflow: visible !important;
+            overflow-x: visible !important;
+          }
+
+          table {
+            width: 100% !important;
+            table-layout: auto !important;
+            border-collapse: collapse !important;
+          }
+
+          th, td {
+            padding: 6px 8px !important;
+            font-size: 12px !important;
+            border-bottom: 1px solid #e5e7eb !important;
+          }
+
+          th {
+            background-color: #f3f4f6 !important;
+            font-weight: bold !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          
+          /* Remove background colors that might mask text */
+          .bg-card, .bg-muted\\/20 {
+            background-color: transparent !important;
+          }
+          
+          /* Retain background for the total section */
+          .bg-emerald-500\\/10 {
+            background-color: #f0fdf4 !important;
+            border: 1px solid #bbf7d0 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
         }
       `}</style>

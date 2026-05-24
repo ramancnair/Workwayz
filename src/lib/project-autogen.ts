@@ -280,6 +280,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
           id: leaveId,
           startDate: Timestamp.fromDate(leaveStart),
           endDate: Timestamp.fromDate(leaveEnd),
+          type: Math.random() > 0.3 ? 'Paid Leave' : 'Loss of Pay',
         },
       ],
     });
@@ -746,9 +747,9 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
 
   // ── 15. Fixed Costs ──────────────────────────────────────────────────────────
   const fixedCostDefs = [
-    { name: 'Software (Licenses)', cost: randInt(200, 5000), type: 'Monthly' as const },
-    { name: 'Hardware (Hosting / GIT)', cost: randInt(200, 5000), type: 'Monthly' as const },
-    { name: 'Miscellaneous', cost: randInt(100, 1000), type: 'One time' as const },
+    { name: 'Hosting', cost: 500, type: 'Monthly' as const },
+    { name: 'GIT', cost: 100, type: 'Monthly' as const },
+    { name: 'Set-up Cost', cost: 1500, type: 'One time' as const },
   ];
   fixedCostDefs.forEach(fc => {
     const fcRef = doc(col('fixedCosts'));
@@ -790,9 +791,9 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     batch.update(empRef, { isBcpSupport: isBcp });
   });
 
-  // ── 19. Worklogs (first 4 weeks for all employees) ──────────────────────────
+  // ── 19. Worklogs (full duration of the project for all employees) ───────────
   const worklogStart = startDate;
-  const worklogEnd = addDays(startDate, 27); // 4 weeks
+  const worklogEnd = endDate; // Full project duration
   const workdays = eachDayOfInterval({ start: worklogStart, end: worklogEnd }).filter(
     d => !isWeekend(d)
   );

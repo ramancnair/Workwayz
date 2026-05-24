@@ -130,6 +130,7 @@ export type LeavePeriod = {
   id: string; // uuid on the client
   startDate: string; // ISO String
   endDate: string; // ISO String
+  type?: 'Paid Leave' | 'Loss of Pay';
 };
 
 export type User = {
@@ -313,7 +314,7 @@ export type Portfolio = {
   deletedAt?: string; // ISO String
 };
 
-export type ProjectMethodology = 'Agile' | 'SDLC' | 'Hybrid';
+export type ProjectMethodology = 'Agile' | 'Hybrid';
 export type PricingModel = 'Fixed Bid' | 'T&M';
 export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Initial Estimation';
 export type RagStatus = 'Red' | 'Amber' | 'Green';

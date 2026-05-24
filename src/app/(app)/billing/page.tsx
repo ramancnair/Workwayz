@@ -7,6 +7,7 @@ import { collection, getDocs, query, where, getDoc, doc, onSnapshot } from 'fire
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -45,6 +46,7 @@ interface ProjectBillingRow {
   profit: number;
   completedPayments: number;
   pricingModel?: string;
+  months: number;
 }
 
 const convertToDate = (val: any): Date | null => {
@@ -79,6 +81,7 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sorting, setSorting] = useState<{ id: keyof ProjectBillingRow; desc: boolean }>({ id: 'name', desc: false });
+  const [viewMode, setViewMode] = useState<'total' | 'month' | 'quarter' | 'year'>('total');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -197,6 +200,7 @@ export default function BillingPage() {
             profit,
             completedPayments,
             pricingModel: project.pricingModel,
+            months,
           };
         });
 
@@ -213,9 +217,46 @@ export default function BillingPage() {
     return () => unsubscribe();
   }, [toast]);
 
+  // Scale data based on viewMode
+  const scaledBillingData = useMemo(() => {
+    return billingData.map(project => {
+      let factor = 1;
+      if (viewMode === 'month') {
+        factor = 1 / project.months;
+      } else if (viewMode === 'quarter') {
+        factor = 3 / project.months;
+      } else if (viewMode === 'year') {
+        factor = 12 / project.months;
+      }
+
+      return {
+        ...project,
+        revenue: project.revenue * factor,
+        resourceCost: project.resourceCost * factor,
+        fixedCosts: project.fixedCosts * factor,
+        profit: project.profit * factor,
+        completedPayments: project.completedPayments * factor,
+      };
+    });
+  }, [billingData, viewMode]);
+
+  const periodLabel = useMemo(() => {
+    if (viewMode === 'month') return 'Monthly Average';
+    if (viewMode === 'quarter') return 'Quarterly Average';
+    if (viewMode === 'year') return 'Yearly Average';
+    return 'Project Lifetime';
+  }, [viewMode]);
+
+  const periodSuffix = useMemo(() => {
+    if (viewMode === 'month') return ' (/ Mo)';
+    if (viewMode === 'quarter') return ' (/ Qtr)';
+    if (viewMode === 'year') return ' (/ Yr)';
+    return '';
+  }, [viewMode]);
+
   // Aggregate metrics
   const aggregateMetrics = useMemo(() => {
-    return billingData.reduce(
+    return scaledBillingData.reduce(
       (acc, curr) => {
         acc.totalRevenue += curr.revenue;
         acc.totalCost += curr.resourceCost;
@@ -226,7 +267,7 @@ export default function BillingPage() {
       },
       { totalRevenue: 0, totalCost: 0, totalFixed: 0, totalProfit: 0, totalCompleted: 0 }
     );
-  }, [billingData]);
+  }, [scaledBillingData]);
 
   // Sort and filter logic
   const handleSort = (columnId: keyof ProjectBillingRow) => {
@@ -238,7 +279,7 @@ export default function BillingPage() {
   };
 
   const processedData = useMemo(() => {
-    const filtered = billingData.filter(row =>
+    const filtered = scaledBillingData.filter(row =>
       row.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -256,7 +297,7 @@ export default function BillingPage() {
     });
 
     return filtered;
-  }, [billingData, searchQuery, sorting]);
+  }, [scaledBillingData, searchQuery, sorting]);
 
   const SortableHeader = ({ columnId, children }: { columnId: keyof ProjectBillingRow; children: React.ReactNode }) => (
     <TableHead>
@@ -363,22 +404,35 @@ export default function BillingPage() {
 
       {/* Main projects billing list */}
       <Card className="bg-card/50 backdrop-blur-sm">
-        <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-border/60">
+        <CardHeader className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 pb-4 border-b border-border/60">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg font-bold">
               <Briefcase className="h-5 w-5 text-blue-500" />
               Project Breakdown
+              <Badge variant="outline" className="font-normal text-xs py-0.5 px-2 bg-blue-50/50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200/50 transition-all duration-300">
+                {periodLabel}
+              </Badge>
             </CardTitle>
             <CardDescription>Detailed revenue, cost, profit, and actual completed milestones for all active projects.</CardDescription>
           </div>
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by project name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-background/50 border-muted"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+            <Tabs value={viewMode} onValueChange={(val: any) => setViewMode(val)} className="w-full sm:w-auto">
+              <TabsList className="grid grid-cols-4 w-full sm:w-auto">
+                <TabsTrigger value="total" className="text-xs">Lifetime</TabsTrigger>
+                <TabsTrigger value="month" className="text-xs">Month</TabsTrigger>
+                <TabsTrigger value="quarter" className="text-xs">Quarter</TabsTrigger>
+                <TabsTrigger value="year" className="text-xs">Year</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by project name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-background/50 border-muted"
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -413,7 +467,7 @@ export default function BillingPage() {
                     <TableRow key={project.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell className="font-semibold text-foreground min-w-[200px]">
                         <Link 
-                          href={`/projects/${project.id}/pmo/fb-billing`}
+                          href={`/projects/${project.id}/pmo/${project.pricingModel === 'T&M' ? 'tnm-billing' : 'fb-billing'}`}
                           className="hover:text-blue-500 flex items-center gap-1.5 transition-colors group cursor-pointer"
                         >
                           {project.name}
@@ -445,7 +499,7 @@ export default function BillingPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" asChild className="hover:border-blue-500 hover:text-blue-500 cursor-pointer">
-                          <Link href={`/projects/${project.id}/pmo/fb-billing`}>
+                          <Link href={`/projects/${project.id}/pmo/${project.pricingModel === 'T&M' ? 'tnm-billing' : 'fb-billing'}`}>
                             Manage PMO
                           </Link>
                         </Button>

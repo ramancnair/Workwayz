@@ -56,7 +56,7 @@ import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { generateFullProjectData } from '@/lib/project-autogen';
 
-const projectMethodologies: ProjectMethodology[] = ['Agile', 'SDLC', 'Hybrid'];
+const projectMethodologies: ProjectMethodology[] = ['Agile', 'Hybrid'];
 const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 
@@ -86,7 +86,7 @@ const projectSchema = z.object({
   description: z.string().optional(),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
   projectManagerId: z.string().optional(),
-  methodology: z.enum(['Agile', 'SDLC', 'Hybrid'] as const).optional(),
+  methodology: z.enum(['Agile', 'Hybrid'] as const).optional(),
   pricingModel: z.enum(['Fixed Bid', 'T&M'] as const).optional(),
   status: z.enum(['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'] as const).optional(),
   startDate: z.string().min(1, "Start date is required."),
@@ -460,7 +460,7 @@ export default function ProjectsDashboard() {
 
         const startDate = new Date();
         const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 6);
+        endDate.setMonth(endDate.getMonth() + 2);
 
         const dataToSave: Partial<Project> = {
           id: projectId,

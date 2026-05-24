@@ -36,10 +36,12 @@ import { format, isSameDay, eachDayOfInterval } from 'date-fns';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { type User, type LeavePeriod } from '@/types';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const leaveSchema = z.object({
   startDate: z.string().min(1, 'Start date is required.'),
   endDate: z.string().min(1, 'End date is required.'),
+  type: z.enum(['Paid Leave', 'Loss of Pay'], { required_error: 'Leave type is required.' }),
 }).refine(data => {
     if (!data.startDate || !data.endDate) return true;
     return new Date(data.endDate) >= new Date(data.startDate);
@@ -59,7 +61,8 @@ export default function LeaveTrackerPage() {
     resolver: zodResolver(leaveSchema),
     defaultValues: {
       startDate: '',
-      endDate: ''
+      endDate: '',
+      type: 'Paid Leave'
     }
   });
 
@@ -122,12 +125,13 @@ export default function LeaveTrackerPage() {
     const newLeavePeriod: Omit<LeavePeriod, 'id'> = {
       startDate: new Date(values.startDate).toISOString(),
       endDate: new Date(values.endDate).toISOString(),
+      type: values.type,
     };
 
     const success = await addLeavePeriod(selectedUser.id, newLeavePeriod);
     if (success) {
       toast({ title: 'Success', description: 'Leave period added successfully.' });
-      form.reset({ startDate: '', endDate: '' });
+      form.reset({ startDate: '', endDate: '', type: 'Paid Leave' });
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not add leave period.' });
     }
@@ -210,6 +214,27 @@ export default function LeaveTrackerPage() {
                                     )}
                                 />
                             </div>
+                            <FormField
+                                control={form.control}
+                                name="type"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Leave Type</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select type" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Paid Leave">Paid Leave</SelectItem>
+                                            <SelectItem value="Loss of Pay">Loss of Pay</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
                             <Button type="submit" disabled={!selectedUser || form.formState.isSubmitting}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Add Leave
@@ -231,6 +256,7 @@ export default function LeaveTrackerPage() {
                             <TableRow>
                                 <TableHead>Start Date</TableHead>
                                 <TableHead>End Date</TableHead>
+                                <TableHead>Type</TableHead>
                                 <TableHead>Number of Days</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -240,6 +266,11 @@ export default function LeaveTrackerPage() {
                                 <TableRow key={period.id}>
                                     <TableCell>{format(new Date(period.startDate), 'PPP')}</TableCell>
                                     <TableCell>{format(new Date(period.endDate), 'PPP')}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={period.type === 'Loss of Pay' ? 'destructive' : 'secondary'}>
+                                            {period.type || 'Paid Leave'}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell>{calculateBusinessDays(period.startDate, period.endDate)}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => setDeletingLeavePeriod(period)}>
@@ -249,7 +280,7 @@ export default function LeaveTrackerPage() {
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                                         No leave periods logged for this user.
                                     </TableCell>
                                 </TableRow>

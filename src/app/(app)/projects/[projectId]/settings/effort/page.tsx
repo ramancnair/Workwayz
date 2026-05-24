@@ -50,7 +50,7 @@ export default function EffortSettingsPage() {
         >
           <Card>
               <CardHeader>
-                  <CardTitle>SDLC</CardTitle>
+                  <CardTitle>Traditional</CardTitle>
                   <CardDescription>
                       Industry Standard: 1 MM = 22 MD and 1 MD = 8 MH
                   </CardDescription>

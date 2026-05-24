@@ -252,9 +252,9 @@ const defaultHorizontals: Omit<Horizontal, 'id'>[] = [
 ];
 
 const defaultFixedCosts: Omit<FixedCost, 'id'>[] = [
-    { name: 'Software (Licenses etc)', cost: 0 },
-    { name: 'Hardware (Hosting/GIT etc)', cost: 0 },
-    { name: 'Miscellaneous', cost: 0 },
+    { name: 'Hosting', cost: 500, type: 'Monthly' },
+    { name: 'GIT', cost: 100, type: 'Monthly' },
+    { name: 'Set-up Cost', cost: 1500, type: 'One time' },
 ];
 
 const defaultEnvironments: Omit<Environment, 'id'>[] = [
@@ -312,6 +312,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/pmo/fb-payment-milestones': ['paymentMilestones'],
     '/pmo/business-continuity': ['environments', 'codeRepositories', 'employees'],
     '/pmo/fb-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts'],
+    '/pmo/tnm-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts', 'worklogs'],
 };
 
 
