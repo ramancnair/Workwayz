@@ -1,10 +1,10 @@
 <div align="center">
 
-# ⚡ ProjectFlow
+# <img src="public/logo.png" width="40" height="40" alt="ProjectFlow Logo" valign="middle" /> ProjectFlow
 
 ### The Enterprise-Grade AI-Powered Project & Portfolio Management Platform
 
-**The only PPM tool that unifies SAFe Agile · Waterfall · Hybrid — in one intelligent platform.**
+**The only PPM tool that unifies SAFe Agile & Hybrid — in one intelligent platform.**
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Next.js](https://img.shields.io/badge/Next.js-Latest-black?logo=next.js)](https://nextjs.org/)
@@ -21,9 +21,9 @@
 
 ## Why ProjectFlow?
 
-Most project management tools make you choose — Agile **or** Waterfall, strategy **or** execution, cloud **or** offline. ProjectFlow makes no such compromise.
+Most project management tools make you choose — strategy **or** execution, cloud **or** offline. ProjectFlow makes no such compromise.
 
-It is the **only PPM platform** that natively supports **SAFe Agile, Waterfall, and Hybrid delivery methodologies** in a single unified workspace. Layered on top is a deep AI integration that eliminates the most time-consuming parts of project management — estimations, story writing, test case generation, and more.
+It is the **only PPM platform** that natively supports **SAFe Agile and Hybrid delivery methodologies** in a single unified workspace. Layered on top is a deep AI integration that eliminates the most time-consuming parts of project management — estimations, story writing, test case generation, and more.
 
 Whether you are running a startup or a large enterprise PMO, ProjectFlow scales with you — and can run entirely **offline** if needed.
 
@@ -33,7 +33,7 @@ Whether you are running a startup or a large enterprise PMO, ProjectFlow scales 
 
 ### Portfolio & Project Management
 - **Full Portfolio Management** — Multi-project portfolio dashboards with real-time health tracking, cost visibility, and delivery status across your entire program
-- **SAFe Agile, Waterfall & Hybrid** — The only tool that supports all three methodologies natively; no plugins, no workarounds
+- **SAFe Agile & Hybrid** — Supports both methodologies natively; no plugins, no workarounds
 - **PM Dashboard** — Dedicated project manager view tracking team velocity, individual workload, overall cost burn, and delivery health at a glance
 - **Development Dashboard** — Engineering-focused view with sprint progress, backlog health, and delivery metrics
 
