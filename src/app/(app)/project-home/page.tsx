@@ -900,7 +900,7 @@ export default function ProjectsDashboard() {
                                         const projectManager = users.find(u => u.id === project.projectManagerId);
                                         const projectUrl = project.status === 'Initial Estimation'
                                           ? `/projects/${project.id}/initial-estimation/ballpark`
-                                          : `/projects/${project.id}/agile-dev/dashboard`;
+                                          : `/projects/${project.id}/development/dashboard`;
                                         return (
                                           <TableRow key={project.id}>
                                             <TableCell className="font-medium">

@@ -143,27 +143,27 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const devMenuItems = [
     {
-      href: `${basePath}/agile-dev/dashboard`,
-      label: "Agile Dev Dashboard",
+      href: `${basePath}/development/dashboard`,
+      label: "Development Dashboard",
       icon: LayoutDashboard,
     },
     {
-      href: `${basePath}/agile-dev/backlog`,
+      href: `${basePath}/development/backlog`,
       label: "Product Backlog",
       icon: Layers,
     },
     {
-      href: `${basePath}/agile-dev/grooming`,
+      href: `${basePath}/development/grooming`,
       label: "Grooming",
       icon: ChevronsUpDown,
     },
     {
-      href: `${basePath}/agile-dev/kanban`,
+      href: `${basePath}/development/kanban`,
       label: "Kanban Board",
       icon: KanbanSquare,
     },
     {
-      href: `${basePath}/agile-dev/development-tasks`,
+      href: `${basePath}/development/development-tasks`,
       label: "Sub-Tasks",
       icon: Component,
     },
@@ -176,14 +176,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: TestTube2,
     },
     {
+      href: `${basePath}/testing/test-backlog`,
+      label: "Test Backlog",
+      icon: ClipboardCheck,
+    },
+    {
       href: `${basePath}/testing/test-plan`,
       label: "Test Plan",
       icon: FileText,
-    },
-    {
-      href: `${basePath}/testing/test-cases`,
-      label: "Test Cases",
-      icon: ClipboardCheck,
     },
     {
       href: `${basePath}/testing/bug-list`,
@@ -341,7 +341,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     }
   ];
 
-  const isTestingPath = ['/testing/dashboard', '/testing/test-cases', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
+  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
@@ -350,7 +350,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = ['/pmo/documents', '/pmo/fb-payment-milestones', '/pmo/tnm-payment-milestones', '/pmo/business-continuity', '/pmo/fb-billing', '/pmo/tnm-billing'].some(p => pathname.startsWith(basePath + p));
-  const isAgileDevPath = pathname.startsWith(`${basePath}/agile-dev`);
+  const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
 
   const menuItems = isSettingsPath ? settingsMenuItems
@@ -362,7 +362,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
               : isGovernancePath ? governanceMenuItems
                 : isHolidaysPath ? holidaysMenuItems
                   : isPmoPath ? pmoMenuItems
-                    : isAgileDevPath ? devMenuItems
+                    : isDevelopmentPath ? devMenuItems
                       : devMenuItems;
 
   return (

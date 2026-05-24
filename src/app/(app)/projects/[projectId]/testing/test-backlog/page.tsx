@@ -91,7 +91,7 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
 };
 
 
-export default function TestCasesPage() {
+export default function TestBacklogPage() {
   const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases, testPlans, updateTestPlan } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -361,12 +361,6 @@ export default function TestCasesPage() {
       await Promise.all(planUpdates);
     } else {
       success = await addTestCase(tcData as any);
-      // For a newly created test case, if user selected test plans, we must also update those plans' testCaseIds mappings
-      // We know `addTestCase` returns true but doesn't give us the ID directly. However, it's newly inserted.
-      // Wait, we can't easily sync `TestPlan.testCaseIds` here without the ID. 
-      // Actually, since `ProjectContext` generates ID safely, let's let `addTestCase` handle this if needed, 
-      // but modifying TestPlan requires the new TC id. For now, since addTestCase is synchronous in DB,
-      // it might be hard to get its ID immediately unless we fetch it. By default, it's safer not to assign new TCs entirely. But `ProjectContext` logic will eventually catch up. 
     }
 
     if (success) {
@@ -391,7 +385,7 @@ export default function TestCasesPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Test Cases" description="Manage and track all test cases for the project.">
+        <PageHeader title="Test Backlog" description="Manage and track all test cases for the project.">
            <Dialog open={isAiGenOpen} onOpenChange={setIsAiGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">

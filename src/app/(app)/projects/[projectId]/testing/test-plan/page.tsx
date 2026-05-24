@@ -355,7 +355,7 @@ export default function TestPlanPage() {
       return updateTestCase(tcId, { executions });
     });
     Promise.all(updates).then(() => {
-        toast({ title: 'Success', description: `${selectedScheduledTCs.length} test cases moved back to plan backlog.` });
+        toast({ title: 'Success', description: `${selectedScheduledTCs.length} test cases deleted from schedule.` });
         setSelectedScheduledTCs([]);
     });
   };
@@ -385,9 +385,20 @@ export default function TestPlanPage() {
                valA = (a as any)[sortKey];
                valB = (b as any)[sortKey];
             }
-            if (valA < valB) return sorting.desc ? 1 : -1;
-            if (valA > valB) return sorting.desc ? -1 : 1;
-            return 0;
+            
+            if (valA === null || valA === undefined) return 1;
+            if (valB === null || valB === undefined) return -1;
+
+            let comparison = 0;
+            if (typeof valA === 'string' && typeof valB === 'string') {
+              comparison = valA.localeCompare(valB, undefined, { numeric: true });
+            } else if (valA > valB) {
+              comparison = 1;
+            } else if (valA < valB) {
+              comparison = -1;
+            }
+
+            return sorting.desc ? -comparison : comparison;
         };
         backlogTCs.sort(sortFn);
         dayTCs.sort(sortFn);
@@ -539,7 +550,7 @@ export default function TestPlanPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
-                  Move to Backlog
+                  Delete
                 </Button>
                  <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
                   <ChevronLeft className="h-4 w-4" />

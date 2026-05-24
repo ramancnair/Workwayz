@@ -5,5 +5,5 @@ export default function ProjectRootPage() {
   const { projectId } = useParams() as { projectId: string };
   // The primary navigation logic is now handled by the links on the project-home page.
   // This page serves as a fallback, directing to the main dashboard.
-  redirect(`/projects/${projectId}/agile-dev/dashboard`);
+  redirect(`/projects/${projectId}/development/dashboard`);
 }
