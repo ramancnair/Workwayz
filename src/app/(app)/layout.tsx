@@ -20,6 +20,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const getTabValue = () => {
     if (pathname.startsWith('/project-home')) return 'projects';
     if (pathname.startsWith('/portfolio-dashboard')) return 'projects';
+    if (pathname.startsWith('/quality')) return 'quality';
     if (pathname.startsWith('/billing')) return 'billing';
     if (pathname.startsWith('/billing-rate')) return 'billing';
     if (pathname.startsWith('/users')) return 'users';
@@ -33,6 +34,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const onTabChange = (value: string) => {
     if (value === 'projects') {
       router.push('/project-home');
+    } else if (value === 'quality') {
+      router.push('/quality/estimations');
     } else if (value === 'portfolio-dashboard') {
         router.push('/portfolio-dashboard');
     } else if (value === 'billing') {
@@ -58,7 +61,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     <AuthGuard>
       <SidebarProvider open={open} onOpenChange={setOpen}>
         <Sidebar collapsible="icon">
-          <PmSidebarNav activeTab={activeTab} />
+          <PmSidebarNav activeTab={activeTab as any} />
         </Sidebar>
         <SidebarInset>
           <div className="h-screen flex flex-col">
@@ -66,6 +69,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
+                        <TabsTrigger value="quality" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Quality</TabsTrigger>
                         <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
                         <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
                         <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>

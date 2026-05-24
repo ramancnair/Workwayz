@@ -46,13 +46,15 @@ import {
   Key,
   Wand2,
   Archive,
+  Calculator,
+  Bug,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 type PmSidebarNavProps = {
-  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing';
+  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing' | 'quality';
 };
 
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
@@ -142,6 +144,20 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'billing',
     },
     {
+      id: 'quality-estimations',
+      href: '/quality/estimations',
+      label: 'Estimations',
+      icon: Calculator,
+      group: 'quality',
+    },
+    {
+      id: 'quality-defects',
+      href: '/quality/defects',
+      label: 'Defects',
+      icon: Bug,
+      group: 'quality',
+    },
+    {
       id: 'users',
       href: `/users`,
       label: "User List",
@@ -223,6 +239,8 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
         return 'users';
       case 'holidays':
         return 'holidays';
+      case 'quality':
+        return 'quality';
       default:
         return 'portfolio';
     }

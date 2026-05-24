@@ -591,37 +591,91 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     batch.update(doc(col('testPlans'), tp.id), { testCaseIds: tpTestCaseIds });
   });
 
-  // ── 12. Bugs (5: 1 Critical, 1 High, 1 Medium, 2 Low) ──────────────────────
-  const bugSeverities = ['Critical', 'High', 'Medium', 'Low', 'Low'];
-  const bugTitles = [
-    'Critical: Application crashes on login with special characters',
-    'High: Data export generates incorrect date format',
-    'Medium: Notification bell shows stale count after refresh',
-    'Low: Minor alignment issue in the settings panel',
-    'Low: Tooltip text truncated on small screens',
+  // ── 12. Bugs (30-50: 50% SIT, 35% UAT, 15% Prod) ───────────────────────────
+  const totalBugs = randInt(30, 50);
+  const sitBugsCount = Math.round(totalBugs * 0.50);
+  const uatBugsCount = Math.round(totalBugs * 0.35);
+  const prodBugsCount = totalBugs - (sitBugsCount + uatBugsCount);
+
+  const sitTemplates = [
+    'SIT: API validation error during batch import',
+    'SIT: Database lock deadlock when saving story status',
+    'SIT: Authentication token expires prematurely on refresh',
+    'SIT: Memory leak observed in real-time chart re-rendering',
+    'SIT: Component layout shift when resizing employee sidebar',
+    'SIT: File upload fails for attachments larger than 2MB',
+    'SIT: Incorrect JSON payload signature on webhook payload',
+    'SIT: System exception when generating utilization reports',
+    'SIT: WebSocket subscription disconnects after 5 minutes',
+    'SIT: Thread exhaustion on parallel background sync tasks'
   ];
+
+  const uatTemplates = [
+    'UAT: Holiday generator confirmation modal is confusing',
+    'UAT: Utilization heatmaps are difficult to read in light mode',
+    'UAT: Expected payment milestones format doesn\'t match invoicing layout',
+    'UAT: Missing confirmation prompt before archiving a project',
+    'UAT: Text overlap in resource Gantt chart headers',
+    'UAT: Dashboard stats cards count archived items incorrectly',
+    'UAT: User profile editing doesn\'t save avatar selection',
+    'UAT: Wording of "Move to Backlog" button is misleading',
+    'UAT: Datepicker field allows past dates on sprint creation',
+    'UAT: Export to CSV button is hidden on smaller screens'
+  ];
+
+  const prodTemplates = [
+    'Production: Concurrent worklog submissions corrupt total hours count',
+    'Production: Supabase auth rate limit exceeded under high load',
+    'Production: Payment gateway callback signature mismatches on webhook',
+    'Production: CDN assets take more than 5s to load in APAC region',
+    'Production: Browser crash in Safari due to grid layout flex overlap',
+    'Production: Billing calculations round cents incorrectly under fixed-bid plans',
+    'Production: Sentry reports unhandled promise rejection on logout'
+  ];
+
   let bugCounter = storyCounter;
-  bugSeverities.forEach((severity, i) => {
+
+  const createAutogenBug = (title: string, foundInPlanId: string) => {
     const bugRef = doc(col('stories'));
-    const bugStatus = rand(['To Do', 'In Development']);
+    const bugStatus = rand(['To Do', 'In Progress', 'Done']);
+    const severity = rand(['Critical', 'High', 'Medium', 'Low']);
+    
     batch.set(bugRef, clean({
       storyId: `BUG-${bugCounter++}`,
-      title: bugTitles[i],
-      description: `Steps to reproduce: Log in, navigate to the affected page, observe the ${severity.toLowerCase()} issue.`,
+      title,
+      description: `Steps to reproduce: Nav to the affected module, perform standard actions, observe the ${severity.toLowerCase()} issue.`,
       itemType: 'Bug',
       status: bugStatus,
       statusHistory: buildStatusHistory(bugStatus, sprint1Start, sprint1End),
-      sprintId: sprintIds[0],
+      sprintId: rand(sprintIds),
       releaseId: releaseRef.id,
-      severity: severity as any,
-      priority: severity as any,
-      assigneeId: devUserIds[i % Math.max(devUserIds.length, 1)],
-      foundInTestPlanId: sitTpRef.id,
+      severity,
+      priority: severity,
+      assigneeId: rand(devUserIds) || null,
+      foundInTestPlanId: foundInPlanId,
       isDeleted: false,
       deletedAt: null,
       createdAt: now,
     }));
-  });
+  };
+
+  // Create SIT Bugs
+  for (let i = 0; i < sitBugsCount; i++) {
+    const title = sitTemplates[i % sitTemplates.length] + ` (#${i + 1})`;
+    createAutogenBug(title, sitTpRef.id);
+  }
+
+  // Create UAT Bugs
+  for (let i = 0; i < uatBugsCount; i++) {
+    const title = uatTemplates[i % uatTemplates.length] + ` (#${i + 1})`;
+    createAutogenBug(title, uatTpRef.id);
+  }
+
+  // Create Production Bugs
+  for (let i = 0; i < prodBugsCount; i++) {
+    const title = prodTemplates[i % prodTemplates.length] + ` (#${i + 1})`;
+    createAutogenBug(title, prodTpRef.id);
+  }
 
   // ── 13. Release + Stages + Milestones ────────────────────────────────────────
   // releaseRef was created earlier (before stories) so stories can reference it.
