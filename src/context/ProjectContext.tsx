@@ -310,6 +310,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/settings/effort': ['projectSettings'],
     '/pmo/documents': ['documents'],
     '/pmo/fb-payment-milestones': ['paymentMilestones'],
+    '/pmo/tnm-payment-milestones': ['paymentMilestones'],
     '/pmo/business-continuity': ['environments', 'codeRepositories', 'employees'],
     '/pmo/fb-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts'],
     '/pmo/tnm-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts', 'worklogs'],

@@ -25,6 +25,7 @@ import {
   differenceInDays,
   format,
   eachDayOfInterval,
+  eachMonthOfInterval,
   previousFriday,
   isSameDay,
   isWeekend,
@@ -97,10 +98,11 @@ export interface AutogenOptions {
   endDate: Date;
   methodology: ProjectMethodology;
   globalUsers: User[];
+  pricingModel?: string;
 }
 
 export async function generateFullProjectData(opts: AutogenOptions): Promise<void> {
-  const { db, projectId, startDate, endDate, methodology, globalUsers } = opts;
+  const { db, projectId, startDate, endDate, methodology, globalUsers, pricingModel } = opts;
 
   const pRef = doc(db, 'projects', projectId);
   const col = (name: string) => collection(pRef, name);
@@ -757,23 +759,39 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   });
 
   // ── 16. Payment Milestones ───────────────────────────────────────────────────
-  const pmDefs = [
-    { name: 'Project Kick-off', date: startDate, pct: 20 },
-    { name: 'Development Complete', date: devEnd, pct: 30 },
-    { name: 'Testing Complete', date: releaseFriday, pct: 30 },
-    { name: 'Production Go-Live', date: addDays(releaseFriday, 7), pct: 20 },
-  ];
-  pmDefs.forEach((pm, i) => {
-    const pmRef = doc(col('paymentMilestones'));
-    const amount = randInt(50000, 200000);
-    batch.set(pmRef, clean({
-      milestoneId: `PM-${i + 1}`,
-      name: pm.name,
-      billingPercentage: pm.pct,
-      amount,
-      status: 'TBD' as any,
-    }));
-  });
+  if (pricingModel === 'T&M') {
+    const months = eachMonthOfInterval({ start: startDate, end: endDate });
+    months.forEach((month, i) => {
+      const pmRef = doc(col('paymentMilestones'));
+      const monthName = format(month, 'MMMM yyyy');
+      const amount = randInt(25000, 75000);
+      batch.set(pmRef, clean({
+        milestoneId: `PM-${i + 1}`,
+        name: monthName,
+        billingPercentage: 0,
+        amount,
+        status: 'TBD' as any,
+      }));
+    });
+  } else {
+    const pmDefs = [
+      { name: 'Project Kick-off', date: startDate, pct: 20 },
+      { name: 'Development Complete', date: devEnd, pct: 30 },
+      { name: 'Testing Complete', date: releaseFriday, pct: 30 },
+      { name: 'Production Go-Live', date: addDays(releaseFriday, 7), pct: 20 },
+    ];
+    pmDefs.forEach((pm, i) => {
+      const pmRef = doc(col('paymentMilestones'));
+      const amount = randInt(50000, 200000);
+      batch.set(pmRef, clean({
+        milestoneId: `PM-${i + 1}`,
+        name: pm.name,
+        billingPercentage: pm.pct,
+        amount,
+        status: 'TBD' as any,
+      }));
+    });
+  }
 
   // ── 17. Code Repository ──────────────────────────────────────────────────────
   const repoRef = doc(col('codeRepositories'));

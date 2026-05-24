@@ -491,6 +491,7 @@ export default function ProjectsDashboard() {
           endDate,
           methodology: autogenMethodology,
           globalUsers: users,
+          pricingModel: dataToSave.pricingModel,
         });
 
         toast({

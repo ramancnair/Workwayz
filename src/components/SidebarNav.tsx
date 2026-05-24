@@ -312,6 +312,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: DollarSign,
     },
     {
+      href: `${basePath}/pmo/tnm-payment-milestones`,
+      label: "TnM Payment Milestones",
+      icon: BillingIcon,
+    },
+    {
       href: `${basePath}/pmo/business-continuity`,
       label: "Business Continuity",
       icon: HeartPulse,
@@ -344,7 +349,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
-  const isPmoPath = ['/pmo/documents', '/pmo/fb-payment-milestones', '/pmo/business-continuity', '/pmo/fb-billing', '/pmo/tnm-billing'].some(p => pathname.startsWith(basePath + p));
+  const isPmoPath = ['/pmo/documents', '/pmo/fb-payment-milestones', '/pmo/tnm-payment-milestones', '/pmo/business-continuity', '/pmo/fb-billing', '/pmo/tnm-billing'].some(p => pathname.startsWith(basePath + p));
   const isAgileDevPath = pathname.startsWith(`${basePath}/agile-dev`);
 
 
