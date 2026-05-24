@@ -1,9 +1,8 @@
 'use client';
-import { redirect } from 'next/navigation';
-import { use } from 'react';
+import { redirect, useParams } from 'next/navigation';
 
-export default function ProjectRootPage({ params }: { params: Promise<{ projectId: string }> }) {
-  const { projectId } = use(params);
+export default function ProjectRootPage() {
+  const { projectId } = useParams() as { projectId: string };
   // The primary navigation logic is now handled by the links on the project-home page.
   // This page serves as a fallback, directing to the main dashboard.
   redirect(`/projects/${projectId}/agile-dev/dashboard`);

@@ -1,9 +1,8 @@
 'use client';
 
-import { redirect } from "next/navigation";
-import { use } from "react";
+import { redirect, useParams } from "next/navigation";
 
-export default function DevelopmentPage({ params }: { params: Promise<{ projectId: string }> }) {
-    const { projectId } = use(params);
+export default function DevelopmentPage() {
+    const { projectId } = useParams() as { projectId: string };
     redirect(`/projects/${projectId}/agile-dev/dashboard`);
 }

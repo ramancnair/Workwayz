@@ -1,10 +1,8 @@
-
 'use client';
 
-import { redirect } from 'next/navigation';
-import { use } from 'react';
+import { redirect, useParams } from 'next/navigation';
 
-export default function PmoRootPage({ params }: { params: Promise<{ projectId: string }> }) {
-  const { projectId } = use(params);
+export default function PmoRootPage() {
+  const { projectId } = useParams() as { projectId: string };
   redirect(`/projects/${projectId}/pmo/documents`);
 }

@@ -1,10 +1,8 @@
-
 'use client';
 
-import { redirect } from 'next/navigation';
-import { use } from 'react';
+import { redirect, useParams } from 'next/navigation';
 
-export default function ProjectDetailsRedirect({ params }: { params: Promise<{ projectId: string }> }) {
-  const { projectId } = use(params);
+export default function ProjectDetailsRedirect() {
+  const { projectId } = useParams() as { projectId: string };
   redirect(`/projects/${projectId}/project-details/project-synopsis`);
 }

@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProject } from '@/context/ProjectContext';
 import { Play, Square } from 'lucide-react';
-import { addDays } from 'date-fns';
-import { Priority } from '@/types';
+import { addDays, differenceInDays } from 'date-fns';
 
 export function ProjectSimulator() {
-  const { stories, sprints, kanbanColumns, updateStory, testDate, setTestDate } = useProject();
+  const { stories, sprints, kanbanColumns, updateStory, testDate, setTestDate, project } = useProject();
   const [percentage, setPercentage] = useState<string>('100');
   const [isSimulating, setIsSimulating] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -18,61 +17,88 @@ export function ProjectSimulator() {
   const orderedColumns = [...kanbanColumns].sort((a, b) => a.order - b.order);
   const doneColumn = orderedColumns.find(c => c.isDoneColumn);
 
+  // Helper to compute overall project start/end timeline
+  const getProjectTimeline = () => {
+    const sprintDates = sprints
+      .filter(s => s.startDate && s.endDate)
+      .map(s => ({
+        start: new Date(s.startDate!),
+        end: new Date(s.endDate!)
+      }));
+
+    let start = project?.startDate ? new Date(project.startDate) : null;
+    let end = project?.endDate ? new Date(project.endDate) : null;
+
+    if (sprintDates.length > 0) {
+      sprintDates.sort((a, b) => a.start.getTime() - b.start.getTime());
+      if (!start) start = sprintDates[0].start;
+      if (!end) end = sprintDates[sprintDates.length - 1].end;
+    }
+
+    // Fallbacks if no dates are defined anywhere
+    if (!start) start = new Date();
+    if (!end) end = addDays(start, 30);
+
+    return { start, end };
+  };
+
   // Simulation loop
   useEffect(() => {
     if (isSimulating) {
       intervalRef.current = setInterval(() => {
-        if (!doneColumn) {
+        if (!doneColumn || orderedColumns.length === 0) {
           setIsSimulating(false);
           return;
         }
 
-        const targetCount = Math.ceil(subTasks.length * (parseInt(percentage) / 100));
-        const doneCount = subTasks.filter(s => s.status === doneColumn.name).length;
+        const { start, end } = getProjectTimeline();
+        const totalDurationMs = end.getTime() - start.getTime();
+        const targetEnd = new Date(start.getTime() + totalDurationMs * (parseInt(percentage) / 100));
 
-        if (doneCount >= targetCount || targetCount === 0) {
+        const currentTestDate = testDate || start;
+
+        // If we reached or passed the target end date, stop simulation
+        if (currentTestDate >= targetEnd) {
           setIsSimulating(false);
           return;
         }
 
-        const priorityOrder: Record<string, number> = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Backburner': 4 };
-        
-        const getSprintDate = (sprintId?: string | null) => {
-           if (!sprintId) return new Date('2099-01-01').getTime();
-           const sprint = sprints.find(s => s.id === sprintId);
-           return sprint?.startDate ? new Date(sprint.startDate).getTime() : new Date('2099-01-01').getTime();
-        };
+        // Calculate step size in days to complete in approx 15 seconds
+        const totalDays = Math.max(1, differenceInDays(targetEnd, start));
+        const stepDays = Math.max(1, Math.ceil(totalDays / 15));
+        const nextTestDate = new Date(Math.min(targetEnd.getTime(), currentTestDate.getTime() + stepDays * 24 * 60 * 60 * 1000));
 
-        const getPriorityVal = (priority?: Priority) => {
-           if (!priority) return 5;
-           return priorityOrder[priority] ?? 5;
-        };
+        // Find all sub-tasks needing status update at this next test date
+        const tasksNeedingUpdate: { id: string; targetStatus: string }[] = [];
 
-        const incompleteSubtasks = subTasks.filter(s => s.status !== doneColumn.name);
-        
-        incompleteSubtasks.sort((a, b) => {
-           const sprintA = getSprintDate(a.sprintId);
-           const sprintB = getSprintDate(b.sprintId);
-           if (sprintA !== sprintB) return sprintA - sprintB;
-           return getPriorityVal(a.priority) - getPriorityVal(b.priority);
+        subTasks.forEach(task => {
+          const sprint = sprints.find(s => s.id === task.sprintId);
+          const taskStart = sprint?.startDate ? new Date(sprint.startDate) : start;
+          const taskEnd = sprint?.endDate ? new Date(sprint.endDate) : end;
+
+          let targetStatus = orderedColumns[0].name;
+
+          if (nextTestDate >= taskEnd) {
+            targetStatus = orderedColumns[orderedColumns.length - 1].name;
+          } else if (nextTestDate >= taskStart) {
+            const fraction = (nextTestDate.getTime() - taskStart.getTime()) / (taskEnd.getTime() - taskStart.getTime());
+            const targetColIndex = Math.floor(fraction * (orderedColumns.length - 1));
+            targetStatus = orderedColumns[Math.min(orderedColumns.length - 1, Math.max(0, targetColIndex))].name;
+          }
+
+          if (task.status !== targetStatus) {
+            tasksNeedingUpdate.push({ id: task.id, targetStatus });
+          }
         });
 
-        // Take up to 5 tasks per second for speed
-        const tasksToMove = incompleteSubtasks.slice(0, 5);
-
-        tasksToMove.forEach(task => {
-            const currentIndex = orderedColumns.findIndex(c => c.name === task.status);
-            if (currentIndex >= 0 && currentIndex < orderedColumns.length - 1) {
-                const nextColumn = orderedColumns[currentIndex + 1];
-                updateStory(task.id, { status: nextColumn.name });
-            } else if (currentIndex === -1 && orderedColumns.length > 0) {
-                // If status is somehow invalid, move to the first valid column
-                updateStory(task.id, { status: orderedColumns[0].name });
-            }
+        // Update up to 8 tasks per tick to keep DB writes lightweight and smooth
+        const batchToUpdate = tasksNeedingUpdate.slice(0, 8);
+        batchToUpdate.forEach(item => {
+          updateStory(item.id, { status: item.targetStatus });
         });
 
-        // Advance test date by 1 day per second
-        setTestDate(addDays(testDate || new Date(), 1));
+        // Advance test date
+        setTestDate(nextTestDate);
 
       }, 1000);
     } else if (intervalRef.current) {
@@ -82,9 +108,14 @@ export function ProjectSimulator() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isSimulating, percentage, subTasks, orderedColumns, doneColumn, sprints, updateStory, testDate, setTestDate]);
+  }, [isSimulating, percentage, subTasks, orderedColumns, doneColumn, sprints, updateStory, testDate, setTestDate, project]);
 
   const handleStartStop = () => {
+    if (!isSimulating) {
+      // Starting: reset date to the start of project timeline
+      const { start } = getProjectTimeline();
+      setTestDate(start);
+    }
     setIsSimulating(!isSimulating);
   };
 

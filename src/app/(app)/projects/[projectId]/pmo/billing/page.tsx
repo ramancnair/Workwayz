@@ -1,10 +1,8 @@
-
 'use client';
 
-import { redirect } from 'next/navigation';
-import { use } from 'react';
+import { redirect, useParams } from 'next/navigation';
 
-export default function DeprecatedBillingPage({ params }: { params: Promise<{ projectId: string }> }) {
-  const { projectId } = use(params);
+export default function DeprecatedBillingPage() {
+  const { projectId } = useParams() as { projectId: string };
   redirect(`/projects/${projectId}/pmo/fb-payment-milestones`);
 }
