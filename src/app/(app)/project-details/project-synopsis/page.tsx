@@ -135,15 +135,6 @@ export default function ProjectSynopsisPage() {
                 
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader><CardTitle>Project Objective</CardTitle></CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground whitespace-pre-wrap">
-                                {project.description || "No description provided."}
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
                         <CardHeader><CardTitle>Key Information</CardTitle></CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <DetailCard 

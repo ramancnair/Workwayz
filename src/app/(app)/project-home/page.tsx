@@ -82,7 +82,6 @@ const portfolioSchema = z.object({
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required.'),
-  description: z.string().optional(),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
   projectManagerId: z.string().optional(),
   pricingModel: z.enum(['Fixed Bid', 'T&M'] as const).optional(),
@@ -173,19 +172,6 @@ function ProjectDialogContent({
                 <FormLabel>Project Name</FormLabel>
                 <FormControl>
                   <Input placeholder="E.g., Q3 Marketing Campaign" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Project Objective</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Describe the project's objective..." {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -331,7 +317,7 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', description: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' },
+    defaultValues: { name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' },
   });
 
   const portfolioForm = useForm<z.infer<typeof portfolioSchema>>({
@@ -384,7 +370,7 @@ export default function ProjectsDashboard() {
           endDate: editingProject.endDate ? format(parseISO(editingProject.endDate), 'yyyy-MM-dd') : '',
         });
       } else {
-        form.reset({ name: '', description: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '' });
+        form.reset({ name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '' });
       }
     }
   }, [isDialogOpen, editingProject, form]);
@@ -435,7 +421,6 @@ export default function ProjectsDashboard() {
         const dataToSave: Partial<Project> = {
           id: projectId,
           name: `Autogen Project ${currentMaxId}`,
-          description: `Auto-generated dummy project optimized for cross-dashboard UI testing.`,
           portfolioId: autogenPortfolioId,
           pricingModel: 'T&M',
           status: 'Active',
@@ -650,7 +635,7 @@ export default function ProjectsDashboard() {
             return matchesArchiveState && p.portfolioId === portfolio.id && (
                 p.name.toLowerCase().includes(filterText.toLowerCase()) ||
                 p.id.toLowerCase().includes(filterText.toLowerCase()) ||
-                (p.description && p.description.toLowerCase().includes(filterText.toLowerCase()))
+                (p.summary && p.summary.toLowerCase().includes(filterText.toLowerCase()))
             );
         });
 
@@ -867,9 +852,9 @@ export default function ProjectsDashboard() {
                                             <TableCell>
                                               <Link href={projectUrl} className="block w-full h-full">
                                                 <div className="hover:underline font-medium">{project.name}</div>
-                                                {project.description && (
-                                                  <div className="text-xs text-muted-foreground mt-1 line-clamp-2" title={project.description}>
-                                                    {project.description}
+                                                {project.summary && (
+                                                  <div className="text-xs text-muted-foreground mt-1 line-clamp-2" title={project.summary}>
+                                                    {project.summary}
                                                   </div>
                                                 )}
                                               </Link>

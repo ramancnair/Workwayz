@@ -330,7 +330,6 @@ export type ProjectStatusHistoryItem = {
 export type Project = {
   id: string;
   name: string;
-  description?: string;
   portfolioId: string;
   isDeleted?: boolean;
   deletedAt?: string; // ISO String

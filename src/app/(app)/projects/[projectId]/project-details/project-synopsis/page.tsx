@@ -184,15 +184,6 @@ export default function ProjectSynopsisPage() {
             <PageHeader title="Project Synopsis" description="A high-level overview of your project details." />
             
             <div className="space-y-6">
-                <Card>
-                    <CardHeader><CardTitle>Project Objective</CardTitle></CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground whitespace-pre-wrap">
-                            {project.description || "No objective provided."}
-                        </p>
-                    </CardContent>
-                </Card>
-
                 <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
                     <Card>
                          <CardHeader className="flex flex-row justify-between items-start">

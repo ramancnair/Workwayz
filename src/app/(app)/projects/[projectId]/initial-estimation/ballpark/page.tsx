@@ -190,14 +190,18 @@ export default function InitialEstimationPage() {
         horizontals: initialHorizontals.map(({ id, name }) => ({ id, name })),
       });
 
-      if (result.error) {
+      if ('error' in result && result.error) {
         throw new Error(result.error);
+      }
+
+      if (!('estimates' in result)) {
+        throw new Error('Invalid response from AI');
       }
 
       const { systemEstimates, horizontalEstimates } = result.estimates;
       
-      const systemPromises = systemEstimates.map(est => updateInitialImpactedSystem(est.id, { name: est.name, estimate: est.estimate }));
-      const horizontalPromises = horizontalEstimates.map(est => updateInitialHorizontal(est.id, { name: est.name, weightage: est.weightage, isEnabled: true }));
+      const systemPromises = systemEstimates.map((est: any) => updateInitialImpactedSystem(est.id, { name: est.name, estimate: est.estimate }));
+      const horizontalPromises = horizontalEstimates.map((est: any) => updateInitialHorizontal(est.id, { name: est.name, weightage: est.weightage, isEnabled: true }));
       
       await Promise.all([...systemPromises, ...horizontalPromises]);
 
@@ -228,7 +232,9 @@ export default function InitialEstimationPage() {
       if ('error' in result && result.error) {
          throw new Error(result.error);
       }
-      setTechStackSuggestions(result.stacks || []);
+      if ('stacks' in result) {
+        setTechStackSuggestions(result.stacks || []);
+      }
     } catch (e: any) {
       setSuggestStackError(e.message || 'Failed to get tech stack suggestions.');
     } finally {
@@ -272,7 +278,9 @@ export default function InitialEstimationPage() {
       if ('error' in result && result.error) {
          throw new Error(result.error);
       }
-      setHorizontalSuggestions(result.strategies || []);
+      if ('strategies' in result) {
+        setHorizontalSuggestions(result.strategies || []);
+      }
     } catch (e: any) {
       setSuggestHorizontalsError(e.message || 'Failed to get horizontal strategy suggestions.');
     } finally {
@@ -410,18 +418,6 @@ export default function InitialEstimationPage() {
           </Alert>
         )}
 
-        {project?.description && (
-          <Card className="mb-6 bg-muted/30">
-            <CardHeader className="pb-3">
-              <CardTitle>Project Objective</CardTitle>
-              <CardDescription>The core objective defined during project creation.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm border-l-2 border-primary/50 pl-4 py-1 italic whitespace-pre-wrap">{project.description}</p>
-            </CardContent>
-          </Card>
-        )}
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -479,7 +475,7 @@ export default function InitialEstimationPage() {
                       <span>
                         <Button 
                            variant="outline"
-                           onClick={handleSuggestTechStack}
+                           onClick={() => handleSuggestTechStack(false)}
                            disabled={!project?.summary || isEditingSummary}
                         >
                           <Bot className="mr-2 h-4 w-4" />
@@ -576,7 +572,7 @@ export default function InitialEstimationPage() {
                           <span>
                             <Button 
                                variant="outline"
-                               onClick={handleSuggestHorizontals}
+                               onClick={() => handleSuggestHorizontals(false)}
                                disabled={!project?.summary || isEditingSummary}
                             >
                               <Bot className="mr-2 h-4 w-4" />
