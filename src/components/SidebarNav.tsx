@@ -242,16 +242,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Resource Workload",
       icon: GanttChartSquare,
     },
-    {
-      href: `${basePath}/resources/leave-tracker`,
-      label: "Leave Tracker",
-      icon: CalendarCheck,
-    },
-    {
-      href: `${basePath}/resources/leave-calendar`,
-      label: "Leave Calendar",
-      icon: CalendarDays,
-    },
   ];
 
   const governanceMenuItems = [
@@ -286,6 +276,16 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     {
       href: `${basePath}/holidays`,
       label: "Holiday Calendar",
+      icon: CalendarDays,
+    },
+    {
+      href: `${basePath}/holidays/leave-tracker`,
+      label: "Leave Tracker",
+      icon: CalendarCheck,
+    },
+    {
+      href: `${basePath}/holidays/leave-calendar`,
+      label: "Leave Calendar",
       icon: CalendarDays,
     },
   ];

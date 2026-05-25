@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -29,7 +28,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Holiday, ProjectSettings, HolidayType } from '@/types';
+import type { Holiday, ProjectSettings } from '@/types';
 import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
 import {
@@ -176,7 +175,6 @@ export default function HolidayPage() {
         console.error("Error saving holiday:", e);
     }
 
-
     if (success) {
       toast({ title: 'Success', description: `Holiday ${editingHoliday ? 'updated' : 'added'}.` });
       setIsHolidayDialogOpen(false);
@@ -280,21 +278,29 @@ export default function HolidayPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {holidays.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(holiday => (
-                    <TableRow key={holiday.id}>
-                      <TableCell>{format(new Date(holiday.date), 'PPP')}</TableCell>
-                      <TableCell>{holiday.description}</TableCell>
-                      <TableCell>{holiday.type || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => openHolidayDialog(holiday)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteHoliday(holiday.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                  {holidays.length > 0 ? (
+                    holidays.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(holiday => (
+                      <TableRow key={holiday.id}>
+                        <TableCell>{format(new Date(holiday.date), 'PPP')}</TableCell>
+                        <TableCell>{holiday.description}</TableCell>
+                        <TableCell>{holiday.type || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => openHolidayDialog(holiday)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteHoliday(holiday.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground text-sm">
+                        No holidays logged in the system.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

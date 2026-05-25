@@ -2,7 +2,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback, useMemo } from 'react';
 import { db, firebaseConfig } from '@/lib/firebase';
 import {
   collection,
@@ -300,8 +300,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays', 'horizontals'],
     '/resources/resource-workload': ['employees', 'worklogs', 'stories', 'holidays', 'weeklyOffDays'],
     '/resources/worklog': ['employees', 'stories', 'worklogs', 'holidays', 'weeklyOffDays'],
-    '/resources/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
-    '/resources/leave-calendar': ['employees', 'holidays', 'weeklyOffDays'],
+    '/holidays/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
+    '/holidays/leave-calendar': ['employees', 'holidays', 'weeklyOffDays'],
     '/raid-dashboard': ['risks', 'assumptions', 'issues', 'dependencies'],
     '/risks': ['risks'],
     '/assumptions': ['assumptions', 'employees'],
@@ -557,7 +557,18 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     });
     
     const unsubAllUsers = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot) => {
-        const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+        const usersData = snapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
+            if (data.leavePeriods && Array.isArray(data.leavePeriods)) {
+                data.leavePeriods = data.leavePeriods.map((lp: any) => ({
+                    ...lp,
+                    startDate: convertTimestamp(lp.startDate),
+                    endDate: convertTimestamp(lp.endDate)
+                }));
+            }
+            return { id: docSnap.id, ...data } as User;
+        });
         setAllUsers(usersData);
     });
 
@@ -1252,7 +1263,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
   const addLeavePeriod = async (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>): Promise<boolean> => {
-    if (!db || !projectId) return false;
+    if (!db) return false;
     try {
       const newLeavePeriod: LeavePeriod = {
         ...leavePeriod,
@@ -1261,33 +1272,33 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         endDate: new Date(leavePeriod.endDate).toISOString(),
       };
       
-      const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
-      await updateDoc(employeeRef, {
+      const globalEmployeeRef = doc(db, 'employees', employeeId);
+      await updateDoc(globalEmployeeRef, {
         leavePeriods: arrayUnion(sanitizeForFirestore(newLeavePeriod))
       });
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to add leave period.", e);
+      console.error("Firebase Error: Failed to add leave period globally.", e);
       return false;
     }
   };
 
   const deleteLeavePeriod = async (employeeId: string, leavePeriodId: string): Promise<boolean> => {
-    if (!db || !projectId) return false;
-    const employee = employees.find(e => e.id === employeeId);
-    if (!employee || !employee.leavePeriods) return false;
+    if (!db) return false;
+    const globalUser = allUsers.find(u => u.id === employeeId);
+    if (!globalUser || !globalUser.leavePeriods) return false;
 
-    const leavePeriodToDelete = employee.leavePeriods.find(p => p.id === leavePeriodId);
+    const leavePeriodToDelete = globalUser.leavePeriods.find(p => p.id === leavePeriodId);
     if (!leavePeriodToDelete) return false;
     
     try {
-      const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
-      await updateDoc(employeeRef, {
+      const globalEmployeeRef = doc(db, 'employees', employeeId);
+      await updateDoc(globalEmployeeRef, {
         leavePeriods: arrayRemove(sanitizeForFirestore(leavePeriodToDelete))
       });
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to delete leave period.", e);
+      console.error("Firebase Error: Failed to delete leave period globally.", e);
       return false;
     }
   };
@@ -2435,12 +2446,22 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   };
 
 
+  const employeesWithGlobalLeaves = useMemo(() => {
+    return employees.map(emp => {
+      const globalUser = allUsers.find(u => u.id === emp.id);
+      return {
+        ...emp,
+        leavePeriods: globalUser?.leavePeriods || []
+      };
+    });
+  }, [employees, allUsers]);
+
   const value: ProjectContextType = {
     project,
     epics,
     stories: pathname.endsWith('/trash') ? stories : stories.filter(s => !s.isDeleted),
     sprints,
-    employees,
+    employees: employeesWithGlobalLeaves,
     allUsers,
     testCases: pathname.endsWith('/trash') ? testCases : testCases.filter(tc => !tc.isDeleted),
     risks: pathname.endsWith('/trash') ? risks : risks.filter(r => !r.isDeleted),

@@ -253,6 +253,9 @@ export type ProjectSettings = {
   manMonthToDays?: number;
   manDayToHours?: number;
   storyPointToHours?: number;
+  allocatedPaidLeavesPerYear?: number;
+  allowCarryOver?: boolean;
+  carryOverLimit?: number;
 };
 
 export type ImpactedSystemCategory = 'Technology' | 'Function';
