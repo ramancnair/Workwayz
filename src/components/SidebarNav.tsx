@@ -406,7 +406,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={
+                    item.href.endsWith('/holidays')
+                      ? pathname === item.href
+                      : pathname.startsWith(item.href)
+                  }
                   tooltip={item.label}
                 >
                   <item.icon />
