@@ -91,6 +91,28 @@ const dailyActivityConfig = {
     opened: { label: 'Opened', color: 'hsl(var(--chart-5))' },
 } satisfies ChartConfig;
 
+const leakageChartConfig = {
+  bugs: {
+    label: "Bugs",
+  },
+  'Critical': {
+    label: "Critical",
+    color: '#a855f7',
+  },
+  'High': {
+    label: "High",
+    color: '#ef4444',
+  },
+  'Medium': {
+    label: "Medium",
+    color: '#eab308',
+  },
+  'Low': {
+    label: "Low",
+    color: '#22c55e',
+  },
+} satisfies ChartConfig;
+
 export default function TestingDashboard() {
   const { testCases, stories, testPlans } = useProject();
   const [selectedTestPlanId, setSelectedTestPlanId] = useState('all');
@@ -230,6 +252,47 @@ export default function TestingDashboard() {
     
   }, [testCases, stories, dailyViewTestPlanId, testPlans]);
 
+  const sortedTestPlansForLeakage = useMemo(() => {
+    return [...testPlans].sort((a, b) => {
+      const getOrder = (name: string) => {
+        const n = name.toLowerCase();
+        if (n.includes('sit')) return 1;
+        if (n.includes('uat')) return 2;
+        if (n.includes('prod') || n.includes('production')) return 3;
+        return 4;
+      };
+      
+      const orderA = getOrder(a.name);
+      const orderB = getOrder(b.name);
+      
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [testPlans]);
+
+  const leakageChartData = useMemo(() => {
+    const bugs = stories.filter(s => s.itemType === 'Bug');
+    
+    return sortedTestPlansForLeakage.map(plan => {
+      const planBugs = bugs.filter(b => b.foundInTestPlanId === plan.id);
+      
+      const criticalCount = planBugs.filter(b => b.severity === 'Critical').length;
+      const highCount = planBugs.filter(b => b.severity === 'High').length;
+      const mediumCount = planBugs.filter(b => b.severity === 'Medium').length;
+      const lowCount = planBugs.filter(b => b.severity === 'Low' || !b.severity).length;
+      
+      return {
+        planName: plan.name,
+        planCode: plan.testPlanId,
+        'Critical': criticalCount,
+        'High': highCount,
+        'Medium': mediumCount,
+        'Low': lowCount,
+        total: planBugs.length
+      };
+    });
+  }, [sortedTestPlansForLeakage, stories]);
+
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -350,6 +413,38 @@ export default function TestingDashboard() {
                      </LineChart>
                  </ChartContainer>
             </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Test Leakage</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px] w-full">
+            <ChartContainer config={leakageChartConfig} className="h-full w-full">
+              <BarChart data={leakageChartData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="planName" 
+                  tickLine={false} 
+                  tickMargin={10} 
+                  axisLine={false} 
+                />
+                <YAxis 
+                  allowDecimals={false} 
+                  tickLine={false} 
+                  axisLine={false} 
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="Low" stackId="a" fill="var(--color-Low)" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Medium" stackId="a" fill="var(--color-Medium)" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="High" stackId="a" fill="var(--color-High)" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Critical" stackId="a" fill="var(--color-Critical)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </div>
         </CardContent>
       </Card>
     </div>
