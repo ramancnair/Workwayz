@@ -352,6 +352,18 @@ export type Project = {
   archivedAt?: string; // ISO String
   projectValue?: number;
   monthlyBilledValue?: number;
+  pmoApproval?: {
+    permitToBuild?: {
+      approved: boolean;
+      approvedBy?: string;
+      approvedAt?: string;
+    };
+    permitToDeploy?: {
+      approved: boolean;
+      approvedBy?: string;
+      approvedAt?: string;
+    };
+  };
 };
 
 export type AccessControlSetting = {

@@ -276,6 +276,7 @@ const standardDocs = [
   'BCP',
   'GIT',
   'Closure',
+  'QA Approval',
 ];
 
 type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans';
@@ -446,6 +447,19 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                         batch.set(docRef, cost);
                     });
                     batch.commit().catch(e => console.error("Failed to set default Fixed Costs", e));
+                    return;
+                }
+                if (name === 'documents' && snapshot.empty) {
+                    const batch = writeBatch(db);
+                    standardDocs.forEach(docName => {
+                        const docRef = doc(collection(rootProjectDocRef, 'documents'));
+                        batch.set(docRef, {
+                            name: docName,
+                            location: '',
+                            createdAt: Timestamp.now(),
+                        });
+                    });
+                    batch.commit().catch(e => console.error("Failed to set default documents", e));
                     return;
                 }
                  // ... other default data logic
