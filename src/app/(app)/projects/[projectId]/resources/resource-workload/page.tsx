@@ -158,7 +158,7 @@ function WorklogDetailModal({ open, onClose, worklog, employee, dateLabel, daySt
   );
 }
 
-export default function ResourceGanttPage() {
+export default function ResourceWorkloadPage() {
   const { employees, worklogs, holidays, weeklyOffDays, stories } = useProject();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 

@@ -30,7 +30,7 @@ const appPages = [
     'Impacted Systems',
     'Releases',
     'Resources',
-    'Resource Gantt',
+    'Resource Workload',
     'Worklog',
     'Leave Tracker',
     'RAID Dashboard',

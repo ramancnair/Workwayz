@@ -233,14 +233,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Users,
     },
     {
-      href: `${basePath}/resources/resource-gantt`,
-      label: "Resource Gantt",
-      icon: GanttChartSquare,
-    },
-    {
       href: `${basePath}/resources/worklog`,
       label: "Worklog",
       icon: ClipboardList,
+    },
+    {
+      href: `${basePath}/resources/resource-workload`,
+      label: "Resource Workload",
+      icon: GanttChartSquare,
     },
     {
       href: `${basePath}/resources/leave-tracker`,
