@@ -32,7 +32,6 @@ type ProjectEstimations = {
   projectName: string;
   projectCode: string;
   status: ProjectStatus;
-  methodology?: string;
   pricingModel?: string;
   
   // Initial Estimates (man days)
@@ -84,7 +83,7 @@ export default function QualityEstimationsPage() {
 
       // Fetch detailed metrics for all projects in parallel
       const metricPromises = projectsData.map(async (project) => {
-        const projectDocRef = doc(db, 'projects', project.id);
+        const projectDocRef = doc(db!, 'projects', project.id);
 
         // Fetch subcollections
         const [
@@ -166,7 +165,6 @@ export default function QualityEstimationsPage() {
           projectName: project.name,
           projectCode: project.id,
           status: project.status || 'Initial Estimation',
-          methodology: project.methodology,
           pricingModel: project.pricingModel,
           devInitial,
           hzInitial,
@@ -441,7 +439,6 @@ export default function QualityEstimationsPage() {
                             </Link>
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span className="font-mono bg-muted/60 px-1 py-0.5 rounded text-[10px]">{item.projectCode}</span>
-                              {item.methodology && <span>• {item.methodology}</span>}
                               {item.pricingModel && <span>• {item.pricingModel}</span>}
                             </div>
                           </div>

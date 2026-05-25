@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { type ProjectStatus, type RagStatus, type ProjectMethodology, type PricingModel } from '@/types';
+import { type ProjectStatus, type RagStatus, type PricingModel } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -24,10 +24,9 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-const ragStatuses: RagStatus[] = ['Green', 'Amber', 'Red'];
-const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
-const projectMethodologies: ProjectMethodology[] = ['Agile', 'Hybrid'];
-const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M'];
+const ragStatuses = ['Green', 'Amber', 'Red'] as const;
+const projectStatuses = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'] as const;
+const pricingModels = ['Fixed Bid', 'T&M'] as const;
 
 
 const statusUpdateSchema = z.object({
@@ -41,7 +40,6 @@ const statusUpdateSchema = z.object({
 const keyInfoUpdateSchema = z.object({
     status: z.enum(projectStatuses),
     projectManagerId: z.string().optional(),
-    methodology: z.enum(projectMethodologies),
     pricingModel: z.enum(pricingModels),
     startDate: z.string(),
     endDate: z.string(),
@@ -113,12 +111,11 @@ export default function ProjectSynopsisPage() {
         }
     }, [project, healthForm, isHealthDialogOpen]);
     
-     useEffect(() => {
+      useEffect(() => {
         if (project && isInfoDialogOpen) {
             infoForm.reset({
                 status: project.status,
                 projectManagerId: project.projectManagerId || 'unassigned',
-                methodology: project.methodology,
                 pricingModel: project.pricingModel,
                 startDate: project.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : '',
                 endDate: project.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
@@ -218,10 +215,6 @@ export default function ProjectSynopsisPage() {
                                 value={projectManager ? `${projectManager.firstName} ${projectManager.lastName}` : "Unassigned"}
                             />
                              <DetailCard 
-                                title="Methodology" 
-                                value={project.methodology}
-                            />
-                             <DetailCard 
                                 title="Pricing Model" 
                                 value={project.pricingModel}
                             />
@@ -248,9 +241,6 @@ export default function ProjectSynopsisPage() {
                                     )}/>
                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <FormField control={infoForm.control} name="methodology" render={({ field }) => (
-                                        <FormItem><FormLabel>Methodology</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{projectMethodologies.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
-                                    )}/>
                                      <FormField control={infoForm.control} name="pricingModel" render={({ field }) => (
                                         <FormItem><FormLabel>Pricing Model</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{pricingModels.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
                                     )}/>

@@ -17,7 +17,6 @@ import {
 } from 'firebase/firestore';
 import type {
   User,
-  ProjectMethodology,
 } from '@/types';
 import {
   addDays,
@@ -96,13 +95,12 @@ export interface AutogenOptions {
   projectId: string;
   startDate: Date;
   endDate: Date;
-  methodology: ProjectMethodology;
   globalUsers: User[];
   pricingModel?: string;
 }
 
 export async function generateFullProjectData(opts: AutogenOptions): Promise<void> {
-  const { db, projectId, startDate, endDate, methodology, globalUsers, pricingModel } = opts;
+  const { db, projectId, startDate, endDate, globalUsers, pricingModel } = opts;
 
   const pRef = doc(db, 'projects', projectId);
   const col = (name: string) => collection(pRef, name);

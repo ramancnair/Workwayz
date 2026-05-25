@@ -314,7 +314,6 @@ export type Portfolio = {
   deletedAt?: string; // ISO String
 };
 
-export type ProjectMethodology = 'Agile' | 'Hybrid';
 export type PricingModel = 'Fixed Bid' | 'T&M';
 export type ProjectStatus = 'Not Started' | 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Initial Estimation';
 export type RagStatus = 'Red' | 'Amber' | 'Green';
@@ -337,7 +336,6 @@ export type Project = {
   deletedAt?: string; // ISO String
   summary?: string;
   projectManagerId?: string;
-  methodology?: ProjectMethodology;
   pricingModel?: PricingModel;
   status?: ProjectStatus;
   startDate?: string; // ISO String

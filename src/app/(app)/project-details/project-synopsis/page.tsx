@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Edit, Circle } from 'lucide-react';
 
 
-const ragStatuses: RagStatus[] = ['Green', 'Amber', 'Red'];
+const ragStatuses = ['Green', 'Amber', 'Red'] as const;
 
 const statusUpdateSchema = z.object({
   overallStatus: z.enum(ragStatuses).optional(),
@@ -157,10 +157,6 @@ export default function ProjectSynopsisPage() {
                             <DetailCard 
                                 title="Project Manager"
                                 value={projectManager ? `${projectManager.firstName} ${projectManager.lastName}` : "Unassigned"}
-                            />
-                             <DetailCard 
-                                title="Methodology" 
-                                value={project.methodology}
                             />
                              <DetailCard 
                                 title="Pricing Model" 

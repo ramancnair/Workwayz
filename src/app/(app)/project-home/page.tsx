@@ -47,7 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
-import { type Portfolio, type Project, type ProjectMethodology, type PricingModel, type User, type ProjectStatus, type RagStatus } from '@/types';
+import { type Portfolio, type Project, type PricingModel, type User, type ProjectStatus, type RagStatus } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -56,7 +56,6 @@ import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { generateFullProjectData } from '@/lib/project-autogen';
 
-const projectMethodologies: ProjectMethodology[] = ['Agile', 'Hybrid'];
 const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 
@@ -86,7 +85,6 @@ const projectSchema = z.object({
   description: z.string().optional(),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
   projectManagerId: z.string().optional(),
-  methodology: z.enum(['Agile', 'Hybrid'] as const).optional(),
   pricingModel: z.enum(['Fixed Bid', 'T&M'] as const).optional(),
   status: z.enum(['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'] as const).optional(),
   startDate: z.string().min(1, "Start date is required."),
@@ -274,33 +272,6 @@ function ProjectDialogContent({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="methodology"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Methodology</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {projectMethodologies.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="pricingModel"
               render={({ field }) => (
                 <FormItem>
@@ -354,14 +325,13 @@ export default function ProjectsDashboard() {
 
   // Project Autogen State
   const [isAutogenDialogOpen, setIsAutogenDialogOpen] = useState(false);
-  const [autogenMethodology, setAutogenMethodology] = useState<ProjectMethodology>('Agile');
   const [autogenCount, setAutogenCount] = useState<string>('5');
   const [autogenPortfolioId, setAutogenPortfolioId] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' },
+    defaultValues: { name: '', description: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' },
   });
 
   const portfolioForm = useForm<z.infer<typeof portfolioSchema>>({
@@ -414,7 +384,7 @@ export default function ProjectsDashboard() {
           endDate: editingProject.endDate ? format(parseISO(editingProject.endDate), 'yyyy-MM-dd') : '',
         });
       } else {
-        form.reset({ name: '', description: '', portfolioId: '', methodology: 'Agile', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '' });
+        form.reset({ name: '', description: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '' });
       }
     }
   }, [isDialogOpen, editingProject, form]);
@@ -467,7 +437,6 @@ export default function ProjectsDashboard() {
           name: `Autogen Project ${currentMaxId}`,
           description: `Auto-generated dummy project optimized for cross-dashboard UI testing.`,
           portfolioId: autogenPortfolioId,
-          methodology: autogenMethodology,
           pricingModel: 'T&M',
           status: 'Active',
           startDate: startDate.toISOString(),
@@ -489,7 +458,6 @@ export default function ProjectsDashboard() {
           projectId,
           startDate,
           endDate,
-          methodology: autogenMethodology,
           globalUsers: users,
           pricingModel: dataToSave.pricingModel,
         });
@@ -571,7 +539,6 @@ export default function ProjectsDashboard() {
       const { projectManagerId, ...restValues } = values;
       const dataToSave: Partial<Project> = {
           ...restValues,
-          methodology: restValues.methodology as ProjectMethodology | undefined,
           pricingModel: restValues.pricingModel as PricingModel | undefined,
           status: restValues.status as ProjectStatus | undefined,
           startDate: new Date(values.startDate).toISOString(),
@@ -798,7 +765,7 @@ export default function ProjectsDashboard() {
           />
         </Dialog>
 
-        <Dialog open={isAutogenDialogOpen} onOpenChange={(open) => { setIsAutogenDialogOpen(open); if(!open) { setAutogenMethodology('Agile'); setAutogenCount('5'); setAutogenPortfolioId(''); } }}>
+        <Dialog open={isAutogenDialogOpen} onOpenChange={(open) => { setIsAutogenDialogOpen(open); if(!open) { setAutogenCount('5'); setAutogenPortfolioId(''); } }}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Project Autogen</DialogTitle>
@@ -814,25 +781,14 @@ export default function ProjectsDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Methodology</Label>
-                  <Select value={autogenMethodology} onValueChange={(v) => setAutogenMethodology(v as ProjectMethodology)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {projectMethodologies.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Total Dummy Projects</Label>
-                  <Select value={autogenCount} onValueChange={setAutogenCount}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 10 }, (_, i) => i + 1).map(num => <SelectItem key={num} value={num.toString()}>{num}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>Total Dummy Projects</Label>
+                <Select value={autogenCount} onValueChange={setAutogenCount}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(num => <SelectItem key={num} value={num.toString()}>{num}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter className="flex-col items-start gap-2 sm:items-center sm:flex-row">

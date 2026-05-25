@@ -31,7 +31,6 @@ type ProjectDefects = {
   projectName: string;
   projectCode: string;
   status: ProjectStatus;
-  methodology?: string;
   pricingModel?: string;
   
   // Defect Splits
@@ -76,7 +75,7 @@ export default function QualityDefectsPage() {
 
       // Fetch stories (bugs) and test plans for all projects in parallel
       const metricPromises = projectsData.map(async (project) => {
-        const projectDocRef = doc(db, 'projects', project.id);
+        const projectDocRef = doc(db!, 'projects', project.id);
 
         const [storiesSnap, testPlansSnap] = await Promise.all([
           getDocs(collection(projectDocRef, 'stories')),
@@ -130,7 +129,6 @@ export default function QualityDefectsPage() {
           projectName: project.name,
           projectCode: project.id,
           status: project.status || 'Initial Estimation',
-          methodology: project.methodology,
           pricingModel: project.pricingModel,
           sitCount,
           uatCount,
@@ -409,7 +407,6 @@ export default function QualityDefectsPage() {
                             </Link>
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span className="font-mono bg-muted/60 px-1 py-0.5 rounded text-[10px]">{item.projectCode}</span>
-                              {item.methodology && <span>• {item.methodology}</span>}
                               {item.pricingModel && <span>• {item.pricingModel}</span>}
                             </div>
                           </div>
