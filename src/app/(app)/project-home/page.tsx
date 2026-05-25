@@ -60,12 +60,12 @@ const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 
 const statusStyles: Record<ProjectStatus, string> = {
-    'Initial Estimation': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-    'Not Started': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    'Active': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    'On Hold': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    'Completed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    'Cancelled': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  'Initial Estimation': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  'Not Started': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  'Active': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  'On Hold': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  'Completed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  'Cancelled': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
 const ragStatusStyles: Record<RagStatus, string> = {
@@ -89,8 +89,8 @@ const projectSchema = z.object({
   startDate: z.string().min(1, "Start date is required."),
   endDate: z.string().min(1, "End date is required."),
 }).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
-    message: 'End date must be after or on the same day as the start date.',
-    path: ['endDate'],
+  message: 'End date must be after or on the same day as the start date.',
+  path: ['endDate'],
 });
 
 function HealthIndicator({ status, label }: { status?: RagStatus; label: string }) {
@@ -116,12 +116,12 @@ function ProjectDialogContent({
   users: User[];
 }) {
   const [pmInputText, setPmInputText] = useState('');
-  
+
   const pmOptions = useMemo(() => users.map(user => ({
-      value: user.id,
-      label: `${user.firstName} ${user.lastName} (${user.empId})`
+    value: user.id,
+    label: `${user.firstName} ${user.lastName} (${user.empId})`
   })), [users]);
-  
+
   useEffect(() => {
     if (editingProject && editingProject.projectManagerId) {
       const pm = users.find(u => u.id === editingProject.projectManagerId);
@@ -129,7 +129,7 @@ function ProjectDialogContent({
         setPmInputText(`${pm.firstName} ${pm.lastName} (${pm.empId})`);
       }
     } else {
-        setPmInputText('');
+      setPmInputText('');
     }
   }, [editingProject, users]);
 
@@ -179,21 +179,21 @@ function ProjectDialogContent({
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField control={form.control} name="startDate" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Project Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
+              <FormItem>
+                <FormLabel>Project Start Date</FormLabel>
+                <FormControl><Input type="date" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
             )} />
             <FormField control={form.control} name="endDate" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Project End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
+              <FormItem>
+                <FormLabel>Project End Date</FormLabel>
+                <FormControl><Input type="date" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
             )} />
           </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="projectManagerId"
@@ -201,36 +201,36 @@ function ProjectDialogContent({
                 <FormItem>
                   <FormLabel>Project Manager</FormLabel>
                   <FormControl>
-                    <Input 
-                      list="pm-options" 
-                      placeholder="Select a Project Manager..." 
+                    <Input
+                      list="pm-options"
+                      placeholder="Select a Project Manager..."
                       value={pmInputText}
                       onChange={(e) => {
-                          const inputText = e.target.value;
-                          setPmInputText(inputText);
-                          
-                          const matchingOption = pmOptions.find(opt => opt.label === inputText);
-                          field.onChange(matchingOption ? matchingOption.value : undefined);
+                        const inputText = e.target.value;
+                        setPmInputText(inputText);
+
+                        const matchingOption = pmOptions.find(opt => opt.label === inputText);
+                        field.onChange(matchingOption ? matchingOption.value : undefined);
                       }}
                       onBlur={() => {
-                          const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
-                          if (!matchingOption) {
-                              setPmInputText('');
-                              field.onChange(undefined);
-                          }
+                        const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
+                        if (!matchingOption) {
+                          setPmInputText('');
+                          field.onChange(undefined);
+                        }
                       }}
                     />
                   </FormControl>
                   <datalist id="pm-options">
-                      {pmOptions.map(option => (
-                          <option key={option.value} value={option.label} />
-                      ))}
+                    {pmOptions.map(option => (
+                      <option key={option.value} value={option.label} />
+                    ))}
                   </datalist>
                   <FormMessage />
                 </FormItem>
               )}
             />
-             <FormField
+            <FormField
               control={form.control}
               name="status"
               render={({ field }) => (
@@ -309,6 +309,10 @@ export default function ProjectsDashboard() {
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'name', desc: false });
   const { toast } = useToast();
 
+  const [activeExpanded, setActiveExpanded] = useState<string[]>([]);
+  const [archiveExpanded, setArchiveExpanded] = useState<string[]>([]);
+  const [isExpandedInitialized, setIsExpandedInitialized] = useState(false);
+
   // Project Autogen State
   const [isAutogenDialogOpen, setIsAutogenDialogOpen] = useState(false);
   const [autogenCount, setAutogenCount] = useState<string>('5');
@@ -324,7 +328,33 @@ export default function ProjectsDashboard() {
     resolver: zodResolver(portfolioSchema),
     defaultValues: { name: '', description: '' },
   });
-  
+
+  useEffect(() => {
+    if (portfolios.length > 0) {
+      const ids = portfolios.map(p => p.id);
+      if (!isExpandedInitialized) {
+        setActiveExpanded(ids);
+        setArchiveExpanded(ids);
+        setIsExpandedInitialized(true);
+      } else {
+        setActiveExpanded(prev => {
+          const newIds = ids.filter(id => !prev.includes(id));
+          if (newIds.length > 0) {
+            return [...prev, ...newIds];
+          }
+          return prev;
+        });
+        setArchiveExpanded(prev => {
+          const newIds = ids.filter(id => !prev.includes(id));
+          if (newIds.length > 0) {
+            return [...prev, ...newIds];
+          }
+          return prev;
+        });
+      }
+    }
+  }, [portfolios, isExpandedInitialized]);
+
   useEffect(() => {
     if (!db) return;
     const portfolioUnsubscribe = onSnapshot(query(collection(db, 'portfolios'), where('isDeleted', '!=', true)), (snapshot) => {
@@ -334,14 +364,14 @@ export default function ProjectsDashboard() {
       }));
       setPortfolios(portfoliosData);
     });
-    
+
     const projectUnsubscribe = onSnapshot(query(collection(db, 'projects'), where('isDeleted', '!=', true)), (snapshot) => {
-        const projectsData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...(doc.data() as Omit<Project, 'id'>),
-        }));
-        setProjects(projectsData);
-        setIsLoading(false);
+      const projectsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Project, 'id'>),
+      }));
+      setProjects(projectsData);
+      setIsLoading(false);
     });
 
     const usersUnsubscribe = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot) => {
@@ -353,12 +383,12 @@ export default function ProjectsDashboard() {
     });
 
     return () => {
-        portfolioUnsubscribe();
-        projectUnsubscribe();
-        usersUnsubscribe();
+      portfolioUnsubscribe();
+      projectUnsubscribe();
+      usersUnsubscribe();
     };
   }, []);
-  
+
   useEffect(() => {
     if (isDialogOpen) {
       if (editingProject) {
@@ -477,7 +507,7 @@ export default function ProjectsDashboard() {
           .filter(num => !isNaN(num));
         const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
         const portfolioId = `PF${nextId.toString().padStart(3, '0')}`;
-        
+
         const newPortfolioRef = doc(db, 'portfolios', portfolioId);
         await setDoc(newPortfolioRef, {
           id: portfolioId,
@@ -502,13 +532,13 @@ export default function ProjectsDashboard() {
     try {
       const portfolioRef = doc(db, 'portfolios', deletingPortfolio.id);
       await updateDoc(portfolioRef, { isDeleted: true, deletedAt: Timestamp.now() });
-      
+
       const portfolioProjects = projects.filter(p => p.portfolioId === deletingPortfolio.id);
       for (const project of portfolioProjects) {
         const projectRef = doc(db, 'projects', project.id);
         await updateDoc(projectRef, { isDeleted: true, deletedAt: Timestamp.now() });
       }
-      
+
       toast({ title: 'Success', description: `Portfolio "${deletingPortfolio.name}" and its ${portfolioProjects.length} project(s) moved to Trash.` });
     } catch (error) {
       console.error('Error deleting portfolio:', error);
@@ -523,11 +553,11 @@ export default function ProjectsDashboard() {
     try {
       const { projectManagerId, ...restValues } = values;
       const dataToSave: Partial<Project> = {
-          ...restValues,
-          pricingModel: restValues.pricingModel as PricingModel | undefined,
-          status: restValues.status as ProjectStatus | undefined,
-          startDate: new Date(values.startDate).toISOString(),
-          endDate: new Date(values.endDate).toISOString(),
+        ...restValues,
+        pricingModel: restValues.pricingModel as PricingModel | undefined,
+        status: restValues.status as ProjectStatus | undefined,
+        startDate: new Date(values.startDate).toISOString(),
+        endDate: new Date(values.endDate).toISOString(),
       };
 
       if (projectManagerId) {
@@ -541,18 +571,18 @@ export default function ProjectsDashboard() {
       } else {
         const projectsSnapshot = await getDocs(collection(db, 'projects'));
         const currentYear = new Date().getFullYear().toString().slice(-2);
-        
-        const projectsFromThisYear = projectsSnapshot.docs
-            .map(doc => doc.id)
-            .filter(id => id.startsWith(`P${currentYear}`));
 
-        const newIdNumber = projectsFromThisYear.length > 0 
-            ? Math.max(...projectsFromThisYear.map(id => parseInt(id.substring(3), 10))) + 1
-            : 1;
+        const projectsFromThisYear = projectsSnapshot.docs
+          .map(doc => doc.id)
+          .filter(id => id.startsWith(`P${currentYear}`));
+
+        const newIdNumber = projectsFromThisYear.length > 0
+          ? Math.max(...projectsFromThisYear.map(id => parseInt(id.substring(3), 10))) + 1
+          : 1;
 
         const projectId = `P${currentYear}${newIdNumber.toString().padStart(5, '0')}`;
         const newProjectRef = doc(db, 'projects', projectId);
-        
+
         await setDoc(newProjectRef, { ...dataToSave, id: projectId, isDeleted: false });
         toast({ title: 'Success', description: 'Project created successfully.' });
       }
@@ -606,7 +636,7 @@ export default function ProjectsDashboard() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not restore project.' });
     }
   };
-  
+
   const handleOpenDialog = (project: Project | null) => {
     setEditingProject(project);
     setIsDialogOpen(true);
@@ -630,46 +660,46 @@ export default function ProjectsDashboard() {
     const userMap = new Map(users.map(u => [u.id, u]));
 
     return portfolios.map(portfolio => {
-        let filtered = projects.filter(p => {
-            const matchesArchiveState = isArchiveTab ? !!p.isArchived : !p.isArchived;
-            return matchesArchiveState && p.portfolioId === portfolio.id && (
-                p.name.toLowerCase().includes(filterText.toLowerCase()) ||
-                p.id.toLowerCase().includes(filterText.toLowerCase()) ||
-                (p.summary && p.summary.toLowerCase().includes(filterText.toLowerCase()))
-            );
-        });
+      let filtered = projects.filter(p => {
+        const matchesArchiveState = isArchiveTab ? !!p.isArchived : !p.isArchived;
+        return matchesArchiveState && p.portfolioId === portfolio.id && (
+          p.name.toLowerCase().includes(filterText.toLowerCase()) ||
+          p.id.toLowerCase().includes(filterText.toLowerCase()) ||
+          (p.summary && p.summary.toLowerCase().includes(filterText.toLowerCase()))
+        );
+      });
 
-        if (sorting) {
-            filtered.sort((a, b) => {
-                let valA: any, valB: any;
-                if(sorting.id === 'projectManagerId') {
-                    const pmA = userMap.get(a.projectManagerId || '');
-                    const pmB = userMap.get(b.projectManagerId || '');
-                    valA = pmA ? `${pmA.firstName} ${pmA.lastName}` : 'zzz'; // put unassigned last
-                    valB = pmB ? `${pmB.firstName} ${pmB.lastName}` : 'zzz';
-                } else {
-                    valA = (a as any)[sorting.id] || '';
-                    valB = (b as any)[sorting.id] || '';
-                }
-                
-                if (typeof valA === 'string' && typeof valB === 'string') {
-                    const comparison = valA.localeCompare(valB, undefined, { numeric: true });
-                    return sorting.desc ? -comparison : comparison;
-                }
-                
-                // Fallback for non-string types
-                if (valA < valB) return sorting.desc ? 1 : -1;
-                if (valA > valB) return sorting.desc ? -1 : 1;
-                return 0;
-            });
-        }
-        return { ...portfolio, projects: filtered };
+      if (sorting) {
+        filtered.sort((a, b) => {
+          let valA: any, valB: any;
+          if (sorting.id === 'projectManagerId') {
+            const pmA = userMap.get(a.projectManagerId || '');
+            const pmB = userMap.get(b.projectManagerId || '');
+            valA = pmA ? `${pmA.firstName} ${pmA.lastName}` : 'zzz'; // put unassigned last
+            valB = pmB ? `${pmB.firstName} ${pmB.lastName}` : 'zzz';
+          } else {
+            valA = (a as any)[sorting.id] || '';
+            valB = (b as any)[sorting.id] || '';
+          }
+
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            const comparison = valA.localeCompare(valB, undefined, { numeric: true });
+            return sorting.desc ? -comparison : comparison;
+          }
+
+          // Fallback for non-string types
+          if (valA < valB) return sorting.desc ? 1 : -1;
+          if (valA > valB) return sorting.desc ? -1 : 1;
+          return 0;
+        });
+      }
+      return { ...portfolio, projects: filtered };
     });
   };
-  
+
   const activeProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(false), [projects, portfolios, filterText, sorting, users]);
   const archivedProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(true), [projects, portfolios, filterText, sorting, users]);
-  
+
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>
       <Button variant="ghost" className="-ml-4 px-4" onClick={() => handleSort(columnId)}>
@@ -739,18 +769,18 @@ export default function ProjectsDashboard() {
             </Form>
           </DialogContent>
         </Dialog>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <ProjectDialogContent 
-            form={form} 
+          <ProjectDialogContent
+            form={form}
             onSubmit={onSubmit}
-            editingProject={editingProject} 
+            editingProject={editingProject}
             portfolios={portfolios}
             users={users}
           />
         </Dialog>
 
-        <Dialog open={isAutogenDialogOpen} onOpenChange={(open) => { setIsAutogenDialogOpen(open); if(!open) { setAutogenCount('5'); setAutogenPortfolioId(''); } }}>
+        <Dialog open={isAutogenDialogOpen} onOpenChange={(open) => { setIsAutogenDialogOpen(open); if (!open) { setAutogenCount('5'); setAutogenPortfolioId(''); } }}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Project Autogen</DialogTitle>
@@ -777,279 +807,280 @@ export default function ProjectsDashboard() {
               </div>
             </div>
             <DialogFooter className="flex-col items-start gap-2 sm:items-center sm:flex-row">
-               <p className="text-xs text-muted-foreground flex-1">Each project generates 20+ subcollections. This may take a moment per project.</p>
-               <Button onClick={handleAutogen} disabled={isGenerating || !autogenPortfolioId} className="w-full sm:w-auto">
-                 {isGenerating ? 'Generating… please wait' : `Generate ${autogenCount} Project(s)`}
-               </Button>
+              <p className="text-xs text-muted-foreground flex-1">Each project generates 20+ subcollections. This may take a moment per project.</p>
+              <Button onClick={handleAutogen} disabled={isGenerating || !autogenPortfolioId} className="w-full sm:w-auto">
+                {isGenerating ? 'Generating… please wait' : `Generate ${autogenCount} Project(s)`}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Tabs defaultValue="active" className="w-full">
-            <TabsList className="mb-4">
-                <TabsTrigger value="active">Active Projects</TabsTrigger>
-                <TabsTrigger value="archive">Archived Projects</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="active">
-                <Card>
-                    <CardContent className="p-4">
-                        <Input 
-                            placeholder="Filter active projects..."
-                            value={filterText}
-                            onChange={(e) => setFilterText(e.target.value)}
-                            className="max-w-sm"
-                        />
-                    </CardContent>
-                     {isLoading ? (
-                      <p className="p-4 text-center">Loading...</p>
-                    ) : (
-                     <Accordion type="multiple" defaultValue={portfolios.map(p => p.id)} className="w-full">
-                        {activeProjectsByPortfolio.map(portfolio => (
-                           <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
-                             <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
-                               <div className="flex items-center gap-4 flex-1">
-                                 <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                                 <Folder className="h-5 w-5" />
-                                 <span className="font-semibold">{portfolio.name}</span>
-                                 <Badge variant="secondary">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}</Badge>
-                                 <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                   <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => handleEditPortfolio(portfolio)}>
-                                     <Edit className="h-3.5 w-3.5" />
-                                   </div>
-                                   <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => setDeletingPortfolio(portfolio)}>
-                                     <Trash2 className="h-3.5 w-3.5" />
-                                   </div>
-                                 </div>
-                               </div>
-                             </AccordionTrigger>
-                             <AccordionContent className="p-0">
-                               {portfolio.projects.length > 0 ? (
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <SortableHeader columnId="id" className="w-[120px]">Project ID</SortableHeader>
-                                      <SortableHeader columnId="name">Project Name</SortableHeader>
-                                      <TableHead>Project Health</TableHead>
-                                      <SortableHeader columnId="status">Status</SortableHeader>
-                                      <SortableHeader columnId="projectManagerId">Project Manager</SortableHeader>
-                                      <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {portfolio.projects.map((project) => {
-                                        const projectManager = users.find(u => u.id === project.projectManagerId);
-                                        const projectUrl = project.status === 'Initial Estimation'
-                                          ? `/projects/${project.id}/initial-estimation/ballpark`
-                                          : `/projects/${project.id}/development/dashboard`;
-                                        return (
-                                          <TableRow key={project.id}>
-                                            <TableCell className="font-medium">
-                                              <Link href={projectUrl} className="block w-full h-full hover:underline">
-                                                {project.id}
-                                              </Link>
-                                            </TableCell>
-                                            <TableCell>
-                                              <Link href={projectUrl} className="block w-full h-full">
-                                                <div className="hover:underline font-medium">{project.name}</div>
-                                                {project.summary && (
-                                                  <div className="text-xs text-muted-foreground mt-1 line-clamp-2" title={project.summary}>
-                                                    {project.summary}
-                                                  </div>
-                                                )}
-                                              </Link>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Popover>
-                                                  <PopoverTrigger asChild>
-                                                    <div className="flex items-center gap-2 cursor-pointer">
-                                                        <div className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
-                                                      <Tooltip>
-                                                          <TooltipTrigger asChild>
-                                                            <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
-                                                          </TooltipTrigger>
-                                                          {project.statusComments && (
-                                                            <TooltipContent>
-                                                              <p>{project.statusComments}</p>
-                                                            </TooltipContent>
+          <TabsList className="mb-4">
+            <TabsTrigger value="active">Active Projects</TabsTrigger>
+            <TabsTrigger value="archive">Archived Projects</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="active">
+            <Card>
+              <CardContent className="p-4">
+                <Input
+                  placeholder="Filter active projects..."
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  className="max-w-sm"
+                />
+              </CardContent>
+              {isLoading ? (
+                <p className="p-4 text-center">Loading...</p>
+              ) : (
+                <Accordion type="multiple" value={activeExpanded} onValueChange={setActiveExpanded} className="w-full">
+                  {activeProjectsByPortfolio.map(portfolio => (
+                    <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
+                      <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
+                        <div className="flex items-center gap-4 flex-1">
+                          <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                          <Folder className="h-5 w-5" />
+                          <span className="font-semibold">{portfolio.name}</span>
+                          <Badge variant="secondary">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}</Badge>
+                          <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => handleEditPortfolio(portfolio)}>
+                              <Edit className="h-3.5 w-3.5" />
+                            </div>
+                            <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => setDeletingPortfolio(portfolio)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </div>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="p-0">
+                        {portfolio.projects.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <SortableHeader columnId="id" className="w-[120px]">Project ID</SortableHeader>
+                                <SortableHeader columnId="name">Project Name</SortableHeader>
+                                <TableHead>Project Health</TableHead>
+                                <SortableHeader columnId="status">Status</SortableHeader>
+                                <SortableHeader columnId="projectManagerId">Project Manager</SortableHeader>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {portfolio.projects.map((project) => {
+                                const projectManager = users.find(u => u.id === project.projectManagerId);
+                                const projectUrl = project.status === 'Initial Estimation'
+                                  ? `/projects/${project.id}/initial-estimation/ballpark`
+                                  : `/projects/${project.id}/development/dashboard`;
+                                return (
+                                  <TableRow key={project.id}>
+                                    <TableCell className="font-medium">
+                                      <Link href={projectUrl} className="block w-full h-full hover:underline">
+                                        {project.id}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={projectUrl} className="block w-full h-full">
+                                        <div className="hover:underline font-medium">{project.name}</div>
+                                        {project.summary && (
+                                          <div className="text-xs text-muted-foreground mt-1 line-clamp-2" title={project.summary}>
+                                            {project.summary}
+                                          </div>
+                                        )}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <div className="flex items-center gap-2 cursor-pointer">
+                                            <div className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
+                                              </TooltipTrigger>
+                                              {project.statusComments && (
+                                                <TooltipContent>
+                                                  <p>{project.statusComments}</p>
+                                                </TooltipContent>
+                                              )}
+                                            </Tooltip>
+                                            <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 ml-auto" />
+                                          </div>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-96">
+                                          <div className="space-y-4">
+                                            <div className="flex gap-4 border-b pb-2">
+                                              <HealthIndicator status={project.scopeStatus} label="Scope" />
+                                              <HealthIndicator status={project.costStatus} label="Cost" />
+                                              <HealthIndicator status={project.timeStatus} label="Time" />
+                                            </div>
+                                            {project.statusHistory && project.statusHistory.length > 0 && (
+                                              <Accordion type="single" collapsible className="w-full">
+                                                <AccordionItem value="history" className="border-none">
+                                                  <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">Status History</AccordionTrigger>
+                                                  <AccordionContent>
+                                                    <div className="max-h-60 overflow-y-auto pr-2 space-y-3">
+                                                      {[...project.statusHistory].reverse().map((historyItem, idx) => (
+                                                        <div key={idx} className="text-sm p-3 bg-muted/50 rounded-md border">
+                                                          <div className="flex justify-between items-center mb-2 text-muted-foreground border-b pb-2">
+                                                            <span>{format(parseISO(historyItem.date), 'MMM dd, yyyy HH:mm')}</span>
+                                                            {historyItem.overallStatus && <HealthIndicator status={historyItem.overallStatus} label={historyItem.overallStatus} />}
+                                                          </div>
+                                                          {historyItem.statusComments ? (
+                                                            <p className="mt-1">{historyItem.statusComments}</p>
+                                                          ) : (
+                                                            <p className="mt-1 text-muted-foreground italic">No comments</p>
                                                           )}
-                                                        </Tooltip>
-                                                        <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 ml-auto" />
+                                                        </div>
+                                                      ))}
                                                     </div>
-                                                  </PopoverTrigger>
-                                                  <PopoverContent className="w-96">
-                                                    <div className="space-y-4">
-                                                      <div className="flex gap-4 border-b pb-2">
-                                                        <HealthIndicator status={project.scopeStatus} label="Scope" />
-                                                        <HealthIndicator status={project.costStatus} label="Cost" />
-                                                        <HealthIndicator status={project.timeStatus} label="Time" />
-                                                      </div>
-                                                      {project.statusHistory && project.statusHistory.length > 0 && (
-                                                          <Accordion type="single" collapsible className="w-full">
-                                                              <AccordionItem value="history" className="border-none">
-                                                                  <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">Status History</AccordionTrigger>
-                                                                  <AccordionContent>
-                                                                      <div className="max-h-60 overflow-y-auto pr-2 space-y-3">
-                                                                          {[...project.statusHistory].reverse().map((historyItem, idx) => (
-                                                                              <div key={idx} className="text-sm p-3 bg-muted/50 rounded-md border">
-                                                                                  <div className="flex justify-between items-center mb-2 text-muted-foreground border-b pb-2">
-                                                                                      <span>{format(parseISO(historyItem.date), 'MMM dd, yyyy HH:mm')}</span>
-                                                                                      {historyItem.overallStatus && <HealthIndicator status={historyItem.overallStatus} label={historyItem.overallStatus} />}
-                                                                                  </div>
-                                                                                  {historyItem.statusComments ? (
-                                                                                      <p className="mt-1">{historyItem.statusComments}</p>
-                                                                                  ) : (
-                                                                                      <p className="mt-1 text-muted-foreground italic">No comments</p>
-                                                                                  )}
-                                                                              </div>
-                                                                          ))}
-                                                                      </div>
-                                                                  </AccordionContent>
-                                                              </AccordionItem>
-                                                          </Accordion>
-                                                      )}
-                                                    </div>
-                                                  </PopoverContent>
-                                                </Popover>
-                                            </TableCell>
-                                            <TableCell>
-                                              <Link href={projectUrl} className="block w-full h-full">
-                                                {project.status ? (
-                                                     <Badge className={cn('font-semibold', statusStyles[project.status])}>
-                                                        {project.status}
-                                                    </Badge>
-                                                ) : 'N/A'}
-                                              </Link>
-                                            </TableCell>
-                                            <TableCell>
-                                              <Link href={projectUrl} className="block w-full h-full">
-                                                {projectManager ? (
-                                                  <span>{projectManager.firstName} {projectManager.lastName}</span>
-                                                ) : 'Unassigned'}
-                                              </Link>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                               {project.status === 'Completed' && (
-                                                 <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" onClick={() => setArchivingProject(project)}>
-                                                      <Archive className="h-4 w-4" />
-                                                    </Button>
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Archive Project</TooltipContent>
-                                                 </Tooltip>
-                                               )}
-                                               <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
-                                                 <Edit className="h-4 w-4" />
-                                              </Button>
-                                               <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                                 <Trash2 className="h-4 w-4" />
-                                               </Button>
-                                            </TableCell>
-                                          </TableRow>
-                                        )
-                                    })}
-                                  </TableBody>
-                                </Table>
-                               ) : (
-                                <div className="text-center p-4 text-sm text-muted-foreground">
-                                    No active projects found for this portfolio.
-                                </div>
-                               )}
-                             </AccordionContent>
-                           </AccordionItem>
-                        ))}
-                     </Accordion>
-                    )}
-                </Card>
-            </TabsContent>
-            
-            <TabsContent value="archive">
-                 <Card>
-                    <CardContent className="p-4">
-                        <Input 
-                            placeholder="Filter archived projects..."
-                            value={filterText}
-                            onChange={(e) => setFilterText(e.target.value)}
-                            className="max-w-sm"
-                        />
-                    </CardContent>
-                     {isLoading ? (
-                      <p className="p-4 text-center">Loading...</p>
-                    ) : (
-                     <Accordion type="multiple" defaultValue={portfolios.map(p => p.id)} className="w-full">
-                        {archivedProjectsByPortfolio.map(portfolio => {
-                           if (portfolio.projects.length === 0) return null; // Only show portfolios with archived projects
-                           return (
-                           <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
-                             <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
-                               <div className="flex items-center gap-4 flex-1">
-                                 <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                                 <Folder className="h-5 w-5 text-muted-foreground" />
-                                 <span className="font-semibold text-muted-foreground">{portfolio.name}</span>
-                                 <Badge variant="outline">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'archived project' : 'archived projects'}</Badge>
-                               </div>
-                             </AccordionTrigger>
-                             <AccordionContent className="p-0">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <SortableHeader columnId="id" className="w-[120px]">Project ID</SortableHeader>
-                                      <SortableHeader columnId="name">Project Name</SortableHeader>
-                                      <SortableHeader columnId="status">Status</SortableHeader>
-                                      <SortableHeader columnId="archivedAt">Archived On</SortableHeader>
-                                      <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {portfolio.projects.map((project) => {
-                                        return (
-                                          <TableRow key={project.id} className="opacity-70 grayscale">
-                                            <TableCell className="font-medium">{project.id}</TableCell>
-                                            <TableCell>{project.name}</TableCell>
-                                            <TableCell>
-                                              {project.status ? (
-                                                  <Badge className={cn('font-semibold', statusStyles[project.status])}>
-                                                      {project.status}
-                                                  </Badge>
-                                              ) : 'N/A'}
-                                            </TableCell>
-                                            <TableCell>
-                                              {project.archivedAt ? format(parseISO(project.archivedAt), 'MMM dd, yyyy') : 'N/A'}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                               <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleRestoreProject(project)}>
-                                                      <RotateCcw className="h-4 w-4" />
-                                                    </Button>
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Restore Project</TooltipContent>
-                                               </Tooltip>
-                                               <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                     <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                                       <Trash2 className="h-4 w-4" />
-                                                     </Button>
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Delete permanently</TooltipContent>
-                                               </Tooltip>
-                                            </TableCell>
-                                          </TableRow>
-                                        )
-                                    })}
-                                  </TableBody>
-                                </Table>
-                             </AccordionContent>
-                           </AccordionItem>
-                        )})}
-                     </Accordion>
-                    )}
-                </Card>
-            </TabsContent>
+                                                  </AccordionContent>
+                                                </AccordionItem>
+                                              </Accordion>
+                                            )}
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={projectUrl} className="block w-full h-full">
+                                        {project.status ? (
+                                          <Badge className={cn('font-semibold', statusStyles[project.status])}>
+                                            {project.status}
+                                          </Badge>
+                                        ) : 'N/A'}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={projectUrl} className="block w-full h-full">
+                                        {projectManager ? (
+                                          <span>{projectManager.firstName} {projectManager.lastName}</span>
+                                        ) : 'Unassigned'}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      {project.status === 'Completed' && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => setArchivingProject(project)}>
+                                              <Archive className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Archive Project</TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <div className="text-center p-4 text-sm text-muted-foreground">
+                            No active projects found for this portfolio.
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="archive">
+            <Card>
+              <CardContent className="p-4">
+                <Input
+                  placeholder="Filter archived projects..."
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  className="max-w-sm"
+                />
+              </CardContent>
+              {isLoading ? (
+                <p className="p-4 text-center">Loading...</p>
+              ) : (
+                <Accordion type="multiple" value={archiveExpanded} onValueChange={setArchiveExpanded} className="w-full">
+                  {archivedProjectsByPortfolio.map(portfolio => {
+                    if (portfolio.projects.length === 0) return null; // Only show portfolios with archived projects
+                    return (
+                      <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
+                        <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
+                          <div className="flex items-center gap-4 flex-1">
+                            <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <Folder className="h-5 w-5 text-muted-foreground" />
+                            <span className="font-semibold text-muted-foreground">{portfolio.name}</span>
+                            <Badge variant="outline">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'archived project' : 'archived projects'}</Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <SortableHeader columnId="id" className="w-[120px]">Project ID</SortableHeader>
+                                <SortableHeader columnId="name">Project Name</SortableHeader>
+                                <SortableHeader columnId="status">Status</SortableHeader>
+                                <SortableHeader columnId="archivedAt">Archived On</SortableHeader>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {portfolio.projects.map((project) => {
+                                return (
+                                  <TableRow key={project.id} className="opacity-70 grayscale">
+                                    <TableCell className="font-medium">{project.id}</TableCell>
+                                    <TableCell>{project.name}</TableCell>
+                                    <TableCell>
+                                      {project.status ? (
+                                        <Badge className={cn('font-semibold', statusStyles[project.status])}>
+                                          {project.status}
+                                        </Badge>
+                                      ) : 'N/A'}
+                                    </TableCell>
+                                    <TableCell>
+                                      {project.archivedAt ? format(parseISO(project.archivedAt), 'MMM dd, yyyy') : 'N/A'}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="icon" onClick={() => handleRestoreProject(project)}>
+                                            <RotateCcw className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Restore Project</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Delete permanently</TooltipContent>
+                                      </Tooltip>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                            </TableBody>
+                          </Table>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )
+                  })}
+                </Accordion>
+              )}
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
-    <AlertDialog open={!!deletingProject} onOpenChange={(isOpen) => !isOpen && setDeletingProject(null)}>
+      <AlertDialog open={!!deletingProject} onOpenChange={(isOpen) => !isOpen && setDeletingProject(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -1059,7 +1090,7 @@ export default function ProjectsDashboard() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteProject}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
@@ -1078,7 +1109,7 @@ export default function ProjectsDashboard() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleArchiveProject}
             >
               Archive
@@ -1096,7 +1127,7 @@ export default function ProjectsDashboard() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeletePortfolio}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
@@ -1108,10 +1139,10 @@ export default function ProjectsDashboard() {
     </TooltipProvider>
   );
 }
-    
 
-    
 
-    
 
-    
+
+
+
+

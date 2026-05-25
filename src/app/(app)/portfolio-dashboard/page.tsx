@@ -86,7 +86,7 @@ function IssueItem({ item, onClick }: { item: EnrichedIssue; onClick: () => void
 
 function ProjectItem({ project }: { project: Project }) {
     return (
-        <Link href={`/projects/${project.id}/project-details/project-synopsis`} className="block p-3 border-b last:border-b-0 hover:bg-muted/50">
+        <Link href={`/projects/${project.id}/project-details/project-status`} className="block p-3 border-b last:border-b-0 hover:bg-muted/50">
             <div className="flex justify-between items-start">
                 <p className="text-sm font-medium flex-1 pr-2">{project.name}</p>
                  <div className="flex items-center gap-2 shrink-0">

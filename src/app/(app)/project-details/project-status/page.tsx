@@ -131,7 +131,7 @@ export default function ProjectSynopsisPage() {
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <PageHeader title="Project Synopsis" description="A high-level overview of your project details." />
+                <PageHeader title="Project Status" description="A high-level overview of your project details." />
                 
                 <div className="space-y-6">
                     <Card>

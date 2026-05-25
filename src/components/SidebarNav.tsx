@@ -194,18 +194,18 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const projectMenuItems = [
     {
-      href: `${basePath}/project-details/project-synopsis`,
-      label: "Project Synopsis",
+      href: `${basePath}/project-details/project-status`,
+      label: "Project Status",
       icon: ClipboardList,
     },
     {
-      href: `${basePath}/project-details/project-dashboard`,
-      label: "Project Dashboard",
+      href: `${basePath}/project-details/pm-dashboard`,
+      label: "PM Dashboard",
       icon: LayoutDashboard,
     },
     {
-      href: `${basePath}/project-details/architecture`,
-      label: "Architecture",
+      href: `${basePath}/project-details/specifications`,
+      label: "Specifications",
       icon: Server,
     },
   ];

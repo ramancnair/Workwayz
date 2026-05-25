@@ -434,7 +434,7 @@ export default function QualityEstimationsPage() {
                       <TableRow key={item.projectId} className="hover:bg-muted/30 transition-colors">
                         <TableCell>
                           <div className="flex flex-col gap-1 min-w-[160px]">
-                            <Link href={`/projects/${item.projectId}/project-details/project-dashboard`} className="font-semibold text-foreground hover:underline truncate">
+                            <Link href={`/projects/${item.projectId}/project-details/pm-dashboard`} className="font-semibold text-foreground hover:underline truncate">
                               {item.projectName}
                             </Link>
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

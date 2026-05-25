@@ -48,7 +48,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     } else if (value === 'testing') {
       router.push(`${basePath}/testing/dashboard`);
     } else if (value === 'project') {
-      router.push(`${basePath}/project-details/project-synopsis`);
+      router.push(`${basePath}/project-details/project-status`);
     } else if (value === 'initial-estimation') {
       router.push(`${basePath}/initial-estimation/ballpark`);
     } else if (value === 'releases') {

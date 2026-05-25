@@ -357,7 +357,7 @@ export default function EnvironmentsPage() {
   return (
     <>
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-        <PageHeader title="Architecture" description="Manage impacted systems and testing environments for the project." />
+        <PageHeader title="Specifications" description="Manage impacted systems and testing environments for the project." />
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

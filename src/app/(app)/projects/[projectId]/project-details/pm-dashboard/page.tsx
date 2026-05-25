@@ -297,7 +297,7 @@ export default function ProjectDashboardPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Project Dashboard" description="A high-level overview of the project's status." />
+      <PageHeader title="PM Dashboard" description="A high-level overview of the project's status." />
       
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         <Card className="lg:col-span-1">
