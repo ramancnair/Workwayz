@@ -275,10 +275,10 @@ export default function TestPlanPage() {
     if (selectedPlanId) {
        const targetExec = updatedExecutions.find(ex => ex.testPlanId === selectedPlanId);
        if (targetExec) {
-          targetExec.assigneeId = values.assigneeId === 'unassigned' ? undefined : values.assigneeId;
+          if (values.assigneeId === 'unassigned') delete targetExec.assigneeId; else targetExec.assigneeId = values.assigneeId;
           targetExec.status = values.status;
-          targetExec.executionDate = values.executionDate ? new Date(values.executionDate).toISOString() : undefined;
-          targetExec.closeDate = values.closeDate ? new Date(values.closeDate).toISOString() : undefined;
+          if (values.executionDate) targetExec.executionDate = new Date(values.executionDate).toISOString(); else delete targetExec.executionDate;
+          if (values.closeDate) targetExec.closeDate = new Date(values.closeDate).toISOString(); else delete targetExec.closeDate;
        }
     }
     
@@ -350,7 +350,7 @@ export default function TestPlanPage() {
       const executions = [...(existingTC?.executions || [])];
       let exec = executions.find(e => e.testPlanId === selectedPlan.id);
       if (exec) {
-        exec.executionDate = undefined;
+        delete exec.executionDate;
       }
       return updateTestCase(tcId, { executions });
     });
@@ -501,7 +501,6 @@ export default function TestPlanPage() {
                       <SortableHeader columnId="testCaseId">ID</SortableHeader>
                       <SortableHeader columnId="sprintId">Sprint</SortableHeader>
                       <SortableHeader columnId="releaseId">Release</SortableHeader>
-                      <SortableHeader columnId="status">Status</SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -524,7 +523,6 @@ export default function TestPlanPage() {
                           </TableCell>
                           <TableCell>{sprint?.title || 'Backlog'}</TableCell>
                           <TableCell>{release?.name || 'N/A'}</TableCell>
-                          <TableCell><Badge className={cn(statusStyles[execStatus])}>{execStatus}</Badge></TableCell>
                         </TableRow>
                       )
                     })}

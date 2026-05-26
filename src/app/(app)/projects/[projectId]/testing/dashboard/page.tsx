@@ -128,12 +128,13 @@ export default function TestingDashboard() {
       filteredTestCases = testCases.filter(tc => planTCIds.has(tc.id));
     }
     const testCaseIdsInView = new Set(filteredTestCases.map(tc => tc.id));
-    relatedBugs = stories.filter(story =>
-      story.itemType === 'Bug' &&
-      story.relatedTestCaseId &&
-      testCaseIdsInView.has(story.relatedTestCaseId)
-    );
-    if (selectedTestPlanId === 'all') {
+    if (selectedTestPlanId !== 'all') {
+      relatedBugs = stories.filter(story =>
+        story.itemType === 'Bug' &&
+        (story.foundInTestPlanId === selectedTestPlanId ||
+         (story.relatedTestCaseId && testCaseIdsInView.has(story.relatedTestCaseId)))
+      );
+    } else {
       relatedBugs = stories.filter(story => story.itemType === 'Bug');
     }
     
@@ -200,8 +201,8 @@ export default function TestingDashboard() {
       ? stories.filter(story => story.itemType === 'Bug')
       : stories.filter(story =>
           story.itemType === 'Bug' &&
-          story.relatedTestCaseId &&
-          testCaseIdsInView.has(story.relatedTestCaseId)
+          (story.foundInTestPlanId === dailyViewTestPlanId ||
+           (story.relatedTestCaseId && testCaseIdsInView.has(story.relatedTestCaseId)))
         );
     
     const tcExecutionsInView: any[] = [];

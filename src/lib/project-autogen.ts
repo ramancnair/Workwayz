@@ -510,7 +510,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const prodStart = addDays(uatEnd, 1);
   const prodEnd = addDays(prodStart, 2);
 
-  const tpRefs: { id: string; name: string }[] = [];
+  const tpRefs: { id: string; name: string; start: Date; end: Date }[] = [];
 
   // SIT Plan
   const sitTpRef = doc(col('testPlans'));
@@ -523,7 +523,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     endDate: Timestamp.fromDate(sitEnd),
     testCaseIds: [],
   });
-  tpRefs.push({ id: sitTpRef.id, name: 'SIT' });
+  tpRefs.push({ id: sitTpRef.id, name: 'SIT', start: testingStart, end: sitEnd });
 
   // UAT Plan
   const uatTpRef = doc(col('testPlans'));
@@ -536,7 +536,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     endDate: Timestamp.fromDate(uatEnd),
     testCaseIds: [],
   });
-  tpRefs.push({ id: uatTpRef.id, name: 'UAT' });
+  tpRefs.push({ id: uatTpRef.id, name: 'UAT', start: uatStart, end: uatEnd });
 
   // Prod Plan
   const prodTpRef = doc(col('testPlans'));
@@ -549,7 +549,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     endDate: Timestamp.fromDate(prodEnd),
     testCaseIds: [],
   });
-  tpRefs.push({ id: prodTpRef.id, name: 'Prod' });
+  tpRefs.push({ id: prodTpRef.id, name: 'Prod', start: prodStart, end: prodEnd });
 
   let tcCounter = 1;
   const tpTestCaseIds: string[] = [];
@@ -561,13 +561,19 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     // Create executions for all 3 plans
     const executions = tpRefs.map(tp => {
       const generatedStatus = rand(['Passed', 'Passed', 'Failed', 'Not Run']); // Weight towards passed for realism
-      return {
+      
+      const planDays = differenceInDays(tp.end, tp.start);
+      const randomDay = randInt(0, Math.max(0, planDays));
+      const execDateStr = addDays(tp.start, randomDay).toISOString();
+
+      return clean({
         testPlanId: tp.id,
         status: generatedStatus,
         assigneeId: testerUserId,
-        statusHistory: [{ fromStatus: 'Not Run', toStatus: generatedStatus, date: now }],
-        executionDate: now,
-      };
+        statusHistory: [{ fromStatus: 'Not Run', toStatus: generatedStatus, date: execDateStr }],
+        executionDate: generatedStatus !== 'Not Run' ? execDateStr : undefined,
+        closeDate: (generatedStatus === 'Passed' || generatedStatus === 'Failed') ? execDateStr : undefined,
+      });
     });
 
     batch.set(tcRef, clean({

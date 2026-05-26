@@ -44,6 +44,7 @@ import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns } from 'lucide-r
 import { type TestCase, type TestCaseStatus, type TestCaseType, type StatusHistoryItem, type Story } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -85,8 +86,8 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     title: { label: 'Title', defaultVisible: true },
     type: { label: 'Type', defaultVisible: false },
     storyId: { label: 'Related Story', defaultVisible: false },
-    sprintId: { label: 'Sprint', defaultVisible: false },
-    releaseId: { label: 'Release', defaultVisible: false },
+    sprintId: { label: 'Sprint', defaultVisible: true },
+    releaseId: { label: 'Release', defaultVisible: true },
     testPlanId: { label: 'Test Plans', defaultVisible: true },
 };
 
@@ -101,6 +102,8 @@ export default function TestBacklogPage() {
   const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
+  const [bulkAssignValues, setBulkAssignValues] = useState<{sprintId: string, releaseId: string}>({ sprintId: 'no-change', releaseId: 'no-change' });
 
 
   const [filters, setFilters] = useState({
@@ -322,6 +325,35 @@ export default function TestBacklogPage() {
     setShowBulkDeleteConfirm(false);
   };
 
+  const handleBulkAssignConfirm = async () => {
+    if (selectedTestCases.length === 0) return;
+    
+    setIsSubmitting(true);
+    const updates: Partial<TestCase> = {};
+    if (bulkAssignValues.sprintId !== 'no-change') {
+       updates.sprintId = bulkAssignValues.sprintId === 'backlog' ? undefined : bulkAssignValues.sprintId;
+    }
+    if (bulkAssignValues.releaseId !== 'no-change') {
+       updates.releaseId = bulkAssignValues.releaseId === 'unassigned' ? undefined : bulkAssignValues.releaseId;
+    }
+
+    if (Object.keys(updates).length > 0) {
+        const promises = selectedTestCases.map(id => updateTestCase(id, updates as any));
+        const results = await Promise.all(promises);
+        const successCount = results.filter(Boolean).length;
+        if (successCount > 0) {
+            toast({ title: "Success", description: `${successCount} test case(s) updated.` });
+        }
+        if (successCount < selectedTestCases.length) {
+            toast({ variant: "destructive", title: "Error", description: `Could not update ${selectedTestCases.length - successCount} test case(s).` });
+        }
+    }
+    
+    setIsSubmitting(false);
+    setIsBulkAssignOpen(false);
+    setSelectedTestCases([]);
+  };
+
   const onSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     setIsSubmitting(true);
     const tcData: Omit<Parameters<typeof addTestCase>[0], never> = {
@@ -408,10 +440,16 @@ export default function TestBacklogPage() {
           </Dialog>
           
           {selectedTestCases.length > 0 && (
-             <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Selected ({selectedTestCases.length})
-            </Button>
+             <div className="flex gap-2">
+                 <Button variant="outline" onClick={() => setIsBulkAssignOpen(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Bulk Assign
+                 </Button>
+                 <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Selected ({selectedTestCases.length})
+                </Button>
+            </div>
           )}
 
           <Button onClick={() => handleDialogOpen(null)}>
@@ -571,18 +609,6 @@ export default function TestBacklogPage() {
                                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     {testCaseTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                      )} />
-                      <FormField control={form.control} name="status" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Status</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {testCaseStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <FormMessage />
@@ -761,6 +787,61 @@ export default function TestBacklogPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isBulkAssignOpen} onOpenChange={setIsBulkAssignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Assign Test Cases</DialogTitle>
+            <DialogDescription>
+              Assign the {selectedTestCases.length} selected test cases to a specific sprint or release.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+             <div className="grid gap-2">
+                <Label>Sprint</Label>
+                <Select 
+                    value={bulkAssignValues.sprintId} 
+                    onValueChange={(v) => setBulkAssignValues(prev => ({ ...prev, sprintId: v }))}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select Sprint" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="no-change">No Change</SelectItem>
+                        <SelectItem value="backlog">Backlog (Unassigned)</SelectItem>
+                        {sprints.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+             </div>
+             <div className="grid gap-2">
+                <Label>Release</Label>
+                <Select 
+                    value={bulkAssignValues.releaseId} 
+                    onValueChange={(v) => setBulkAssignValues(prev => ({ ...prev, releaseId: v }))}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select Release" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="no-change">No Change</SelectItem>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {releases.map(r => (
+                            <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+             </div>
+          </div>
+          <DialogFooter>
+             <Button variant="ghost" onClick={() => setIsBulkAssignOpen(false)}>Cancel</Button>
+             <Button onClick={handleBulkAssignConfirm} disabled={isSubmitting}>
+                 {isSubmitting ? 'Assigning...' : 'Confirm'}
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
        <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
         <AlertDialogContent>
