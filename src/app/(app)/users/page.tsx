@@ -40,9 +40,10 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot, ShieldCheck, ShieldOff } from 'lucide-react';
 import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
@@ -221,6 +222,7 @@ export default function UsersPage() {
                     accessLevel: level,
                     avatar: 'https://placehold.co/40x40.png',
                     isDeleted: false,
+                    isEnabled: true,
                     costCurrency: 'USD',
                     costAmount: (Math.floor(Math.random() * 80) + 40) * 1000,
                 };
@@ -318,6 +320,7 @@ export default function UsersPage() {
             ...sanitizedValues, 
             avatar: 'https://placehold.co/40x40.png',
             isDeleted: false,
+            isEnabled: true,
         });
         
         // Push single identity to auth pool
@@ -503,6 +506,7 @@ export default function UsersPage() {
                   <SortableHeader columnId="name">Name</SortableHeader>
                   <SortableHeader columnId="email">Email</SortableHeader>
                   <SortableHeader columnId="accessLevel">Access Level</SortableHeader>
+                  <SortableHeader columnId="isEnabled">Enabled</SortableHeader>
                   <SortableHeader columnId="costAmount">Annual Cost</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -527,6 +531,19 @@ export default function UsersPage() {
                     <TableCell>{user.firstName} {user.lastName}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.accessLevel || 'N/A'}</TableCell>
+                    <TableCell>
+                      {user.isEnabled === false ? (
+                        <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 dark:text-amber-300 dark:border-amber-700 dark:bg-amber-900/30">
+                          <ShieldOff className="mr-1 h-3 w-3" />
+                          Pending
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 dark:text-green-300 dark:border-green-700 dark:bg-green-900/30">
+                          <ShieldCheck className="mr-1 h-3 w-3" />
+                          Enabled
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {user.costCurrency && user.costAmount !== undefined ? (
                         <span>

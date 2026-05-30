@@ -166,6 +166,7 @@ export type User = {
   leavePeriods?: LeavePeriod[];
   isDeleted?: boolean;
   deletedAt?: string; // ISO String
+  isEnabled?: boolean; // undefined treated as true for backward compat
   capabilities?: string[];
   isBcpSupport?: boolean;
 };

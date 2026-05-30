@@ -86,6 +86,7 @@ export default function SignupPage() {
             accessLevel: accessLevel,
             avatar: 'https://placehold.co/40x40.png',
             isDeleted: false,
+            isEnabled: false,
             uid: user.id
         };
 
@@ -144,6 +145,7 @@ export default function SignupPage() {
             accessLevel: accessLevel,
             avatar: 'https://placehold.co/40x40.png',
             isDeleted: false,
+            isEnabled: false,
             uid: user.uid
         };
         
@@ -166,7 +168,7 @@ export default function SignupPage() {
         title: "Account created!",
         description: "Welcome to ProjectFlow.",
       });
-      router.push('/project-home');
+      router.push('/my-projects');
     } catch (error: any) {
       console.error("Signup error:", error);
       toast({

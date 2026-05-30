@@ -55,7 +55,7 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 type PmSidebarNavProps = {
-  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing' | 'quality';
+  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing' | 'quality' | 'my-projects';
 };
 
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
@@ -123,6 +123,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   };
   
   const allMenuItems = [
+    {
+      id: 'my-projects-home',
+      href: `/my-projects`,
+      label: "My Projects",
+      icon: Briefcase,
+      group: 'my-projects'
+    },
     {
       id: 'projects',
       href: `/project-home`,
@@ -236,6 +243,8 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
 
   const getGroupForTab = (tab: PmSidebarNavProps['activeTab']) => {
     switch (tab) {
+      case 'my-projects':
+        return 'my-projects';
       case 'portfolios':
       case 'trash':
         return 'portfolio';

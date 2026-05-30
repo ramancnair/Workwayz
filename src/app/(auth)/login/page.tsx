@@ -247,7 +247,7 @@ export default function LoginPage() {
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
-      router.push('/project-home');
+      router.push('/my-projects');
     } catch (error: any) {
       let errorMessage = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
@@ -305,7 +305,7 @@ export default function LoginPage() {
               issuedAt: Date.now(),
             }));
             toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
-            router.push('/project-home');
+            router.push('/my-projects');
         }
     } catch (error: any) {
         toast({ title: "Login failed", description: error.message || "Could not authenticate with Keycloak.", variant: "destructive" });
@@ -340,7 +340,7 @@ export default function LoginPage() {
                            issuedAt: Date.now(),
                          }));
                          toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
-                         router.push('/project-home');
+                         router.push('/my-projects');
                      });
                  }
              }).catch(e => {

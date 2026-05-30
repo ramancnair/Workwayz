@@ -3,12 +3,18 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { type PropsWithChildren } from "react";
+import { type PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PmSidebarNav } from '@/components/PmSidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Settings } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
+
+const PORTFOLIO_ROLES: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager'];
 
 export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -16,8 +22,52 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   const isProjectPage = pathname.startsWith('/projects/');
   const { open, setOpen } = useSidebarPersistedState();
-  
+
+  const [userAccessLevel, setUserAccessLevel] = useState<AccessLevel | null>(null);
+  const [isEnabled, setIsEnabled] = useState<boolean | null>(null); // null = loading
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('projectflow_user');
+    if (!storedUser) return;
+
+    try {
+      const parsed = JSON.parse(storedUser);
+      const level = (parsed.accessLevel as AccessLevel) || 'Team Member';
+      setUserAccessLevel(level);
+
+      // Check enablement from Firestore for current user
+      if (db && parsed.empId) {
+        const empId = parsed.empId;
+        const q = query(collection(db, 'employees'), where('empId', '==', empId));
+        getDocs(q).then((snapshot) => {
+          if (!snapshot.empty) {
+            const data = snapshot.docs[0].data();
+            // undefined isEnabled → treat as enabled (backward compat)
+            setIsEnabled(data.isEnabled !== false);
+          } else {
+            setIsEnabled(true);
+          }
+        }).catch(() => {
+          setIsEnabled(true);
+        });
+      } else {
+        setIsEnabled(true);
+      }
+    } catch {
+      setUserAccessLevel('Team Member');
+      setIsEnabled(true);
+    }
+  }, []);
+
+  const canSeePortfolioTabs = useMemo(() => {
+    if (!userAccessLevel) return false;
+    return PORTFOLIO_ROLES.includes(userAccessLevel);
+  }, [userAccessLevel]);
+
+  const showOnlyMyProjects = isEnabled === false;
+
   const getTabValue = () => {
+    if (pathname.startsWith('/my-projects')) return 'my-projects';
     if (pathname.startsWith('/project-home')) return 'projects';
     if (pathname.startsWith('/portfolio-dashboard')) return 'projects';
     if (pathname.startsWith('/quality')) return 'quality';
@@ -28,11 +78,13 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (pathname.startsWith('/trash')) return 'trash'; 
     if (pathname.startsWith('/holidays')) return 'holidays';
     if (pathname.startsWith('/portfolio-settings')) return 'portfolios';
-    return 'projects';
+    return 'my-projects';
   };
 
   const onTabChange = (value: string) => {
-    if (value === 'projects') {
+    if (value === 'my-projects') {
+      router.push('/my-projects');
+    } else if (value === 'projects') {
       router.push('/project-home');
     } else if (value === 'quality') {
       router.push('/quality/estimations');
@@ -68,15 +120,20 @@ export default function AppLayout({ children }: PropsWithChildren) {
             <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4 shrink-0">
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                        <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
-                        <TabsTrigger value="quality" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Quality</TabsTrigger>
-                        <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
-                        <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
-                        <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
-                        <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
-                            <Settings className="h-4 w-4" />
-                            Portfolio Settings
-                        </TabsTrigger>
+                        <TabsTrigger value="my-projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">My Projects</TabsTrigger>
+                        {!showOnlyMyProjects && canSeePortfolioTabs && (
+                          <>
+                            <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
+                            <TabsTrigger value="quality" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Quality</TabsTrigger>
+                            <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
+                            <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
+                            <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                            <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+                                <Settings className="h-4 w-4" />
+                                Portfolio Settings
+                            </TabsTrigger>
+                          </>
+                        )}
                     </TabsList>
                 </Tabs>
             </div>

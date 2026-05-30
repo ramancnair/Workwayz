@@ -389,12 +389,12 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       <div className="p-2 transition-all duration-300">
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link href="/project-home">
+            <Link href="/my-projects">
               <SidebarMenuButton
-                tooltip="Project Home"
+                tooltip="My Projects"
               >
                 <Home />
-                <span>Project Home</span>
+                <span>My Projects</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
