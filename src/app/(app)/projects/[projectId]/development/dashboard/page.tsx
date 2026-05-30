@@ -51,6 +51,59 @@ const getStatusOnDate = (item: Story, targetDate: Date): string | null => {
     return effectiveStatus;
 };
 
+/**
+ * Determines whether a work item is considered "done" on a given date.
+ *
+ * This is more robust than a simple getStatusOnDate equality check because it
+ * handles legacy/corrupted data where statusHistory uses old status names
+ * (e.g. 'In Development') that don't match the current Kanban done-column name.
+ *
+ * Resolution order:
+ * 1. If the item's statusHistory shows doneStatus on or before targetDate → Done.
+ * 2. If item.status === doneStatus (currently Done) but history never recorded the
+ *    Done transition (legacy data), we find the effective Done date as the date of
+ *    the last history entry, and consider it Done from that date onward.
+ * 3. Parent-status inference: if a parent story is Done per the above rules,
+ *    sub-items inherit that completion (supports 'parent moved to Done on Kanban'
+ *    without individually updating every sub-task).
+ */
+const isItemDoneOnDate = (
+    item: Story,
+    targetDate: Date,
+    doneStatus: string,
+    allStories: Story[]
+): boolean => {
+    // ── Rule 1: explicit Done entry in statusHistory ──────────────────────────
+    const statusOnDate = getStatusOnDate(item, targetDate);
+    if (statusOnDate === doneStatus) return true;
+
+    // ── Rule 2: item is currently Done but history uses legacy status names ───
+    if (item.status === doneStatus) {
+        const sortedHistory = [...(item.statusHistory || [])].sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        // Find the earliest explicit Done entry (may not exist for legacy data)
+        const doneEntry = sortedHistory.find(h => h.toStatus === doneStatus);
+        const effectiveDoneDate = doneEntry
+            ? startOfDay(new Date(doneEntry.date))
+            // No Done entry → treat the last history transition date as the Done date
+            // (conservative: the story was "as good as Done" after its last recorded move)
+            : sortedHistory.length > 0
+                ? startOfDay(new Date(sortedHistory[sortedHistory.length - 1].date))
+                : new Date(0); // No history at all → always Done
+        if (effectiveDoneDate <= startOfDay(targetDate)) return true;
+    }
+
+    // ── Rule 3: parent-status inference ──────────────────────────────────────
+    if (item.parentStoryId) {
+        const parent = allStories.find(s => s.id === item.parentStoryId);
+        if (parent) {
+            return isItemDoneOnDate(parent, targetDate, doneStatus, allStories);
+        }
+    }
+
+    return false;
+};
 
 export default function DevelopmentDashboard() {
   const { stories, sprints, releasesAndMilestones, holidays, weeklyOffDays, testDate, kanbanColumns } = useProject();
@@ -92,17 +145,19 @@ export default function DevelopmentDashboard() {
       const sprint = sprints.find(s => s.id === selectedSprintId);
       if (!sprint || !sprint.startDate || !sprint.endDate) return [];
       
-      const today = testDate ? startOfDay(testDate) : null;
-      const sprintStories = stories.filter(story => story.sprintId === sprint.id);
+      const today = startOfDay(testDate ?? new Date());
+      const sprintStories = stories.filter(story => story.sprintId === sprint.id && !story.isDeleted);
       
-      const totalEffort = sprintStories.reduce((sum, story) => {
-          if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
-              const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-              if (subTasks.length > 0) {
-                  return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
-              }
+      const isLeafOrStandaloneInSprint = (item: Story) => {
+          if (['Requirement/Story', 'Feature Change'].includes(item.itemType)) {
+              const sprintSubItems = subItemsByStoryId[item.id]?.filter(si => si.sprintId === sprint.id && !si.isDeleted) || [];
+              return sprintSubItems.length === 0;
           }
-          if (!story.parentStoryId) {
+          return true;
+      };
+
+      const totalEffort = sprintStories.reduce((sum, story) => {
+          if (isLeafOrStandaloneInSprint(story)) {
                return sum + (story.estimatedHours || 0);
           }
           return sum;
@@ -127,24 +182,11 @@ export default function DevelopmentDashboard() {
       
       return sprintDates.map(date => {
           const completedEffortOnDate = sprintStories.reduce((sum, story) => {
-              let storyCompletedEffort = 0;
-              
-              const checkCompletion = (item: Story) => {
-                  const statusOnDate = getStatusOnDate(item, date);
-                  return statusOnDate === doneColumnName ? (item.estimatedHours || 0) : 0;
+              if (isLeafOrStandaloneInSprint(story)) {
+                  const isCompleted = isItemDoneOnDate(story, date, doneColumnName, stories);
+                  return sum + (isCompleted ? (story.estimatedHours || 0) : 0);
               }
-
-              if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
-                  const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-                   if (subTasks.length > 0) {
-                      storyCompletedEffort = subTasks.reduce((subSum, subTask) => subSum + checkCompletion(subTask), 0);
-                   } else {
-                      storyCompletedEffort = checkCompletion(story);
-                   }
-              } else if (!story.parentStoryId) { // For standalone tasks/bugs etc.
-                  storyCompletedEffort = checkCompletion(story);
-              }
-              return sum + storyCompletedEffort;
+              return sum;
           }, 0);
               
           const remaining = totalEffort - completedEffortOnDate;
@@ -160,24 +202,26 @@ export default function DevelopmentDashboard() {
               ideal: idealEffort < 0 ? 0 : idealEffort,
           }
       });
-  }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays, subItemsByStoryId, testDate]);
+  }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays, subItemsByStoryId, testDate, doneColumnName]);
 
   const burnupData = useMemo(() => {
       const release = releases.find(r => r.id === selectedReleaseId);
       if(!release || !release.startDate || !release.endDate) return [];
       
-      const today = testDate ? startOfDay(testDate) : null;
-      const releaseStories = stories.filter(s => s.releaseId === release.id);
+      const today = startOfDay(testDate ?? new Date());
+      const releaseStories = stories.filter(s => s.releaseId === release.id && !s.isDeleted);
       
-      const totalScope = releaseStories.reduce((sum, story) => {
-          if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
-              const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-              if (subTasks.length > 0) {
-                  return sum + subTasks.reduce((subSum, subTask) => subSum + (subTask.estimatedHours || 0), 0);
-              }
+      const isLeafOrStandaloneInRelease = (item: Story) => {
+          if (['Requirement/Story', 'Feature Change'].includes(item.itemType)) {
+              const releaseSubItems = subItemsByStoryId[item.id]?.filter(si => si.releaseId === release.id && !si.isDeleted) || [];
+              return releaseSubItems.length === 0;
           }
-           if (!story.parentStoryId) {
-              return sum + (story.estimatedHours || 0);
+          return true;
+      };
+
+      const totalScope = releaseStories.reduce((sum, story) => {
+          if (isLeafOrStandaloneInRelease(story)) {
+               return sum + (story.estimatedHours || 0);
           }
           return sum;
       }, 0);
@@ -193,24 +237,11 @@ export default function DevelopmentDashboard() {
 
       return releaseDates.map((date, index) => {
           const completedEffortOnDate = releaseStories.reduce((sum, story) => {
-              let storyCompletedEffort = 0;
-              
-              const checkCompletion = (item: Story) => {
-                  const statusOnDate = getStatusOnDate(item, date);
-                  return statusOnDate === doneColumnName ? (item.estimatedHours || 0) : 0;
+              if (isLeafOrStandaloneInRelease(story)) {
+                  const isCompleted = isItemDoneOnDate(story, date, doneColumnName, stories);
+                  return sum + (isCompleted ? (story.estimatedHours || 0) : 0);
               }
-
-              if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
-                  const subTasks = subItemsByStoryId[story.id]?.filter(si => si.itemType === 'Sub Task') || [];
-                   if (subTasks.length > 0) {
-                      storyCompletedEffort = subTasks.reduce((subSum, subTask) => subSum + checkCompletion(subTask), 0);
-                   } else {
-                      storyCompletedEffort = checkCompletion(story);
-                   }
-              } else if (!story.parentStoryId) { // For standalone tasks/bugs etc.
-                  storyCompletedEffort = checkCompletion(story);
-              }
-              return sum + storyCompletedEffort;
+              return sum;
           }, 0);
 
           idealBurnup = index * idealDailyBurnup;
@@ -222,7 +253,7 @@ export default function DevelopmentDashboard() {
               scope: totalScope,
           }
       });
-  }, [selectedReleaseId, releases, stories, subItemsByStoryId, testDate]);
+  }, [selectedReleaseId, releases, stories, subItemsByStoryId, testDate, doneColumnName]);
 
   const itemStats = useMemo(() => {
     const stats = {

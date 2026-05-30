@@ -298,30 +298,67 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     });
   });
 
-  // ── 8. Sprints (at least 2) ──────────────────────────────────────────────────
+  // ── 8. Sprints (at least 2, clamped to project date boundaries) ─────────────
   const sprintDuration = 14; // 2 weeks
-  const sprint1Start = startOfWeek(startDate, { weekStartsOn: 1 });
-  const sprint1End = addDays(sprint1Start, sprintDuration - 1);
-  const sprint2Start = addDays(sprint1End, 1);
-  const sprint2End = addDays(sprint2Start, sprintDuration - 1);
+  const projectDurationDays = differenceInDays(endDate, startDate);
 
-  const sprintRef1 = doc(col('sprints'));
+  // Sprint 2 = CURRENT active sprint, starts from the project start date.
+  // Use the nearest Monday on or after startDate so sprints align to week boundaries,
+  // but never go before the project startDate.
+  let sprint2Start = startOfWeek(startDate, { weekStartsOn: 1 });
+  if (sprint2Start < startDate) {
+    // startOfWeek went backwards (e.g. startDate is Wednesday → Monday before it).
+    // Advance to the next Monday instead.
+    sprint2Start = addDays(sprint2Start, 7);
+  }
+  // If advancing to next Monday pushed us past endDate, fall back to startDate itself.
+  if (sprint2Start > endDate) {
+    sprint2Start = startDate;
+  }
+  let sprint2End = addDays(sprint2Start, sprintDuration - 1);
+  // Clamp sprint 2 end to project endDate
+  if (sprint2End > endDate) {
+    sprint2End = endDate;
+  }
+
+  // Sprint 1 = COMPLETED past sprint, runs immediately before Sprint 2.
+  // Only create Sprint 1 if there is room within the project date range.
+  const canFitTwoSprints = differenceInDays(sprint2Start, startDate) >= 7; // need at least 1 week
+  let sprint1Start = startDate;
+  let sprint1End = addDays(sprint2Start, -1);
+  // Clamp sprint 1 start to project startDate (should already be, but safety check)
+  if (sprint1Start < startDate) {
+    sprint1Start = startDate;
+  }
+  // Ensure sprint1End doesn't go before sprint1Start
+  if (sprint1End < sprint1Start) {
+    sprint1End = sprint1Start;
+  }
+
   const sprintRef2 = doc(col('sprints'));
-  batch.set(sprintRef1, {
-    title: 'Sprint 1',
+  batch.set(sprintRef2, {
+    title: canFitTwoSprints ? 'Sprint 2' : 'Sprint 1',
     isCurrent: true,
     status: 'Current',
-    startDate: Timestamp.fromDate(sprint1Start),
-    endDate: Timestamp.fromDate(sprint1End),
-  });
-  batch.set(sprintRef2, {
-    title: 'Sprint 2',
-    isCurrent: false,
-    status: 'Yet to Start',
     startDate: Timestamp.fromDate(sprint2Start),
     endDate: Timestamp.fromDate(sprint2End),
   });
-  const sprintIds = [sprintRef1.id, sprintRef2.id];
+
+  let sprintRef1: ReturnType<typeof doc> | null = null;
+  if (canFitTwoSprints) {
+    sprintRef1 = doc(col('sprints'));
+    batch.set(sprintRef1, {
+      title: 'Sprint 1',
+      isCurrent: false,
+      status: 'Completed',
+      startDate: Timestamp.fromDate(sprint1Start),
+      endDate: Timestamp.fromDate(sprint1End),
+    });
+  }
+
+  const sprintIds = canFitTwoSprints
+    ? [sprintRef1!.id, sprintRef2.id]
+    : [sprintRef2.id];
 
   // ── 9. Epics (1-2) ───────────────────────────────────────────────────────────
   const epicDefs = [
@@ -356,6 +393,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
 
   // Helper: build a realistic statusHistory that transitions through statuses
   // with dates spread across the sprint period. This is critical for burndown/burnup charts.
+  // IMPORTANT: Status names MUST match actual Kanban column names: 'To Do', 'In Progress', 'In QA', 'Done'.
   const buildStatusHistory = (finalStatus: string, sprintStartDate: Date, sprintEndDate: Date) => {
     const history: { fromStatus: string | null; toStatus: string; date: string }[] = [];
     const sprintDays = differenceInDays(sprintEndDate, sprintStartDate);
@@ -365,17 +403,17 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
 
     if (finalStatus === 'To Do') return history;
 
-    // Move to 'In Development' roughly 10-30% into the sprint
+    // Move to 'In Progress' roughly 10-30% into the sprint
     const devStartOffset = Math.max(1, Math.floor(sprintDays * (0.1 + Math.random() * 0.2)));
     const devStartDate = addDays(sprintStartDate, devStartOffset);
-    history.push({ fromStatus: 'To Do', toStatus: 'In Development', date: devStartDate.toISOString() });
+    history.push({ fromStatus: 'To Do', toStatus: 'In Progress', date: devStartDate.toISOString() });
 
-    if (finalStatus === 'In Development') return history;
+    if (finalStatus === 'In Progress') return history;
 
     // Move to 'In QA' roughly 40-60% into the sprint
     const qaStartOffset = Math.max(devStartOffset + 1, Math.floor(sprintDays * (0.4 + Math.random() * 0.2)));
     const qaStartDate = addDays(sprintStartDate, qaStartOffset);
-    history.push({ fromStatus: 'In Development', toStatus: 'In QA', date: qaStartDate.toISOString() });
+    history.push({ fromStatus: 'In Progress', toStatus: 'In QA', date: qaStartDate.toISOString() });
 
     if (finalStatus === 'In QA') return history;
 
@@ -401,9 +439,13 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     const epicId = epicIds[i % epicIds.length];
     const assigneeId = devUserIds[i % Math.max(devUserIds.length, 1)];
     const impactedSystemIds = systemIdsLive; // all 3 systems
-    const finalStatus = rand(['To Do', 'In Development', 'In QA', 'Done']);
-    const sprintStart = sprintId === sprintRef1.id ? sprint1Start : sprint2Start;
-    const sprintEnd = sprintId === sprintRef1.id ? sprint1End : sprint2End;
+    // Sprint 1 is a COMPLETED past sprint → all stories must be 'Done' so the burndown reaches zero.
+    // Sprint 2 is the CURRENT active sprint → realistic mix of statuses.
+    const finalStatus = sprintRef1 && sprintId === sprintRef1.id
+        ? 'Done'
+        : rand(['To Do', 'In Progress', 'In QA', 'Done', 'Done']); // Weight Done 2x
+    const sprintStart = sprintRef1 && sprintId === sprintRef1.id ? sprint1Start : sprint2Start;
+    const sprintEnd = sprintRef1 && sprintId === sprintRef1.id ? sprint1End : sprint2End;
 
     batch.set(stRef, clean({
       storyId,
@@ -429,7 +471,20 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     systemIdsLive.forEach((sysId, sIdx) => {
       const subRef = doc(col('stories'));
       const subId = `SUB-${storyCounter++}`;
-      const subFinalStatus = rand(['To Do', 'In Development', 'Done']);
+      
+      let subFinalStatus = 'To Do';
+      if (finalStatus === 'Done') {
+        // Parent is Done (incl. all Sprint 1 stories) → sub-tasks must also be Done
+        subFinalStatus = 'Done';
+      } else if (finalStatus === 'In QA') {
+        // Parent is in QA → sub-tasks are Done or In QA
+        subFinalStatus = rand(['In QA', 'Done']);
+      } else if (finalStatus === 'In Progress') {
+        // Parent is In Progress → sub-tasks are To Do or In Progress
+        subFinalStatus = rand(['To Do', 'In Progress']);
+      }
+      // 'To Do' parent: subFinalStatus stays 'To Do' (already set above)
+
       batch.set(subRef, clean({
         storyId: subId,
         title: `${systemDefs[sIdx].name} – ${title} implementation`,
@@ -452,18 +507,25 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   });
 
   // 10b. Feature Changes
-  fcTitles.forEach(title => {
+  // One FC per sprint so both burndowns have scope variety.
+  fcTitles.forEach((title, fcIdx) => {
     const fcRef = doc(col('stories'));
     const fcId = `FC-${storyCounter++}`;
-    const sprintId = sprintIds[0];
-    const fcStatus = rand(['To Do', 'In Development']);
+    const sprintId = sprintIds[fcIdx % sprintIds.length]; // spread across sprints
+    // Sprint 1 is completed → FC must be Done.
+    // Sprint 2 is current → FC can be any status.
+    const fcStatus = sprintRef1 && sprintId === sprintRef1.id
+        ? 'Done'
+        : rand(['To Do', 'In Progress', 'In QA', 'Done']);
+    const fcSprintStart = sprintRef1 && sprintId === sprintRef1.id ? sprint1Start : sprint2Start;
+    const fcSprintEnd = sprintRef1 && sprintId === sprintRef1.id ? sprint1End : sprint2End;
     batch.set(fcRef, clean({
       storyId: fcId,
       title,
       description: `Feature change request: ${title}`,
       itemType: 'Feature Change',
       status: fcStatus,
-      statusHistory: buildStatusHistory(fcStatus, sprint1Start, sprint1End),
+      statusHistory: buildStatusHistory(fcStatus, fcSprintStart, fcSprintEnd),
       epicId: epicIds[0],
       sprintId,
       releaseId: releaseRef.id,
@@ -643,6 +705,10 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     const bugRef = doc(col('stories'));
     const bugStatus = rand(['To Do', 'In Progress', 'Done']);
     const severity = rand(['Critical', 'High', 'Medium', 'Low']);
+    const bugSprintId = rand(sprintIds);
+    // Use the correct sprint dates for statusHistory based on assigned sprint
+    const bugSprintStart = sprintRef1 && bugSprintId === sprintRef1.id ? sprint1Start : sprint2Start;
+    const bugSprintEnd = sprintRef1 && bugSprintId === sprintRef1.id ? sprint1End : sprint2End;
     
     batch.set(bugRef, clean({
       storyId: `BUG-${bugCounter++}`,
@@ -650,8 +716,8 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       description: `Steps to reproduce: Nav to the affected module, perform standard actions, observe the ${severity.toLowerCase()} issue.`,
       itemType: 'Bug',
       status: bugStatus,
-      statusHistory: buildStatusHistory(bugStatus, sprint1Start, sprint1End),
-      sprintId: rand(sprintIds),
+      statusHistory: buildStatusHistory(bugStatus, bugSprintStart, bugSprintEnd),
+      sprintId: bugSprintId,
       releaseId: releaseRef.id,
       severity,
       priority: severity,
