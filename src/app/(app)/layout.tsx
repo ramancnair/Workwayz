@@ -63,9 +63,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
         <Sidebar collapsible="icon">
           <PmSidebarNav activeTab={activeTab as any} />
         </Sidebar>
-        <SidebarInset>
-          <div className="h-screen flex flex-col">
-            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4">
+        <SidebarInset className="min-w-0">
+          <div className="h-screen flex flex-col overflow-hidden">
+            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4 shrink-0">
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>

@@ -111,7 +111,7 @@ export default function AccessSettingsPage() {
     }
     
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0 w-full">
             <PageHeader 
                 title="Access Settings" 
                 description="Define page-level access for different roles."
@@ -121,9 +121,9 @@ export default function AccessSettingsPage() {
                     {isLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
             </PageHeader>
-            <Card>
+            <Card className="w-full overflow-hidden">
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto w-full">
                         <Table className="min-w-full">
                             <TableHeader>
                                 <TableRow>
