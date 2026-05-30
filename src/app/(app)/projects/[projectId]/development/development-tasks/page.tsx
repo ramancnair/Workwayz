@@ -251,12 +251,12 @@ export default function DevelopmentTasksPage() {
     if (isDialogOpen) {
       if (editingSubTask) {
         form.reset({
-          title: editingSubTask.title,
+          title: editingSubTask.title || '',
           description: editingSubTask.description || '',
-          parentStoryId: editingSubTask.parentStoryId,
+          parentStoryId: editingSubTask.parentStoryId || '',
           assigneeId: editingSubTask.assigneeId || 'unassigned',
-          status: editingSubTask.status,
-          estimatedHours: editingSubTask.estimatedHours,
+          status: editingSubTask.status as 'To Do' | 'In Progress' | 'Done',
+          estimatedHours: editingSubTask.estimatedHours || 0,
           impactedSystemId: editingSubTask.impactedSystemId || 'unassigned',
           startDate: editingSubTask.startDate ? format(parseISO(editingSubTask.startDate), 'yyyy-MM-dd') : '',
           endDate: editingSubTask.endDate ? format(parseISO(editingSubTask.endDate), 'yyyy-MM-dd') : '',
@@ -267,7 +267,7 @@ export default function DevelopmentTasksPage() {
         form.reset({
           title: '',
           description: '',
-          parentStoryId: undefined,
+          parentStoryId: '',
           assigneeId: 'unassigned',
           status: 'To Do',
           estimatedHours: 0,
@@ -282,16 +282,16 @@ export default function DevelopmentTasksPage() {
   }, [isDialogOpen, editingSubTask, form]);
   
   const handleUpdateCell = async (taskId: string, columnId: ColumnId, value: any) => {
-    let payload: Partial<Story> = { [columnId]: value };
+    let payload: Partial<Story> = {};
 
     if (columnId === 'assigneeId') {
         payload[columnId] = value === 'unassigned' ? undefined : value;
-    }
-    if (columnId === 'sprintId') {
+    } else if (columnId === 'sprintId') {
         payload[columnId] = value === 'backlog' ? null : value;
-    }
-    if (['startDate', 'endDate'].includes(columnId) && value) {
-      payload[columnId] = new Date(value).toISOString();
+    } else if (['startDate', 'endDate'].includes(columnId) && value) {
+        (payload as any)[columnId] = new Date(value).toISOString();
+    } else {
+        (payload as any)[columnId] = value;
     }
     
     await updateStory(taskId, payload);
@@ -342,7 +342,7 @@ export default function DevelopmentTasksPage() {
         itemType: 'Sub Task',
         estimatedHours: values.estimatedHours,
         impactedSystemId: values.impactedSystemId === 'unassigned' ? undefined : values.impactedSystemId,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
@@ -363,7 +363,8 @@ export default function DevelopmentTasksPage() {
     if (editingSubTask) {
       success = await updateStory(editingSubTask.id, subTaskData);
     } else {
-      success = await addStory(subTaskData as Omit<Story, 'id' | 'storyId'>, 'SUB');
+      const result = await addStory(subTaskData as Omit<Story, 'id' | 'storyId'>, 'SUB');
+      success = !!result;
     }
 
     if (success) {
@@ -703,13 +704,14 @@ export default function DevelopmentTasksPage() {
     </div>
 
     <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingSubTask(null); }}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>{editingSubTask ? 'Edit Sub-Task' : 'Add New Sub-Task'}</DialogTitle>
             <DialogDescription>Make changes to the sub-task details here.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                 <FormField
                     control={form.control}
                     name="parentStoryId"
@@ -890,7 +892,8 @@ export default function DevelopmentTasksPage() {
                       )}
                     />
                 </div>
-                <DialogFooter>
+                </div>
+                <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingSubTask ? 'Saving...' : 'Creating...') : (editingSubTask ? 'Save Changes' : 'Create Sub-Task')}
                   </Button>

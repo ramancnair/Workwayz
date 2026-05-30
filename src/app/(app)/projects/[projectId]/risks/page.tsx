@@ -303,15 +303,16 @@ export default function RisksPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingRisk(null); }}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>{editingRisk ? 'Edit Risk' : 'Add New Risk'}</DialogTitle>
             <DialogDescription>
               {editingRisk ? 'Update the details for this risk.' : 'Fill in the details for the new risk.'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                 <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Risk Description</FormLabel>
@@ -370,8 +371,8 @@ export default function RisksPage() {
                         <FormMessage />
                     </FormItem>
                 )} />
-              
-              <DialogFooter>
+              </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingRisk ? 'Saving...' : 'Creating...') : (editingRisk ? 'Save Changes' : 'Create Risk')}
                 </Button>

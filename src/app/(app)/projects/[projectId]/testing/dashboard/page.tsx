@@ -17,6 +17,8 @@ import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis, LineChart, Line, Cart
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { eachDayOfInterval, format, parseISO, startOfDay } from 'date-fns';
 import { Story, BugSeverity } from '@/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 const testCaseStatusConfig = {
   testCases: {
@@ -86,9 +88,10 @@ const bugSeverityConfig: ChartConfig = {
 
 
 const dailyActivityConfig = {
-    executed: { label: 'Executed', color: 'hsl(var(--chart-1))' },
-    closed: { label: 'Closed', color: 'hsl(var(--chart-2))' },
-    opened: { label: 'Opened', color: 'hsl(var(--chart-5))' },
+    planned: { label: 'Planned', color: '#eab308' }, // Amber/Yellow
+    executed: { label: 'Executed', color: '#3b82f6' }, // Blue
+    closed: { label: 'Closed', color: '#10b981' }, // Emerald green
+    opened: { label: 'Opened', color: '#ef4444' }, // Red for opened bugs
 } satisfies ChartConfig;
 
 const leakageChartConfig = {
@@ -110,6 +113,20 @@ const leakageChartConfig = {
   'Low': {
     label: "Low",
     color: '#22c55e',
+  },
+} satisfies ChartConfig;
+
+const storyCoverageConfig = {
+  stories: {
+    label: "Stories",
+  },
+  'Covered': {
+    label: "Covered",
+    color: '#10b981',
+  },
+  'Uncovered': {
+    label: "Uncovered",
+    color: '#ef4444',
   },
 } satisfies ChartConfig;
 
@@ -158,7 +175,7 @@ export default function TestingDashboard() {
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>)
-    ).map(([name, value]) => ({ name, value, fill: testCaseStatusConfig[name as keyof typeof testCaseStatusConfig]?.color || '#ccc' }));
+    ).map(([name, value]) => ({ name, value, fill: (testCaseStatusConfig[name as keyof typeof testCaseStatusConfig] as any)?.color || '#ccc' }));
 
     // Bug Metrics
     const bugStatusData = Object.entries(
@@ -167,7 +184,7 @@ export default function TestingDashboard() {
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>)
-    ).map(([name, value]) => ({ name, value, fill: bugStatusConfig[name as keyof typeof bugStatusConfig]?.color || '#ccc' }));
+    ).map(([name, value]) => ({ name, value, fill: (bugStatusConfig[name as keyof typeof bugStatusConfig] as any)?.color || '#ccc' }));
     
     // Open Bugs by Severity
     const openBugs = relatedBugs.filter(bug => bug.status === 'To Do' || bug.status === 'In Progress');
@@ -215,7 +232,26 @@ export default function TestingDashboard() {
        }
     });
 
+    const plannedDates: { id: string; date: string }[] = [];
+    filteredTestCases.forEach(tc => {
+      const plans = testPlans.filter(p => p.testCaseIds?.includes(tc.id));
+      if (plans.length > 0) {
+        const earliestPlan = plans.reduce((earliest, current) => {
+          return new Date(current.startDate) < new Date(earliest.startDate) ? current : earliest;
+        }, plans[0]);
+        plannedDates.push({ id: tc.id, date: earliestPlan.startDate });
+      } else {
+        const execs = tc.executions || [];
+        if (execs.length > 0 && execs[0].executionDate) {
+          plannedDates.push({ id: tc.id, date: execs[0].executionDate });
+        }
+      }
+    });
+
     const allDates: Date[] = [];
+    plannedDates.forEach(pd => {
+        allDates.push(startOfDay(parseISO(pd.date)));
+    });
     tcExecutionsInView.forEach(exec => {
         if(exec.executionDate) allDates.push(startOfDay(parseISO(exec.executionDate)));
         if(exec.closeDate) allDates.push(startOfDay(parseISO(exec.closeDate)));
@@ -235,6 +271,7 @@ export default function TestingDashboard() {
         const dateStr = format(date, 'yyyy-MM-dd');
         return {
             date: format(date, 'MMM d'),
+            planned: plannedDates.filter(pd => format(parseISO(pd.date), 'yyyy-MM-dd') === dateStr).length,
             executed: tcExecutionsInView.filter(exec => exec.executionDate && format(parseISO(exec.executionDate), 'yyyy-MM-dd') === dateStr).length,
             closed: tcExecutionsInView.filter(exec => exec.closeDate && format(parseISO(exec.closeDate), 'yyyy-MM-dd') === dateStr).length,
         };
@@ -293,6 +330,26 @@ export default function TestingDashboard() {
       };
     });
   }, [sortedTestPlansForLeakage, stories]);
+
+  const storyCoverageData = useMemo(() => {
+    const targetStories = stories.filter(
+      s => ['Requirement/Story', 'Feature Change'].includes(s.itemType) && !s.isDeleted
+    );
+    
+    const covered = targetStories.filter(s =>
+      testCases.some(tc => tc.storyId === s.id && !tc.isDeleted)
+    );
+    const uncovered = targetStories.filter(s =>
+      !testCases.some(tc => tc.storyId === s.id && !tc.isDeleted)
+    );
+
+    const chartData = [
+      { name: 'Covered', value: covered.length, fill: '#10b981' },
+      { name: 'Uncovered', value: uncovered.length, fill: '#ef4444' }
+    ];
+
+    return { covered, uncovered, chartData };
+  }, [stories, testCases]);
 
 
   return (
@@ -395,8 +452,9 @@ export default function TestingDashboard() {
                         <YAxis />
                         <ChartTooltip content={<ChartTooltipContent />} />
                         <ChartLegend content={<ChartLegendContent />} />
+                        <Line type="monotone" dataKey="planned" stroke="var(--color-planned)" strokeWidth={2} dot={false} strokeDasharray="3 3" />
                         <Line type="monotone" dataKey="executed" stroke="var(--color-executed)" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="closed" stroke="var(--color-closed)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="closed" stroke="var(--color-closed)" strokeWidth={2} dot={false} strokeDasharray="5 5" />
                      </LineChart>
                  </ChartContainer>
             </div>
@@ -417,37 +475,161 @@ export default function TestingDashboard() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Test Leakage</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[350px] w-full">
-            <ChartContainer config={leakageChartConfig} className="h-full w-full">
-              <BarChart data={leakageChartData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="planName" 
-                  tickLine={false} 
-                  tickMargin={10} 
-                  axisLine={false} 
-                />
-                <YAxis 
-                  allowDecimals={false} 
-                  tickLine={false} 
-                  axisLine={false} 
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="Low" stackId="a" fill="var(--color-Low)" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="Medium" stackId="a" fill="var(--color-Medium)" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="High" stackId="a" fill="var(--color-High)" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="Critical" stackId="a" fill="var(--color-Critical)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Test Leakage</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col justify-center">
+            <div className="h-[350px] w-full">
+              <ChartContainer config={leakageChartConfig} className="h-full w-full">
+                <BarChart data={leakageChartData}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="planName" 
+                    tickLine={false} 
+                    tickMargin={10} 
+                    axisLine={false} 
+                  />
+                  <YAxis 
+                    allowDecimals={false} 
+                    tickLine={false} 
+                    axisLine={false} 
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Bar dataKey="Low" stackId="a" fill="var(--color-Low)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Medium" stackId="a" fill="var(--color-Medium)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="High" stackId="a" fill="var(--color-High)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Critical" stackId="a" fill="var(--color-Critical)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Story Test Coverage</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+              {/* Pie Chart */}
+              <div className="flex flex-col items-center">
+                <div className="h-[200px] w-full relative">
+                  {storyCoverageData.chartData.every(d => d.value === 0) ? (
+                    <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground italic">
+                      No stories available
+                    </div>
+                  ) : (
+                    <ChartContainer config={storyCoverageConfig} className="h-full w-full">
+                      <PieChart>
+                        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                        <Pie
+                          data={storyCoverageData.chartData}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={2}
+                        >
+                          {storyCoverageData.chartData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <ChartLegend content={<ChartLegendContent />} />
+                      </PieChart>
+                    </ChartContainer>
+                  )}
+                </div>
+                <div className="text-center mt-2">
+                  <span className="text-2xl font-bold">
+                    {storyCoverageData.covered.length + storyCoverageData.uncovered.length > 0
+                      ? Math.round(
+                          (storyCoverageData.covered.length /
+                            (storyCoverageData.covered.length + storyCoverageData.uncovered.length)) *
+                            100
+                        )
+                      : 0}
+                    %
+                  </span>
+                  <p className="text-xs text-muted-foreground">Stories Covered</p>
+                </div>
+              </div>
+
+              {/* Story list tabs */}
+              <div className="flex flex-col h-full min-w-0">
+                <Tabs defaultValue="uncovered" className="w-full flex-1 flex flex-col">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="uncovered" className="text-xs flex items-center gap-1.5 justify-center py-1.5">
+                      <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                      Uncovered
+                      <Badge variant="secondary" className="px-1 py-0 text-[10px] ml-1 font-semibold">
+                        {storyCoverageData.uncovered.length}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="covered" className="text-xs flex items-center gap-1.5 justify-center py-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      Covered
+                      <Badge variant="secondary" className="px-1 py-0 text-[10px] ml-1 font-semibold">
+                        {storyCoverageData.covered.length}
+                      </Badge>
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="uncovered" className="flex-1 min-h-0 mt-2">
+                    <div className="max-h-[220px] overflow-y-auto pr-1 space-y-1.5">
+                      {storyCoverageData.uncovered.length > 0 ? (
+                        storyCoverageData.uncovered.map((story) => (
+                          <div
+                            key={story.id}
+                            className="flex items-start gap-2 p-2 hover:bg-muted/50 rounded-md text-xs border border-transparent hover:border-border transition-all duration-200"
+                          >
+                            <Badge variant="outline" className="shrink-0 bg-red-500/10 text-red-500 border-red-500/20 font-mono font-medium">
+                              {story.storyId}
+                            </Badge>
+                            <span className="font-medium text-foreground line-clamp-2 pt-0.5 leading-snug">
+                              {story.title}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-xs text-muted-foreground italic border border-dashed rounded-lg">
+                          All stories covered! 🎉
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="covered" className="flex-1 min-h-0 mt-2">
+                    <div className="max-h-[220px] overflow-y-auto pr-1 space-y-1.5">
+                      {storyCoverageData.covered.length > 0 ? (
+                        storyCoverageData.covered.map((story) => (
+                          <div
+                            key={story.id}
+                            className="flex items-start gap-2 p-2 hover:bg-muted/50 rounded-md text-xs border border-transparent hover:border-border transition-all duration-200"
+                          >
+                            <Badge variant="outline" className="shrink-0 bg-emerald-500/10 text-emerald-500 border-emerald-500/20 font-mono font-medium">
+                              {story.storyId}
+                            </Badge>
+                            <span className="font-medium text-foreground line-clamp-2 pt-0.5 leading-snug">
+                              {story.title}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-xs text-muted-foreground italic border border-dashed rounded-lg">
+                          No stories covered yet.
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

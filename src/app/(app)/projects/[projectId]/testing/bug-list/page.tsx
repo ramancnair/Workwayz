@@ -359,171 +359,70 @@ export default function BugListPage() {
     </div>
 
     <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingBug(null); setIsDialogOpen(open); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>{editingBug ? 'Edit Bug' : 'Add New Bug'}</DialogTitle>
             <DialogDescription>
               {editingBug ? 'Make changes to the bug details here.' : 'Log a new bug found during testing.'}
             </DialogDescription>
           </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Bug title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Steps to Reproduce)</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Describe the steps to reproduce the bug..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="acceptanceCriteria"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expected Result</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Describe what should happen..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                   <FormField
                     control={form.control}
-                    name="reporterId"
+                    name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reporter</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select a reporter" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {employees.map(emp => (
-                              <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Bug title" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <FormField
                     control={form.control}
-                    name="assigneeId"
+                    name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Assignee</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {employees.map(emp => (
-                              <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Description (Steps to Reproduce)</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe the steps to reproduce the bug..." {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="relatedTestCaseId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Related Test Case</FormLabel>
-                          <FormControl>
-                            <Input
-                              list="testcase-options"
-                              placeholder="Search for a test case..."
-                              value={testCaseInputText}
-                              onChange={(e) => {
-                                const text = e.target.value;
-                                setTestCaseInputText(text);
-                                const matchingOption = testCaseOptions.find(opt => opt.label === text);
-                                field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                              }}
-                              onBlur={() => {
-                                const matchingOption = testCaseOptions.find(opt => opt.label === testCaseInputText);
-                                if (!matchingOption) {
-                                  setTestCaseInputText('');
-                                  field.onChange('unassigned');
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <datalist id="testcase-options">
-                            {testCaseOptions.map(opt => <option key={opt.value} value={opt.label} />)}
-                          </datalist>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
+                  <FormField
                     control={form.control}
-                    name="sprintId"
+                    name="acceptanceCriteria"
                     render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Sprint</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="backlog">Backlog</SelectItem>
-                            {sprints.map(sprint => (
-                                <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
+                      <FormItem>
+                        <FormLabel>Expected Result</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe what should happen..." {...field} />
+                        </FormControl>
                         <FormMessage />
-                        </FormItem>
+                      </FormItem>
                     )}
-                    />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="foundInTestPlanId"
+                      name="reporterId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Found In Test Plan</FormLabel>
+                          <FormLabel>Reporter</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a Test Plan" />
-                              </SelectTrigger>
+                              <SelectTrigger><SelectValue placeholder="Select a reporter" /></SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="unassigned">None</SelectItem>
-                              {testPlans.map(tp => (
-                                <SelectItem key={tp.id} value={tp.id}>{tp.name}</SelectItem>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {employees.map(emp => (
+                                <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -531,143 +430,246 @@ export default function BugListPage() {
                         </FormItem>
                       )}
                     />
-                     <FormField
+                    <FormField
                       control={form.control}
-                      name="relatedBugId"
+                      name="assigneeId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Related / Original Bug</FormLabel>
-                          <FormControl>
-                            <Input
-                              list="bug-options"
-                              placeholder="Search for a bug..."
-                              value={relatedBugInputText}
-                              onChange={(e) => {
-                                const text = e.target.value;
-                                setRelatedBugInputText(text);
-                                const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                              }}
-                              onBlur={() => {
-                                const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
-                                if (!matchingOption) {
-                                  setRelatedBugInputText('');
-                                  field.onChange('unassigned');
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <datalist id="bug-options">
-                            {relatedBugOptions.filter(opt => opt.value !== editingBug?.id).map(opt => <option key={opt.value} value={opt.label} />)}
-                          </datalist>
+                          <FormLabel>Assignee</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                            <FormControl>
+                              <SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {employees.map(emp => (
+                                <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
+                  </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
                         control={form.control}
-                        name="severity"
+                        name="relatedTestCaseId"
                         render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Severity</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                          <FormItem>
+                            <FormLabel>Related Test Case</FormLabel>
                             <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Set severity" />
-                                </SelectTrigger>
+                              <Input
+                                list="testcase-options"
+                                placeholder="Search for a test case..."
+                                value={testCaseInputText}
+                                onChange={(e) => {
+                                  const text = e.target.value;
+                                  setTestCaseInputText(text);
+                                  const matchingOption = testCaseOptions.find(opt => opt.label === text);
+                                  field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                }}
+                                onBlur={() => {
+                                  const matchingOption = testCaseOptions.find(opt => opt.label === testCaseInputText);
+                                  if (!matchingOption) {
+                                    setTestCaseInputText('');
+                                    field.onChange('unassigned');
+                                  }
+                                }}
+                              />
                             </FormControl>
-                            <SelectContent>
-                                {severities.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                    {s}
-                                </SelectItem>
+                            <datalist id="testcase-options">
+                              {testCaseOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                            </datalist>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                      control={form.control}
+                      name="sprintId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Sprint</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                              <FormControl>
+                              <SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="backlog">Backlog</SelectItem>
+                              {sprints.map(sprint => (
+                                  <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="foundInTestPlanId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Found In Test Plan</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a Test Plan" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="unassigned">None</SelectItem>
+                                {testPlans.map(tp => (
+                                  <SelectItem key={tp.id} value={tp.id}>{tp.name}</SelectItem>
                                 ))}
-                            </SelectContent>
+                              </SelectContent>
                             </Select>
                             <FormMessage />
-                        </FormItem>
+                          </FormItem>
                         )}
-                    />
-                </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value as StoryStatus}>
+                      />
+                       <FormField
+                        control={form.control}
+                        name="relatedBugId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Related / Original Bug</FormLabel>
                             <FormControl>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
+                              <Input
+                                list="bug-options"
+                                placeholder="Search for a bug..."
+                                value={relatedBugInputText}
+                                onChange={(e) => {
+                                  const text = e.target.value;
+                                  setRelatedBugInputText(text);
+                                  const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                  field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                }}
+                                onBlur={() => {
+                                  const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                  if (!matchingOption) {
+                                    setRelatedBugInputText('');
+                                    field.onChange('unassigned');
+                                  }
+                                }}
+                              />
                             </FormControl>
-                            <SelectContent>
-                            {statusOptions.map((p) => (
-                                <SelectItem key={p} value={p}>
-                                {p}
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="releaseId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Release</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {releases.map(release => (
-                                <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
-                 <FormField
-                  control={form.control}
-                  name="attachments"
-                  render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Attachments</FormLabel>
-                      <FormControl>
-                      <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                  </FormItem>
-                  )}
-                />
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="createdAt" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Created On</FormLabel>
-                            <FormControl>
-                                <DatePicker date={field.value} setDate={field.onChange} />
-                            </FormControl>
+                            <datalist id="bug-options">
+                              {relatedBugOptions.filter(opt => opt.value !== editingBug?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                            </datalist>
                             <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="closedAt" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Closed On</FormLabel>
-                            <FormControl>
-                                <DatePicker date={field.value} setDate={field.onChange} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name="severity"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Severity</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                  <SelectValue placeholder="Set severity" />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {severities.map((s) => (
+                                    <SelectItem key={s} value={s}>
+                                      {s}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                  </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value as StoryStatus}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              {statusOptions.map((p) => (
+                                  <SelectItem key={p} value={p}>
+                                  {p}
+                                  </SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                      <FormField
+                      control={form.control}
+                      name="releaseId"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Release</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                              <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {releases.map(release => (
+                                  <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                              ))}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                  </div>
+                   <FormField
+                    control={form.control}
+                    name="attachments"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Attachments</FormLabel>
+                        <FormControl>
+                        <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                  />
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="createdAt" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Created On</FormLabel>
+                              <FormControl>
+                                  <DatePicker date={field.value} setDate={field.onChange} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="closedAt" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Closed On</FormLabel>
+                              <FormControl>
+                                  <DatePicker date={field.value} setDate={field.onChange} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                  </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Saving...' : 'Save Changes'}
                   </Button>

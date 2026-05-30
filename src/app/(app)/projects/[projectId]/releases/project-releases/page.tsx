@@ -403,112 +403,112 @@ export default function ReleasesPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingItem(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-               {(currentItemType === 'Stage' || currentItemType === 'Milestone') && (
-                  <FormField
-                    control={form.control}
-                    name="parentReleaseId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Parent Release</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select a parent release..." /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {releases.map(release => (
-                              <SelectItem key={release.id} value={release.id}>
-                                [{release.releaseId}] {release.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl><Input placeholder={`E.g., Q3 2024 ${currentItemType}`} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl><Textarea placeholder="Describe the main goals..." {...field} rows={4} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {currentItemType === 'Milestone' ? (
-                <FormField control={form.control} name="milestoneDate" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Milestone Date</FormLabel>
-                        <FormControl>
-                            <Input type="date" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="startDate" render={({ field }) => (
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+                 {(currentItemType === 'Stage' || currentItemType === 'Milestone') && (
+                    <FormField
+                      control={form.control}
+                      name="parentReleaseId"
+                      render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Start Date</FormLabel>
-                            <FormControl>
-                                <Input type="date" {...field} value={field.value ?? ''} />
-                            </FormControl>
-                            <FormMessage />
+                          <FormLabel>Parent Release</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select a parent release..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {releases.map(release => (
+                                <SelectItem key={release.id} value={release.id}>
+                                  [{release.releaseId}] {release.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
                         </FormItem>
-                    )} />
-                    <FormField control={form.control} name="endDate" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>End Date</FormLabel>
-                            <FormControl>
-                                <Input type="date" {...field} value={field.value ?? ''} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
-              )}
-              
+                      )}
+                    />
+                  )}
                 <FormField
                   control={form.control}
-                  name="isCompleted"
+                  name="name"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Mark as Completed
-                        </FormLabel>
-                      </div>
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl><Input placeholder={`E.g., Q3 2024 ${currentItemType}`} {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl><Textarea placeholder="Describe the main goals..." {...field} rows={4} /></FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
 
-
-              <DialogFooter>
+                {currentItemType === 'Milestone' ? (
+                  <FormField control={form.control} name="milestoneDate" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Milestone Date</FormLabel>
+                          <FormControl>
+                              <Input type="date" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="startDate" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Start Date</FormLabel>
+                              <FormControl>
+                                  <Input type="date" {...field} value={field.value ?? ''} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="endDate" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>End Date</FormLabel>
+                              <FormControl>
+                                  <Input type="date" {...field} value={field.value ?? ''} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                  </div>
+                )}
+                
+                  <FormField
+                    control={form.control}
+                    name="isCompleted"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Mark as Completed
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+              </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (editingItem ? 'Saving...' : 'Creating...') : (editingItem ? 'Save Changes' : `Create ${currentItemType}`)}
                 </Button>

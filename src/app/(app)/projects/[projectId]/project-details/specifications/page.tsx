@@ -884,12 +884,13 @@ export default function EnvironmentsPage() {
       </Dialog>
       
        <Dialog open={isSystemDialogOpen} onOpenChange={(open) => { setIsSystemDialogOpen(open); if (!open) setEditingSystem(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>{editingSystem ? 'Edit System' : 'Add New System'}</DialogTitle>
           </DialogHeader>
           <Form {...systemForm}>
-            <form onSubmit={systemForm.handleSubmit(onSystemSubmit)} className="space-y-4">
+            <form onSubmit={systemForm.handleSubmit(onSystemSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
               <FormField
                 control={systemForm.control}
                 name="name"
@@ -952,7 +953,8 @@ export default function EnvironmentsPage() {
                     </FormItem>
                   )}
                 />
-              <DialogFooter>
+              </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSystemSubmitting}>
                   {isSystemSubmitting ? (editingSystem ? 'Saving...' : 'Creating...') : (editingSystem ? 'Save Changes' : 'Create System')}
                 </Button>

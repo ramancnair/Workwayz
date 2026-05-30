@@ -7,7 +7,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
-import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority, BugSeverity } from '@/types';
+import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority, BugSeverity, TestCase } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -339,13 +339,14 @@ function StoryCard({
 
 
 export default function KanbanPage() {
-  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings, testCases, testDate, testPlans } = useProject();
+  const { stories, epics, sprints, kanbanColumns, moveStoryStatus, moveStoryToSprint, employees: users, updateStory, deleteStory, environments, impactedSystems, releasesAndMilestones, holidays, weeklyOffDays, projectSettings, testCases, testDate, testPlans, updateTestCase, deleteTestCase } = useProject();
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
   const [viewBy, setViewBy] = useState<'story' | 'sub-task' | 'bug'>('story');
   const [selectionStack, setSelectionStack] = useState<Story[]>([]);
   const selectedStory = selectionStack[selectionStack.length - 1] || null;
+  const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
   const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
   const [editParentStoryText, setEditParentStoryText] = useState('');
@@ -748,25 +749,24 @@ export default function KanbanPage() {
       </div>
 
       <Dialog open={!!selectedStory} onOpenChange={(isOpen) => !isOpen && handleSetSelectedStory(null)}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] [&>div]:p-0">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden" bypassScrollWrapper={true}>
           {selectedStory && (
             <>
               {selectedStory.itemType === 'Sub Task' ? (
-                <>
-                  <DialogHeader>
-                    <div className="flex items-center gap-2">
-                        {selectionStack.length > 1 && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleGoBack}>
-                                <ArrowLeft className="h-4 w-4" />
-                            </Button>
-                        )}
-                        <DialogTitle>Edit Sub Task</DialogTitle>
-                    </div>
-                    <DialogDescription>Make changes to your sub task here.</DialogDescription>
-                  </DialogHeader>
-                  <Form {...subTaskForm}>
-                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)}>
-                      <div className="overflow-y-auto px-6 py-4 space-y-4 max-h-[calc(90vh-140px)]">
+                <Form {...subTaskForm}>
+                  <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <div className="flex items-center gap-2">
+                          {selectionStack.length > 1 && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleGoBack}>
+                                  <ArrowLeft className="h-4 w-4" />
+                              </Button>
+                          )}
+                          <DialogTitle>Edit Sub Task</DialogTitle>
+                      </div>
+                      <DialogDescription>Make changes to your sub task here.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -893,26 +893,24 @@ export default function KanbanPage() {
                                 </div>
                             </TabsContent>
                         </Tabs>
-                      </div>
-                      <DialogFooter className="px-6 py-4 border-t">
-                          <Button type="submit" disabled={isEditStorySubmitting}>
-                              {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                          </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit" disabled={isEditStorySubmitting}>
+                            {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
               ) : (
-                <>
-                <DialogHeader>
-                  <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
-                  <DialogDescription>
-                    Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
-                  </DialogDescription>
-                </DialogHeader>
                 <Form {...editStoryForm}>
-                  <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)}>
-                    <div className="overflow-y-auto px-6 py-4 space-y-4 max-h-[calc(90vh-150px)]">
+                  <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
+                      <DialogDescription>
+                        Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                       <FormField
                           control={editStoryForm.control}
                           name="title"
@@ -1403,7 +1401,7 @@ export default function KanbanPage() {
                                           <div key={tc.id} className="flex items-center justify-between text-sm p-2 hover:bg-muted/50 rounded-md">
                                               <div className='flex items-center gap-2 min-w-0 flex-1'>
                                                   <Badge variant="secondary" className="shrink-0">{tc.testCaseId}</Badge>
-                                                  <span className="font-medium truncate">{tc.title}</span>
+                                                  <span className="font-medium truncate cursor-pointer hover:underline text-primary" onClick={() => setEditingTestCase(tc)}>{tc.title}</span>
                                               </div>
                                               <Badge variant="outline" className="ml-2 shrink-0">{tc.type}</Badge>
                                           </div>
@@ -1507,15 +1505,177 @@ export default function KanbanPage() {
                     </DialogFooter>
                   </form>
                 </Form>
-                </>
               )}
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      <TestCaseEditDialog
+        testCase={editingTestCase}
+        isOpen={!!editingTestCase}
+        onClose={() => setEditingTestCase(null)}
+        onSave={async (data) => {
+          if (editingTestCase) {
+            return await updateTestCase(editingTestCase.id, data);
+          }
+          return false;
+        }}
+        onDelete={async () => {
+          if (editingTestCase) {
+            return await deleteTestCase(editingTestCase.id);
+          }
+          return false;
+        }}
+        releases={releases}
+        sprints={sprints}
+      />
     </>
   );
 }
+
+function TestCaseEditDialog({
+  testCase,
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
+  releases,
+  sprints,
+}: {
+  testCase: TestCase | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (updatedData: Partial<TestCase>) => Promise<boolean>;
+  onDelete?: () => Promise<boolean>;
+  releases: any[];
+  sprints: any[];
+}) {
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState<'Functional' | 'Non-functional'>('Functional');
+  const [description, setDescription] = useState('');
+  const [expectedResult, setExpectedResult] = useState('');
+  const [releaseId, setReleaseId] = useState('unassigned');
+  const [sprintId, setSprintId] = useState('backlog');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (testCase) {
+      setTitle(testCase.title || '');
+      setType(testCase.type || 'Functional');
+      setDescription(testCase.description || '');
+      setExpectedResult(testCase.expectedResult || '');
+      setReleaseId(testCase.releaseId || 'unassigned');
+      setSprintId(testCase.sprintId || 'backlog');
+    }
+  }, [testCase]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testCase) return;
+    setIsSubmitting(true);
+    const success = await onSave({
+      title,
+      type,
+      description,
+      expectedResult,
+      releaseId: releaseId === 'unassigned' ? undefined : releaseId,
+      sprintId: sprintId === 'backlog' ? undefined : sprintId,
+    });
+    if (success) {
+      onClose();
+    }
+    setIsSubmitting(false);
+  };
+
+  if (!testCase) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>Edit Test Case: {testCase.testCaseId}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-2 overflow-y-auto max-h-[calc(90vh-140px)] px-1">
+          <div className="space-y-2">
+            <Label htmlFor="tc-title">Title</Label>
+            <Input id="tc-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tc-type">Type</Label>
+              <Select value={type} onValueChange={(v: any) => setType(v)}>
+                <SelectTrigger id="tc-type"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Functional">Functional</SelectItem>
+                  <SelectItem value="Non-functional">Non-functional</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tc-sprint">Sprint</Label>
+              <Select value={sprintId} onValueChange={setSprintId}>
+                <SelectTrigger id="tc-sprint"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="backlog">Backlog</SelectItem>
+                  {sprints.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tc-release">Release</Label>
+            <Select value={releaseId} onValueChange={setReleaseId}>
+              <SelectTrigger id="tc-release"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {releases.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tc-desc">Description (Steps)</Label>
+            <Textarea id="tc-desc" value={description} onChange={(e) => setDescription(e.target.value)} required rows={4} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tc-expected">Expected Result</Label>
+            <Textarea id="tc-expected" value={expectedResult} onChange={(e) => setExpectedResult(e.target.value)} required rows={3} />
+          </div>
+          <DialogFooter className="pt-2 flex flex-row justify-between items-center w-full">
+            {onDelete && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to delete this test case?')) {
+                    setIsSubmitting(true);
+                    const success = await onDelete();
+                    if (success) {
+                      onClose();
+                    }
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+              >
+                Delete
+              </Button>
+            )}
+            <div className="flex items-center space-x-2 ml-auto">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+            </div>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 
 

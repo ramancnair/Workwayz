@@ -553,109 +553,111 @@ export default function UsersPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingUser(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="firstName" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name *</FormLabel>
-                    <FormControl><Input placeholder="John" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="lastName" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name *</FormLabel>
-                    <FormControl><Input placeholder="Doe" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                 <FormField control={form.control} name="empId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Emp ID *</FormLabel>
-                    <FormControl><Input placeholder="E.g., E001" {...field} readOnly={!!editingUser} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                 <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email *</FormLabel>
-                    <FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="phone" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone *</FormLabel>
-                    <FormControl><Input placeholder="123-456-7890" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="experience" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Experience (years)</FormLabel>
-                    <FormControl><Input type="number" placeholder="5" {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                 <FormField control={form.control} name="accessLevel" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Access Level</FormLabel>
-                     <Select onValueChange={field.onChange} value={field.value}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={form.control} name="firstName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name *</FormLabel>
+                      <FormControl><Input placeholder="John" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="lastName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name *</FormLabel>
+                      <FormControl><Input placeholder="Doe" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={form.control} name="empId" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Emp ID *</FormLabel>
+                      <FormControl><Input placeholder="E.g., E001" {...field} readOnly={!!editingUser} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={form.control} name="email" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="phone" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone *</FormLabel>
+                      <FormControl><Input placeholder="123-456-7890" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="experience" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Experience (years)</FormLabel>
+                      <FormControl><Input type="number" placeholder="5" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={form.control} name="accessLevel" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Access Level</FormLabel>
+                       <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an access level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {accessLevels.map(level => (
+                              <SelectItem key={level} value={level}>{level}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="space-y-2">
+                    <FormLabel>Cost</FormLabel>
+                    <div className="flex h-10 w-full items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
+                      <FormField control={form.control} name="costCurrency" render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value || 'USD'}>
+                          <FormControl>
+                            <SelectTrigger className="w-[125px] border-0 focus:ring-0 focus:ring-offset-0 rounded-r-none shadow-none h-full bg-transparent pr-2 pl-3">
+                              <SelectValue placeholder="USD" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="USD">USD ($)</SelectItem>
+                            <SelectItem value="EUR">EUR (€)</SelectItem>
+                            <SelectItem value="GBP">GBP (£)</SelectItem>
+                            <SelectItem value="INR">INR (₹)</SelectItem>
+                            <SelectItem value="CAD">CAD ($)</SelectItem>
+                            <SelectItem value="AUD">AUD ($)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )} />
+                      <div className="h-6 w-px bg-input shrink-0" />
+                      <FormField control={form.control} name="costAmount" render={({ field }) => (
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an access level" />
-                          </SelectTrigger>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-l-none shadow-none h-full bg-transparent px-3"
+                            {...field}
+                            value={field.value ?? ''}
+                          />
                         </FormControl>
-                        <SelectContent>
-                          {accessLevels.map(level => (
-                            <SelectItem key={level} value={level}>{level}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <div className="space-y-2">
-                  <FormLabel>Cost</FormLabel>
-                  <div className="flex h-10 w-full items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
-                    <FormField control={form.control} name="costCurrency" render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value || 'USD'}>
-                        <FormControl>
-                          <SelectTrigger className="w-[125px] border-0 focus:ring-0 focus:ring-offset-0 rounded-r-none shadow-none h-full bg-transparent pr-2 pl-3">
-                            <SelectValue placeholder="USD" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="USD">USD ($)</SelectItem>
-                          <SelectItem value="EUR">EUR (€)</SelectItem>
-                          <SelectItem value="GBP">GBP (£)</SelectItem>
-                          <SelectItem value="INR">INR (₹)</SelectItem>
-                          <SelectItem value="CAD">CAD ($)</SelectItem>
-                          <SelectItem value="AUD">AUD ($)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )} />
-                    <div className="h-6 w-px bg-input shrink-0" />
-                    <FormField control={form.control} name="costAmount" render={({ field }) => (
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-l-none shadow-none h-full bg-transparent px-3"
-                          {...field}
-                          value={field.value ?? ''}
-                        />
-                      </FormControl>
-                    )} />
+                      )} />
+                    </div>
                   </div>
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (editingUser ? 'Saving...' : 'Creating...') : (editingUser ? 'Save Changes' : 'Create User')}
                 </Button>

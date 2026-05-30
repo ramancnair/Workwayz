@@ -314,18 +314,17 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
 
   return (
     <Dialog open={!!storyId} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden" bypassScrollWrapper={true}>
           {selectedStory && (
             <>
               {selectedStory.itemType === 'Sub Task' ? (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>Edit Sub Task</DialogTitle>
-                    <DialogDescription>Make changes to your sub task here.</DialogDescription>
-                  </DialogHeader>
-                  <Form {...subTaskForm}>
-                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)}>
-                      <div className="overflow-y-auto px-6 py-4 space-y-4">
+                <Form {...subTaskForm}>
+                  <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Edit Sub Task</DialogTitle>
+                      <DialogDescription>Make changes to your sub task here.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -473,26 +472,24 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                 </div>
                             </TabsContent>
                         </Tabs>
-                      </div>
-                      <DialogFooter>
-                          <Button type="submit" disabled={isEditStorySubmitting}>
-                              {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                          </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit" disabled={isEditStorySubmitting}>
+                            {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
               ) : (
-              <>
-              <DialogHeader>
-                <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
-                <DialogDescription>
-                  Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
-                </DialogDescription>
-              </DialogHeader>
               <Form {...editStoryForm}>
-                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)}>
-                  <div className="overflow-y-auto px-6 py-4 space-y-4">
+                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
+                  <DialogHeader>
+                    <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
+                    <DialogDescription>
+                      Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                   <FormField
                       control={editStoryForm.control}
                       name="itemType"
@@ -1084,7 +1081,6 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                   </DialogFooter>
                 </form>
               </Form>
-              </>
               )}
             </>
           )}
