@@ -13,9 +13,8 @@ import { PageHeader } from '@/components/PageHeader';
 import { type User, type Project, type AccessLevel, type RagStatus, type ProjectStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Briefcase, ChevronRight, Clock, UserCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { Briefcase, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
 
-const ENABLEMENT_ROLES: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager'];
 
 const statusStyles: Record<ProjectStatus, string> = {
   'Initial Estimation': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
@@ -37,12 +36,10 @@ export default function MyProjectsPage() {
 
   const [currentUser, setCurrentUser] = useState<{ empId: string; accessLevel: AccessLevel; name: string; email: string } | null>(null);
   const [currentUserFromDb, setCurrentUserFromDb] = useState<User | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [myProjectIds, setMyProjectIds] = useState<string[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  const [enablingUserId, setEnablingUserId] = useState<string | null>(null);
 
   // Read current user from localStorage
   useEffect(() => {
@@ -62,24 +59,24 @@ export default function MyProjectsPage() {
     }
   }, []);
 
-  // Listen to all users (for the enablement panel)
+  // Listen to current user only to check isEnabled status
   useEffect(() => {
-    if (!db) return;
-    const q = query(collection(db, 'employees'), where('isDeleted', '!=', true));
-    const unsub = onSnapshot(q, (snapshot) => {
-      const usersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as User));
-      setAllUsers(usersData);
-
-      // Find the current user in the DB to check isEnabled
-      if (currentUser?.empId) {
-        const dbUser = usersData.find(u => u.empId === currentUser.empId);
-        if (dbUser) {
-          setCurrentUserFromDb(dbUser);
-        }
+    if (!db || !currentUser?.empId) {
+      if (!currentUser?.empId) {
+        setIsLoadingUsers(false);
       }
+      return;
+    }
+    const docRef = doc(db, 'employees', currentUser.empId);
+    const unsub = onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setCurrentUserFromDb({ id: snapshot.id, ...snapshot.data() } as User);
+      } else {
+        setCurrentUserFromDb(null);
+      }
+      setIsLoadingUsers(false);
+    }, (error) => {
+      console.error("Error listening to current user status:", error);
       setIsLoadingUsers(false);
     });
     return () => unsub();
@@ -137,107 +134,16 @@ export default function MyProjectsPage() {
   }, [currentUser?.empId, allProjects]);
 
   const isUserEnabled = currentUserFromDb ? currentUserFromDb.isEnabled !== false : true;
-  const canEnableUsers = currentUser && ENABLEMENT_ROLES.includes(currentUser.accessLevel);
-
-  const usersAwaitingEnablement = useMemo(() => {
-    return allUsers.filter(u => u.isEnabled === false);
-  }, [allUsers]);
 
   const myProjects = useMemo(() => {
     return allProjects.filter(p => myProjectIds.includes(p.id));
   }, [allProjects, myProjectIds]);
-
-  const handleEnableUser = async (userId: string) => {
-    if (!db) return;
-    setEnablingUserId(userId);
-    try {
-      const userRef = doc(db, 'employees', userId);
-      await updateDoc(userRef, { isEnabled: true });
-      toast({ title: 'User Enabled', description: 'The user has been enabled and can now access their projects.' });
-    } catch (error) {
-      console.error('Error enabling user:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not enable user.' });
-    } finally {
-      setEnablingUserId(null);
-    }
-  };
-
-  const getInitials = (name: string) => {
-    if (!name) return '?';
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   const isLoading = isLoadingUsers || isLoadingProjects;
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <PageHeader title="My Projects" description="View your assigned projects and quick links." />
-
-      {/* Users Awaiting Enablement — only for authorized roles */}
-      {canEnableUsers && usersAwaitingEnablement.length > 0 && (
-        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              <CardTitle className="text-lg">Users Awaiting Enablement</CardTitle>
-            </div>
-            <CardDescription>
-              These users have signed up but need to be enabled before they can access their projects.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Access Level</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {usersAwaitingEnablement.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-7 w-7">
-                          <AvatarFallback className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                            {getInitials(`${user.firstName} ${user.lastName}`)}
-                          </AvatarFallback>
-                        </Avatar>
-                        {user.firstName} {user.lastName}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{user.accessLevel || 'N/A'}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => handleEnableUser(user.id)}
-                        disabled={enablingUserId === user.id}
-                      >
-                        {enablingUserId === user.id ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <UserCheck className="mr-2 h-4 w-4" />
-                        )}
-                        Enable
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Main content: My Projects list */}
       {!isUserEnabled ? (

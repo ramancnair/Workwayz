@@ -40,10 +40,11 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot, ShieldCheck, ShieldOff } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot, ShieldCheck, ShieldOff, Clock, UserCheck } from 'lucide-react';
 import { type User, type AccessLevel } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
@@ -59,7 +60,9 @@ const userFormSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().min(1, 'Phone number is required'),
   experience: z.coerce.number().optional(),
-  accessLevel: z.enum(['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO']).optional(),
+  accessLevel: z.enum(['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'], {
+    required_error: 'Access Level is required',
+  }),
   costAmount: z.coerce.number().optional(),
   costCurrency: z.string().optional(),
 });
@@ -104,6 +107,42 @@ export default function UsersPage() {
   
   const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
   const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
+
+  const [currentUser, setCurrentUser] = useState<{ empId: string; accessLevel: AccessLevel; name: string; email: string } | null>(null);
+
+  // Read current user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('projectflow_user');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        setCurrentUser({
+          empId: parsed.empId || '',
+          accessLevel: (parsed.accessLevel as AccessLevel) || 'Team Member',
+          name: parsed.name || '',
+          email: parsed.email || '',
+        });
+      } catch {
+        console.error('Failed to parse user from localStorage');
+      }
+    }
+  }, []);
+
+  const isAdmin = currentUser?.accessLevel === 'Administrator';
+
+  const usersAwaitingEnablement = useMemo(() => {
+    return users.filter(u => u.isEnabled === false);
+  }, [users]);
+
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const form = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
@@ -299,12 +338,26 @@ export default function UsersPage() {
 
     try {
       if (editingUser) {
-        await updateDoc(doc(db, 'employees', editingUser.id), sanitizedValues);
+        const updateData = { ...sanitizedValues };
+        if (editingUser.isEnabled === false) {
+          if (!isAdmin) {
+            toast({ variant: "destructive", title: "Unauthorized", description: "Only Administrators can enable users." });
+            setIsSubmitting(false);
+            return;
+          }
+          updateData.isEnabled = true;
+        }
+        await updateDoc(doc(db, 'employees', editingUser.id), updateData);
         
         // Also push updates to Auth pool to ensure roles are synced
         await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
         
-        toast({ title: "Success", description: `User updated successfully.` });
+        toast({
+          title: editingUser.isEnabled === false ? "User Enabled" : "Success",
+          description: editingUser.isEnabled === false 
+            ? `${values.firstName} ${values.lastName} has been enabled successfully.`
+            : "User updated successfully."
+        });
       } else {
         // Check for unique Emp ID when creating a new user
         const isEmpIdTaken = users.some(user => user.empId === values.empId);
@@ -468,6 +521,61 @@ export default function UsersPage() {
             Add User
           </Button>
         </PageHeader>
+
+        {/* Users Awaiting Enablement Section */}
+        {isAdmin && usersAwaitingEnablement.length > 0 && (
+          <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <CardTitle className="text-lg">Users Awaiting Enablement</CardTitle>
+              </div>
+              <CardDescription>
+                These users have signed up but need to be enabled and assigned an access level before they can access the application.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-4">Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead className="text-right pr-4">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {usersAwaitingEnablement.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium pl-4">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                              {getInitials(`${user.firstName} ${user.lastName}`)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {user.firstName} {user.lastName}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.phone || 'N/A'}</TableCell>
+                      <TableCell className="text-right pr-4">
+                        <Button
+                          size="sm"
+                          onClick={() => handleDialogOpen(user)}
+                        >
+                          <UserCheck className="mr-2 h-4 w-4" />
+                          Enable
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardContent className="p-4 space-y-4">
             <div className="flex items-center gap-4 flex-wrap">
@@ -554,7 +662,13 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(user)}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleDialogOpen(user)}
+                        disabled={user.isEnabled === false && !isAdmin}
+                        title={user.isEnabled === false && !isAdmin ? "Only Administrators can enable users" : undefined}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
@@ -622,7 +736,7 @@ export default function UsersPage() {
                   )} />
                    <FormField control={form.control} name="accessLevel" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Access Level</FormLabel>
+                      <FormLabel>Access Level *</FormLabel>
                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>

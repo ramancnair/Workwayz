@@ -24,11 +24,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const bar = payload[0];
     const isPlanned = bar.dataKey === 'plannedRange';
 
+    const startDate = data.start instanceof Date ? data.start : new Date(data.start);
+    const endDate = data.end instanceof Date ? data.end : new Date(data.end);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return null;
+    }
+
     return (
       <div className="bg-background border rounded-md p-2 shadow-md text-sm">
         <p className="font-bold">{data.projectName}</p>
         <p className="font-semibold text-muted-foreground">{isPlanned ? 'Planned' : 'Actual'}</p>
-        <p>{format(data.start, 'MMM d, yyyy')} - {format(data.end, 'MMM d, yyyy')}</p>
+        <p>{format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')}</p>
         <p>Duration: {data.duration} {data.duration === 1 ? 'day' : 'days'}</p>
       </div>
     );
@@ -93,7 +100,7 @@ export function UtilizationGanttChart({ data }: { data: ProjectTimelineData[] })
     const chartDomain: [number, number] = [minDate.getTime(), maxDate.getTime()];
     const chartTicks = eachDayOfInterval({ start: minDate, end: maxDate }).map(d => d.getTime());
 
-    return { chartData: processedData, yAxisLabels, domain: chartDomain, ticks: chartTicks };
+    return { chartData: processedData, yAxisLabels: yLabels, domain: chartDomain, ticks: chartTicks };
 
   }, [data]);
   

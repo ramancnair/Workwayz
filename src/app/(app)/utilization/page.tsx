@@ -6,10 +6,39 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, getDoc, doc } from 'firebase/firestore';
 import { PageHeader } from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { type User, type Project, type Story, type Worklog } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { type User, type Project, type Story } from '@/types';
 import { UtilizationGanttChart } from '@/components/UtilizationGanttChart';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { 
+    startOfMonth, 
+    endOfMonth, 
+    eachDayOfInterval, 
+    format, 
+    startOfDay, 
+    isSameDay,
+    addMonths,
+    subMonths
+} from 'date-fns';
+import { 
+    Calendar as CalendarIcon, 
+    Clock, 
+    UserCheck, 
+    AlertCircle, 
+    CheckCircle2, 
+    Activity, 
+    TrendingUp, 
+    Info,
+    Briefcase,
+    ChevronLeft,
+    ChevronRight
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
 
 export interface ProjectTimelineData {
     project: Project;
@@ -23,6 +52,8 @@ export default function UtilizationPage() {
     const [timelineData, setTimelineData] = useState<ProjectTimelineData[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [userInput, setUserInput] = useState('');
+    const [selectedCalendarDay, setSelectedCalendarDay] = useState<Date | null>(null);
+    const [currentCalendarMonth, setCurrentCalendarMonth] = useState<Date>(new Date());
     
     useEffect(() => {
         const fetchUsers = async () => {
@@ -67,11 +98,11 @@ export default function UtilizationPage() {
                     const planned = tasksSnapshot.docs.map(doc => {
                         const task = doc.data() as Story;
                         return { 
-                            start: new Date(task.startDate!), 
-                            end: new Date(task.endDate!),
+                            start: task.startDate ? new Date(task.startDate) : null, 
+                            end: task.endDate ? new Date(task.endDate) : null,
                             name: task.title
                         };
-                    }).filter(t => t.start && t.end);
+                    }).filter(t => t.start && t.end && !isNaN(t.start.getTime()) && !isNaN(t.end.getTime())) as Array<{ start: Date; end: Date; name: string; }>;
 
                     // Fetch actual worklogs
                     const worklogsQuery = query(
@@ -79,7 +110,9 @@ export default function UtilizationPage() {
                         where('employeeId', '==', selectedUser.id)
                     );
                     const worklogsSnapshot = await getDocs(worklogsQuery);
-                    const worklogDates = worklogsSnapshot.docs.map(doc => new Date(doc.id.split('-').slice(1).join('-')));
+                    const worklogDates = worklogsSnapshot.docs
+                        .map(doc => new Date(doc.id.split('-').slice(1).join('-')))
+                        .filter(d => !isNaN(d.getTime()));
                     
                     const actual: Array<{ start: Date; end: Date; name: string }> = [];
                     if (worklogDates.length > 0) {
@@ -114,12 +147,140 @@ export default function UtilizationPage() {
         fetchTimelineData();
 
     }, [selectedUser]);
+
+    useEffect(() => {
+        if (selectedUser) {
+            setSelectedCalendarDay(new Date());
+            setCurrentCalendarMonth(new Date());
+        } else {
+            setSelectedCalendarDay(null);
+            setCurrentCalendarMonth(new Date());
+        }
+    }, [selectedUser]);
     
     const handleUserSelect = (label: string) => {
         const user = allUsers.find(u => `${u.firstName} ${u.lastName} (${u.empId})` === label);
         setSelectedUser(user || null);
         setUserInput(label);
     }
+
+    const handlePrevMonth = () => {
+        setCurrentCalendarMonth(prev => subMonths(prev, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentCalendarMonth(prev => addMonths(prev, 1));
+    };
+
+    const getOccupancyForDate = (date: Date, data: ProjectTimelineData[]) => {
+        const activeProjects: Array<{ id: string; name: string; color: string }> = [];
+        data.forEach((item, index) => {
+            const isPlanned = item.planned.some(p => {
+                const start = startOfDay(new Date(p.start));
+                const end = startOfDay(new Date(p.end));
+                const current = startOfDay(new Date(date));
+                return current >= start && current <= end;
+            });
+            if (isPlanned) {
+                activeProjects.push({
+                    id: item.project.id,
+                    name: item.project.name,
+                    color: COLORS[index % COLORS.length]
+                });
+            }
+        });
+        return activeProjects;
+    };
+
+    const getInitials = (firstName?: string, lastName?: string) => {
+        if (!firstName && !lastName) return '?';
+        return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+    };
+
+    const availabilityOutlook = useMemo(() => {
+        if (!timelineData.length) return null;
+        
+        const today = startOfDay(new Date());
+        const startOfSelectedMonth = startOfMonth(currentCalendarMonth);
+        const endOfSelectedMonth = endOfMonth(currentCalendarMonth);
+        
+        // 1. Calculate monthly utilization rate for selected month
+        const daysInMonthList = eachDayOfInterval({ start: startOfSelectedMonth, end: endOfSelectedMonth });
+        let occupiedDaysCount = 0;
+        
+        daysInMonthList.forEach(day => {
+            const activeProjects = getOccupancyForDate(day, timelineData);
+            if (activeProjects.length > 0) {
+                occupiedDaysCount++;
+            }
+        });
+        
+        const monthlyRate = (occupiedDaysCount / daysInMonthList.length) * 100;
+        
+        // 2. Determine today's status
+        const todayProjects = getOccupancyForDate(today, timelineData);
+        const isOccupiedToday = todayProjects.length > 0;
+        
+        // 3. Find next available date (from today onwards, look up to 90 days ahead)
+        let nextAvailable: Date | null = null;
+        let checkDate = new Date(today);
+        
+        for (let i = 0; i < 90; i++) {
+            const projects = getOccupancyForDate(checkDate, timelineData);
+            if (projects.length === 0) {
+                nextAvailable = new Date(checkDate);
+                break;
+            }
+            checkDate.setDate(checkDate.getDate() + 1);
+        }
+        
+        // 4. Find occupied until date (maximum end date of any active range starting today)
+        let occupiedUntil: Date | null = null;
+        let maxDateMs = 0;
+        
+        timelineData.forEach(item => {
+            item.planned.forEach(p => {
+                const endMs = p.end.getTime();
+                if (p.end >= today && endMs > maxDateMs) {
+                    maxDateMs = endMs;
+                    occupiedUntil = p.end;
+                }
+            });
+        });
+
+        // 5. Calculate active projects list in the viewed month
+        const activeProjectsInMonthSet = new Set<string>();
+        daysInMonthList.forEach(day => {
+            const activeProjects = getOccupancyForDate(day, timelineData);
+            activeProjects.forEach(proj => activeProjectsInMonthSet.add(proj.id));
+        });
+        
+        return {
+            monthlyRate: Math.round(monthlyRate),
+            isOccupiedToday,
+            todayProjects,
+            nextAvailable,
+            occupiedUntil,
+            activeProjectsCount: activeProjectsInMonthSet.size
+        };
+    }, [timelineData, currentCalendarMonth]);
+
+    const calendarDays = useMemo(() => {
+        const startOfCurMonth = startOfMonth(currentCalendarMonth);
+        const endOfCurMonth = endOfMonth(currentCalendarMonth);
+        const days = eachDayOfInterval({ start: startOfCurMonth, end: endOfCurMonth });
+        
+        const startDayIndex = startOfCurMonth.getDay();
+        const padCount = startDayIndex === 0 ? 6 : startDayIndex - 1;
+        const padding = Array.from({ length: padCount });
+        
+        return { days, padding };
+    }, [currentCalendarMonth]);
+
+    const selectedDayAssignments = useMemo(() => {
+        if (!selectedCalendarDay) return [];
+        return getOccupancyForDate(selectedCalendarDay, timelineData);
+    }, [selectedCalendarDay, timelineData]);
 
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -134,16 +295,23 @@ export default function UtilizationPage() {
                             placeholder="Search by name or employee ID..."
                             value={userInput}
                             onChange={(e) => {
-                                setUserInput(e.target.value);
-                                if (!e.target.value) setSelectedUser(null);
-                            }}
-                            onBlur={(e) => {
-                                if (!userOptions.some(opt => opt.label === e.target.value)) {
-                                    // If text doesn't match an option, clear selection
-                                    // but keep the text for user to see
+                                const val = e.target.value;
+                                setUserInput(val);
+                                if (!val) {
                                     setSelectedUser(null);
                                 } else {
-                                    handleUserSelect(e.target.value);
+                                    const matchingOption = userOptions.find(opt => opt.label === val);
+                                    if (matchingOption) {
+                                        handleUserSelect(val);
+                                    }
+                                }
+                            }}
+                            onBlur={(e) => {
+                                const val = e.target.value;
+                                if (!userOptions.some(opt => opt.label === val)) {
+                                    setSelectedUser(null);
+                                } else {
+                                    handleUserSelect(val);
                                 }
                             }}
                         />
@@ -154,24 +322,263 @@ export default function UtilizationPage() {
                 </CardContent>
             </Card>
             
-            <Card>
-                <CardContent className="p-4">
-                    {selectedUser ? (
-                        isLoading ? (
-                            <div>
-                                <Skeleton className="h-8 w-1/4 mb-4" />
+            {selectedUser ? (
+                isLoading ? (
+                    <Card>
+                        <CardContent className="p-8">
+                            <div className="space-y-4">
+                                <Skeleton className="h-8 w-1/4" />
                                 <Skeleton className="h-64 w-full" />
                             </div>
-                        ) : (
-                            <UtilizationGanttChart data={timelineData} />
-                        )
-                    ) : (
-                        <div className="text-center text-muted-foreground py-16">
-                            Please select a user to view their utilization timeline.
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="space-y-6">
+                        {/* Availability Outlook & Monthly Calendar Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Left: Outlook Card */}
+                            <Card className="lg:col-span-1 border-border bg-card">
+                                <CardHeader className="pb-3 border-b">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Activity className="h-5 w-5 text-primary" />
+                                        Availability Outlook
+                                    </CardTitle>
+                                    <CardDescription>Real-time occupancy status & monthly forecast</CardDescription>
+                                </CardHeader>
+                                <CardContent className="pt-6 space-y-6">
+                                    {/* User Micro Profile */}
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-10 w-10 border">
+                                            <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                                                {getInitials(selectedUser.firstName, selectedUser.lastName)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <h4 className="font-semibold text-sm">{selectedUser.firstName} {selectedUser.lastName}</h4>
+                                            <p className="text-xs text-muted-foreground font-mono">{selectedUser.empId} • {selectedUser.accessLevel}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Status Badge */}
+                                    <div className="space-y-2">
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Current Status</span>
+                                        {availabilityOutlook?.isOccupiedToday ? (
+                                            <Badge variant="outline" className="text-rose-700 border-rose-300 bg-rose-50 dark:text-rose-300 dark:border-rose-700 dark:bg-rose-950/20 py-1.5 px-3 w-full flex items-center justify-center gap-1.5">
+                                                <AlertCircle className="h-4 w-4" />
+                                                Occupied Today
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 dark:text-green-300 dark:border-green-700 dark:bg-green-950/20 py-1.5 px-3 w-full flex items-center justify-center gap-1.5">
+                                                <CheckCircle2 className="h-4 w-4" />
+                                                Available Today
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    {/* Statistics Metrics */}
+                                    <div className="grid grid-cols-2 gap-4 border-t border-b py-4">
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Monthly Utilization</span>
+                                            <span className="text-2xl font-bold flex items-center gap-1">
+                                                {availabilityOutlook?.monthlyRate}%
+                                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                                            </span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Active Projects</span>
+                                            <span className="text-2xl font-bold">{availabilityOutlook?.activeProjectsCount ?? 0}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Availability Details */}
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                <UserCheck className="h-4 w-4 text-emerald-500" />
+                                                Next Available
+                                            </span>
+                                            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                                {availabilityOutlook?.nextAvailable 
+                                                    ? isSameDay(availabilityOutlook.nextAvailable, new Date())
+                                                        ? 'Available Today'
+                                                        : format(availabilityOutlook.nextAvailable, 'MMM d, yyyy')
+                                                    : 'Fully Occupied'
+                                                }
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                <Clock className="h-4 w-4 text-amber-500" />
+                                                Occupied Until
+                                            </span>
+                                            <span className="font-medium text-amber-600 dark:text-amber-400">
+                                                {availabilityOutlook?.occupiedUntil 
+                                                    ? format(availabilityOutlook.occupiedUntil, 'MMM d, yyyy')
+                                                    : 'No Planned Tasks'
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Right: Calendar Grid Card */}
+                            <Card className="lg:col-span-2 border-border bg-card flex flex-col">
+                                <CardHeader className="pb-3 border-b flex flex-row items-center justify-between space-y-0">
+                                    <div>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <CalendarIcon className="h-5 w-5 text-primary" />
+                                            Availability Grid
+                                        </CardTitle>
+                                        <CardDescription>Daily occupancy map for {format(currentCalendarMonth, 'MMMM yyyy')}</CardDescription>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevMonth}>
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Badge variant="secondary" className="font-semibold text-xs py-1 px-3 min-w-[90px] text-center justify-center">
+                                            {format(currentCalendarMonth, 'MMM yyyy')}
+                                        </Badge>
+                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextMonth}>
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="pt-4 flex-1 flex flex-col gap-4">
+                                    {/* Calendar Weeks header */}
+                                    <div className="grid grid-cols-7 gap-1 text-center font-medium text-xs text-muted-foreground pb-1">
+                                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                                            <div key={day} className="py-1">{day}</div>
+                                        ))}
+                                    </div>
+
+                                    {/* Days Grid */}
+                                    <div className="grid grid-cols-7 gap-1 flex-1">
+                                        {/* Padding before startOfMonth */}
+                                        {calendarDays.padding.map((_, index) => (
+                                            <div key={`pad-${index}`} className="aspect-square bg-muted/20 dark:bg-muted/5 rounded border border-transparent" />
+                                        ))}
+
+                                        {/* Month days */}
+                                        {calendarDays.days.map((day) => {
+                                            const activeProjects = getOccupancyForDate(day, timelineData);
+                                            const isSelected = selectedCalendarDay && isSameDay(day, selectedCalendarDay);
+                                            const isToday = isSameDay(day, new Date());
+                                            
+                                            // Color schemes based on utilization level
+                                            let bgClass = "bg-background hover:bg-muted/50 dark:hover:bg-muted/20";
+                                            let borderClass = "border-border";
+                                            let textClass = "text-foreground";
+                                            let utilLabel = "0%";
+                                            
+                                            if (activeProjects.length === 1) {
+                                                bgClass = "bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/40";
+                                                borderClass = "border-indigo-200 dark:border-indigo-800";
+                                                textClass = "text-indigo-800 dark:text-indigo-300";
+                                                utilLabel = "100%";
+                                            } else if (activeProjects.length > 1) {
+                                                bgClass = "bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100/70 dark:hover:bg-rose-950/40";
+                                                borderClass = "border-rose-200 dark:border-rose-800";
+                                                textClass = "text-rose-800 dark:text-rose-300";
+                                                utilLabel = "Over";
+                                            }
+
+                                            if (isToday) {
+                                                borderClass = "border-primary ring-1 ring-primary";
+                                            }
+                                            if (isSelected) {
+                                                bgClass = "bg-primary text-primary-foreground hover:bg-primary/90";
+                                                borderClass = "border-primary shadow-sm";
+                                                textClass = "text-primary-foreground";
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={day.toISOString()}
+                                                    onClick={() => setSelectedCalendarDay(day)}
+                                                    className={cn(
+                                                        "aspect-square rounded border flex flex-col justify-between p-1 md:p-1.5 transition-all duration-200 cursor-pointer select-none text-left focus:outline-none relative group",
+                                                        bgClass,
+                                                        borderClass,
+                                                        textClass
+                                                    )}
+                                                >
+                                                    <span className="text-xs font-semibold">{format(day, 'd')}</span>
+                                                    <span className={cn(
+                                                        "text-[9px] md:text-[10px] font-bold block text-right mt-1 opacity-80",
+                                                        isSelected ? "text-primary-foreground" : "text-muted-foreground"
+                                                    )}>
+                                                        {utilLabel}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Daily Assignment Detail view */}
+                                    {selectedCalendarDay && (
+                                        <div className="border-t pt-3 mt-auto">
+                                            <div className="flex items-center gap-1.5 mb-2">
+                                                <Info className="h-4 w-4 text-muted-foreground" />
+                                                <h4 className="text-xs font-semibold text-muted-foreground">
+                                                    Assignments for {format(selectedCalendarDay, 'EEEE, MMMM d, yyyy')}
+                                                </h4>
+                                            </div>
+                                            {selectedDayAssignments.length === 0 ? (
+                                                <p className="text-xs text-muted-foreground italic">No assignments scheduled. The user is 100% available on this day.</p>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {selectedDayAssignments.map((proj) => {
+                                                        const allocationRate = Math.round(100 / selectedDayAssignments.length);
+                                                        return (
+                                                            <Badge 
+                                                                key={proj.id} 
+                                                                variant="outline" 
+                                                                className="flex items-center gap-1.5 text-xs py-1 px-2.5"
+                                                                style={{ borderColor: `${proj.color}40`, backgroundColor: `${proj.color}08` }}
+                                                            >
+                                                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: proj.color }} />
+                                                                <span className="font-medium text-foreground">{proj.name}</span>
+                                                                <span className="text-muted-foreground ml-1">({allocationRate}% Allocation)</span>
+                                                            </Badge>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </div>
-                    )}
-                </CardContent>
-            </Card>
+
+                        {/* Long-term Gantt Chart Timeline */}
+                        <Card className="border-border">
+                            <CardHeader className="pb-2 border-b">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Activity className="h-5 w-5 text-primary" />
+                                    Allocation Timeline (Gantt Chart)
+                                </CardTitle>
+                                <CardDescription>Gantt view of planned tasks and actual work logged</CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-4">
+                                <UtilizationGanttChart data={timelineData} />
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
+            ) : (
+                <Card>
+                    <CardContent className="p-16 flex flex-col items-center justify-center text-center">
+                        <div className="rounded-full bg-muted p-4 mb-4">
+                            <Briefcase className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">No User Selected</h3>
+                        <p className="text-muted-foreground max-w-sm">
+                            Select a team member above to visualize their current month calendar, availability metrics, and project allocation.
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

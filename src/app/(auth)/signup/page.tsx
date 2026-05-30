@@ -15,13 +15,12 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
 import Keycloak from 'keycloak-js';
 
-const accessLevels = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
+
 
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [accessLevel, setAccessLevel] = useState<string>('Team Member');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +82,6 @@ export default function SignupPage() {
             email: emailInput,
             phone: 'N/A',
             experience: 0,
-            accessLevel: accessLevel,
             avatar: 'https://placehold.co/40x40.png',
             isDeleted: false,
             isEnabled: false,
@@ -103,7 +101,6 @@ export default function SignupPage() {
         localStorage.setItem('projectflow_user', JSON.stringify({
           name: `${firstName} ${lastName}`.trim(),
           email: emailInput,
-          accessLevel: accessLevel,
           empId,
           uid: user.id,
           authProvider: 'supabase',
@@ -142,7 +139,6 @@ export default function SignupPage() {
             email: emailInput,
             phone: 'N/A',
             experience: 0,
-            accessLevel: accessLevel,
             avatar: 'https://placehold.co/40x40.png',
             isDeleted: false,
             isEnabled: false,
@@ -156,7 +152,6 @@ export default function SignupPage() {
         localStorage.setItem('projectflow_user', JSON.stringify({
           name: `${firstName} ${lastName}`.trim(),
           email: emailInput,
-          accessLevel: accessLevel,
           empId,
           uid: user.uid,
           authProvider: 'firebase',
@@ -242,20 +237,7 @@ export default function SignupPage() {
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="accessLevel">Access Level</Label>
-                <select
-                  id="accessLevel"
-                  value={accessLevel}
-                  onChange={(e) => setAccessLevel(e.target.value)}
-                  className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center' }}
-                >
-                  {accessLevels.map(level => (
-                    <option key={level} value={level}>{level}</option>
-                  ))}
-                </select>
-              </div>
+
             </>
           )}
         </CardContent>
