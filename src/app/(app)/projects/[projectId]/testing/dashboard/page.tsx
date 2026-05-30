@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +16,7 @@ import {
 import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { eachDayOfInterval, format, parseISO, startOfDay } from 'date-fns';
-import { Story, BugSeverity } from '@/types';
+import { Story, BugSeverity, TestPlanTestCase } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
@@ -131,43 +131,39 @@ const storyCoverageConfig = {
 } satisfies ChartConfig;
 
 export default function TestingDashboard() {
-  const { testCases, stories, testPlans } = useProject();
+  const { testCases, stories, testPlans, testPlanTestCases, subscribeToTestPlanTestCases } = useProject();
   const [selectedTestPlanId, setSelectedTestPlanId] = useState('all');
 
+  // Subscribe to all test plan subcollections for dashboard metrics
+  useEffect(() => {
+    const unsubscribers = testPlans.map(plan => subscribeToTestPlanTestCases(plan.id));
+    return () => unsubscribers.forEach(unsub => unsub());
+  }, [testPlans, subscribeToTestPlanTestCases]);
+
+  // Get all plan test cases (flattened) or filtered by selected plan
+  const allPlanTestCases = useMemo((): TestPlanTestCase[] => {
+    if (selectedTestPlanId !== 'all') {
+      return testPlanTestCases[selectedTestPlanId] || [];
+    }
+    return Object.values(testPlanTestCases).flat();
+  }, [selectedTestPlanId, testPlanTestCases]);
+
   const filteredSummaryData = useMemo(() => {
-    let filteredTestCases = testCases;
     let relatedBugs: Story[] = [];
 
     if (selectedTestPlanId !== 'all') {
-      const plan = testPlans.find(p => p.id === selectedTestPlanId);
-      const planTCIds = new Set(plan?.testCaseIds ?? []);
-      filteredTestCases = testCases.filter(tc => planTCIds.has(tc.id));
-    }
-    const testCaseIdsInView = new Set(filteredTestCases.map(tc => tc.id));
-    if (selectedTestPlanId !== 'all') {
+      const planTCOrigIds = new Set(allPlanTestCases.map(tc => tc.originalTestCaseId));
       relatedBugs = stories.filter(story =>
         story.itemType === 'Bug' &&
         (story.foundInTestPlanId === selectedTestPlanId ||
-          (story.relatedTestCaseId && testCaseIdsInView.has(story.relatedTestCaseId)))
+          (story.relatedTestCaseId && planTCOrigIds.has(story.relatedTestCaseId)))
       );
     } else {
       relatedBugs = stories.filter(story => story.itemType === 'Bug');
     }
 
-    // Test Case Metrics
-    let statusesToCount: string[] = [];
-    if (selectedTestPlanId !== 'all') {
-      filteredTestCases.forEach(tc => {
-        const exec = tc.executions?.find(e => e.testPlanId === selectedTestPlanId);
-        if (exec) statusesToCount.push(exec.status || 'Not Run');
-      });
-    } else {
-      filteredTestCases.forEach(tc => {
-        if (tc.executions) {
-          tc.executions.forEach(exec => statusesToCount.push(exec.status || 'Not Run'));
-        }
-      });
-    }
+    // Test Case Metrics from plan copies
+    const statusesToCount: string[] = allPlanTestCases.map(tc => tc.status || 'Not Run');
 
     const testCaseStatusData = Object.entries(
       statusesToCount.reduce((acc, status) => {
@@ -201,78 +197,57 @@ export default function TestingDashboard() {
       bugStatusData,
       openBugsBySeverityData,
     };
-  }, [testCases, stories, selectedTestPlanId, testPlans]);
+  }, [allPlanTestCases, stories, selectedTestPlanId]);
 
   const dailyViewData = useMemo(() => {
-    let filteredTestCases = testCases;
     let relatedBugs: Story[] = [];
 
     if (selectedTestPlanId !== 'all') {
-      const plan = testPlans.find(p => p.id === selectedTestPlanId);
-      const planTCIds = new Set(plan?.testCaseIds ?? []);
-      filteredTestCases = testCases.filter(tc => planTCIds.has(tc.id));
-    }
-    const testCaseIdsInView = new Set(filteredTestCases.map(tc => tc.id));
-    relatedBugs = selectedTestPlanId === 'all'
-      ? stories.filter(story => story.itemType === 'Bug')
-      : stories.filter(story =>
+      const planTCOrigIds = new Set(allPlanTestCases.map(tc => tc.originalTestCaseId));
+      relatedBugs = stories.filter(story =>
         story.itemType === 'Bug' &&
         (story.foundInTestPlanId === selectedTestPlanId ||
-          (story.relatedTestCaseId && testCaseIdsInView.has(story.relatedTestCaseId)))
+          (story.relatedTestCaseId && planTCOrigIds.has(story.relatedTestCaseId)))
       );
+    } else {
+      relatedBugs = stories.filter(story => story.itemType === 'Bug');
+    }
 
-    const tcExecutionsInView: any[] = [];
-    filteredTestCases.forEach(tc => {
-      if (selectedTestPlanId !== 'all') {
-        const exec = tc.executions?.find(e => e.testPlanId === selectedTestPlanId);
-        if (exec) tcExecutionsInView.push(exec);
-      } else {
-        if (tc.executions) tcExecutionsInView.push(...tc.executions);
+    // Derive date range from test plan boundaries, not from data points
+    let minDate: Date | null = null;
+    let maxDate: Date | null = null;
+
+    if (selectedTestPlanId !== 'all') {
+      const plan = testPlans.find(p => p.id === selectedTestPlanId);
+      if (plan?.startDate && plan?.endDate) {
+        minDate = startOfDay(parseISO(plan.startDate));
+        maxDate = startOfDay(parseISO(plan.endDate));
       }
-    });
-
-    const plannedDates: { id: string; date: string }[] = [];
-    filteredTestCases.forEach(tc => {
-      const plans = testPlans.filter(p => p.testCaseIds?.includes(tc.id));
-      if (plans.length > 0) {
-        const earliestPlan = plans.reduce((earliest, current) => {
-          return new Date(current.startDate) < new Date(earliest.startDate) ? current : earliest;
-        }, plans[0]);
-        plannedDates.push({ id: tc.id, date: earliestPlan.startDate });
-      } else {
-        const execs = tc.executions || [];
-        if (execs.length > 0 && execs[0].executionDate) {
-          plannedDates.push({ id: tc.id, date: execs[0].executionDate });
+    } else {
+      // Use earliest start and latest end across all test plans
+      testPlans.forEach(plan => {
+        if (plan.startDate) {
+          const d = startOfDay(parseISO(plan.startDate));
+          if (!minDate || d < minDate) minDate = d;
         }
-      }
-    });
+        if (plan.endDate) {
+          const d = startOfDay(parseISO(plan.endDate));
+          if (!maxDate || d > maxDate) maxDate = d;
+        }
+      });
+    }
 
-    const allDates: Date[] = [];
-    plannedDates.forEach(pd => {
-      allDates.push(startOfDay(parseISO(pd.date)));
-    });
-    tcExecutionsInView.forEach(exec => {
-      if (exec.executionDate) allDates.push(startOfDay(parseISO(exec.executionDate)));
-      if (exec.closeDate) allDates.push(startOfDay(parseISO(exec.closeDate)));
-    });
-    relatedBugs.forEach(bug => {
-      if (bug.createdAt) allDates.push(startOfDay(parseISO(bug.createdAt)));
-      if (bug.closedAt) allDates.push(startOfDay(parseISO(bug.closedAt)));
-    });
+    if (!minDate || !maxDate) return { tcData: [], bugData: [] };
 
-    if (allDates.length === 0) return { tcData: [], bugData: [] };
-
-    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
-    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
     const dateInterval = eachDayOfInterval({ start: minDate, end: maxDate });
 
     const tcData = dateInterval.map(date => {
       const dateStr = format(date, 'yyyy-MM-dd');
       return {
         date: format(date, 'MMM d'),
-        planned: plannedDates.filter(pd => format(parseISO(pd.date), 'yyyy-MM-dd') === dateStr).length,
-        executed: tcExecutionsInView.filter(exec => exec.executionDate && format(parseISO(exec.executionDate), 'yyyy-MM-dd') === dateStr).length,
-        closed: tcExecutionsInView.filter(exec => exec.closeDate && format(parseISO(exec.closeDate), 'yyyy-MM-dd') === dateStr).length,
+        planned: allPlanTestCases.filter(tc => tc.executionDate && format(parseISO(tc.executionDate), 'yyyy-MM-dd') === dateStr).length,
+        executed: allPlanTestCases.filter(tc => tc.executionDate && tc.status !== 'Not Run' && format(parseISO(tc.executionDate), 'yyyy-MM-dd') === dateStr).length,
+        closed: allPlanTestCases.filter(tc => tc.closeDate && format(parseISO(tc.closeDate), 'yyyy-MM-dd') === dateStr).length,
       };
     });
 
@@ -287,7 +262,7 @@ export default function TestingDashboard() {
 
     return { tcData, bugData };
 
-  }, [testCases, stories, selectedTestPlanId, testPlans]);
+  }, [allPlanTestCases, stories, selectedTestPlanId, testPlans]);
 
   const sortedTestPlansForLeakage = useMemo(() => {
     return [...testPlans].sort((a, b) => {

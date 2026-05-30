@@ -95,15 +95,24 @@ export type TestPlan = {
   sprintId?: string;
   releaseId?: string;
   environmentId?: string;
-  testCaseIds?: string[]; // IDs of test cases included in this plan
+  testCaseIds?: string[]; // Legacy: kept for migration only
 };
 
-export type TestExecution = {
-  testPlanId: string;
-  assigneeId?: string;
+export type TestPlanTestCase = {
+  id: string;                    // Firestore doc ID (within the plan subcollection)
+  originalTestCaseId: string;    // Reference back to the backlog TestCase
+  testCaseId: string;            // Human-readable ID (e.g. "TC-5", copied from original)
+  title: string;
+  type: TestCaseType;
+  description: string;
+  expectedResult: string;
+  storyId?: string;
+  releaseId?: string;
+  sprintId?: string;
   status: TestCaseStatus;
-  executionDate?: string; // ISO string for the date part
-  closeDate?: string; // ISO string for the date part
+  assigneeId?: string;
+  executionDate?: string;        // ISO string
+  closeDate?: string;            // Auto-set when status = 'Passed'
   statusHistory?: StatusHistoryItem[];
 };
 
@@ -119,7 +128,6 @@ export type TestCase = {
   sprintId?: string;
   isDeleted?: boolean;
   deletedAt?: string;
-  executions?: TestExecution[];
 };
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';

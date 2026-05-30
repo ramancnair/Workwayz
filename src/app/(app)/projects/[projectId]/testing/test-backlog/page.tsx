@@ -41,7 +41,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns } from 'lucide-react';
-import { type TestCase, type TestCaseStatus, type TestCaseType, type StatusHistoryItem, type Story } from '@/types';
+import { type TestCase, type TestCaseStatus, type TestCaseType, type Story } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -65,7 +65,6 @@ const testCaseFormSchema = z.object({
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
-  testPlanIds: z.array(z.string()).optional(),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -79,7 +78,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
 const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
-type ColumnId = 'testCaseId' | 'title' | 'type' | 'storyId' | 'sprintId' | 'releaseId' | 'testPlanId';
+type ColumnId = 'testCaseId' | 'title' | 'type' | 'storyId' | 'sprintId' | 'releaseId';
 
 const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
     testCaseId: { label: 'ID', defaultVisible: true },
@@ -88,12 +87,11 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     storyId: { label: 'Related Story', defaultVisible: false },
     sprintId: { label: 'Sprint', defaultVisible: true },
     releaseId: { label: 'Release', defaultVisible: true },
-    testPlanId: { label: 'Test Plans', defaultVisible: true },
 };
 
 
 export default function TestBacklogPage() {
-  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases, testPlans, updateTestPlan } = useProject();
+  const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
@@ -273,7 +271,6 @@ export default function TestBacklogPage() {
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
-            testPlanIds: editingTestCase.executions?.map(e => e.testPlanId) ?? testPlans.map(p => p.id),
           });
         } else {
           setRelatedStoryInputText('');
@@ -285,11 +282,10 @@ export default function TestBacklogPage() {
             storyId: '',
             releaseId: 'unassigned',
             sprintId: 'backlog',
-            testPlanIds: testPlans.map(p => p.id), // default: all plans checked
           });
         }
     }
-  }, [isDialogOpen, editingTestCase, form, storyOptions, testPlans]);
+  }, [isDialogOpen, editingTestCase, form, storyOptions]);
 
   const handleDialogOpen = (testCase: TestCase | null) => {
     setEditingTestCase(testCase);
@@ -366,31 +362,9 @@ export default function TestBacklogPage() {
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
     };
 
-    const selectedPlanIds = values.testPlanIds ?? [];
-    let updatedExecutions = [...(editingTestCase?.executions || [])];
-    updatedExecutions = updatedExecutions.filter(ex => selectedPlanIds.includes(ex.testPlanId));
-    selectedPlanIds.forEach(planId => {
-      if (!updatedExecutions.find(ex => ex.testPlanId === planId)) {
-         updatedExecutions.push({ testPlanId: planId, status: 'Not Run' });
-      }
-    });
-
-    tcData.executions = updatedExecutions;
-
     let success = false;
     if (editingTestCase) {
-      const planUpdates = testPlans.map(plan => {
-        const alreadyIn = plan.testCaseIds?.includes(editingTestCase.id) ?? false;
-        const shouldBeIn = selectedPlanIds.includes(plan.id);
-        if (shouldBeIn && !alreadyIn) {
-          return updateTestPlan(plan.id, { testCaseIds: [...(plan.testCaseIds ?? []), editingTestCase.id] });
-        } else if (!shouldBeIn && alreadyIn) {
-          return updateTestPlan(plan.id, { testCaseIds: (plan.testCaseIds ?? []).filter(id => id !== editingTestCase.id) });
-        }
-        return Promise.resolve(true);
-      });
       success = await updateTestCase(editingTestCase.id, tcData as any);
-      await Promise.all(planUpdates);
     } else {
       success = await addTestCase(tcData as any);
     }
@@ -527,7 +501,6 @@ export default function TestBacklogPage() {
                 {columnVisibility.storyId && <SortableHeader columnId="storyId">Story</SortableHeader>}
                 {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
                 {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
-                {columnVisibility.testPlanId && <SortableHeader columnId="testPlanId">Test Plans</SortableHeader>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -559,13 +532,6 @@ export default function TestBacklogPage() {
                         </TableCell>}
                         {columnVisibility.sprintId && <TableCell>{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>}
                         {columnVisibility.releaseId && <TableCell>{release?.releaseId || 'N/A'}</TableCell>}
-                        {columnVisibility.testPlanId && (
-                          <TableCell>
-                            {tc.executions && tc.executions.length > 0
-                              ? tc.executions.map(e => testPlans.find(p => p.id === e.testPlanId)?.testPlanId).filter(Boolean).join(', ')
-                              : '—'}
-                          </TableCell>
-                        )}
                         <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
                             <Edit className="h-4 w-4" />
@@ -715,43 +681,6 @@ export default function TestBacklogPage() {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                      </div>
-                      <div className="grid grid-cols-1 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="testPlanIds"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Test Plans</FormLabel>
-                                <div className="border rounded-md p-3 space-y-2 max-h-36 overflow-y-auto">
-                                  {testPlans.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground">No test plans available.</p>
-                                  ) : (
-                                    testPlans.map(plan => (
-                                      <div key={plan.id} className="flex items-center space-x-2">
-                                        <Checkbox
-                                          id={`tc-tp-${plan.id}`}
-                                          checked={(field.value ?? []).includes(plan.id)}
-                                          onCheckedChange={(checked) => {
-                                            const current = field.value ?? [];
-                                            field.onChange(
-                                              checked
-                                                ? [...current, plan.id]
-                                                : current.filter(id => id !== plan.id)
-                                            );
-                                          }}
-                                        />
-                                        <label htmlFor={`tc-tp-${plan.id}`} className="text-sm cursor-pointer">
-                                          [{plan.testPlanId}] {plan.name}
-                                        </label>
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
                                 <FormMessage />
                               </FormItem>
                             )}

@@ -21,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, DependencyType, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, DependencyType, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan, TestPlanTestCase } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { usePathname } from 'next/navigation';
@@ -72,6 +72,7 @@ interface ProjectContextType {
   environments: Environment[];
   codeRepositories: CodeRepository[];
   testPlans: TestPlan[];
+  testPlanTestCases: Record<string, TestPlanTestCase[]>;
   testDate: Date | null;
   setTestDate: (date: Date | null) => void;
   
@@ -117,6 +118,11 @@ interface ProjectContextType {
   addTestPlan: (plan: Omit<TestPlan, 'id' | 'testPlanId'>) => Promise<boolean>;
   updateTestPlan: (id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId'>>) => Promise<boolean>;
   deleteTestPlan: (id: string, deleteTestCases?: boolean) => Promise<boolean>;
+  // Test Plan Test Case actions (copies)
+  addTestCasesToPlan: (planId: string, testCaseIds: string[], executionDate?: string) => Promise<boolean>;
+  updateTestPlanTestCase: (planId: string, tcId: string, data: Partial<Omit<TestPlanTestCase, 'id' | 'originalTestCaseId' | 'testCaseId'>>) => Promise<boolean>;
+  removeTestCasesFromPlan: (planId: string, tcIds: string[]) => Promise<boolean>;
+  subscribeToTestPlanTestCases: (planId: string) => () => void;
   
   // Bug actions
 
@@ -346,6 +352,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
   const [testPlans, setTestPlans] = useState<TestPlan[]>([]);
+  const [testPlanTestCases, setTestPlanTestCases] = useState<Record<string, TestPlanTestCase[]>>({});
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [worklogSubmissions, setWorklogSubmissions] = useState<WorklogSubmission[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
@@ -1315,12 +1322,10 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
                 .map((id: string) => parseInt(id.replace('TC-', ''), 10) || 0)
             ) + 1
             : 1;
-        const now = (testDate || new Date()).toISOString();
         const payload = { 
             ...testCase, 
             testCaseId: `TC-${newIdNumber}`, 
             isDeleted: false,
-            executions: testCase.executions || [] 
         };
         await addDoc(collection(db, 'projects', projectId, 'testCases'), sanitizeForFirestore(payload));
         return true;
@@ -1361,7 +1366,6 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
             storyId: relatedStory?.id,
             sprintId: relatedStory?.sprintId || undefined,
             releaseId: getRandomItem(projectReleases)?.id || undefined,
-            executions: [],
             isDeleted: false
           };
           
@@ -1383,34 +1387,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     if (!db || !projectId) return false;
     try {
       const testCaseRef = doc(db, 'projects', projectId, 'testCases', testCaseId);
-      const testCaseToUpdate = testCases.find(tc => tc.id === testCaseId);
-      
-      if (!testCaseToUpdate) {
-        console.error("Test Case not found", testCaseId);
-        return false;
-      }
-      
-      const payload: any = { ...data };
-      
-      if (data.executions && testCaseToUpdate.executions) {
-        payload.executions = data.executions.map(newExec => {
-          const oldExec = testCaseToUpdate.executions?.find(e => e.testPlanId === newExec.testPlanId);
-          if (oldExec && newExec.status && newExec.status !== oldExec.status) {
-            const newHistoryEntry: StatusHistoryItem = {
-              fromStatus: oldExec.status,
-              toStatus: newExec.status,
-              date: (testDate || new Date()).toISOString(),
-            };
-            return {
-              ...newExec,
-              statusHistory: [...(oldExec.statusHistory || []), newHistoryEntry]
-            };
-          }
-          return newExec;
-        });
-      }
-      
-      await updateDoc(testCaseRef, sanitizeForFirestore(payload));
+      await updateDoc(testCaseRef, sanitizeForFirestore(data));
       return true;
     } catch (e: any) {
       console.error("Firebase Error: Failed to update test case.", { id: testCaseId, code: e.code, message: e.message, fullError: e });
@@ -1470,31 +1447,142 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     }
   };
 
-  const deleteTestPlan = async (id: string, deleteTestCases: boolean = false): Promise<boolean> => {
+  const deleteTestPlan = async (id: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
       // Delete the plan document
       batch.delete(doc(db, 'projects', projectId, 'testPlans', id));
 
-      // Remove this plan's ID from all TCs that reference it in their executions
-      const affectedTCs = testCases.filter(tc => (tc.executions || []).some(e => e.testPlanId === id));
-      affectedTCs.forEach(tc => {
-        const tcRef = doc(db, 'projects', projectId, 'testCases', tc.id);
-        if (deleteTestCases) {
-          batch.update(tcRef, { isDeleted: true, deletedAt: Timestamp.now() });
-        } else {
-          const remainingExecs = (tc.executions || []).filter(e => e.testPlanId !== id);
-          batch.update(tcRef, { executions: remainingExecs });
-        }
+      // Delete all test case copies in this plan's subcollection
+      const planTCsSnapshot = await getDocs(collection(db, 'projects', projectId, 'testPlans', id, 'testCases'));
+      planTCsSnapshot.docs.forEach(tcDoc => {
+        batch.delete(tcDoc.ref);
       });
+
       await batch.commit();
+      // Clean up local state
+      setTestPlanTestCases(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       return true;
     } catch (e) {
       console.error("Firebase Error: Failed to delete test plan.", e);
       return false;
     }
   };
+
+  // Test Plan Test Case Actions (copies in subcollection)
+  const addTestCasesToPlan = async (planId: string, testCaseIds: string[], executionDate?: string): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const batch = writeBatch(db);
+      const existingPlanTCs = testPlanTestCases[planId] || [];
+      const existingOrigIds = new Set(existingPlanTCs.map(tc => tc.originalTestCaseId));
+
+      for (const tcId of testCaseIds) {
+        if (existingOrigIds.has(tcId)) continue; // Already in plan
+        const originalTC = testCases.find(tc => tc.id === tcId);
+        if (!originalTC) continue;
+
+        const newRef = doc(collection(db, 'projects', projectId, 'testPlans', planId, 'testCases'));
+        const copy: Omit<TestPlanTestCase, 'id'> = {
+          originalTestCaseId: originalTC.id,
+          testCaseId: originalTC.testCaseId,
+          title: originalTC.title,
+          type: originalTC.type,
+          description: originalTC.description,
+          expectedResult: originalTC.expectedResult,
+          storyId: originalTC.storyId,
+          releaseId: originalTC.releaseId,
+          sprintId: originalTC.sprintId,
+          status: 'Not Run',
+          executionDate: executionDate,
+        };
+        batch.set(newRef, sanitizeForFirestore(copy));
+      }
+
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to add test cases to plan.", e);
+      return false;
+    }
+  };
+
+  const updateTestPlanTestCase = async (planId: string, tcId: string, data: Partial<Omit<TestPlanTestCase, 'id' | 'originalTestCaseId' | 'testCaseId'>>): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const tcRef = doc(db, 'projects', projectId, 'testPlans', planId, 'testCases', tcId);
+      const existingTC = (testPlanTestCases[planId] || []).find(tc => tc.id === tcId);
+      
+      const payload: any = { ...data };
+
+      // Auto-manage closeDate based on status
+      if (data.status === 'Passed') {
+        payload.closeDate = (testDate || new Date()).toISOString();
+      } else if (data.status && data.status !== 'Passed') {
+        payload.closeDate = null; // Clear close date when not Passed
+      }
+
+      // Track status history
+      if (existingTC && data.status && data.status !== existingTC.status) {
+        const newHistoryEntry: StatusHistoryItem = {
+          fromStatus: existingTC.status,
+          toStatus: data.status,
+          date: (testDate || new Date()).toISOString(),
+        };
+        payload.statusHistory = [...(existingTC.statusHistory || []), newHistoryEntry];
+      }
+
+      await updateDoc(tcRef, sanitizeForFirestore(payload));
+      return true;
+    } catch (e: any) {
+      console.error("Firebase Error: Failed to update test plan test case.", { planId, tcId, code: e.code, message: e.message });
+      return false;
+    }
+  };
+
+  const removeTestCasesFromPlan = async (planId: string, tcIds: string[]): Promise<boolean> => {
+    if (!db || !projectId) return false;
+    try {
+      const batch = writeBatch(db);
+      for (const tcId of tcIds) {
+        batch.delete(doc(db, 'projects', projectId, 'testPlans', planId, 'testCases', tcId));
+      }
+      await batch.commit();
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to remove test cases from plan.", e);
+      return false;
+    }
+  };
+
+  const subscribeToTestPlanTestCases = useCallback((planId: string): (() => void) => {
+    if (!db || !projectId || !planId) return () => {};
+    const colRef = collection(db, 'projects', projectId, 'testPlans', planId, 'testCases');
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
+      const data = snapshot.docs.map(d => {
+        const docData = d.data();
+        // Convert timestamps
+        ['executionDate', 'closeDate'].forEach(f => {
+          if (docData[f]) docData[f] = convertTimestamp(docData[f]);
+        });
+        if (docData.statusHistory) {
+          docData.statusHistory = docData.statusHistory.map((sh: any) => ({
+            ...sh,
+            date: convertTimestamp(sh.date),
+          }));
+        }
+        return { id: d.id, ...docData } as TestPlanTestCase;
+      });
+      setTestPlanTestCases(prev => ({ ...prev, [planId]: data }));
+    });
+    return unsubscribe;
+  }, [db, projectId]);
 
   // Risk Actions
   const addRisk = async (risk: Omit<Risk, 'id' | 'riskId'>): Promise<boolean> => {
@@ -2519,6 +2607,11 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
     addTestPlan,
     updateTestPlan,
     deleteTestPlan,
+    testPlanTestCases,
+    addTestCasesToPlan,
+    updateTestPlanTestCase,
+    removeTestCasesFromPlan,
+    subscribeToTestPlanTestCases,
 
     addRisk,
     updateRisk,

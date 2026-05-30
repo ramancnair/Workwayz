@@ -572,7 +572,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const prodStart = addDays(uatEnd, 1);
   const prodEnd = addDays(prodStart, 2);
 
-  const tpRefs: { id: string; name: string; start: Date; end: Date }[] = [];
+  const tpRefs: { id: string; name: string; start: Date; end: Date; ref: ReturnType<typeof doc> }[] = [];
 
   // SIT Plan
   const sitTpRef = doc(col('testPlans'));
@@ -583,9 +583,8 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     environmentId: envData.find(e => e.name === 'SIT')?.id,
     startDate: Timestamp.fromDate(testingStart),
     endDate: Timestamp.fromDate(sitEnd),
-    testCaseIds: [],
   });
-  tpRefs.push({ id: sitTpRef.id, name: 'SIT', start: testingStart, end: sitEnd });
+  tpRefs.push({ id: sitTpRef.id, name: 'SIT', start: testingStart, end: sitEnd, ref: sitTpRef });
 
   // UAT Plan
   const uatTpRef = doc(col('testPlans'));
@@ -596,9 +595,8 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     environmentId: envData.find(e => e.name === 'UAT')?.id,
     startDate: Timestamp.fromDate(uatStart),
     endDate: Timestamp.fromDate(uatEnd),
-    testCaseIds: [],
   });
-  tpRefs.push({ id: uatTpRef.id, name: 'UAT', start: uatStart, end: uatEnd });
+  tpRefs.push({ id: uatTpRef.id, name: 'UAT', start: uatStart, end: uatEnd, ref: uatTpRef });
 
   // Prod Plan
   const prodTpRef = doc(col('testPlans'));
@@ -609,52 +607,57 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     environmentId: envData.find(e => e.name === 'Prod')?.id,
     startDate: Timestamp.fromDate(prodStart),
     endDate: Timestamp.fromDate(prodEnd),
-    testCaseIds: [],
   });
-  tpRefs.push({ id: prodTpRef.id, name: 'Prod', start: prodStart, end: prodEnd });
+  tpRefs.push({ id: prodTpRef.id, name: 'Prod', start: prodStart, end: prodEnd, ref: prodTpRef });
 
   let tcCounter = 1;
-  const tpTestCaseIds: string[] = [];
 
   storyRefObjs.forEach(st => {
     const tcRef = doc(col('testCases'));
-    tpTestCaseIds.push(tcRef.id);
+    const tcId = `TC-${tcCounter++}`;
+    const tcTitle = `Test: ${st.storyId} – validate expected behaviour`;
+    const tcType = rand(['Functional', 'Non-functional']);
+    const tcDesc = `Verify that ${st.storyId} meets all acceptance criteria.`;
+    const tcExpectedResult = 'The feature behaves as per requirements without errors.';
 
-    // Create executions for all 3 plans
-    const executions = tpRefs.map(tp => {
-      const generatedStatus = rand(['Passed', 'Passed', 'Failed', 'Not Run']); // Weight towards passed for realism
-      
-      const planDays = differenceInDays(tp.end, tp.start);
-      const randomDay = randInt(0, Math.max(0, planDays));
-      const execDateStr = addDays(tp.start, randomDay).toISOString();
-
-      return clean({
-        testPlanId: tp.id,
-        status: generatedStatus,
-        assigneeId: testerUserId,
-        statusHistory: [{ fromStatus: 'Not Run', toStatus: generatedStatus, date: execDateStr }],
-        executionDate: generatedStatus !== 'Not Run' ? execDateStr : undefined,
-        closeDate: (generatedStatus === 'Passed' || generatedStatus === 'Failed') ? execDateStr : undefined,
-      });
-    });
-
+    // Create the backlog test case (no executions field)
     batch.set(tcRef, clean({
-      testCaseId: `TC-${tcCounter++}`,
-      title: `Test: ${st.storyId} – validate expected behaviour`,
-      type: rand(['Functional', 'Non-functional']),
-      description: `Verify that ${st.storyId} meets all acceptance criteria.`,
-      expectedResult: 'The feature behaves as per requirements without errors.',
-      executions,
+      testCaseId: tcId,
+      title: tcTitle,
+      type: tcType,
+      description: tcDesc,
+      expectedResult: tcExpectedResult,
       storyId: st.id,
       sprintId: st.sprintId,
       isDeleted: false,
       deletedAt: null,
     }));
-  });
 
-  // Update all plans with the same test case IDs
-  tpRefs.forEach(tp => {
-    batch.update(doc(col('testPlans'), tp.id), { testCaseIds: tpTestCaseIds });
+    // Create a copy in each test plan's subcollection
+    tpRefs.forEach(tp => {
+      const planTcRef = doc(collection(db, 'projects', projectId, 'testPlans', tp.id, 'testCases'));
+      const generatedStatus = rand(['Passed', 'Passed', 'Failed', 'Not Run']);
+      
+      const planDays = differenceInDays(tp.end, tp.start);
+      const randomDay = randInt(0, Math.max(0, planDays));
+      const execDateStr = addDays(tp.start, randomDay).toISOString();
+
+      batch.set(planTcRef, clean({
+        originalTestCaseId: tcRef.id,
+        testCaseId: tcId,
+        title: tcTitle,
+        type: tcType,
+        description: tcDesc,
+        expectedResult: tcExpectedResult,
+        storyId: st.id,
+        sprintId: st.sprintId,
+        status: generatedStatus,
+        assigneeId: testerUserId,
+        statusHistory: [{ fromStatus: 'Not Run', toStatus: generatedStatus, date: execDateStr }],
+        executionDate: generatedStatus !== 'Not Run' ? execDateStr : undefined,
+        closeDate: generatedStatus === 'Passed' ? execDateStr : undefined,
+      }));
+    });
   });
 
   // ── 12. Bugs (30-50: 50% SIT, 35% UAT, 15% Prod) ───────────────────────────

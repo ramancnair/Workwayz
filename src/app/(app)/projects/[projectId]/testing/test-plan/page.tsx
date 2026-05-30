@@ -21,7 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown } from 'lucide-react';
-import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan } from '@/types';
+import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan, TestPlanTestCase } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import { format, eachDayOfInterval, parseISO, addDays, subDays, isSameDay } from 'date-fns';
@@ -77,12 +77,7 @@ const testCaseFormSchema = z.object({
   expectedResult: z.string().min(1, 'Expected result is required.'),
   status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
   assigneeId: z.string().optional(),
-  storyId: z.string().optional(),
-  releaseId: z.string().optional(),
-  sprintId: z.string().optional(),
-  testPlanIds: z.array(z.string()).optional(),
   executionDate: z.string().optional(),
-  closeDate: z.string().optional(),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -102,7 +97,6 @@ export default function TestPlanPage() {
   const {
     testCases,
     addTestPlan,
-    updateTestCase,
     testPlans,
     sprints,
     releasesAndMilestones,
@@ -111,18 +105,21 @@ export default function TestPlanPage() {
     environments,
     updateTestPlan,
     deleteTestPlan,
+    testPlanTestCases,
+    addTestCasesToPlan,
+    updateTestPlanTestCase,
+    removeTestCasesFromPlan,
+    subscribeToTestPlanTestCases,
   } = useProject();
   const { toast } = useToast();
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const [isTestCaseDialogOpen, setIsTestCaseDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<TestPlan | null>(null);
-  const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
+  const [editingTestCase, setEditingTestCase] = useState<TestPlanTestCase | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<TestPlan | null>(null);
-  const [deleteTestCasesWithPlan, setDeleteTestCasesWithPlan] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
   const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
-  const [relatedStoryInputText, setRelatedStoryInputText] = useState('');
   const [currentExecutionDay, setCurrentExecutionDay] = useState<Date | null>(null);
   
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
@@ -174,6 +171,13 @@ export default function TestPlanPage() {
     }
   }, [testPlans, selectedPlanId]);
 
+  // Subscribe to test plan test cases when selected plan changes
+  useEffect(() => {
+    if (!selectedPlanId) return;
+    const unsubscribe = subscribeToTestPlanTestCases(selectedPlanId);
+    return () => unsubscribe();
+  }, [selectedPlanId, subscribeToTestPlanTestCases]);
+
    useEffect(() => {
     if (selectedPlan && selectedPlan.startDate) {
       setCurrentExecutionDay(parseISO(selectedPlan.startDate));
@@ -206,31 +210,19 @@ export default function TestPlanPage() {
     }
   }, [isPlanDialogOpen, editingPlan, testPlanForm]);
 
-  const storyOptions = useMemo(() => stories
-    .filter(s => s.itemType === 'Requirement/Story')
-    .map(story => ({
-      value: story.id,
-      label: `[${story.storyId}] ${story.title}`,
-    })), [stories]);
-
   useEffect(() => {
     if (isTestCaseDialogOpen && editingTestCase) {
-        const relatedStory = storyOptions.find(opt => opt.value === editingTestCase.storyId);
-        setRelatedStoryInputText(relatedStory?.label || '');
-        const planExec = editingTestCase.executions?.find(e => e.testPlanId === selectedPlanId);
         testCaseForm.reset({
-            ...editingTestCase,
-            storyId: editingTestCase.storyId || '',
-            releaseId: editingTestCase.releaseId || 'unassigned',
-            sprintId: editingTestCase.sprintId || 'backlog',
-            assigneeId: planExec?.assigneeId || 'unassigned',
-            status: planExec?.status || 'Not Run',
-            testPlanIds: editingTestCase.executions?.map(e => e.testPlanId) ?? testPlans.map(p => p.id), // default: all plans
-            executionDate: planExec?.executionDate ? format(parseISO(planExec.executionDate), 'yyyy-MM-dd') : '',
-            closeDate: planExec?.closeDate ? format(parseISO(planExec.closeDate), 'yyyy-MM-dd') : '',
+            title: editingTestCase.title,
+            type: editingTestCase.type,
+            description: editingTestCase.description,
+            expectedResult: editingTestCase.expectedResult,
+            status: editingTestCase.status || 'Not Run',
+            assigneeId: editingTestCase.assigneeId || 'unassigned',
+            executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
         });
     }
-  }, [isTestCaseDialogOpen, editingTestCase, testCaseForm, storyOptions, testPlans, selectedPlanId]);
+  }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
 
 
   const onTestPlanSubmit = async (values: z.infer<typeof refinedTestPlanSchema>) => {
@@ -249,55 +241,19 @@ export default function TestPlanPage() {
   };
 
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
-    if (!editingTestCase) return;
-    const testCaseData: Partial<TestCase> = {
-        title: values.title,
-        type: values.type,
-        description: values.description,
-        expectedResult: values.expectedResult,
-        storyId: values.storyId === '' ? undefined : values.storyId,
-        releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
-        sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
+    if (!editingTestCase || !selectedPlanId) return;
+    
+    const updateData: Partial<TestPlanTestCase> = {
+      title: values.title,
+      type: values.type,
+      description: values.description,
+      expectedResult: values.expectedResult,
+      status: values.status,
+      assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+      executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
     };
 
-    const selectedPlanIds = values.testPlanIds ?? [];
-    let updatedExecutions = [...(editingTestCase.executions || [])];
-    
-    // Sync checkboxes: remove executions for unchecked plans, add defaults for new ones
-    updatedExecutions = updatedExecutions.filter(ex => selectedPlanIds.includes(ex.testPlanId));
-    selectedPlanIds.forEach(planId => {
-      if (!updatedExecutions.find(ex => ex.testPlanId === planId)) {
-         updatedExecutions.push({ testPlanId: planId, status: 'Not Run' });
-      }
-    });
-
-    // Apply specific fields (Date, Status, Assignee) to the active test plan context
-    if (selectedPlanId) {
-       const targetExec = updatedExecutions.find(ex => ex.testPlanId === selectedPlanId);
-       if (targetExec) {
-          if (values.assigneeId === 'unassigned') delete targetExec.assigneeId; else targetExec.assigneeId = values.assigneeId;
-          targetExec.status = values.status;
-          if (values.executionDate) targetExec.executionDate = new Date(values.executionDate).toISOString(); else delete targetExec.executionDate;
-          if (values.closeDate) targetExec.closeDate = new Date(values.closeDate).toISOString(); else delete targetExec.closeDate;
-       }
-    }
-    
-    testCaseData.executions = updatedExecutions;
-
-    // Sync TestPlan.testCaseIds array
-    const planUpdates = testPlans.map(plan => {
-      const alreadyIn = plan.testCaseIds?.includes(editingTestCase.id) ?? false;
-      const shouldBeIn = selectedPlanIds.includes(plan.id);
-      if (shouldBeIn && !alreadyIn) {
-        return updateTestPlan(plan.id, { testCaseIds: [...(plan.testCaseIds ?? []), editingTestCase.id] });
-      } else if (!shouldBeIn && alreadyIn) {
-        return updateTestPlan(plan.id, { testCaseIds: (plan.testCaseIds ?? []).filter(id => id !== editingTestCase.id) });
-      }
-      return Promise.resolve(true);
-    });
-
-    const success = await updateTestCase(editingTestCase.id, testCaseData);
-    await Promise.all(planUpdates);
+    const success = await updateTestPlanTestCase(selectedPlanId, editingTestCase.id, updateData);
     if (success) {
       toast({ title: 'Success', description: 'Test Case updated.' });
       setIsTestCaseDialogOpen(false);
@@ -308,7 +264,7 @@ export default function TestPlanPage() {
   
   const handleDeletePlan = async () => {
     if (!deletingPlan) return;
-    const success = await deleteTestPlan(deletingPlan.id, deleteTestCasesWithPlan);
+    const success = await deleteTestPlan(deletingPlan.id);
     if(success) {
       toast({title: "Success", description: "Test plan deleted."});
       setSelectedPlanId(null);
@@ -318,72 +274,65 @@ export default function TestPlanPage() {
     setDeletingPlan(null);
   };
 
-  const handleBulkMoveToTP = () => {
+  const handleBulkMoveToTP = async () => {
     if (selectedBacklogTCs.length === 0 || !currentExecutionDay || !selectedPlan) return;
 
-    const newIds = [...new Set([...(selectedPlan.testCaseIds ?? []), ...selectedBacklogTCs])];
-    updateTestPlan(selectedPlan.id, { testCaseIds: newIds });
+    const success = await addTestCasesToPlan(
+      selectedPlan.id,
+      selectedBacklogTCs,
+      currentExecutionDay.toISOString()
+    );
 
-    const updates = selectedBacklogTCs.map(tcId => {
-      const existingTC = testCases.find(t => t.id === tcId);
-      const executions = [...(existingTC?.executions || [])];
-      let exec = executions.find(e => e.testPlanId === selectedPlan.id);
-      if (exec) {
-        exec.executionDate = currentExecutionDay.toISOString();
-      } else {
-        executions.push({ testPlanId: selectedPlan.id, status: 'Not Run', executionDate: currentExecutionDay.toISOString() });
-      }
-      return updateTestCase(tcId, { executions });
-    });
-    Promise.all(updates).then(() => {
-        toast({ title: 'Success', description: `${selectedBacklogTCs.length} test cases scheduled.` });
-        setSelectedBacklogTCs([]);
-    });
+    if (success) {
+      toast({ title: 'Success', description: `${selectedBacklogTCs.length} test cases added to plan.` });
+      setSelectedBacklogTCs([]);
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not add test cases to plan.' });
+    }
   };
 
-  const handleBulkMoveToBacklog = () => {
+  const handleBulkMoveToBacklog = async () => {
     if (selectedScheduledTCs.length === 0 || !selectedPlan) return;
 
-    // We do NOT remove from plan entirely, we just clear the executionDate so they drop from the "Scheduled" column.
-    const updates = selectedScheduledTCs.map(tcId => {
-      const existingTC = testCases.find(t => t.id === tcId);
-      const executions = [...(existingTC?.executions || [])];
-      let exec = executions.find(e => e.testPlanId === selectedPlan.id);
-      if (exec) {
-        delete exec.executionDate;
-      }
-      return updateTestCase(tcId, { executions });
-    });
-    Promise.all(updates).then(() => {
-        toast({ title: 'Success', description: `${selectedScheduledTCs.length} test cases deleted from schedule.` });
-        setSelectedScheduledTCs([]);
-    });
+    const success = await removeTestCasesFromPlan(selectedPlan.id, selectedScheduledTCs);
+    if (success) {
+      toast({ title: 'Success', description: `${selectedScheduledTCs.length} test cases removed from plan.` });
+      setSelectedScheduledTCs([]);
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not remove test cases from plan.' });
+    }
   };
+
+  // Get test cases for current plan from subcollection
+  const planTestCases = useMemo(() => {
+    if (!selectedPlanId) return [];
+    return testPlanTestCases[selectedPlanId] || [];
+  }, [selectedPlanId, testPlanTestCases]);
 
   const { tcsForCurrentDay, backlog } = useMemo(() => {
     const dateStr = currentExecutionDay ? format(currentExecutionDay, 'yyyy-MM-dd') : null;
 
+    // Backlog: all non-deleted test cases from the backlog
     let backlogTCs = testCases.filter(tc => !tc.isDeleted);
-    let dayTCs: TestCase[] = [];
+
+    // Day TCs: filter plan copies by execution date
+    let dayTCs: TestPlanTestCase[] = [];
     if (selectedPlan) {
-      const planTCIds = new Set(selectedPlan.testCaseIds ?? []);
-      dayTCs = testCases.filter(tc => {
-        if (!planTCIds.has(tc.id)) return false;
-        const exec = tc.executions?.find(e => e.testPlanId === selectedPlan.id);
-        return exec?.executionDate && format(parseISO(exec.executionDate), 'yyyy-MM-dd') === dateStr;
+      dayTCs = planTestCases.filter(tc => {
+        return tc.executionDate && format(parseISO(tc.executionDate), 'yyyy-MM-dd') === dateStr;
       });
     }
 
     if (sorting) {
-        const sortKey = sorting.id as keyof TestCase | 'status';
-        const sortFn = (a: TestCase, b: TestCase) => {
+        const sortKey = sorting.id as string;
+        const sortFn = (a: any, b: any) => {
             let valA, valB;
             if (sortKey === 'status') {
-               valA = a.executions?.find(e => e.testPlanId === selectedPlanId)?.status || 'Not Run';
-               valB = b.executions?.find(e => e.testPlanId === selectedPlanId)?.status || 'Not Run';
+               valA = a.status || 'Not Run';
+               valB = b.status || 'Not Run';
             } else {
-               valA = (a as any)[sortKey];
-               valB = (b as any)[sortKey];
+               valA = a[sortKey];
+               valB = b[sortKey];
             }
             
             if (valA === null || valA === undefined) return 1;
@@ -405,7 +354,7 @@ export default function TestPlanPage() {
     }
     
     return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
-  }, [selectedPlan, testCases, currentExecutionDay, sorting, selectedPlanId]);
+  }, [selectedPlan, testCases, planTestCases, currentExecutionDay, sorting]);
 
 
   const planDays = useMemo(() => {
@@ -437,14 +386,14 @@ export default function TestPlanPage() {
     });
   };
   
-  const handleTestCaseDialogOpen = (testCase: TestCase) => {
+  const handleTestCaseDialogOpen = (testCase: TestPlanTestCase) => {
     setEditingTestCase(testCase);
     setIsTestCaseDialogOpen(true);
   };
   
   const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => {
     const isSorting = sorting?.id === columnId;
-    const sortIcon = isSorting ? (sorting.desc ? <ArrowUpDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4" />) : <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
+    const sortIcon = isSorting ? (<ArrowUpDown className="h-4 w-4" />) : (<ChevronsUpDown className="h-4 w-4 text-muted-foreground" />);
 
     return (
       <TableHead>
@@ -499,15 +448,13 @@ export default function TestPlanPage() {
                           />
                       </TableHead>
                       <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                      <SortableHeader columnId="title">Title</SortableHeader>
                       <SortableHeader columnId="sprintId">Sprint</SortableHeader>
-                      <SortableHeader columnId="releaseId">Release</SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {backlog.map(tc => {
                       const sprint = sprints.find(s => s.id === tc.sprintId);
-                      const release = releases.find(r => r.id === tc.releaseId);
-                      const execStatus = tc.executions?.find(e => e.testPlanId === selectedPlanId)?.status || 'Not Run';
                       return (
                         <TableRow key={tc.id}>
                           <TableCell>
@@ -517,12 +464,10 @@ export default function TestPlanPage() {
                               />
                           </TableCell>
                           <TableCell className="py-1">
-                               <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left font-medium text-primary hover:underline">
-                                <Badge variant="secondary">{tc.testCaseId}</Badge>
-                              </button>
+                               <Badge variant="secondary">{tc.testCaseId}</Badge>
                           </TableCell>
+                          <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
                           <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                          <TableCell>{release?.name || 'N/A'}</TableCell>
                         </TableRow>
                       )
                     })}
@@ -540,7 +485,7 @@ export default function TestPlanPage() {
                   <>
                     <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
                     <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => { setDeleteTestCasesWithPlan(false); setDeletingPlan(selectedPlan); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { setDeletingPlan(selectedPlan); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </>
                 ) : (
                   <h3 className="font-bold text-lg">Execution Plan</h3>
@@ -548,7 +493,7 @@ export default function TestPlanPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
-                  Delete
+                  Remove
                 </Button>
                  <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
                   <ChevronLeft className="h-4 w-4" />
@@ -574,16 +519,12 @@ export default function TestPlanPage() {
                                         />
                                     </TableHead>
                                     <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                                    <SortableHeader columnId="sprintId">Sprint</SortableHeader>
-                                    <SortableHeader columnId="releaseId">Release</SortableHeader>
+                                    <SortableHeader columnId="title">Title</SortableHeader>
                                     <SortableHeader columnId="status">Status</SortableHeader>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {tcsForCurrentDay.map(tc => {
-                                    const sprint = sprints.find(s => s.id === tc.sprintId);
-                                    const release = releases.find(r => r.id === tc.releaseId);
-                                    const execStatus = tc.executions?.find(e => e.testPlanId === selectedPlanId)?.status || 'Not Run';
                                     return (
                                         <TableRow key={tc.id}>
                                             <TableCell>
@@ -597,9 +538,8 @@ export default function TestPlanPage() {
                                                     <Badge variant="secondary">{tc.testCaseId}</Badge>
                                                 </button>
                                             </TableCell>
-                                            <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                                            <TableCell>{release?.name || 'N/A'}</TableCell>
-                                            <TableCell><Badge className={cn(statusStyles[execStatus])}>{execStatus}</Badge></TableCell>
+                                            <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
+                                            <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -714,10 +654,12 @@ export default function TestPlanPage() {
       </DialogContent>
     </Dialog>
     
+    {/* Edit Test Case (Plan Copy) Dialog */}
     <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
         <DialogHeader className="px-6 py-4 border-b shrink-0">
-          <DialogTitle>Edit Test Case</DialogTitle>
+          <DialogTitle>Edit Test Case — {selectedPlan?.name}</DialogTitle>
+          <DialogDescription>Editing the test case copy within this test plan. Changes here do not affect the original backlog test case.</DialogDescription>
         </DialogHeader>
          <Form {...testCaseForm}>
           <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -783,158 +725,44 @@ export default function TestPlanPage() {
                         <FormMessage />
                       </FormItem>
                   )} />
-                   <FormField control={testCaseForm.control} name="storyId" render={({ field }) => (
+                  {/* Related Story (read-only, from the original) */}
+                  <FormItem>
+                    <FormLabel>Related Story</FormLabel>
+                    <Input
+                      readOnly
+                      value={editingTestCase?.storyId
+                        ? (() => {
+                            const story = stories.find(s => s.id === editingTestCase.storyId);
+                            return story ? `[${story.storyId}] ${story.title}` : 'N/A';
+                          })()
+                        : 'N/A'}
+                      className="bg-muted"
+                    />
+                  </FormItem>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={testCaseForm.control} name="executionDate" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Related Story (Optional)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                  list="story-options-tc" 
-                                  placeholder="Select a story..." 
-                                  value={relatedStoryInputText}
-                                  onChange={(e) => {
-                                      const inputText = e.target.value;
-                                      setRelatedStoryInputText(inputText);
-                                      
-                                      const matchingOption = storyOptions.find(opt => opt.label === inputText);
-                                      if (matchingOption) {
-                                          field.onChange(matchingOption.value);
-                                      } else {
-                                          field.onChange('');
-                                      }
-                                  }}
-                                  onBlur={() => {
-                                      const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
-                                      if (!matchingOption) {
-                                          setRelatedStoryInputText('');
-                                          field.onChange('');
-                                      }
-                                  }}
-                              />
-                            </FormControl>
-                            <datalist id="story-options-tc">
-                              {storyOptions.map(option => (
-                                <option key={option.value} value={option.label}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </datalist>
-                          <FormMessage />
+                        <FormLabel>Execution Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
                       </FormItem>
                   )} />
+                  {/* Close Date — read-only, auto-set when status = Passed */}
+                  <FormItem>
+                    <FormLabel>Close Date</FormLabel>
+                    <Input
+                      type="date"
+                      readOnly
+                      value={editingTestCase?.closeDate ? format(parseISO(editingTestCase.closeDate), 'yyyy-MM-dd') : ''}
+                      className="bg-muted"
+                      placeholder="Auto-set when Passed"
+                    />
+                    <p className="text-xs text-muted-foreground">Auto-set when status is &quot;Passed&quot;</p>
+                  </FormItem>
               </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={testCaseForm.control}
-                      name="sprintId"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Sprint</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || 'backlog'}
-                            disabled={!!testCaseForm.getValues('storyId')}
-                          >
-                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                              <SelectContent>
-                              <SelectItem value="backlog">Backlog</SelectItem>
-                              {sprints.map(sprint => (
-                                  <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                              ))}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                    />
-                     <FormField
-                      control={testCaseForm.control}
-                      name="releaseId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Release</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Assign to a release" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {releases.map((release) => (
-                                <SelectItem key={release.id} value={release.id}>
-                                  [{release.releaseId}] {release.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField
-                      control={testCaseForm.control}
-                      name="testPlanIds"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                          <FormLabel>Test Plans</FormLabel>
-                          <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
-                            {testPlans.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">No test plans available.</p>
-                            ) : (
-                              testPlans.map(plan => (
-                                <div key={plan.id} className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id={`tp-chk-${plan.id}`}
-                                    checked={(field.value ?? []).includes(plan.id)}
-                                    onCheckedChange={(checked) => {
-                                      const current = field.value ?? [];
-                                      field.onChange(
-                                        checked
-                                          ? [...current, plan.id]
-                                          : current.filter(id => id !== plan.id)
-                                      );
-                                    }}
-                                  />
-                                  <label htmlFor={`tp-chk-${plan.id}`} className="text-sm cursor-pointer">
-                                    [{plan.testPlanId}] {plan.name}
-                                  </label>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={testCaseForm.control}
-                      name="executionDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Execution Date</FormLabel>
-                           <FormControl>
-                            <Input type="date" {...field} value={field.value || ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                </div>
-                 <FormField
-                  control={testCaseForm.control}
-                  name="closeDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Close Date</FormLabel>
-                       <FormControl>
-                        <Input type="date" {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
             </div>
             <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
               <Button type="submit">Save Changes</Button>
@@ -949,21 +777,8 @@ export default function TestPlanPage() {
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action will delete the test plan "{deletingPlan?.name}". By default, test cases will be moved to the backlog.
+            This action will delete the test plan &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
           </AlertDialogDescription>
-          <div className="flex items-center space-x-2 pt-4">
-            <Checkbox
-              id="delete-test-cases"
-              checked={deleteTestCasesWithPlan}
-              onCheckedChange={(checked) => setDeleteTestCasesWithPlan(!!checked)}
-            />
-            <label
-              htmlFor="delete-test-cases"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Also permanently delete all test cases within this plan.
-            </label>
-          </div>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
