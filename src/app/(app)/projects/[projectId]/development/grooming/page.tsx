@@ -686,14 +686,15 @@ export default function GroomingPage() {
                 releaseId: selectedStory.releaseId || 'unassigned',
             });
         } else {
+            const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
             const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
-      setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
-      const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
-      setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
-      const predStory = stories.find(s => s.id === selectedStory.predecessorId);
-      setEditPredecessorText(predStory ? `[${predStory.storyId}] ${predStory.title}` : '');
+            setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
+            const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
+            setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
+            const predStory = stories.find(s => s.id === selectedStory.predecessorId);
+            setEditPredecessorText(predStory ? `[${predStory.storyId}] ${predStory.title}` : '');
 
-             editStoryForm.reset({
+            editStoryForm.reset({
                 title: selectedStory.title,
                 description: selectedStory.description || '',
                 acceptanceCriteria: selectedStory.acceptanceCriteria || '',
@@ -717,7 +718,7 @@ export default function GroomingPage() {
                 setEditParentStoryText('');
             }
         }
-    }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions]);
+    }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases]);
 
   const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
       if(!start || !end) return 0;
@@ -884,6 +885,11 @@ export default function GroomingPage() {
           logs: selectedStory.statusHistory?.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
         };
     }, [selectedStory, subItemsByParentId]);
+
+    const selectedStoryTestCases = useMemo(() => {
+        if (!selectedStory) return [];
+        return testCases.filter(tc => tc.storyId === selectedStory.id && !tc.isDeleted);
+    }, [selectedStory, testCases]);
 
     const subItemsEffort = useMemo(() => {
       if (!selectedStory) return 0;
@@ -1092,7 +1098,7 @@ export default function GroomingPage() {
         </AlertDialog>
 
         <Dialog open={!!selectedStory} onOpenChange={(isOpen) => !isOpen && handleSetSelectedStory(null)}>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] [&>div]:p-0">
             {selectedStory && (
                 <>
                 {selectedStory.itemType === 'Sub Task' ? (
@@ -1109,7 +1115,8 @@ export default function GroomingPage() {
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
-                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 py-4">
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)}>
+                      <div className="overflow-y-auto px-6 py-4 space-y-4 max-h-[calc(90vh-140px)]">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -1252,11 +1259,12 @@ export default function GroomingPage() {
                                 </div>
                             </TabsContent>
                         </Tabs>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isEditStorySubmitting}>
-                                {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                            </Button>
-                        </DialogFooter>
+                      </div>
+                      <DialogFooter className="px-6 py-4 border-t">
+                          <Button type="submit" disabled={isEditStorySubmitting}>
+                              {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                          </Button>
+                      </DialogFooter>
                     </form>
                   </Form>
                 </>
@@ -1269,10 +1277,11 @@ export default function GroomingPage() {
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...editStoryForm}>
-                    <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4 py-4">
-                    <FormField
-                        control={editStoryForm.control}
-                        name="title"
+                    <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)}>
+                      <div className="overflow-y-auto px-6 py-4 space-y-4 max-h-[calc(90vh-150px)]">
+                        <FormField
+                            control={editStoryForm.control}
+                            name="title"
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Title</FormLabel>
@@ -1283,8 +1292,8 @@ export default function GroomingPage() {
                         </FormItem>
                         )}
                     />
-                    <Tabs defaultValue="details" className="w-full">
-                        <TabsList>
+                     <Tabs defaultValue="details" className="w-full">
+                          <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
                              {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
                                 <>
@@ -1298,6 +1307,12 @@ export default function GroomingPage() {
                                         Bugs
                                         <Badge variant="secondary" className="ml-2">
                                             {selectedStorySubItems.bugs.length}
+                                        </Badge>
+                                    </TabsTrigger>
+                                    <TabsTrigger value="testCases">
+                                        Test Cases
+                                        <Badge variant="secondary" className="ml-2">
+                                            {selectedStoryTestCases.length}
                                         </Badge>
                                     </TabsTrigger>
                                 </>
@@ -1724,6 +1739,25 @@ export default function GroomingPage() {
                                   )}
                               </div>
                           </TabsContent>
+                          <TabsContent value="testCases">
+                             <div className="space-y-4 pt-4">
+                                  {selectedStoryTestCases.length > 0 ? (
+                                      <div className="space-y-2 rounded-md border p-2">
+                                      {selectedStoryTestCases.map(tc => (
+                                          <div key={tc.id} className="flex items-center justify-between text-sm p-2 hover:bg-muted/50 rounded-md">
+                                              <div className='flex items-center gap-2 min-w-0 flex-1'>
+                                                  <Badge variant="secondary" className="shrink-0">{tc.testCaseId}</Badge>
+                                                  <span className="font-medium truncate">{tc.title}</span>
+                                              </div>
+                                              <Badge variant="outline" className="ml-2 shrink-0">{tc.type}</Badge>
+                                          </div>
+                                      ))}
+                                      </div>
+                                  ) : (
+                                      <p className="text-sm text-muted-foreground italic px-2 text-center py-4">No test cases linked.</p>
+                                  )}
+                              </div>
+                          </TabsContent>
                         <TabsContent value="logs">
                             <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
                                 {selectedStorySubItems.logs.length > 0 ? (
@@ -1751,7 +1785,8 @@ export default function GroomingPage() {
                             </div>
                           </TabsContent>
                     </Tabs>
-                  <DialogFooter className="flex justify-end items-center pt-4">
+                    </div>
+                  <DialogFooter className="flex justify-end items-center px-6 py-4 border-t">
                     <div className="flex items-center gap-2">
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}

@@ -923,6 +923,11 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     };
   }, [selectedStory, subItemsByParentId]);
 
+  const selectedStoryTestCases = useMemo(() => {
+    if (!selectedStory) return [];
+    return testCases.filter(tc => tc.storyId === selectedStory.id && !tc.isDeleted);
+  }, [selectedStory, testCases]);
+
   const subItemsEffort = useMemo(() => {
     if (!selectedStory) return 0;
     return selectedStorySubItems.subTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0) + 
@@ -1683,7 +1688,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
       </Dialog>
 
       <Dialog open={!!selectedStory} onOpenChange={(open) => !open && handleSetSelectedStory(null)}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] [&>div]:p-0">
           {selectedStory && (
             <>
               {selectedStory.itemType === 'Sub Task' ? (
@@ -1700,7 +1705,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     <DialogDescription>Make changes to your sub task here.</DialogDescription>
                   </DialogHeader>
                   <Form {...subTaskForm}>
-                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="space-y-4 py-4">
+                    <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)}>
+                      <div className="overflow-y-auto px-6 py-4 space-y-4 max-h-[calc(90vh-140px)]">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
@@ -1848,11 +1854,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 </div>
                             </TabsContent>
                         </Tabs>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isEditStorySubmitting}>
-                                {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                            </Button>
-                        </DialogFooter>
+                      </div>
+                      <DialogFooter className="px-6 py-4 border-t">
+                          <Button type="submit" disabled={isEditStorySubmitting}>
+                              {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                          </Button>
+                      </DialogFooter>
                     </form>
                   </Form>
                 </>
@@ -1865,7 +1872,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                 </DialogDescription>
               </DialogHeader>
               <Form {...editStoryForm}>
-                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="space-y-4 py-4">
+                <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)}>
+                  <div className="overflow-y-auto px-6 py-4 space-y-4 max-h-[calc(90vh-150px)]">
                   <FormField
                       control={editStoryForm.control}
                       name="itemType"
@@ -1904,7 +1912,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                     )}
                   />
                     <Tabs defaultValue="details" className="w-full">
-                        <TabsList>
+                         <TabsList>
                             <TabsTrigger value="details">Details</TabsTrigger>
                             {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
                                 <>
@@ -1918,6 +1926,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                         Bugs
                                         <Badge variant="secondary" className="ml-2">
                                             {selectedStorySubItems.bugs.length}
+                                        </Badge>
+                                    </TabsTrigger>
+                                    <TabsTrigger value="testCases">
+                                        Test Cases
+                                        <Badge variant="secondary" className="ml-2">
+                                            {selectedStoryTestCases.length}
                                         </Badge>
                                     </TabsTrigger>
                                 </>
@@ -2451,6 +2465,25 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                   )}
                               </div>
                           </TabsContent>
+                          <TabsContent value="testCases">
+                             <div className="space-y-4 pt-4">
+                                  {selectedStoryTestCases.length > 0 ? (
+                                      <div className="space-y-2 rounded-md border p-2">
+                                      {selectedStoryTestCases.map(tc => (
+                                          <div key={tc.id} className="flex items-center justify-between text-sm p-2 hover:bg-muted/50 rounded-md">
+                                              <div className='flex items-center gap-2 min-w-0 flex-1'>
+                                                  <Badge variant="secondary" className="shrink-0">{tc.testCaseId}</Badge>
+                                                  <span className="font-medium truncate">{tc.title}</span>
+                                              </div>
+                                              <Badge variant="outline" className="ml-2 shrink-0">{tc.type}</Badge>
+                                          </div>
+                                      ))}
+                                      </div>
+                                  ) : (
+                                      <p className="text-sm text-muted-foreground italic px-2 text-center py-4">No test cases linked.</p>
+                                  )}
+                              </div>
+                          </TabsContent>
                         <TabsContent value="logs">
                             <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
                                 {selectedStorySubItems.logs.length > 0 ? (
@@ -2478,7 +2511,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                           </TabsContent>
                     </Tabs>
-                  <DialogFooter className="flex justify-end items-center pt-4">
+                    </div>
+                  <DialogFooter className="flex justify-end items-center px-6 py-4 border-t">
                     <div className="flex items-center gap-2">
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
