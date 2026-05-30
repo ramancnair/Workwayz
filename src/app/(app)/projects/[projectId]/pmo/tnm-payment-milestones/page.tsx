@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProject } from '@/context/ProjectContext';
+import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -64,6 +65,8 @@ const statusStyles: Record<PaymentMilestoneStatus, string> = {
 
 
 export default function TnmPaymentMilestonesPage() {
+  const { projectId } = useParams() as { projectId: string };
+  const router = useRouter();
   const { 
     project, 
     paymentMilestones, 
@@ -71,8 +74,20 @@ export default function TnmPaymentMilestonesPage() {
     updatePaymentMilestone, 
     deletePaymentMilestone 
   } = useProject();
+
+  useEffect(() => {
+    if (project && project.pricingModel !== 'T&M') {
+      router.replace(`/projects/${projectId}/pmo/documents`);
+    }
+  }, [project, projectId, router]);
+
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  if (!project || project.pricingModel !== 'T&M') {
+    return null;
+  }
+
   const [editingMilestone, setEditingMilestone] = useState<PaymentMilestone | null>(null);
   const [deletingMilestone, setDeletingMilestone] = useState<PaymentMilestone | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

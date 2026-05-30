@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
+import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import {
   Table,
@@ -43,6 +44,8 @@ import {
 } from '@/components/ui/dialog';
 
 export default function ResourceBillingPage() {
+  const { projectId } = useParams() as { projectId: string };
+  const router = useRouter();
   const { 
     project,
     employees, 
@@ -56,7 +59,17 @@ export default function ResourceBillingPage() {
     worklogs
   } = useProject();
 
+  useEffect(() => {
+    if (project && project.pricingModel !== 'T&M') {
+      router.replace(`/projects/${projectId}/pmo/documents`);
+    }
+  }, [project, projectId, router]);
+
   const { toast } = useToast();
+
+  if (!project || project.pricingModel !== 'T&M') {
+    return null;
+  }
   const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: number; costRate?: number }>>({});
   const [newCostName, setNewCostName] = useState('');
   const [newCostValue, setNewCostValue] = useState(0);

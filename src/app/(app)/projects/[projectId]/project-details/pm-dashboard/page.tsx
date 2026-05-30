@@ -29,11 +29,7 @@ import { format, parseISO, isSameDay, eachDayOfInterval, differenceInDays, isWit
 import type { Story, Worklog, UserRole } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
-const taskChartConfig = {
-  'To Do': { label: 'To Do', color: 'hsl(var(--muted-foreground))' },
-  'In Progress': { label: 'In Progress', color: 'hsl(var(--chart-1))' },
-  'Done': { label: 'Done', color: 'hsl(var(--chart-2))' },
-} satisfies ChartConfig;
+
 
 const workloadChartConfig = {
   subTaskEffort: { label: 'Sub-Task Effort', color: 'hsl(var(--chart-2))' },
@@ -132,27 +128,60 @@ export default function ProjectDashboardPage() {
     }
   }, [sprints]);
 
+  const swimLanes = useMemo(() => {
+    return kanbanColumns.length > 0
+      ? [...kanbanColumns].sort((a, b) => a.order - b.order).map(c => c.name)
+      : ['To Do', 'In Progress', 'In QA', 'Done'];
+  }, [kanbanColumns]);
+
+  const taskChartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    const colors = [
+      'hsl(var(--muted-foreground))', // To Do
+      'hsl(var(--chart-1))',          // In Progress / In Development
+      'hsl(var(--chart-4))',          // In QA
+      'hsl(var(--chart-2))',          // Done / Complete
+      'hsl(var(--chart-3))',
+      'hsl(var(--chart-5))',
+    ];
+
+    swimLanes.forEach((lane, index) => {
+      let color = colors[index % colors.length];
+      if (lane === 'To Do') color = 'hsl(var(--muted-foreground))';
+      else if (lane === 'In Progress' || lane === 'In Development') color = 'hsl(var(--chart-1))';
+      else if (lane === 'In QA') color = 'hsl(var(--chart-4))';
+      else if (lane === 'Done' || lane === 'Complete') color = 'hsl(var(--chart-2))';
+
+      config[lane] = {
+        label: lane,
+        color,
+      };
+    });
+    return config;
+  }, [swimLanes]);
+
   const releaseChartData = useMemo(() => {
     const filteredStories = selectedReleaseId === 'all'
       ? stories
       : stories.filter(story => story.releaseId === selectedReleaseId);
 
     const statusCounts = filteredStories.reduce((acc, story) => {
-      const status = story.status || 'To Do';
-      if (acc[status]) {
-        acc[status]++;
-      } else {
-        acc[status] = 1;
+      let status = story.status || (swimLanes[0] || 'To Do');
+      if (!swimLanes.includes(status)) {
+        status = swimLanes[0] || 'To Do';
       }
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    return Object.entries(statusCounts).map(([name, value]) => ({
-      name,
-      value,
-      fill: (taskChartConfig[name as keyof typeof taskChartConfig] || { color: '#ccc' }).color,
-    }));
-  }, [stories, selectedReleaseId]);
+    return swimLanes
+      .map(name => ({
+        name,
+        value: statusCounts[name] || 0,
+        fill: (taskChartConfig[name] || { color: '#ccc' }).color,
+      }))
+      .filter(item => item.value > 0);
+  }, [stories, selectedReleaseId, swimLanes, taskChartConfig]);
 
   const sprintChartData = useMemo(() => {
     const filteredStories = selectedSprintId === 'all'
@@ -160,21 +189,22 @@ export default function ProjectDashboardPage() {
       : stories.filter(story => story.sprintId === selectedSprintId);
 
     const statusCounts = filteredStories.reduce((acc, story) => {
-      const status = story.status || 'To Do';
-      if (acc[status]) {
-        acc[status]++;
-      } else {
-        acc[status] = 1;
+      let status = story.status || (swimLanes[0] || 'To Do');
+      if (!swimLanes.includes(status)) {
+        status = swimLanes[0] || 'To Do';
       }
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    return Object.entries(statusCounts).map(([name, value]) => ({
-      name,
-      value,
-      fill: (taskChartConfig[name as keyof typeof taskChartConfig] || { color: '#ccc' }).color,
-    }));
-  }, [stories, selectedSprintId]);
+    return swimLanes
+      .map(name => ({
+        name,
+        value: statusCounts[name] || 0,
+        fill: (taskChartConfig[name] || { color: '#ccc' }).color,
+      }))
+      .filter(item => item.value > 0);
+  }, [stories, selectedSprintId, swimLanes, taskChartConfig]);
 
   const epicProgressData = useMemo(() => {
     if (!epics || epics.length === 0) return [];
@@ -192,12 +222,6 @@ export default function ProjectDashboardPage() {
         return { name: epic.title, progress };
       });
   }, [epics, stories]);
-
-  const swimLanes = useMemo(() => {
-    return kanbanColumns.length > 0
-      ? [...kanbanColumns].sort((a, b) => a.order - b.order).map(c => c.name)
-      : ['To Do', 'In Progress', 'In QA', 'Done'];
-  }, [kanbanColumns]);
 
   const swimLaneTimeData = useMemo(() => {
     const parentIdsWithSubTasks = new Set<string>();
@@ -811,14 +835,9 @@ export default function ProjectDashboardPage() {
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     <LabelList dataKey="value" position="top" formatter={(val: number) => `${val}d`} className="fill-foreground font-semibold" fontSize={11} />
-                    {swimLaneTimeData.map((entry, index) => {
-                      const colors = [
-                        'hsl(var(--muted-foreground))', // To Do
-                        'hsl(var(--chart-1))', // In Development
-                        'hsl(var(--chart-4))', // In QA
-                        'hsl(var(--chart-2))', // Complete / Done
-                      ];
-                      return <Cell key={entry.name} fill={colors[index % colors.length]} />;
+                    {swimLaneTimeData.map((entry) => {
+                      const color = (taskChartConfig[entry.name] || { color: 'hsl(var(--muted-foreground))' }).color;
+                      return <Cell key={entry.name} fill={color} />;
                     })}
                   </Bar>
                 </BarChart>

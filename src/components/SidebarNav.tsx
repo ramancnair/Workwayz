@@ -73,7 +73,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
-  const { testDate, setTestDate } = useProject();
+  const { project, testDate, setTestDate } = useProject();
   const [user, setUser] = useState({ name: '', email: '' });
 
   useEffect(() => {
@@ -296,26 +296,30 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Documents",
       icon: DocumentsIcon,
     },
-    {
-      href: `${basePath}/pmo/fb-billing`,
-      label: "FB Billing",
-      icon: DollarSign,
-    },
-    {
-      href: `${basePath}/pmo/fb-payment-milestones`,
-      label: "FB Payment Milestones",
-      icon: BillingIcon,
-    },
-    {
-      href: `${basePath}/pmo/tnm-billing`,
-      label: "TnM Billing",
-      icon: DollarSign,
-    },
-    {
-      href: `${basePath}/pmo/tnm-payment-milestones`,
-      label: "TnM Payment Milestones",
-      icon: BillingIcon,
-    },
+    ...(project?.pricingModel !== 'T&M' ? [
+      {
+        href: `${basePath}/pmo/fb-billing`,
+        label: "FB Billing",
+        icon: DollarSign,
+      },
+      {
+        href: `${basePath}/pmo/fb-payment-milestones`,
+        label: "FB Payment Milestones",
+        icon: BillingIcon,
+      },
+    ] : []),
+    ...(project?.pricingModel !== 'Fixed Bid' ? [
+      {
+        href: `${basePath}/pmo/tnm-billing`,
+        label: "TnM Billing",
+        icon: DollarSign,
+      },
+      {
+        href: `${basePath}/pmo/tnm-payment-milestones`,
+        label: "TnM Payment Milestones",
+        icon: BillingIcon,
+      },
+    ] : []),
     {
       href: `${basePath}/pmo/business-continuity`,
       label: "Business Continuity",

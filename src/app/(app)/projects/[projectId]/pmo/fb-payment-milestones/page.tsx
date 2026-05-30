@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProject } from '@/context/ProjectContext';
+import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -65,6 +66,8 @@ const statusStyles: Record<PaymentMilestoneStatus, string> = {
 
 
 export default function BillingPage() {
+  const { projectId } = useParams() as { projectId: string };
+  const router = useRouter();
   const { 
     project, 
     updateProject, 
@@ -73,8 +76,20 @@ export default function BillingPage() {
     updatePaymentMilestone, 
     deletePaymentMilestone 
   } = useProject();
+
+  useEffect(() => {
+    if (project && project.pricingModel !== 'Fixed Bid') {
+      router.replace(`/projects/${projectId}/pmo/documents`);
+    }
+  }, [project, projectId, router]);
+
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  if (!project || project.pricingModel !== 'Fixed Bid') {
+    return null;
+  }
+
   const [editingMilestone, setEditingMilestone] = useState<PaymentMilestone | null>(null);
   const [deletingMilestone, setDeletingMilestone] = useState<PaymentMilestone | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

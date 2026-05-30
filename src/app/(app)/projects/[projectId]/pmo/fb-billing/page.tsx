@@ -2,8 +2,9 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
+import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import {
   Table,
@@ -34,6 +35,8 @@ import {
 } from '@/components/ui/dialog';
 
 export default function ResourceBillingPage() {
+  const { projectId } = useParams() as { projectId: string };
+  const router = useRouter();
   const { 
     project,
     employees, 
@@ -45,8 +48,19 @@ export default function ResourceBillingPage() {
     updateFixedCost, 
     deleteFixedCost 
   } = useProject();
+
+  useEffect(() => {
+    if (project && project.pricingModel !== 'Fixed Bid') {
+      router.replace(`/projects/${projectId}/pmo/documents`);
+    }
+  }, [project, projectId, router]);
+
   console.warn("DIAGNOSTIC - employees and fixedCosts in ResourceBillingPage:", employees, fixedCosts);
   const { toast } = useToast();
+
+  if (!project || project.pricingModel !== 'Fixed Bid') {
+    return null;
+  }
   const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: number; costRate?: number }>>({});
   const [newCostName, setNewCostName] = useState('');
   const [newCostValue, setNewCostValue] = useState(0);
