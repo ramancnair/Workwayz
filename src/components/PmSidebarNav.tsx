@@ -326,6 +326,14 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/portfolio-settings">
+              <SidebarMenuButton tooltip="Portfolio Settings" isActive={pathname.startsWith(`/portfolio-settings`)}>
+                <Settings />
+                <span>Portfolio Settings</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
         </SidebarMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

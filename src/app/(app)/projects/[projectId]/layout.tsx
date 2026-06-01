@@ -3,7 +3,7 @@
 
 import { usePathname, useRouter, useParams } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { type PropsWithChildren, use } from "react";
+import { type PropsWithChildren, use, useMemo } from "react";
 import { ProjectProvider, useProject } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarNav } from '@/components/SidebarNav';
@@ -39,6 +39,9 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (isGovernancePath) return 'governance';
     if (isHolidaysPath) return 'holidays';
     if (isPmoPath) return 'pmo';
+    if (pathname.startsWith(`${basePath}/settings`)) return 'settings';
+    if (pathname.startsWith(`${basePath}/trash`)) return 'trash';
+    if (pathname.startsWith('/my-account')) return 'my-account';
     return ''; // No active tab for settings
   };
 
@@ -61,8 +64,21 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
       router.push(`${basePath}/holidays`);
     } else if (value === 'pmo') {
       router.push(`${basePath}/pmo/documents`);
+    } else if (value === 'settings') {
+      router.push(`${basePath}/settings/board`);
+    } else if (value === 'trash') {
+      router.push(`${basePath}/trash`);
+    } else if (value === 'my-account') {
+      router.push('/my-account');
     }
   };
+
+  const dynamicTab = useMemo(() => {
+    if (pathname.startsWith(`${basePath}/settings`)) return { value: 'settings', label: 'Project Settings' };
+    if (pathname.startsWith(`${basePath}/trash`)) return { value: 'trash', label: 'Project Trash' };
+    if (pathname.startsWith('/my-account')) return { value: 'my-account', label: 'Profile & Account' };
+    return null;
+  }, [pathname, basePath]);
 
   const { open, setOpen } = useSidebarPersistedState();
 
@@ -95,6 +111,11 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                   <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
                   <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
                 </>
+              )}
+              {dynamicTab && (
+                <TabsTrigger value={dynamicTab.value} className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                  {dynamicTab.label}
+                </TabsTrigger>
               )}
             </TabsList>
           </Tabs>

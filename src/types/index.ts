@@ -378,6 +378,7 @@ export type Project = {
 export type AccessControlSetting = {
   id: AccessLevel; // The access level itself is the ID
   pageAccess: Record<string, boolean>; // Key is page name, value is true/false
+  crudAccess?: Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }>;
 };
 
 export type TrashedItem = {

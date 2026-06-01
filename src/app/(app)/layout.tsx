@@ -78,6 +78,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (pathname.startsWith('/trash')) return 'trash'; 
     if (pathname.startsWith('/holidays')) return 'holidays';
     if (pathname.startsWith('/portfolio-settings')) return 'portfolios';
+    if (pathname.startsWith('/my-account')) return 'my-account';
     return 'my-projects';
   };
 
@@ -100,8 +101,17 @@ export default function AppLayout({ children }: PropsWithChildren) {
         router.push('/trash');
     } else if (value === 'portfolios') {
         router.push('/portfolio-settings');
+    } else if (value === 'my-account') {
+        router.push('/my-account');
     }
   };
+
+  const dynamicTab = useMemo(() => {
+    if (pathname.startsWith('/trash')) return { value: 'trash', label: 'Trash' };
+    if (pathname.startsWith('/portfolio-settings')) return { value: 'portfolios', label: 'Portfolio Settings' };
+    if (pathname.startsWith('/my-account')) return { value: 'my-account', label: 'Profile & Account' };
+    return null;
+  }, [pathname]);
 
   if (isProjectPage) {
     return <AuthGuard>{children}</AuthGuard>;
@@ -128,11 +138,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
                             <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
                             <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
                             <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
-                            <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
-                                <Settings className="h-4 w-4" />
-                                Portfolio Settings
-                            </TabsTrigger>
                           </>
+                        )}
+                        {dynamicTab && (
+                          <TabsTrigger value={dynamicTab.value} className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                            {dynamicTab.label}
+                          </TabsTrigger>
                         )}
                     </TabsList>
                 </Tabs>
