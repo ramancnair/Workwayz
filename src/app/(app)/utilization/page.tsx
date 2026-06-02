@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -8,7 +7,6 @@ import { PageHeader } from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { type User, type Project, type Story } from '@/types';
-import { UtilizationGanttChart } from '@/components/UtilizationGanttChart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +42,9 @@ export interface ProjectTimelineData {
     project: Project;
     planned: Array<{ start: Date; end: Date; name: string; }>;
     actual: Array<{ start: Date; end: Date; name: string; }>;
+    onboardingDate: Date | null;
+    offloadingDate: Date | null;
+    availability: number;
 }
 
 export default function UtilizationPage() {
@@ -77,64 +78,79 @@ export default function UtilizationPage() {
 
             try {
                 const projectsSnapshot = await getDocs(collection(db, 'projects'));
-                const userProjects: Project[] = [];
+                const resolvedData: ProjectTimelineData[] = [];
 
                 for (const projectDoc of projectsSnapshot.docs) {
                     const employeeDocRef = doc(db, 'projects', projectDoc.id, 'employees', selectedUser.id);
                     const employeeDoc = await getDoc(employeeDocRef);
                     if (employeeDoc.exists()) {
-                        userProjects.push({ id: projectDoc.id, ...projectDoc.data() } as Project);
+                        const project = { id: projectDoc.id, ...projectDoc.data() } as Project;
+                        const empData = employeeDoc.data();
+
+                        // Fetch planned tasks
+                        const tasksQuery = query(
+                            collection(db, 'projects', project.id, 'stories'), 
+                            where('itemType', '==', 'Task'),
+                            where('assigneeId', '==', selectedUser.id)
+                        );
+                        const tasksSnapshot = await getDocs(tasksQuery);
+                        const planned = tasksSnapshot.docs.map(doc => {
+                            const task = doc.data() as Story;
+                            return { 
+                                start: task.startDate ? new Date(task.startDate) : null, 
+                                end: task.endDate ? new Date(task.endDate) : null,
+                                name: task.title
+                            };
+                        }).filter(t => t.start && t.end && !isNaN(t.start.getTime()) && !isNaN(t.end.getTime())) as Array<{ start: Date; end: Date; name: string; }>;
+
+                        // Fetch actual worklogs
+                        const worklogsQuery = query(
+                            collection(db, 'projects', project.id, 'worklogs'),
+                            where('employeeId', '==', selectedUser.id)
+                        );
+                        const worklogsSnapshot = await getDocs(worklogsQuery);
+                        const worklogDates = worklogsSnapshot.docs
+                            .map(doc => new Date(doc.id.split('-').slice(1).join('-')))
+                            .filter(d => !isNaN(d.getTime()));
+                        
+                        const actual: Array<{ start: Date; end: Date; name: string }> = [];
+                        if (worklogDates.length > 0) {
+                            worklogDates.sort((a,b) => a.getTime() - b.getTime());
+                            let currentRange = { start: worklogDates[0], end: worklogDates[0], name: 'Work Logged' };
+
+                            for(let i = 1; i < worklogDates.length; i++) {
+                                const dayDiff = (worklogDates[i].getTime() - currentRange.end.getTime()) / (1000 * 3600 * 24);
+                                if(dayDiff <= 1) { // consecutive days
+                                    currentRange.end = worklogDates[i];
+                                } else {
+                                    actual.push(currentRange);
+                                    currentRange = { start: worklogDates[i], end: worklogDates[i], name: 'Work Logged' };
+                                }
+                            }
+                            actual.push(currentRange);
+                        }
+
+                        // Helper to safely parse dates (Firestore Timestamps vs ISO Strings)
+                        const convertToDate = (val: any): Date | null => {
+                            if (!val) return null;
+                            if (typeof val.toDate === 'function') {
+                                return val.toDate();
+                            }
+                            const d = new Date(val);
+                            return isNaN(d.getTime()) ? null : d;
+                        };
+
+                        resolvedData.push({
+                            project,
+                            planned,
+                            actual,
+                            onboardingDate: convertToDate(empData.onboardingDate),
+                            offloadingDate: convertToDate(empData.offloadingDate),
+                            availability: empData.availability !== undefined ? Number(empData.availability) : 100
+                        });
                     }
                 }
                 
-                const dataPromises = userProjects.map(async (project) => {
-                    // Fetch planned tasks
-                    const tasksQuery = query(
-                        collection(db, 'projects', project.id, 'stories'), 
-                        where('itemType', '==', 'Task'),
-                        where('assigneeId', '==', selectedUser.id)
-                    );
-                    const tasksSnapshot = await getDocs(tasksQuery);
-                    const planned = tasksSnapshot.docs.map(doc => {
-                        const task = doc.data() as Story;
-                        return { 
-                            start: task.startDate ? new Date(task.startDate) : null, 
-                            end: task.endDate ? new Date(task.endDate) : null,
-                            name: task.title
-                        };
-                    }).filter(t => t.start && t.end && !isNaN(t.start.getTime()) && !isNaN(t.end.getTime())) as Array<{ start: Date; end: Date; name: string; }>;
-
-                    // Fetch actual worklogs
-                    const worklogsQuery = query(
-                        collection(db, 'projects', project.id, 'worklogs'),
-                        where('employeeId', '==', selectedUser.id)
-                    );
-                    const worklogsSnapshot = await getDocs(worklogsQuery);
-                    const worklogDates = worklogsSnapshot.docs
-                        .map(doc => new Date(doc.id.split('-').slice(1).join('-')))
-                        .filter(d => !isNaN(d.getTime()));
-                    
-                    const actual: Array<{ start: Date; end: Date; name: string }> = [];
-                    if (worklogDates.length > 0) {
-                        worklogDates.sort((a,b) => a.getTime() - b.getTime());
-                        let currentRange = { start: worklogDates[0], end: worklogDates[0], name: 'Work Logged' };
-
-                        for(let i = 1; i < worklogDates.length; i++) {
-                            const dayDiff = (worklogDates[i].getTime() - currentRange.end.getTime()) / (1000 * 3600 * 24);
-                            if(dayDiff <= 1) { // consecutive days
-                                currentRange.end = worklogDates[i];
-                            } else {
-                                actual.push(currentRange);
-                                currentRange = { start: worklogDates[i], end: worklogDates[i], name: 'Work Logged' };
-                            }
-                        }
-                        actual.push(currentRange);
-                    }
-                    
-                    return { project, planned, actual };
-                });
-                
-                const resolvedData = await Promise.all(dataPromises);
                 setTimelineData(resolvedData);
 
             } catch (error) {
@@ -173,20 +189,22 @@ export default function UtilizationPage() {
     };
 
     const getOccupancyForDate = (date: Date, data: ProjectTimelineData[]) => {
-        const activeProjects: Array<{ id: string; name: string; color: string }> = [];
+        const activeProjects: Array<{ id: string; name: string; color: string; availability: number; onboardingDate: Date | null; offloadingDate: Date | null }> = [];
         data.forEach((item, index) => {
-            const isPlanned = item.planned.some(p => {
-                const start = startOfDay(new Date(p.start));
-                const end = startOfDay(new Date(p.end));
+            if (item.onboardingDate && item.offloadingDate) {
+                const start = startOfDay(new Date(item.onboardingDate));
+                const end = startOfDay(new Date(item.offloadingDate));
                 const current = startOfDay(new Date(date));
-                return current >= start && current <= end;
-            });
-            if (isPlanned) {
-                activeProjects.push({
-                    id: item.project.id,
-                    name: item.project.name,
-                    color: COLORS[index % COLORS.length]
-                });
+                if (current >= start && current <= end) {
+                    activeProjects.push({
+                        id: item.project.id,
+                        name: item.project.name,
+                        color: COLORS[index % COLORS.length],
+                        availability: item.availability,
+                        onboardingDate: item.onboardingDate,
+                        offloadingDate: item.offloadingDate
+                    });
+                }
             }
         });
         return activeProjects;
@@ -197,6 +215,21 @@ export default function UtilizationPage() {
         return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
     };
 
+    const activeProjectsInMonth = useMemo(() => {
+        const startOfSelectedMonth = startOfMonth(currentCalendarMonth);
+        const endOfSelectedMonth = endOfMonth(currentCalendarMonth);
+        
+        return timelineData.filter(item => {
+            if (!item.onboardingDate || !item.offloadingDate) return false;
+            const start = startOfDay(item.onboardingDate);
+            const end = startOfDay(item.offloadingDate);
+            return start <= endOfSelectedMonth && end >= startOfSelectedMonth;
+        }).map((item, index) => ({
+            ...item,
+            color: COLORS[index % COLORS.length]
+        }));
+    }, [timelineData, currentCalendarMonth]);
+
     const availabilityOutlook = useMemo(() => {
         if (!timelineData.length) return null;
         
@@ -204,22 +237,22 @@ export default function UtilizationPage() {
         const startOfSelectedMonth = startOfMonth(currentCalendarMonth);
         const endOfSelectedMonth = endOfMonth(currentCalendarMonth);
         
-        // 1. Calculate monthly utilization rate for selected month
+        // 1. Calculate monthly utilization rate for selected month (average cumulative utilization)
         const daysInMonthList = eachDayOfInterval({ start: startOfSelectedMonth, end: endOfSelectedMonth });
-        let occupiedDaysCount = 0;
+        let totalUtilSum = 0;
         
         daysInMonthList.forEach(day => {
             const activeProjects = getOccupancyForDate(day, timelineData);
-            if (activeProjects.length > 0) {
-                occupiedDaysCount++;
-            }
+            const dailyUtil = activeProjects.reduce((sum, proj) => sum + proj.availability, 0);
+            totalUtilSum += dailyUtil;
         });
         
-        const monthlyRate = (occupiedDaysCount / daysInMonthList.length) * 100;
+        const monthlyRate = totalUtilSum / daysInMonthList.length;
         
         // 2. Determine today's status
         const todayProjects = getOccupancyForDate(today, timelineData);
-        const isOccupiedToday = todayProjects.length > 0;
+        const todayUtil = todayProjects.reduce((sum, proj) => sum + proj.availability, 0);
+        const isOccupiedToday = todayUtil > 0;
         
         // 3. Find next available date (from today onwards, look up to 90 days ahead)
         let nextAvailable: Date | null = null;
@@ -227,25 +260,26 @@ export default function UtilizationPage() {
         
         for (let i = 0; i < 90; i++) {
             const projects = getOccupancyForDate(checkDate, timelineData);
-            if (projects.length === 0) {
+            const totalUtil = projects.reduce((sum, proj) => sum + proj.availability, 0);
+            if (totalUtil < 100) {
                 nextAvailable = new Date(checkDate);
                 break;
             }
             checkDate.setDate(checkDate.getDate() + 1);
         }
         
-        // 4. Find occupied until date (maximum end date of any active range starting today)
+        // 4. Find occupied until date (maximum offloading date of any active range starting today)
         let occupiedUntil: Date | null = null;
         let maxDateMs = 0;
         
         timelineData.forEach(item => {
-            item.planned.forEach(p => {
-                const endMs = p.end.getTime();
-                if (p.end >= today && endMs > maxDateMs) {
+            if (item.offloadingDate) {
+                const endMs = item.offloadingDate.getTime();
+                if (item.offloadingDate >= today && endMs > maxDateMs) {
                     maxDateMs = endMs;
-                    occupiedUntil = p.end;
+                    occupiedUntil = item.offloadingDate;
                 }
-            });
+            }
         });
 
         // 5. Calculate active projects list in the viewed month
@@ -419,6 +453,44 @@ export default function UtilizationPage() {
                                             </span>
                                         </div>
                                     </div>
+
+                                    {/* Monthly Project Allocations List */}
+                                    <div className="border-t pt-4 space-y-3">
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                                            Allocated Projects ({format(currentCalendarMonth, 'MMMM yyyy')})
+                                        </span>
+                                        {activeProjectsInMonth.length === 0 ? (
+                                            <p className="text-xs text-muted-foreground italic">No project allocations in this month.</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {activeProjectsInMonth.map((item) => {
+                                                    return (
+                                                        <div key={item.project.id} className="flex flex-col space-y-1 p-2.5 rounded-md border bg-muted/20">
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className="text-xs font-bold flex items-center gap-1.5 truncate">
+                                                                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                                                                    <span className="truncate" title={item.project.name}>{item.project.name}</span>
+                                                                </span>
+                                                                <Badge variant="secondary" className="text-[10px] font-bold py-0 px-1.5 shrink-0 bg-primary/10 text-primary border-none">
+                                                                    {item.availability}% Util
+                                                                </Badge>
+                                                            </div>
+                                                            <div className="flex flex-col text-[10px] text-muted-foreground space-y-0.5">
+                                                                <div className="flex justify-between">
+                                                                    <span>Onboard:</span>
+                                                                    <span className="font-mono">{item.onboardingDate ? format(item.onboardingDate, 'MMM d, yyyy') : 'N/A'}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span>Offload:</span>
+                                                                    <span className="font-mono">{item.offloadingDate ? format(item.offloadingDate, 'MMM d, yyyy') : 'N/A'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
                                 </CardContent>
                             </Card>
 
@@ -465,22 +537,23 @@ export default function UtilizationPage() {
                                             const isSelected = selectedCalendarDay && isSameDay(day, selectedCalendarDay);
                                             const isToday = isSameDay(day, new Date());
                                             
+                                            // Sum up utilization percentage
+                                            const totalUtilization = activeProjects.reduce((sum, proj) => sum + proj.availability, 0);
+                                            
                                             // Color schemes based on utilization level
                                             let bgClass = "bg-background hover:bg-muted/50 dark:hover:bg-muted/20";
                                             let borderClass = "border-border";
                                             let textClass = "text-foreground";
-                                            let utilLabel = "0%";
+                                            let utilLabel = `${totalUtilization}%`;
                                             
-                                            if (activeProjects.length === 1) {
+                                            if (totalUtilization > 0 && totalUtilization <= 100) {
                                                 bgClass = "bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/40";
                                                 borderClass = "border-indigo-200 dark:border-indigo-800";
                                                 textClass = "text-indigo-800 dark:text-indigo-300";
-                                                utilLabel = "100%";
-                                            } else if (activeProjects.length > 1) {
+                                            } else if (totalUtilization > 100) {
                                                 bgClass = "bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100/70 dark:hover:bg-rose-950/40";
                                                 borderClass = "border-rose-200 dark:border-rose-800";
                                                 textClass = "text-rose-800 dark:text-rose-300";
-                                                utilLabel = "Over";
                                             }
 
                                             if (isToday) {
@@ -497,15 +570,28 @@ export default function UtilizationPage() {
                                                     key={day.toISOString()}
                                                     onClick={() => setSelectedCalendarDay(day)}
                                                     className={cn(
-                                                        "aspect-square rounded border flex flex-col justify-between p-1 md:p-1.5 transition-all duration-200 cursor-pointer select-none text-left focus:outline-none relative group",
+                                                        "aspect-square rounded border flex flex-col justify-between p-1 md:p-1.5 transition-all duration-200 cursor-pointer select-none text-left focus:outline-none relative group overflow-hidden",
                                                         bgClass,
                                                         borderClass,
                                                         textClass
                                                     )}
                                                 >
                                                     <span className="text-xs font-semibold">{format(day, 'd')}</span>
+                                                    
+                                                    {/* Gantt-like colored filling bars */}
+                                                    <div className="w-full space-y-0.5 my-1 flex-1 flex flex-col justify-center">
+                                                        {activeProjects.map((proj) => (
+                                                            <div
+                                                                key={proj.id}
+                                                                className="h-1.5 w-full rounded-sm opacity-80 hover:opacity-100 transition-opacity animate-in fade-in"
+                                                                style={{ backgroundColor: proj.color }}
+                                                                title={`${proj.name} (${proj.availability}% Allocation)`}
+                                                            />
+                                                        ))}
+                                                    </div>
+
                                                     <span className={cn(
-                                                        "text-[9px] md:text-[10px] font-bold block text-right mt-1 opacity-80",
+                                                        "text-[9px] md:text-[10px] font-bold block text-right mt-auto opacity-80 w-full",
                                                         isSelected ? "text-primary-foreground" : "text-muted-foreground"
                                                     )}>
                                                         {utilLabel}
@@ -529,17 +615,16 @@ export default function UtilizationPage() {
                                             ) : (
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedDayAssignments.map((proj) => {
-                                                        const allocationRate = Math.round(100 / selectedDayAssignments.length);
                                                         return (
                                                             <Badge 
                                                                 key={proj.id} 
                                                                 variant="outline" 
-                                                                className="flex items-center gap-1.5 text-xs py-1 px-2.5"
+                                                                className="flex items-center gap-1.5 text-xs py-1 px-2.5 animate-in slide-in-from-bottom-1"
                                                                 style={{ borderColor: `${proj.color}40`, backgroundColor: `${proj.color}08` }}
                                                             >
                                                                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: proj.color }} />
                                                                 <span className="font-medium text-foreground">{proj.name}</span>
-                                                                <span className="text-muted-foreground ml-1">({allocationRate}% Allocation)</span>
+                                                                <span className="text-muted-foreground ml-1">({proj.availability}% Allocation)</span>
                                                             </Badge>
                                                         );
                                                     })}
@@ -550,20 +635,6 @@ export default function UtilizationPage() {
                                 </CardContent>
                             </Card>
                         </div>
-
-                        {/* Long-term Gantt Chart Timeline */}
-                        <Card className="border-border">
-                            <CardHeader className="pb-2 border-b">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <Activity className="h-5 w-5 text-primary" />
-                                    Allocation Timeline (Gantt Chart)
-                                </CardTitle>
-                                <CardDescription>Gantt view of planned tasks and actual work logged</CardDescription>
-                            </CardHeader>
-                            <CardContent className="pt-4">
-                                <UtilizationGanttChart data={timelineData} />
-                            </CardContent>
-                        </Card>
                     </div>
                 )
             ) : (
