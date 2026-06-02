@@ -49,6 +49,7 @@ import {
   Calculator,
   Bug,
   ClipboardList,
+  CalendarCheck,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -181,7 +182,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     },
     {
       id: 'holidays',
-      href: `/holidays`,
+      href: `/holidays/holiday-calendar`,
       label: "Holiday Calendar",
       icon: CalendarDays,
       group: 'holidays'
@@ -191,6 +192,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: `/holidays/allocated`,
       label: "Allocated Leaves",
       icon: ClipboardList,
+      group: 'holidays'
+    },
+    {
+      id: 'leave-tracker',
+      href: `/holidays/leave-tracker`,
+      label: "Leave Tracker",
+      icon: CalendarCheck,
       group: 'holidays'
     },
     {

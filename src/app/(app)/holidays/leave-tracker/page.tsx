@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useProject } from '@/context/ProjectContext';
+
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -34,11 +34,12 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { format, isSameDay, eachDayOfInterval } from 'date-fns';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { type User, type LeavePeriod } from '@/types';
+import { type User, type LeavePeriod, type Holiday } from '@/types';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { db } from '@/lib/firebase';
-import { onSnapshot, doc } from 'firebase/firestore';
+import { onSnapshot, doc, collection, query, where, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
 const leaveSchema = z.object({
   startDate: z.string().min(1, 'Start date is required.'),
@@ -53,8 +54,11 @@ const leaveSchema = z.object({
 });
 
 export default function LeaveTrackerPage() {
-  const { employees: users, allUsers, addLeavePeriod, deleteLeavePeriod, isLoading, holidays, weeklyOffDays } = useProject();
   const { toast } = useToast();
+
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [weeklyOffDays, setWeeklyOffDays] = useState<number[]>([0, 6]);
 
   const [deletingLeavePeriod, setDeletingLeavePeriod] = useState<LeavePeriod | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
@@ -71,7 +75,9 @@ export default function LeaveTrackerPage() {
 
   useEffect(() => {
     if (!db) return;
-    const unsub = onSnapshot(doc(db, 'settings', 'main'), (docSnap) => {
+    
+    // Fetch Settings
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'main'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setLeaveSettings({
@@ -79,10 +85,76 @@ export default function LeaveTrackerPage() {
           allowCarryOver: data.allowCarryOver ?? false,
           carryOverLimit: data.carryOverLimit ?? 10,
         });
+        setWeeklyOffDays(data.weeklyOffDays ?? [0, 6]);
       }
     });
-    return () => unsub();
+
+    // Fetch Employees
+    const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot) => {
+      const emps = snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as User);
+      setAllUsers(emps);
+    });
+
+    // Fetch Holidays
+    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
+      const hols = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
+        } as Holiday;
+      });
+      setHolidays(hols);
+    });
+
+    return () => {
+      unsubSettings();
+      unsubEmployees();
+      unsubHolidays();
+    };
   }, []);
+
+  const addLeavePeriod = async (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>): Promise<boolean> => {
+    if (!db) return false;
+    try {
+      const newLeavePeriod: LeavePeriod = {
+        ...leavePeriod,
+        id: uuidv4(),
+        startDate: new Date(leavePeriod.startDate).toISOString(),
+        endDate: new Date(leavePeriod.endDate).toISOString(),
+      };
+      
+      const globalEmployeeRef = doc(db, 'employees', employeeId);
+      await updateDoc(globalEmployeeRef, {
+        leavePeriods: arrayUnion(newLeavePeriod)
+      });
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to add leave period globally.", e);
+      return false;
+    }
+  };
+
+  const deleteLeavePeriod = async (employeeId: string, leavePeriodId: string): Promise<boolean> => {
+    if (!db) return false;
+    const globalUser = allUsers.find(u => u.id === employeeId);
+    if (!globalUser || !globalUser.leavePeriods) return false;
+
+    const leavePeriodToDelete = globalUser.leavePeriods.find(p => p.id === leavePeriodId);
+    if (!leavePeriodToDelete) return false;
+    
+    try {
+      const globalEmployeeRef = doc(db, 'employees', employeeId);
+      await updateDoc(globalEmployeeRef, {
+        leavePeriods: arrayRemove(leavePeriodToDelete)
+      });
+      return true;
+    } catch (e) {
+      console.error("Firebase Error: Failed to delete leave period globally.", e);
+      return false;
+    }
+  };
 
   const calculateBusinessDaysForYear = useMemo(() => {
     return (startDateStr: string, endDateStr: string, year: number): number => {
@@ -142,7 +214,7 @@ export default function LeaveTrackerPage() {
     }
   }, []);
 
-  // Derived active user strictly from logged-in session (checks allUsers first, then project users, defaults to users[0] if not found)
+  // Derived active user strictly from logged-in session (checks allUsers)
   const activeUser = useMemo(() => {
     if (allUsers.length > 0 && currentUser?.email) {
       const loggedInEmployee = allUsers.find(emp => emp.email?.toLowerCase() === currentUser.email.toLowerCase());
@@ -150,10 +222,8 @@ export default function LeaveTrackerPage() {
         return loggedInEmployee;
       }
     }
-    if (users.length === 0) return null;
-    const loggedInEmployeeInProject = users.find(emp => emp.email?.toLowerCase() === currentUser?.email?.toLowerCase());
-    return loggedInEmployeeInProject || users[0];
-  }, [users, allUsers, currentUser]);
+    return null;
+  }, [allUsers, currentUser]);
 
   const calculateBusinessDays = (startDateStr: string, endDateStr: string): number => {
     try {

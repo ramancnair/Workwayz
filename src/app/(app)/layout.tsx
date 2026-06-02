@@ -96,7 +96,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     } else if (value === 'users') {
       router.push('/users');
     } else if (value === 'holidays') {
-      router.push('/holidays');
+      router.push('/holidays/holiday-calendar');
     } else if (value === 'trash') {
         router.push('/trash');
     } else if (value === 'portfolios') {

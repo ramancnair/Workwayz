@@ -279,11 +279,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: CalendarDays,
     },
     {
-      href: `${basePath}/holidays/leave-tracker`,
-      label: "Leave Tracker",
-      icon: CalendarCheck,
-    },
-    {
       href: `${basePath}/holidays/leave-calendar`,
       label: "Leave Calendar",
       icon: CalendarDays,
