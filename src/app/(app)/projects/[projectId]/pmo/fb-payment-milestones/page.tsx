@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProject } from '@/context/ProjectContext';
+import { eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -74,7 +75,11 @@ export default function BillingPage() {
     paymentMilestones, 
     addPaymentMilestone, 
     updatePaymentMilestone, 
-    deletePaymentMilestone 
+    deletePaymentMilestone,
+    employees,
+    holidays,
+    weeklyOffDays,
+    fixedCosts
   } = useProject();
 
   useEffect(() => {
@@ -99,6 +104,86 @@ export default function BillingPage() {
   const [isSavingVal, setIsSavingVal] = useState(false);
   const [isEditingValue, setIsEditingValue] = useState(false);
   const [hasInitializedEditState, setHasInitializedEditState] = useState(false);
+  const [isOverriddenInput, setIsOverriddenInput] = useState(false);
+
+  // Helper functions for billing total calculation
+  const calculateBusinessDays = (startDateStr?: string, endDateStr?: string): number => {
+    if (!startDateStr || !endDateStr) return 0;
+    try {
+        const start = parseISO(startDateStr);
+        const end = parseISO(endDateStr);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+            return 0;
+        }
+
+        const holidayDates = holidays.map(h => new Date(h.date));
+
+        const interval = eachDayOfInterval({ start, end });
+        
+        const businessDays = interval.filter(day => {
+            const dayOfWeek = day.getDay();
+            const isWeekend = weeklyOffDays.includes(dayOfWeek);
+            const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+            return !isWeekend && !isHoliday;
+        });
+
+        return businessDays.length;
+    } catch(e) {
+        console.error("Error calculating business days", e);
+        return 0;
+    }
+  };
+
+  const calculateProjectMonths = (): number => {
+    if (!project?.startDate || !project?.endDate) return 1;
+    try {
+        const start = parseISO(project.startDate);
+        const end = parseISO(project.endDate);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+            return 1;
+        }
+        
+        const yearsDiff = end.getFullYear() - start.getFullYear();
+        const monthsDiff = end.getMonth() - start.getMonth();
+        return Math.max(1, yearsDiff * 12 + monthsDiff + 1);
+    } catch(e) {
+        console.error("Error calculating project months", e);
+        return 1;
+    }
+  };
+
+  const calculatedTotalBill = useMemo(() => {
+    if (!employees || !fixedCosts) {
+      return 0;
+    }
+    
+    let totalRevenue = 0;
+
+    employees.forEach(user => {
+      const workingDays = calculateBusinessDays(user.onboardingDate, user.offloadingDate);
+      if (workingDays > 0) {
+        totalRevenue += workingDays * (user.billedRate || 0);
+      }
+    });
+    
+    const totalFixedCost = fixedCosts.reduce((acc, fc) => {
+      if (fc.type === 'Monthly') {
+        const months = calculateProjectMonths();
+        return acc + ((fc.cost || 0) * months);
+      }
+      return acc + (fc.cost || 0);
+    }, 0);
+
+    return totalRevenue + totalFixedCost;
+  }, [employees, fixedCosts, holidays, weeklyOffDays, project]);
+
+  const effectiveContractValue = useMemo(() => {
+    return project.isProjectValueOverridden 
+      ? (project.projectValue || 0) 
+      : calculatedTotalBill;
+  }, [project.isProjectValueOverridden, project.projectValue, calculatedTotalBill]);
   
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'milestoneId', desc: false });
 
@@ -157,7 +242,7 @@ export default function BillingPage() {
 
     paymentMilestones.forEach(m => {
       const amount = project?.pricingModel === 'Fixed Bid'
-        ? ((m.billingPercentage / 100) * (project.projectValue || 0))
+        ? ((m.billingPercentage / 100) * effectiveContractValue)
         : (m.amount || 0);
 
       if (m.status === 'Payment Completed') {
@@ -168,7 +253,7 @@ export default function BillingPage() {
     });
 
     return { realisedAmount: realised, remainingAmount: remaining };
-  }, [paymentMilestones, project]);
+  }, [paymentMilestones, project, effectiveContractValue]);
 
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>
@@ -179,21 +264,21 @@ export default function BillingPage() {
     </TableHead>
   );
 
-  // Initialize Project value forms & editing state
   useEffect(() => {
     if (project) {
-      setProjectValueInput(project.projectValue !== undefined ? String(project.projectValue) : '');
+      setProjectValueInput(project.isProjectValueOverridden ? String(project.projectValue || '') : String(calculatedTotalBill));
       setMonthlyBilledInput(project.monthlyBilledValue !== undefined ? String(project.monthlyBilledValue) : '');
+      setIsOverriddenInput(!!project.isProjectValueOverridden);
       
       if (!hasInitializedEditState) {
         const hasValue = project.pricingModel === 'Fixed Bid' 
-          ? (project.projectValue !== undefined && project.projectValue !== null && project.projectValue !== 0)
+          ? (project.projectValue !== undefined && project.projectValue !== null && project.projectValue !== 0) || !project.isProjectValueOverridden
           : (project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null && project.monthlyBilledValue !== 0);
         setIsEditingValue(!hasValue);
         setHasInitializedEditState(true);
       }
     }
-  }, [project, hasInitializedEditState]);
+  }, [project, hasInitializedEditState, calculatedTotalBill]);
 
   // Form watcher for billing percentage auto-calculation in Fixed Bid
   const billingPct = form.watch('billingPercentage');
@@ -206,11 +291,11 @@ export default function BillingPage() {
   useEffect(() => {
     if (project?.pricingModel === 'Fixed Bid') {
       const pct = parseFloat(billingPct as any) || 0;
-      const totalVal = parseFloat(projectValueInput) || project.projectValue || 0;
+      const totalVal = effectiveContractValue;
       const computedAmount = (pct / 100) * totalVal;
       form.setValue('amount', Math.round(computedAmount * 100) / 100);
     }
-  }, [billingPct, project, projectValueInput, form]);
+  }, [billingPct, project, effectiveContractValue, form]);
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -255,16 +340,23 @@ export default function BillingPage() {
   const handleSaveProjectValue = async () => {
     if (!project) return;
     const val = parseFloat(projectValueInput);
-    if (isNaN(val) || val < 0) {
+    if (isOverriddenInput && (isNaN(val) || val < 0)) {
       toast({ variant: "destructive", title: "Error", description: "Please enter a valid positive number." });
       return;
     }
     setIsSavingVal(true);
-    const success = await updateProject({ projectValue: val });
+    
+    const targetValue = isOverriddenInput ? val : calculatedTotalBill;
+    
+    const success = await updateProject({ 
+      projectValue: targetValue,
+      isProjectValueOverridden: isOverriddenInput
+    });
+    
     if (success) {
       // Synchronize all existing payment milestone amounts in the database
       const promises = paymentMilestones.map(milestone => {
-        const computedAmount = (milestone.billingPercentage / 100) * val;
+        const computedAmount = (milestone.billingPercentage / 100) * targetValue;
         return updatePaymentMilestone(milestone.id, { amount: Math.round(computedAmount * 100) / 100 });
       });
       await Promise.all(promises);
@@ -300,7 +392,7 @@ export default function BillingPage() {
     const payload = { ...payloadData } as any;
 
     if (project?.pricingModel === 'Fixed Bid') {
-      const totalVal = parseFloat(projectValueInput) || project.projectValue || 0;
+      const totalVal = effectiveContractValue;
       payload.amount = Math.round(((values.billingPercentage / 100) * totalVal) * 100) / 100;
     }
 
@@ -359,17 +451,32 @@ export default function BillingPage() {
                 !isEditingValue ? (
                   <div className="flex flex-col md:flex-row items-end gap-4 max-w-xl">
                     <div className="flex-1 space-y-2 w-full">
-                      <label className="text-sm font-semibold text-muted-foreground">Final Contract Value (USD)</label>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-semibold text-muted-foreground">Final Contract Value (USD)</label>
+                        {project.isProjectValueOverridden ? (
+                          <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-400 border border-amber-500/20">
+                            Custom Override
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
+                            Default (Total Bill)
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3">
                         <div className="text-2xl font-black text-foreground tracking-tight py-1 bg-background/30 rounded px-3 border border-border/40 flex-1 flex items-center h-10">
-                          ${(project.projectValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${effectiveContractValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <Button 
                           type="button" 
                           variant="outline" 
                           size="icon" 
-                          onClick={() => setIsEditingValue(true)} 
-                          className="h-10 w-10 shrink-0 border-muted-foreground/30 hover:border-foreground/50 transition-colors"
+                          onClick={() => {
+                            setProjectValueInput(project.isProjectValueOverridden ? String(project.projectValue || '') : String(calculatedTotalBill));
+                            setIsOverriddenInput(!!project.isProjectValueOverridden);
+                            setIsEditingValue(true);
+                          }} 
+                          className="h-10 w-10 shrink-0 border-muted-foreground/30 hover:border-foreground/50 transition-colors cursor-pointer"
                           title="Edit Contract Value"
                         >
                           <Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" />
@@ -378,37 +485,67 @@ export default function BillingPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col md:flex-row items-end gap-4 max-w-xl">
-                    <div className="flex-1 space-y-2 w-full">
-                      <label className="text-sm font-semibold text-muted-foreground">Final Contract Value (USD)</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={projectValueInput}
-                          onChange={(e) => setProjectValueInput(e.target.value)}
-                          className="pl-8 bg-background/50 border-muted"
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2 w-full md:w-auto">
-                      <Button onClick={handleSaveProjectValue} disabled={isSavingVal} className="shadow-sm">
-                        {isSavingVal ? 'Saving...' : 'Save Value'}
+                  <div className="space-y-4 max-w-xl">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        type="button"
+                        variant={isOverriddenInput ? "outline" : "default"}
+                        onClick={() => {
+                          setIsOverriddenInput(false);
+                          setProjectValueInput(String(calculatedTotalBill));
+                        }}
+                        className="flex-1 text-xs h-9 cursor-pointer transition-all duration-200"
+                      >
+                        Use Billing Total (${calculatedTotalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                       </Button>
-                      {(project.projectValue !== undefined && project.projectValue !== null && project.projectValue !== 0) && (
+                      <Button
+                        type="button"
+                        variant={isOverriddenInput ? "default" : "outline"}
+                        onClick={() => {
+                          setIsOverriddenInput(true);
+                          setProjectValueInput(project.isProjectValueOverridden ? String(project.projectValue || '') : '');
+                        }}
+                        className="flex-1 text-xs h-9 cursor-pointer transition-all duration-200"
+                      >
+                        Custom Override
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-end gap-4">
+                      <div className="flex-1 space-y-2 w-full">
+                        <label className="text-sm font-semibold text-muted-foreground">
+                          {isOverriddenInput ? 'Custom Contract Value (USD)' : 'Billing Total (USD) - Read-only'}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={projectValueInput}
+                            onChange={(e) => setProjectValueInput(e.target.value)}
+                            className="pl-8 bg-background/50 border-muted focus-visible:ring-1"
+                            disabled={!isOverriddenInput}
+                            autoFocus={isOverriddenInput}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 w-full md:w-auto shrink-0">
+                        <Button onClick={handleSaveProjectValue} disabled={isSavingVal} className="shadow-sm cursor-pointer">
+                          {isSavingVal ? 'Saving...' : 'Save Value'}
+                        </Button>
                         <Button 
                           variant="ghost" 
                           onClick={() => {
-                            setProjectValueInput(String(project.projectValue || ''));
+                            setProjectValueInput(project.isProjectValueOverridden ? String(project.projectValue || '') : String(calculatedTotalBill));
+                            setIsOverriddenInput(!!project.isProjectValueOverridden);
                             setIsEditingValue(false);
                           }}
                           disabled={isSavingVal}
+                          className="cursor-pointer"
                         >
                           Cancel
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -524,7 +661,7 @@ export default function BillingPage() {
                   <TableCell>{milestone.billingPercentage}%</TableCell>
                   <TableCell>
                     ${(project?.pricingModel === 'Fixed Bid'
-                      ? ((milestone.billingPercentage / 100) * (project.projectValue || 0))
+                      ? ((milestone.billingPercentage / 100) * effectiveContractValue)
                       : milestone.amount
                     ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </TableCell>

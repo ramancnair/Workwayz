@@ -360,6 +360,7 @@ export type Project = {
   isArchived?: boolean;
   archivedAt?: string; // ISO String
   projectValue?: number;
+  isProjectValueOverridden?: boolean;
   monthlyBilledValue?: number;
   pmoApproval?: {
     permitToBuild?: {
