@@ -45,17 +45,17 @@ const leaveSchema = z.object({
   endDate: z.string().min(1, 'End date is required.'),
   type: z.enum(['Paid Leave', 'Loss of Pay'], { required_error: 'Leave type is required.' }),
 }).refine(data => {
-    if (!data.startDate || !data.endDate) return true;
-    return new Date(data.endDate) >= new Date(data.startDate);
+  if (!data.startDate || !data.endDate) return true;
+  return new Date(data.endDate) >= new Date(data.startDate);
 }, {
   message: 'End date cannot be before start date.',
   path: ['endDate'],
 });
 
 export default function LeaveTrackerPage() {
-  const { employees: users, addLeavePeriod, deleteLeavePeriod, isLoading, holidays, weeklyOffDays } = useProject();
+  const { employees: users, allUsers, addLeavePeriod, deleteLeavePeriod, isLoading, holidays, weeklyOffDays } = useProject();
   const { toast } = useToast();
-  
+
   const [deletingLeavePeriod, setDeletingLeavePeriod] = useState<LeavePeriod | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
 
@@ -89,9 +89,9 @@ export default function LeaveTrackerPage() {
       try {
         const start = new Date(startDateStr);
         const end = new Date(endDateStr);
-        
+
         if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
-            return 0;
+          return 0;
         }
 
         const yearStart = new Date(year, 0, 1);
@@ -106,16 +106,16 @@ export default function LeaveTrackerPage() {
 
         const holidayDates = holidays.map(h => new Date(h.date));
         const interval = eachDayOfInterval({ start: overlapStart, end: overlapEnd });
-        
+
         const businessDays = interval.filter(day => {
-            const dayOfWeek = day.getDay();
-            const isWeekend = weeklyOffDays.includes(dayOfWeek);
-            const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
-            return !isWeekend && !isHoliday;
+          const dayOfWeek = day.getDay();
+          const isWeekend = weeklyOffDays.includes(dayOfWeek);
+          const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+          return !isWeekend && !isHoliday;
         });
 
         return businessDays.length;
-      } catch(e) {
+      } catch (e) {
         console.error("Error calculating business days", e);
         return 0;
       }
@@ -142,37 +142,43 @@ export default function LeaveTrackerPage() {
     }
   }, []);
 
-  // Derived active user strictly from logged-in session (defaults to users[0] if not found)
+  // Derived active user strictly from logged-in session (checks allUsers first, then project users, defaults to users[0] if not found)
   const activeUser = useMemo(() => {
+    if (allUsers.length > 0 && currentUser?.email) {
+      const loggedInEmployee = allUsers.find(emp => emp.email?.toLowerCase() === currentUser.email.toLowerCase());
+      if (loggedInEmployee) {
+        return loggedInEmployee;
+      }
+    }
     if (users.length === 0) return null;
-    const loggedInEmployee = users.find(emp => emp.email?.toLowerCase() === currentUser?.email?.toLowerCase());
-    return loggedInEmployee || users[0];
-  }, [users, currentUser]);
+    const loggedInEmployeeInProject = users.find(emp => emp.email?.toLowerCase() === currentUser?.email?.toLowerCase());
+    return loggedInEmployeeInProject || users[0];
+  }, [users, allUsers, currentUser]);
 
   const calculateBusinessDays = (startDateStr: string, endDateStr: string): number => {
     try {
-        const start = new Date(startDateStr);
-        const end = new Date(endDateStr);
-        
-        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
-            return 0;
-        }
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
 
-        const holidayDates = holidays.map(h => new Date(h.date));
-
-        const interval = eachDayOfInterval({ start, end });
-        
-        const businessDays = interval.filter(day => {
-            const dayOfWeek = day.getDay();
-            const isWeekend = weeklyOffDays.includes(dayOfWeek);
-            const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
-            return !isWeekend && !isHoliday;
-        });
-
-        return businessDays.length;
-    } catch(e) {
-        console.error("Error calculating business days", e);
+      if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
         return 0;
+      }
+
+      const holidayDates = holidays.map(h => new Date(h.date));
+
+      const interval = eachDayOfInterval({ start, end });
+
+      const businessDays = interval.filter(day => {
+        const dayOfWeek = day.getDay();
+        const isWeekend = weeklyOffDays.includes(dayOfWeek);
+        const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+        return !isWeekend && !isHoliday;
+      });
+
+      return businessDays.length;
+    } catch (e) {
+      console.error("Error calculating business days", e);
+      return 0;
     }
   };
 
@@ -192,11 +198,11 @@ export default function LeaveTrackerPage() {
     const hasEmploymentStartDateInPrevYear = user.employmentStartDate && new Date(user.employmentStartDate).getFullYear() <= prevYear;
     const hasOnboardingDateInPrevYear = user.onboardingDate && new Date(user.onboardingDate).getFullYear() <= prevYear;
     const hasLeavesInPrevYearOrBefore = (user.leavePeriods || []).some(p => p.startDate && new Date(p.startDate).getFullYear() <= prevYear);
-    
+
     const existedInPrevYear = !!(hasEmploymentStartDateInPrevYear || hasOnboardingDateInPrevYear || hasLeavesInPrevYearOrBefore);
 
-    const carriedOver = existedInPrevYear && leaveSettings.allowCarryOver 
-      ? Math.min(remainingPrev, leaveSettings.carryOverLimit) 
+    const carriedOver = existedInPrevYear && leaveSettings.allowCarryOver
+      ? Math.min(remainingPrev, leaveSettings.carryOverLimit)
       : 0;
 
     const totalAvailable = allocated + carriedOver;
@@ -214,6 +220,7 @@ export default function LeaveTrackerPage() {
 
     return {
       year,
+      activeYear: year,
       allocated,
       carriedOver,
       totalAvailable,
@@ -241,12 +248,12 @@ export default function LeaveTrackerPage() {
 
     const holidayDates = holidays.map(h => new Date(h.date));
     const interval = eachDayOfInterval({ start, end });
-    
+
     const businessDays = interval.filter(day => {
-        const dayOfWeek = day.getDay();
-        const isWeekend = weeklyOffDays.includes(dayOfWeek);
-        const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
-        return !isWeekend && !isHoliday;
+      const dayOfWeek = day.getDay();
+      const isWeekend = weeklyOffDays.includes(dayOfWeek);
+      const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+      return !isWeekend && !isHoliday;
     });
 
     if (businessDays.length === 0) {
@@ -267,9 +274,9 @@ export default function LeaveTrackerPage() {
         };
         const success = await addLeavePeriod(activeUser.id, newLeavePeriod);
         if (success) {
-          toast({ 
-            title: 'Converted to Loss of Pay', 
-            description: 'This leave was automatically converted to Loss of Pay (LOP) because you have 0 remaining paid leaves.' 
+          toast({
+            title: 'Converted to Loss of Pay',
+            description: 'This leave was automatically converted to Loss of Pay (LOP) because you have 0 remaining paid leaves.'
           });
           form.reset({ startDate: '', endDate: '', type: 'Paid Leave' });
         } else {
@@ -298,9 +305,9 @@ export default function LeaveTrackerPage() {
         const successLop = await addLeavePeriod(activeUser.id, lopPeriod);
 
         if (successPaid && successLop) {
-          toast({ 
-            title: 'Applied Split Leave', 
-            description: `Applied ${paidCount} days of Paid Leave. The remaining ${businessDays.length - paidCount} days were automatically converted to Loss of Pay (LOP).` 
+          toast({
+            title: 'Applied Split Leave',
+            description: `Applied ${paidCount} days of Paid Leave. The remaining ${businessDays.length - paidCount} days were automatically converted to Loss of Pay (LOP).`
           });
           form.reset({ startDate: '', endDate: '', type: 'Paid Leave' });
         } else {
@@ -340,12 +347,12 @@ export default function LeaveTrackerPage() {
 
   const handleDelete = async () => {
     if (!activeUser || !deletingLeavePeriod) return;
-    
+
     const success = await deleteLeavePeriod(activeUser.id, deletingLeavePeriod.id);
     if (success) {
-        toast({ title: 'Success', description: 'Leave period deleted.' });
+      toast({ title: 'Success', description: 'Leave period deleted.' });
     } else {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete leave period.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete leave period.' });
     }
     setDeletingLeavePeriod(null);
   }
@@ -360,215 +367,215 @@ export default function LeaveTrackerPage() {
         <PageHeader title="Leave Tracker" description="Manage your leave days." />
 
         <div className="grid gap-6 md:grid-cols-2">
-            <Card className="overflow-hidden border-border/40 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent pb-6">
-                  {activeUser ? (
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary border border-primary/20 shadow-inner">
-                        {activeUser.firstName[0]}{activeUser.lastName[0]}
-                      </div>
+          <Card className="overflow-hidden border-border/40 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent pb-6">
+              {activeUser ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary border border-primary/20 shadow-inner">
+                    {activeUser.firstName[0]}{activeUser.lastName[0]}
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold tracking-tight">
+                      {activeUser.firstName} {activeUser.lastName}
+                    </CardTitle>
+                    <CardDescription className="text-xs font-medium text-muted-foreground mt-0.5">
+                      {activeUser.email} • Logged-in Employee
+                    </CardDescription>
+                  </div>
+                </div>
+              ) : (
+                <CardTitle>Active User Profile</CardTitle>
+              )}
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              {activeUser ? (
+                <>
+                  {leaveQuotaStats && (
+                    <>
+                      {/* Premium Global Leave Ledger */}
                       <div>
-                        <CardTitle className="text-xl font-bold tracking-tight">
-                          {activeUser.firstName} {activeUser.lastName}
-                        </CardTitle>
-                        <CardDescription className="text-xs font-medium text-muted-foreground mt-0.5">
-                          {activeUser.email} • Logged-in Employee
-                        </CardDescription>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center justify-between">
+                          <span>Global Leave Pool Ledger ({leaveQuotaStats.activeYear})</span>
+                          <Badge variant="outline" className="font-semibold text-[10px] border-primary/20 text-primary bg-primary/5">
+                            Standard Base: {leaveQuotaStats.allocated} Days
+                          </Badge>
+                        </h4>
+
+                        <div className="grid grid-cols-3 gap-2 text-center bg-muted/30 rounded-xl p-3 border border-border/50">
+                          <div>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Base Quota</p>
+                            <p className="text-lg font-bold text-foreground mt-0.5">{leaveQuotaStats.allocated}d</p>
+                          </div>
+                          <div className="border-x border-border/80">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Carry-Over</p>
+                            <p className="text-lg font-bold text-emerald-600 mt-0.5">+{leaveQuotaStats.carriedOver}d</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Total Available</p>
+                            <p className="text-lg font-bold text-primary mt-0.5">{leaveQuotaStats.totalAvailable}d</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <CardTitle>Active User Profile</CardTitle>
-                  )}
-                </CardHeader>
-                <CardContent className="p-6 space-y-6">
-                {activeUser ? (
-                  <>
-                    {leaveQuotaStats && (
-                      <>
-                        {/* Premium Global Leave Ledger */}
-                        <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center justify-between">
-                            <span>Global Leave Pool Ledger ({leaveQuotaStats.activeYear})</span>
-                            <Badge variant="outline" className="font-semibold text-[10px] border-primary/20 text-primary bg-primary/5">
-                              Standard Base: {leaveQuotaStats.allocated} Days
-                            </Badge>
-                          </h4>
-                          
-                          <div className="grid grid-cols-3 gap-2 text-center bg-muted/30 rounded-xl p-3 border border-border/50">
-                            <div>
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase">Base Quota</p>
-                              <p className="text-lg font-bold text-foreground mt-0.5">{leaveQuotaStats.allocated}d</p>
-                            </div>
-                            <div className="border-x border-border/80">
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase">Carry-Over</p>
-                              <p className="text-lg font-bold text-emerald-600 mt-0.5">+{leaveQuotaStats.carriedOver}d</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase">Total Available</p>
-                              <p className="text-lg font-bold text-primary mt-0.5">{leaveQuotaStats.totalAvailable}d</p>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Main Balance Display */}
-                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-md border border-primary/10">
-                          <div className="absolute -right-6 -bottom-6 opacity-10">
-                            <PlusCircle className="h-32 w-32" />
-                          </div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-primary-foreground/80">
-                            Remaining Paid Balance
+                      {/* Main Balance Display */}
+                      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-md border border-primary/10">
+                        <div className="absolute -right-6 -bottom-6 opacity-10">
+                          <PlusCircle className="h-32 w-32" />
+                        </div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-primary-foreground/80">
+                          Remaining Paid Balance
+                        </p>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <span className="text-4xl font-extrabold tracking-tight">
+                            {leaveQuotaStats.remainingPaid}
+                          </span>
+                          <span className="text-sm font-medium text-primary-foreground/70">/ {leaveQuotaStats.totalAvailable} days</span>
+                        </div>
+                        <div className="mt-4 h-1.5 w-full rounded-full bg-primary-foreground/20">
+                          <div
+                            className="h-1.5 rounded-full bg-primary-foreground transition-all duration-500"
+                            style={{ width: `${Math.min(100, (leaveQuotaStats.remainingPaid / leaveQuotaStats.totalAvailable) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Summary Counters */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-muted/40 hover:bg-muted/60 transition-colors rounded-xl p-4 border border-border/40">
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Paid Leave Taken</p>
+                          <p className="text-3xl font-extrabold text-foreground mt-2">
+                            {leaveQuotaStats.activeYearPaidTaken} <span className="text-xs font-medium text-muted-foreground">days</span>
                           </p>
-                          <div className="mt-2 flex items-baseline gap-2">
-                            <span className="text-4xl font-extrabold tracking-tight">
-                              {leaveQuotaStats.remainingPaid}
-                            </span>
-                            <span className="text-sm font-medium text-primary-foreground/70">/ {leaveQuotaStats.totalAvailable} days</span>
-                          </div>
-                          <div className="mt-4 h-1.5 w-full rounded-full bg-primary-foreground/20">
-                            <div 
-                              className="h-1.5 rounded-full bg-primary-foreground transition-all duration-500" 
-                              style={{ width: `${Math.min(100, (leaveQuotaStats.remainingPaid / leaveQuotaStats.totalAvailable) * 100)}%` }}
-                            />
-                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">Globally logged in {leaveQuotaStats.activeYear}</p>
                         </div>
+                        <div className="bg-destructive/5 hover:bg-destructive/10 transition-colors rounded-xl p-4 border border-destructive/10">
+                          <p className="text-xs font-bold text-destructive/80 uppercase tracking-wider">Loss of Pay (LOP)</p>
+                          <p className="text-3xl font-extrabold text-destructive mt-2">
+                            {leaveQuotaStats.activeYearLopTaken} <span className="text-xs font-medium text-muted-foreground">days</span>
+                          </p>
+                          <p className="text-[10px] text-destructive/70 mt-1">Globally logged in {leaveQuotaStats.activeYear}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Loading active employee profile...</p>
+              )}
+            </CardContent>
+          </Card>
 
-                        {/* Summary Counters */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-muted/40 hover:bg-muted/60 transition-colors rounded-xl p-4 border border-border/40">
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Paid Leave Taken</p>
-                            <p className="text-3xl font-extrabold text-foreground mt-2">
-                              {leaveQuotaStats.activeYearPaidTaken} <span className="text-xs font-medium text-muted-foreground">days</span>
-                            </p>
-                            <p className="text-[10px] text-muted-foreground mt-1">Globally logged in {leaveQuotaStats.activeYear}</p>
-                          </div>
-                          <div className="bg-destructive/5 hover:bg-destructive/10 transition-colors rounded-xl p-4 border border-destructive/10">
-                            <p className="text-xs font-bold text-destructive/80 uppercase tracking-wider">Loss of Pay (LOP)</p>
-                            <p className="text-3xl font-extrabold text-destructive mt-2">
-                              {leaveQuotaStats.activeYearLopTaken} <span className="text-xs font-medium text-muted-foreground">days</span>
-                            </p>
-                            <p className="text-[10px] text-destructive/70 mt-1">Globally logged in {leaveQuotaStats.activeYear}</p>
-                          </div>
-                        </div>
-                      </>
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New Leave Period</CardTitle>
+              <CardDescription>Select a start and end date for your leave.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <FormField
+                      control={form.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>Start Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>End Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Leave Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Paid Leave">Paid Leave</SelectItem>
+                            <SelectItem value="Loss of Pay">Loss of Pay</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Loading active employee profile...</p>
-                )}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Add New Leave Period</CardTitle>
-                    <CardDescription>Select a start and end date for your leave.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <div className="flex items-start gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="startDate"
-                                    render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormLabel>Start Date</FormLabel>
-                                        <FormControl>
-                                            <Input type="date" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="endDate"
-                                    render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormLabel>End Date</FormLabel>
-                                        <FormControl>
-                                            <Input type="date" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <FormField
-                                control={form.control}
-                                name="type"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Leave Type</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select type" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Paid Leave">Paid Leave</SelectItem>
-                                            <SelectItem value="Loss of Pay">Loss of Pay</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <Button type="submit" disabled={!activeUser || form.formState.isSubmitting}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Leave
-                            </Button>
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
+                  />
+                  <Button type="submit" disabled={!activeUser || form.formState.isSubmitting}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Leave
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
         </div>
 
         {activeUser && (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Logged Leave for {activeUser.firstName}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Start Date</TableHead>
-                                <TableHead>End Date</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Number of Days</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedLeavePeriods.length > 0 ? sortedLeavePeriods.map(period => (
-                                <TableRow key={period.id}>
-                                    <TableCell>{format(new Date(period.startDate), 'PPP')}</TableCell>
-                                    <TableCell>{format(new Date(period.endDate), 'PPP')}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={period.type === 'Loss of Pay' ? 'destructive' : 'secondary'}>
-                                            {period.type || 'Paid Leave'}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{calculateBusinessDays(period.startDate, period.endDate)}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => setDeletingLeavePeriod(period)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                        No leave periods logged for you.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Logged Leave for {activeUser.firstName}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Number of Days</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedLeavePeriods.length > 0 ? sortedLeavePeriods.map(period => (
+                    <TableRow key={period.id}>
+                      <TableCell>{format(new Date(period.startDate), 'PPP')}</TableCell>
+                      <TableCell>{format(new Date(period.endDate), 'PPP')}</TableCell>
+                      <TableCell>
+                        <Badge variant={period.type === 'Loss of Pay' ? 'destructive' : 'secondary'}>
+                          {period.type || 'Paid Leave'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{calculateBusinessDays(period.startDate, period.endDate)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingLeavePeriod(period)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        No leave periods logged for you.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
       </div>
       <AlertDialog open={!!deletingLeavePeriod} onOpenChange={(isOpen) => !isOpen && setDeletingLeavePeriod(null)}>
@@ -581,7 +588,7 @@ export default function LeaveTrackerPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDelete}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
