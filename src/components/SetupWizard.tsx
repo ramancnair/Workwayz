@@ -246,6 +246,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               dbProvider,
               fbProjectId,
               fbApiKey,
+              supaUrl,
+              supaKey,
               authProvider,
               kcUrl,
               kcRealm,
@@ -446,6 +448,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <SelectContent>
                       <SelectItem value="firebase">Firebase Auth</SelectItem>
                       <SelectItem value="keycloak">Keycloak</SelectItem>
+                      <SelectItem value="supabase">Supabase Auth</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">

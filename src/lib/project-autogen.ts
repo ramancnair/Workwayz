@@ -5,7 +5,7 @@
  * for a dummy project so that every dashboard is populated without manual data entry.
  */
 
-import type { Firestore } from 'firebase/firestore';
+import type { Firestore } from '@/lib/db-provider';
 import {
   collection,
   doc,
@@ -14,7 +14,7 @@ import {
   getDocs,
   query,
   where,
-} from 'firebase/firestore';
+} from '@/lib/db-provider';
 import type {
   User,
 } from '@/types';

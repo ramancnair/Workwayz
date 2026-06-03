@@ -1,6 +1,6 @@
 
-import { db } from './firebase';
-import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { db } from './db-provider';
+import { collection, getDocs, writeBatch, doc } from '@/lib/db-provider';
 
 const SUBCOLLECTIONS = [
   'epics', 'stories', 'sprints', 'employees', 'testCases', 'risks', 

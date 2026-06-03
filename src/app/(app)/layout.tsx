@@ -9,8 +9,8 @@ import { PmSidebarNav } from '@/components/PmSidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Settings } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from '@/lib/db-provider';
+import { db } from '@/lib/db-provider';
 
 type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 

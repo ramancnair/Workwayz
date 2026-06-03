@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Holiday, ProjectSettings, User } from '@/types';
 import { eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/db-provider';
 import {
   collection,
   onSnapshot,
@@ -24,7 +24,7 @@ import {
   setDoc,
   query,
   where,
-} from 'firebase/firestore';
+} from '@/lib/db-provider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

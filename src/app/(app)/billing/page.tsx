@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, getDoc, doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { collection, getDocs, query, where, getDoc, doc, onSnapshot } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

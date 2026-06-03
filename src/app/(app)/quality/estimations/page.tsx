@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, getDocs, doc, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, onSnapshot, getDocs, doc, query, where } from '@/lib/db-provider';
+import { db } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';

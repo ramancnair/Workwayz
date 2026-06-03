@@ -67,7 +67,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const isPublicPath =
-      pathname === '/login' || pathname === '/signup' || pathname === '/';
+      pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname === '/setup-wizard';
 
     const valid = validateSession();
 
@@ -89,7 +89,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isPublicPath = pathname === '/login' || pathname === '/signup' || pathname === '/';
+  const isPublicPath = pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname === '/setup-wizard';
   if (!isAuthenticated && !isPublicPath) {
     return null;
   }

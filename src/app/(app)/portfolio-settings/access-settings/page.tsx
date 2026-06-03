@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { collection, doc, getDocs, setDoc } from '@/lib/db-provider';
 import { AccessLevel, AccessControlSetting } from '@/types';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';

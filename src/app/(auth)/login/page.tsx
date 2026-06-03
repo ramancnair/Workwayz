@@ -9,10 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+import { db } from '@/lib/db-provider';
 import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from '@/lib/db-provider';
 import Keycloak from 'keycloak-js';
 
 const determineAccessLevel = (keycloak: any) => {
@@ -38,51 +39,8 @@ const syncKeycloakUserWithDatabase = async (userProfile: any, accessLevel: strin
         uid: subject
     };
 
-    if (process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
-        if (!supabase) return finalUserData;
-        const { data: employees } = await supabase.from('employees').select('*').eq('email', userProfile.email);
-        if (employees && employees.length > 0) {
-            const data = employees[0];
-            return {
-                name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-                email: data.email || userProfile.email,
-                accessLevel: data.accessLevel || accessLevel,
-                empId: data.empId || data.id,
-                uid: subject
-            };
-        }
-        
-        // Create new user in Supabase
-        const { data: allEmps } = await supabase.from('employees').select('empId');
-        let highestId = 0;
-        if (allEmps) {
-            allEmps.forEach((emp: any) => {
-                if (emp.empId && emp.empId.startsWith('E')) {
-                    const numPart = parseInt(emp.empId.substring(1));
-                    if (!isNaN(numPart) && numPart > highestId) highestId = numPart;
-                }
-            });
-        }
-        empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
-        
-        const firstName = userProfile.firstName || userProfile.username || 'Keycloak User';
-        const lastName = userProfile.lastName || '';
-        
-        await supabase.from('employees').insert([{
-            id: empId,
-            empId,
-            firstName,
-            lastName,
-            email: userProfile.email,
-            phone: 'N/A',
-            experience: 0,
-            accessLevel,
-            avatar: 'https://placehold.co/40x40.png',
-            isDeleted: false,
-            uid: subject
-        }]);
-        
-        return { name: `${firstName} ${lastName}`.trim(), email: userProfile.email, accessLevel, empId, uid: subject };
+    if (false) {
+        // Obsolete separate path for supabase. We now use the polyfill for everything!
     } else {
         if (!db) return finalUserData;
         const q = query(collection(db, 'employees'), where('email', '==', userProfile.email));
@@ -155,7 +113,7 @@ export default function LoginPage() {
 
       if (authProvider === 'keycloak') {
          throw new Error("Keycloak should use the dedicated login button.");
-      } else if (process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
+      } else if (true) {
         if (!supabase) {
            throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
         }
@@ -171,11 +129,9 @@ export default function LoginPage() {
 
         const user = authData.user;
 
-        // 2. Fetch user profile from Supabase 'employees' collection
-        const { data: employees, error: fetchError } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('email', emailInput);
+        // 2. Fetch user profile from 'employees' collection using polyfill
+        const q = query(collection(db, 'employees'), where('email', '==', emailInput));
+        const querySnapshot = await getDocs(q);
 
         let userData = {
           name: emailInput.split('@')[0],
@@ -185,13 +141,14 @@ export default function LoginPage() {
           uid: user.id
         };
 
-        if (employees && employees.length > 0) {
-          const data = employees[0];
+        if (!querySnapshot.empty) {
+          const docSnap = querySnapshot.docs[0];
+          const data = docSnap.data();
           userData = {
             name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
             email: data.email || emailInput,
             accessLevel: data.accessLevel || 'Team Member',
-            empId: data.empId || data.id,
+            empId: data.empId || docSnap.id,
             uid: user.id
           };
         }

@@ -30,7 +30,7 @@ import { PlusCircle, Edit, Trash2, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Holiday, ProjectSettings } from '@/types';
 import { format } from 'date-fns';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/db-provider';
 import {
   collection,
   onSnapshot,
@@ -40,7 +40,7 @@ import {
   doc,
   setDoc,
   Timestamp,
-} from 'firebase/firestore';
+} from '@/lib/db-provider';
 import { aiHolidayGenerator } from '@/ai/flows/ai-holiday-generator';
 
 const holidayFormSchema = z.object({

@@ -6,8 +6,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
-import { db, firebaseConfig } from '@/lib/firebase';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where, writeBatch, db } from '@/lib/db-provider';
+import { firebaseConfig } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -161,7 +161,7 @@ export default function UsersPage() {
   });
   
   useEffect(() => {
-    if (!db) return;
+    if (!db) { console.error('DB is null, aborting onSubmit!'); return; }
     const q = query(collection(db, 'employees'), where('isDeleted', '!=', true));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const usersData = querySnapshot.docs.map(doc => {
@@ -321,7 +321,8 @@ export default function UsersPage() {
   };
 
   const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
-    if (!db) return;
+    console.log('onSubmit called', values, 'db is', db);
+    if (!db) { console.error('DB is null, aborting onSubmit!'); return; }
     setIsSubmitting(true);
     
     // Check for unique email
@@ -689,7 +690,7 @@ export default function UsersPage() {
             <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <form onSubmit={form.handleSubmit(onSubmit, (errors) => { alert('Form errors: ' + JSON.stringify(errors)); console.error(errors); })} className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="firstName" render={({ field }) => (

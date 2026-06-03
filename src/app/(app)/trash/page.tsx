@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, getDocs, deleteDoc, collectionGroup, orderBy, Timestamp, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, getDocs, deleteDoc, collectionGroup, orderBy, Timestamp, getDoc } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';

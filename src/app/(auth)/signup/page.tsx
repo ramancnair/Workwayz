@@ -9,10 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+import { db } from '@/lib/db-provider';
 import { supabase } from '@/lib/supabase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs } from '@/lib/db-provider';
 import Keycloak from 'keycloak-js';
 
 
@@ -37,7 +38,7 @@ export default function SignupPage() {
 
       if (authProvider === 'keycloak') {
          throw new Error("Signup is managed by Keycloak. Please sign up via your organization's portal.");
-      } else if (process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
+      } else if (true) {
         if (!supabase) {
            throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
         }

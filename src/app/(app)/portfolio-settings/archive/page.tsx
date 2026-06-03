@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, setDoc, doc, getDocs, updateDoc, Timestamp, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, onSnapshot, setDoc, doc, getDocs, updateDoc, Timestamp, query, where } from '@/lib/db-provider';
+import { db } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import {

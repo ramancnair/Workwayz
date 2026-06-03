@@ -37,8 +37,8 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { type User, type LeavePeriod, type Holiday } from '@/types';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { db } from '@/lib/firebase';
-import { onSnapshot, doc, collection, query, where, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { onSnapshot, doc, collection, query, where, updateDoc, arrayUnion, arrayRemove } from '@/lib/db-provider';
 import { v4 as uuidv4 } from 'uuid';
 
 const leaveSchema = z.object({

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, getDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { collection, getDocs, query, where, getDoc, doc } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
