@@ -131,7 +131,8 @@ const storyCoverageConfig = {
 } satisfies ChartConfig;
 
 export default function TestingDashboard() {
-  const { testCases, stories, testPlans, testPlanTestCases, subscribeToTestPlanTestCases } = useProject();
+  const { testCases, stories, testPlans: rawTestPlans, testPlanTestCases, subscribeToTestPlanTestCases } = useProject();
+  const testPlans = useMemo(() => rawTestPlans.filter(tp => tp && tp.id && typeof tp.id === 'string' && tp.id.trim() !== ''), [rawTestPlans]);
   const [selectedTestPlanId, setSelectedTestPlanId] = useState('all');
 
   // Subscribe to all test plan subcollections for dashboard metrics

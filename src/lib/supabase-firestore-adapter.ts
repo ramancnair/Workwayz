@@ -3,6 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const db = supabase;
 
+// ============================================================================
+// Timestamp polyfill (mirrors Firestore Timestamp)
+// ============================================================================
 export class Timestamp {
     seconds: number;
     nanoseconds: number;
@@ -25,11 +28,95 @@ export class Timestamp {
     }
 }
 
-export const collection = (dbInstance: any, ...paths: string[]) => {
-    return { type: 'collection', path: paths.join('/') };
-};
+// ============================================================================
+// LOCAL PUB-SUB — the core mechanism for real-time UI updates.
+//
+// Supabase Realtime (postgres_changes) relies on a WebSocket connection to
+// the Supabase server. On local emulators and in certain Next.js HMR
+// scenarios, this connection is unreliable. Instead of depending on it, we
+// maintain a simple in-memory pub-sub: every write function (setDoc,
+// updateDoc, deleteDoc, addDoc, writeBatch.commit) notifies all active
+// onSnapshot listeners whose collection path matches the written path.
+//
+// This guarantees instant, same-tab reactivity regardless of WebSocket
+// health — exactly what Firebase Firestore's onSnapshot provides natively.
+// ============================================================================
 
+interface Listener {
+    /** The collection path this listener cares about, e.g. "employees" or "projects/abc/stories" */
+    collectionPath: string;
+    /** The full ref (may include constraints) — used to re-fetch the correct data */
+    ref: any;
+    onNext: (snapshot: any) => void;
+    onError?: (err: any) => void;
+}
 
+const listeners: Listener[] = [];
+
+/**
+ * Extract the collection path from a document path.
+ * "employees/E003" → "employees"
+ * "projects/abc/stories/s1" → "projects/abc/stories"
+ */
+function getCollectionPath(docPath: string): string {
+    const parts = docPath.split('/');
+    // A document path has an even number of parts (collection/doc/collection/doc/...)
+    // Drop the last segment (the doc id) to get the collection path
+    if (parts.length >= 2) {
+        return parts.slice(0, -1).join('/');
+    }
+    return docPath;
+}
+
+/**
+ * Notify all listeners whose collection path matches the changed path.
+ * We debounce slightly (microtask) so that batch operations don't cause
+ * N re-fetches — they'll coalesce into one per listener.
+ */
+const pendingNotifications = new Set<string>();
+let notificationScheduled = false;
+let channelCounter = 0;
+
+function scheduleListenerNotification(changedDocPath: string) {
+    const collPath = getCollectionPath(changedDocPath);
+    pendingNotifications.add(collPath);
+    // Also add the exact doc path for doc-level listeners
+    pendingNotifications.add(changedDocPath);
+
+    if (!notificationScheduled) {
+        notificationScheduled = true;
+        queueMicrotask(() => {
+            const paths = new Set(pendingNotifications);
+            pendingNotifications.clear();
+            notificationScheduled = false;
+
+            for (const listener of listeners) {
+                let shouldFire = false;
+                for (const p of paths) {
+                    if (p === listener.collectionPath || p === listener.ref.path || p.startsWith(listener.collectionPath + '/')) {
+                        shouldFire = true;
+                        break;
+                    }
+                }
+                if (shouldFire) {
+                    if (listener.ref.type === 'doc') {
+                        getDoc(listener.ref)
+                            .then(listener.onNext)
+                            .catch(err => { if (listener.onError) listener.onError(err); });
+                    } else {
+                        getDocs(listener.ref)
+                            .then(listener.onNext)
+                            .catch(err => { if (listener.onError) listener.onError(err); });
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ============================================================================
+// Data hydration — converts stored JSON timestamps back into Timestamp objects
+// ============================================================================
 function hydrateData(data: any): any {
     if (data === null || data === undefined) return data;
     if (Array.isArray(data)) {
@@ -48,21 +135,43 @@ function hydrateData(data: any): any {
     return data;
 }
 
-export const doc = (dbInstanceOrCol: any, ...paths: string[]) => {
-    if (typeof dbInstanceOrCol === 'object' && dbInstanceOrCol.type === 'collection') {
-        return { type: 'doc', path: `${dbInstanceOrCol.path}/${paths.join('/')}` };
+// ============================================================================
+// Ref constructors
+// ============================================================================
+export const collection = (dbInstanceOrDocRef: any, ...paths: string[]) => {
+    let path = '';
+    if (dbInstanceOrDocRef && typeof dbInstanceOrDocRef === 'object' && dbInstanceOrDocRef.path) {
+        path = `${dbInstanceOrDocRef.path}/${paths.join('/')}`;
+    } else {
+        path = paths.join('/');
     }
-    return { type: 'doc', path: paths.join('/') };
+    const id = path.split('/').pop() || '';
+    return { type: 'collection', path, id };
 };
 
+export const doc = (dbInstanceOrColOrDocRef: any, ...paths: string[]) => {
+    let path = '';
+    if (dbInstanceOrColOrDocRef && typeof dbInstanceOrColOrDocRef === 'object' && dbInstanceOrColOrDocRef.path) {
+        const subPath = (paths.length > 0 && paths[0]) ? paths.join('/') : uuidv4();
+        path = `${dbInstanceOrColOrDocRef.path}/${subPath}`;
+    } else {
+        const pathStr = paths.join('/');
+        path = pathStr || uuidv4();
+    }
+    const id = path.split('/').pop() || '';
+    return { type: 'doc', path, id };
+};
+
+// ============================================================================
+// Write operations — ALL call scheduleListenerNotification
+// ============================================================================
 export const addDoc = async (colRef: any, data: any) => {
     const docId = uuidv4();
     const fullPath = `${colRef.path}/${docId}`;
     const parts = fullPath.split('/');
     
-    // projects/project_id/collection_name/...
     let projectId = null;
-    let collectionName = parts[parts.length - 2];
+    let collectionName = parts[parts.length - 2] || 'unknown';
     
     if (parts[0] === 'projects' && parts.length > 2) {
         projectId = parts[1];
@@ -70,19 +179,22 @@ export const addDoc = async (colRef: any, data: any) => {
         collectionName = parts[0];
     }
 
-    const { error } = await supabase!.from('firebase_compat').insert({
-        path: fullPath,
+    const result = await supabase!.from('firebase_compat').upsert({
         collection_name: collectionName,
+        path: fullPath,
         project_id: projectId,
-        data: data
-    });
+        data: data,
+        updated_at: new Date().toISOString()
+    }, { onConflict: 'path' });
+    if (result.error) throw result.error;
 
-    if (error) throw error;
+    scheduleListenerNotification(fullPath);
     return { id: docId, path: fullPath };
 };
 
 export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean }) => {
     const fullPath = docRef.path;
+
     const parts = fullPath.split('/');
     let projectId = null;
     let collectionName = parts[parts.length - 2] || 'unknown';
@@ -90,25 +202,22 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
     if (parts[0] === 'projects') {
         projectId = parts[1];
         if (parts.length === 2) {
-            collectionName = 'projects'; // root project doc
+            collectionName = 'projects';
         }
     } else if (parts[0] !== 'projects') {
         collectionName = parts[0];
     }
 
     if (options?.merge) {
-        // Fetch existing data to merge
         const { data: existing } = await supabase!.from('firebase_compat').select('data').eq('path', fullPath).single();
         let mergedData = existing ? { ...existing.data } : {};
         
-        // Handle arrayUnion / arrayRemove and merge normal fields
         for (const key in data) {
             if (data[key] && data[key].type === 'arrayUnion') {
                 const currentArr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
                 mergedData[key] = [...currentArr, ...data[key].elements];
             } else if (data[key] && data[key].type === 'arrayRemove') {
                 const currentArr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
-                // naive removal, doesn't handle deep equality perfectly
                 const toRemove = JSON.stringify(data[key].elements);
                 mergedData[key] = currentArr.filter((el: any) => !toRemove.includes(JSON.stringify(el)));
             } else {
@@ -134,6 +243,8 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
         }, { onConflict: 'path' });
         if (error) throw error;
     }
+
+    scheduleListenerNotification(fullPath);
 };
 
 export const updateDoc = async (docRef: any, data: any) => {
@@ -141,19 +252,21 @@ export const updateDoc = async (docRef: any, data: any) => {
 };
 
 export const deleteDoc = async (docRef: any) => {
-    const { error } = await supabase!.from('firebase_compat').delete().eq('path', docRef.path);
+    const pathStr = docRef.path;
+    const { error } = await supabase!.from('firebase_compat').delete().eq('path', pathStr);
     if (error) throw error;
+    scheduleListenerNotification(pathStr);
 };
 
+// ============================================================================
+// Read operations
+// ============================================================================
 export const getDoc = async (docRef: any) => {
     const { data, error } = await supabase!.from('firebase_compat').select('*').eq('path', docRef.path).single();
     if (error && error.code !== 'PGRST116') {
         throw error;
     }
     const docId = docRef.path.split('/').pop();
-    
-    // Parse timestamps back from ISO strings if needed, though they are stored as JSON strings
-    // We will just let the app handle it as strings or convert if needed
     
     return {
         id: docId,
@@ -174,7 +287,6 @@ export const getDocs = async (queryRef: any) => {
     let request = supabase!.from('firebase_compat').select('*');
     
     if (queryRef.path) {
-        // It's a collection, so filter by path prefix
         request = request.like('path', `${queryRef.path}/%`);
     }
 
@@ -182,15 +294,11 @@ export const getDocs = async (queryRef: any) => {
         for (const c of queryRef.constraints) {
             if (c.type === 'where') {
                 if (c.opStr === '==') {
-                    // Supabase JSONB containment or equality
-                    // Using ->> for top level text keys, but for robust types we might need specific casting
-                    // For now, we assume simple string/number equality
                     if (typeof c.value === 'string') {
                         request = request.eq(`data->>${c.fieldPath}`, c.value);
                     } else if (typeof c.value === 'boolean') {
                         request = request.eq(`data->${c.fieldPath}`, c.value);
                     } else {
-                        // For numbers etc
                         request = request.eq(`data->${c.fieldPath}`, c.value);
                     }
                 } else if (c.opStr === '!=') {
@@ -205,10 +313,9 @@ export const getDocs = async (queryRef: any) => {
     }
 
     const { data, error } = await request;
-    if (error) console.error('getDocs error:', error);
     if (error) throw error;
 
-    const docs = data.map((row: any) => {
+    const docs = (data || []).map((row: any) => {
         const docId = row.path.split('/').pop();
         return {
             id: docId,
@@ -225,6 +332,9 @@ export const getDocs = async (queryRef: any) => {
     };
 };
 
+// ============================================================================
+// Batch writes — commit triggers listeners once for all affected paths
+// ============================================================================
 export const writeBatch = (dbInstance: any) => {
     const operations: any[] = [];
     return {
@@ -238,7 +348,6 @@ export const writeBatch = (dbInstance: any) => {
              operations.push({ type: 'delete', docRef });
         },
         commit: async () => {
-            // Sequential await to mimic batch since Supabase js doesn't have a bulk mixed ops easily yet
             for (const op of operations) {
                 if (op.type === 'set') {
                     await setDoc(op.docRef, op.data, op.options);
@@ -248,14 +357,16 @@ export const writeBatch = (dbInstance: any) => {
                     await deleteDoc(op.docRef);
                 }
             }
+            // Note: each individual setDoc/updateDoc/deleteDoc already calls
+            // scheduleListenerNotification, and they coalesce via microtask,
+            // so batch commits naturally fire a single notification round.
         }
     };
 };
 
-// Simplified array operations. These would typically require RPC or reading then writing
-// For arrayUnion/arrayRemove, we return a special object and handle it in updateDoc if we want strict compatibility,
-// but for now, we can just return the raw values and hope the app logic doesn't strictly rely on atomic array operations.
-// Wait, the context appends to arrays!
+// ============================================================================
+// Array field helpers
+// ============================================================================
 export const arrayUnion = (...elements: any[]) => {
     return { type: 'arrayUnion', elements };
 };
@@ -264,46 +375,71 @@ export const arrayRemove = (...elements: any[]) => {
     return { type: 'arrayRemove', elements };
 };
 
+// ============================================================================
+// onSnapshot — registers a listener and does initial fetch.
+//
+// Also subscribes to Supabase Realtime as a secondary mechanism for
+// cross-tab / cross-user updates. But same-tab reactivity is guaranteed
+// by the local pub-sub above.
+// ============================================================================
 export const onSnapshot = (ref: any, onNext: (snapshot: any) => void, onError?: (error: any) => void) => {
-    let initialFetchComplete = false;
-    
+    // Determine the collection path this listener cares about
+    const collectionPath = ref.type === 'doc' ? ref.path : ref.path;
+
+    const listenerObj: Listener = { collectionPath, ref, onNext, onError };
+    listeners.push(listenerObj);
+
+
     // Initial fetch
     if (ref.type === 'doc') {
         getDoc(ref).then(docSnap => {
             onNext(docSnap);
-            initialFetchComplete = true;
-        }).catch(err => { console.error('onSnapshot fetch error:', err); if (onError) onError(err); });
+        }).catch(err => {
+            console.error('onSnapshot initial fetch error:', err);
+            if (onError) onError(err);
+        });
     } else {
         getDocs(ref).then(querySnap => {
             onNext(querySnap);
-            initialFetchComplete = true;
-        }).catch(err => { console.error('onSnapshot fetch error:', err); if (onError) onError(err); });
+        }).catch(err => {
+            console.error('onSnapshot initial fetch error:', err);
+            if (onError) onError(err);
+        });
     }
 
-    // Subscribe to changes
-    // In a real app we'd filter the channel down, but for simplicity we subscribe to all and filter client side
-    const channelName = `compat_${ref.path.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    
-    const channel = supabase!.channel(channelName)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'firebase_compat' }, (payload: any) => {
-            // Re-fetch everything for simplicity when a change happens that matches our path
-            if (payload.new && payload.new.path && payload.new.path.startsWith(ref.path) || 
-                payload.old && payload.old.path && payload.old.path.startsWith(ref.path)) {
-                
-                if (ref.type === 'doc') {
-                    getDoc(ref).then(onNext).catch(onError);
-                } else {
-                    getDocs(ref).then(onNext).catch(onError);
+    // Secondary: Supabase Realtime for cross-tab/cross-user updates (best-effort)
+    let channel: any = null;
+    try {
+        const channelName = `compat_${ref.path.replace(/[^a-zA-Z0-9]/g, '_')}_${channelCounter++}`;
+        channel = supabase!.channel(channelName)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'firebase_compat' }, (payload: any) => {
+                const changedPath = payload.new?.path || payload.old?.path || '';
+                if (changedPath.startsWith(ref.path) || changedPath.startsWith(ref.path + '/')) {
+                    if (ref.type === 'doc') {
+                        getDoc(ref).then(onNext).catch(err => { if (onError) onError(err); });
+                    } else {
+                        getDocs(ref).then(onNext).catch(err => { if (onError) onError(err); });
+                    }
                 }
-            }
-        })
-        .subscribe();
+            })
+            .subscribe();
+    } catch (e) {
+        // Realtime is best-effort; local pub-sub handles same-tab reactivity
+    }
 
+    // Unsubscribe function
     return () => {
-        supabase!.removeChannel(channel);
+        const index = listeners.indexOf(listenerObj);
+        if (index > -1) listeners.splice(index, 1);
+        if (channel) {
+            try { supabase!.removeChannel(channel); } catch (e) { /* ignore */ }
+        }
     };
 };
 
+// ============================================================================
+// Ordering & collection groups (stubs for API compat)
+// ============================================================================
 export const orderBy = (fieldPath: string, directionStr: string = 'asc') => {
     return { type: 'orderBy', fieldPath, directionStr };
 };

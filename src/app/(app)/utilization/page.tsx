@@ -60,7 +60,7 @@ export default function UtilizationPage() {
         const fetchUsers = async () => {
             if (!db) return;
             const usersSnapshot = await getDocs(collection(db, 'employees'));
-            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            const usersList = usersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
             setAllUsers(usersList);
         };
         fetchUsers();
@@ -84,7 +84,7 @@ export default function UtilizationPage() {
                     const employeeDocRef = doc(db, 'projects', projectDoc.id, 'employees', selectedUser.id);
                     const employeeDoc = await getDoc(employeeDocRef);
                     if (employeeDoc.exists()) {
-                        const project = { id: projectDoc.id, ...projectDoc.data() } as Project;
+                        const project = { ...projectDoc.data(), id: projectDoc.id } as Project;
                         const empData = employeeDoc.data();
 
                         // Fetch planned tasks

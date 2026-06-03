@@ -201,11 +201,11 @@ export default function PortfolioDashboardPage() {
       try {
         const portfoliosQuery = query(collection(db, 'portfolios'), where('isDeleted', '!=', true));
         const portfoliosSnapshot = await getDocs(portfoliosQuery);
-        setPortfolios(portfoliosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Portfolio)));
+        setPortfolios(portfoliosSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Portfolio)));
 
         const projectsQuery = query(collection(db, 'projects'), where('status', '==', 'Active'));
         const projectsSnapshot = await getDocs(projectsQuery);
-        const activeProjects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+        const activeProjects = projectsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Project));
         
         setAllActiveProjects(activeProjects);
 
@@ -218,7 +218,7 @@ export default function PortfolioDashboardPage() {
             risksSnapshot.forEach(doc => {
                 const risk = doc.data() as Risk;
                 if (getRiskPotential(risk.severity, risk.probability) === 'High') {
-                    fetchedRisks.push({ ...risk, id: doc.id, projectName: project.name, projectId: project.id });
+                    fetchedRisks.push({ ...risk, projectName: project.name, projectId: project.id, id: doc.id });
                 }
             });
 
@@ -232,7 +232,7 @@ export default function PortfolioDashboardPage() {
                  } as Issue;
 
                  if (['Critical', 'High'].includes(issue.priority)) {
-                    fetchedIssues.push({ ...issue, id: doc.id, projectName: project.name, projectId: project.id });
+                    fetchedIssues.push({ ...issue, projectName: project.name, projectId: project.id, id: doc.id });
                 }
             });
         }

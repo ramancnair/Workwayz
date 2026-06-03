@@ -70,7 +70,7 @@ export default function MyProjectsPage() {
     const docRef = doc(db, 'employees', currentUser.empId);
     const unsub = onSnapshot(docRef, (snapshot) => {
       if (snapshot.exists()) {
-        setCurrentUserFromDb({ id: snapshot.id, ...snapshot.data() } as User);
+        setCurrentUserFromDb({ ...snapshot.data(), id: snapshot.id } as User);
       } else {
         setCurrentUserFromDb(null);
       }
@@ -88,7 +88,7 @@ export default function MyProjectsPage() {
     const q = query(collection(db, 'projects'), where('isDeleted', '!=', true));
     const unsub = onSnapshot(q, (snapshot) => {
       const projectsData = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Project))
+        .map(doc => ({ ...doc.data(), id: doc.id } as Project))
         .filter(p => !p.isArchived);
       setAllProjects(projectsData);
     });

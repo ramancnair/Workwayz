@@ -113,16 +113,17 @@ export default function DevelopmentDashboard() {
   const [selectedSprintId, setSelectedSprintId] = useState<string | undefined>();
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | undefined>();
   
-  const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
+  const validSprints = useMemo(() => sprints.filter(s => s && s.id && typeof s.id === 'string' && s.id.trim() !== ''), [sprints]);
+  const releases = useMemo(() => releasesAndMilestones.filter(r => r && r.itemType === 'Release' && r.id && typeof r.id === 'string' && r.id.trim() !== ''), [releasesAndMilestones]);
 
   useEffect(() => {
-      const currentSprint = sprints.find(s => s.isCurrent);
+      const currentSprint = validSprints.find(s => s.isCurrent);
       if (currentSprint) {
           setSelectedSprintId(currentSprint.id);
-      } else if (sprints.length > 0) {
-          setSelectedSprintId(sprints[0].id);
+      } else if (validSprints.length > 0) {
+          setSelectedSprintId(validSprints[0].id);
       }
-  }, [sprints]);
+  }, [validSprints]);
 
   useEffect(() => {
       if(releases.length > 0) {
@@ -142,7 +143,7 @@ export default function DevelopmentDashboard() {
   }, {} as Record<string, Story[]>), [stories]);
 
   const burndownData = useMemo(() => {
-      const sprint = sprints.find(s => s.id === selectedSprintId);
+      const sprint = validSprints.find(s => s.id === selectedSprintId);
       if (!sprint || !sprint.startDate || !sprint.endDate) return [];
       
       const today = startOfDay(testDate ?? new Date());
@@ -202,7 +203,7 @@ export default function DevelopmentDashboard() {
               ideal: idealEffort < 0 ? 0 : idealEffort,
           }
       });
-  }, [selectedSprintId, sprints, stories, holidays, weeklyOffDays, subItemsByStoryId, testDate, doneColumnName]);
+  }, [selectedSprintId, validSprints, stories, holidays, weeklyOffDays, subItemsByStoryId, testDate, doneColumnName]);
 
   const burnupData = useMemo(() => {
       const release = releases.find(r => r.id === selectedReleaseId);
@@ -321,7 +322,7 @@ export default function DevelopmentDashboard() {
                           <SelectValue placeholder="Select a sprint" />
                       </SelectTrigger>
                       <SelectContent>
-                          {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                          {validSprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                       </SelectContent>
                   </Select>
               </div>

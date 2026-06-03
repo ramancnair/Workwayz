@@ -92,7 +92,7 @@ export default function BillingPage() {
     const unsubscribe = onSnapshot(q, async (projectsSnapshot) => {
       try {
         const rawProjects = projectsSnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Project))
+          .map(doc => ({ ...doc.data(), id: doc.id } as Project))
           .filter(p => !p.isArchived);
 
         // Fetch global settings & holidays
@@ -103,8 +103,8 @@ export default function BillingPage() {
         const globalHolidays = globalHolidaysSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
-            id: doc.id,
             ...data,
+            id: doc.id,
             date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
           } as Holiday;
         });
@@ -127,8 +127,8 @@ export default function BillingPage() {
           const projHolidaysList = holidaysSnap.docs.map(d => {
             const data = d.data();
             return {
-              id: d.id,
               ...data,
+              id: d.id,
               date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
             } as Holiday;
           });

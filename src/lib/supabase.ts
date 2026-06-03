@@ -5,5 +5,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publish
 
 // Only create the client if the URL and Key are present
 export const supabase = (supabaseUrl && supabaseAnonKey) 
-    ? createClient(supabaseUrl, supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+            fetch: (url, options) => {
+                return fetch(url, { ...options, cache: 'no-store' });
+            }
+        }
+    })
     : null;

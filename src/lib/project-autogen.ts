@@ -129,7 +129,8 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const kanbanCols = ['To Do', 'In Progress', 'In QA', 'Done'];
   const kanbanColIds: Record<string, string> = {};
   kanbanCols.forEach((name, i) => {
-    const ref = doc(col('kanbanColumns'));
+    const docId = name.toLowerCase().replace(/\s+/g, '-');
+    const ref = doc(col('kanbanColumns'), docId);
     kanbanColIds[name] = ref.id;
     batch.set(ref, {
       name,

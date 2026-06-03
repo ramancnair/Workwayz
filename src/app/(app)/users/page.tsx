@@ -690,7 +690,7 @@ export default function UsersPage() {
             <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit, (errors) => { alert('Form errors: ' + JSON.stringify(errors)); console.error(errors); })} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="firstName" render={({ field }) => (

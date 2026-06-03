@@ -330,12 +330,12 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
 export default function BacklogPage() {
   const { 
     project,
-    epics, 
+    epics: rawEpics, 
     stories, 
-    sprints, 
-    employees: users, 
+    sprints: rawSprints, 
+    employees: rawUsers, 
     releasesAndMilestones,
-    impactedSystems,
+    impactedSystems: rawImpactedSystems,
     moveStoryToSprint, 
     moveStoryToEpic, 
     deleteStory, 
@@ -350,11 +350,17 @@ export default function BacklogPage() {
     weeklyOffDays,
     projectSettings,
     testCases,
-    testPlans,
+    testPlans: rawTestPlans,
     testDate,
     updateTestCase,
     deleteTestCase,
   } = useProject();
+
+  const epics = useMemo(() => rawEpics.filter(e => e && e.id && typeof e.id === 'string' && e.id.trim() !== ''), [rawEpics]);
+  const sprints = useMemo(() => rawSprints.filter(s => s && s.id && typeof s.id === 'string' && s.id.trim() !== ''), [rawSprints]);
+  const users = useMemo(() => rawUsers.filter(u => u && u.id && typeof u.id === 'string' && u.id.trim() !== ''), [rawUsers]);
+  const testPlans = useMemo(() => rawTestPlans.filter(tp => tp && tp.id && typeof tp.id === 'string' && tp.id.trim() !== ''), [rawTestPlans]);
+  const impactedSystems = useMemo(() => rawImpactedSystems.filter(s => s && s.id && typeof s.id === 'string' && s.id.trim() !== ''), [rawImpactedSystems]);
   
   const { toast } = useToast();
 
@@ -389,7 +395,7 @@ export default function BacklogPage() {
   const [addPredecessorText, setAddPredecessorText] = useState('');
   const [editPredecessorText, setEditPredecessorText] = useState('');
 
-  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
+  const releases = useMemo(() => releasesAndMilestones.filter(r => r && r.itemType === 'Release' && r.id && typeof r.id === 'string' && r.id.trim() !== ''), [releasesAndMilestones]);
 
   const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
     if(!start || !end) return 0;

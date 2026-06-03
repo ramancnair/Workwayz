@@ -252,7 +252,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                 if (name === 'kanbanColumns' && snapshot.empty) {
                     const batch = writeBatch(db);
                     defaultKanbanColumns.forEach(col => {
-                        const docRef = doc(collection(rootProjectDocRef, 'kanbanColumns'));
+                        const docId = col.name.toLowerCase().replace(/\s+/g, '-');
+                        const docRef = doc(collection(rootProjectDocRef, 'kanbanColumns'), docId);
                         batch.set(docRef, col);
                     });
                     batch.commit().catch(e => console.error("Failed to set default Kanban columns", e));
@@ -332,7 +333,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                         date: convertTimestamp(sh.date),
                     }))
                 }
-                return { id: doc.id, ...docData };
+                return { ...docData, id: doc.id };
             };
             
             if (snapshot.docs) { // QuerySnapshot
@@ -364,8 +365,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         const holidaysData = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
-                id: doc.id,
                 ...data,
+                id: doc.id,
                 date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
             } as Holiday
         });
@@ -383,7 +384,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                     endDate: convertTimestamp(lp.endDate)
                 }));
             }
-            return { id: docSnap.id, ...data } as User;
+            return { ...data, id: docSnap.id } as User;
         });
         setAllUsers(usersData);
     });
