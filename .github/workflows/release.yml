@@ -34,7 +34,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            projectflow-test-v${{ github.ref_name }}.tar.gz
+            projectflow-web-image-v${{ github.ref_name }}.tar.gz
             docker-compose.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

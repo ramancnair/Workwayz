@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  projectflow-web:
+    image: projectflow-web:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: projectflow-web
+    ports:
+      - "3000:3000"
+    volumes:
+      - projectflow-data:/app/data
+    environment:
+      - NODE_ENV=production
+    restart: always
+
+volumes:
+  projectflow-data:
+

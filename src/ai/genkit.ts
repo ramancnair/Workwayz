@@ -1,6 +1,7 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import { openAI, openAICompatible } from '@genkit-ai/compat-oai';
+import { openAICompatible } from '@genkit-ai/compat-oai';
+import { openAI } from '@genkit-ai/compat-oai/openai';
 import { anthropic, claude35Sonnet, claude37Sonnet, claude3Opus, claude3Haiku, claude45Sonnet } from 'genkitx-anthropic';
 import { ollama } from 'genkitx-ollama';
 
