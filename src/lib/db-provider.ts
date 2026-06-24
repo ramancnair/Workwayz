@@ -2,7 +2,7 @@ import * as FB from 'firebase/firestore';
 import * as SB from './supabase-firestore-adapter';
 import { db as fbDb } from './firebase';
 
-const isSupa = true;
+const isSupa = process.env.NEXT_PUBLIC_DB_PROVIDER === 'supabase';
 export const collection = (isSupa ? SB.collection : FB.collection) as any;
 export const doc = (isSupa ? SB.doc : FB.doc) as any;
 export const addDoc = (isSupa ? SB.addDoc : FB.addDoc) as any;

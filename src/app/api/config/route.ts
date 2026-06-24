@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         }
 
         // Map incoming body settings to ENV vars based on what they sent
-        const dbKeys = ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'DATABASE_URL', 'NEXT_PUBLIC_DATABASE_PROVIDER'];
+        const dbKeys = ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'DATABASE_URL', 'NEXT_PUBLIC_DATABASE_PROVIDER', 'NEXT_PUBLIC_DB_PROVIDER'];
         if (type === 'database') {
             const db = payload;
             
@@ -60,6 +60,7 @@ export async function POST(request: Request) {
             dbKeys.forEach(k => envMap.set(k, '""'));
 
             if (db.provider === 'firebase') {
+                envMap.set('NEXT_PUBLIC_DB_PROVIDER', '"firebase"');
                 if (db.apiKey) envMap.set('NEXT_PUBLIC_FIREBASE_API_KEY', `"${db.apiKey}"`);
                 if (db.projectId) envMap.set('NEXT_PUBLIC_FIREBASE_PROJECT_ID', `"${db.projectId}"`);
                 
@@ -73,9 +74,11 @@ export async function POST(request: Request) {
                 if (db.messagingSenderId) envMap.set('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', `"${db.messagingSenderId}"`);
                 if (db.appId) envMap.set('NEXT_PUBLIC_FIREBASE_APP_ID', `"${db.appId}"`);
             } else if (db.provider === 'supabase') {
+                envMap.set('NEXT_PUBLIC_DB_PROVIDER', '"supabase"');
                 if (db.supabaseUrl) envMap.set('NEXT_PUBLIC_SUPABASE_URL', `"${db.supabaseUrl}"`);
                 if (db.supabaseAnonKey) envMap.set('NEXT_PUBLIC_SUPABASE_ANON_KEY', `"${db.supabaseAnonKey}"`);
             } else if (['postgresql', 'mysql', 'mongodb'].includes(db.provider)) {
+                envMap.set('NEXT_PUBLIC_DB_PROVIDER', `"${db.provider}"`);
                 if (db.connectionString) envMap.set('DATABASE_URL', `"${db.connectionString}"`);
             }
             envMap.set('NEXT_PUBLIC_DATABASE_PROVIDER', `"${db.provider}"`);
