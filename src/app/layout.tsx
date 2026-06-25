@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { SetupInterceptor } from "@/components/SetupInterceptor";
+import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 
 export default function RootLayout({
   children,
@@ -31,6 +32,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <SupabaseBootstrap />
           <SetupInterceptor />
           {children}
           <Toaster />

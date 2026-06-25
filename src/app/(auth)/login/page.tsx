@@ -97,23 +97,27 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!process.env.NEXT_PUBLIC_DATABASE_PROVIDER && (!auth || !db)) {
-       toast({ title: 'Error', description: 'Database not configured properly.', variant: 'destructive' });
-       return;
-    }
-
     setIsLoading(true);
     
     try {
       const emailInput = (document.getElementById('email') as HTMLInputElement)?.value;
       const passwordInput = (document.getElementById('password') as HTMLInputElement)?.value;
-      
-      const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
 
-      if (authProvider === 'keycloak') {
+      // Fetch runtime config to determine active provider (avoids NEXT_PUBLIC_ build-time baking issue)
+      let runtimeDbProvider = 'supabase';
+      let runtimeAuthProvider = 'supabase';
+      try {
+        const cfgRes = await fetch('/api/runtime-config');
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          runtimeDbProvider = cfg.dbProvider || 'supabase';
+          runtimeAuthProvider = cfg.authProvider || cfg.dbProvider || 'supabase';
+        }
+      } catch (_) {}
+
+      if (runtimeAuthProvider === 'keycloak') {
          throw new Error("Keycloak should use the dedicated login button.");
-      } else if (true) {
+      } else if (runtimeDbProvider === 'supabase') {
         if (!supabase) {
            throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
         }

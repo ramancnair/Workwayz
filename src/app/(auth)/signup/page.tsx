@@ -34,11 +34,21 @@ export default function SignupPage() {
       const firstName = nameParts[0];
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
       
-      const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
+      const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'supabase';
 
-      if (authProvider === 'keycloak') {
+      // Override with runtime config to handle Docker standalone (NEXT_PUBLIC_ baked empty)
+      let runtimeDbProvider = authProvider;
+      try {
+        const cfgRes = await fetch('/api/runtime-config');
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          runtimeDbProvider = cfg.dbProvider || cfg.authProvider || authProvider;
+        }
+      } catch (_) {}
+
+      if (runtimeDbProvider === 'keycloak') {
          throw new Error("Signup is managed by Keycloak. Please sign up via your organization's portal.");
-      } else if (true) {
+      } else if (runtimeDbProvider === 'supabase') {
         if (!supabase) {
            throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
         }
