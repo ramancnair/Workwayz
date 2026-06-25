@@ -1,0 +1,40 @@
+name: Publish Release Artifacts
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build_and_upload:
+    name: Build and Upload Artifacts to Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to upload release assets
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: projectflow-web:latest
+          outputs: type=docker,dest=/tmp/projectflow-web-image.tar
+
+      - name: Compress Docker Image Tarball
+        run: |
+          gzip -9 /tmp/projectflow-web-image.tar
+          mv /tmp/projectflow-web-image.tar.gz ./projectflow-web-image-v${{ github.ref_name }}.tar.gz
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            projectflow-web-image-v${{ github.ref_name }}.tar.gz
+            docker-compose.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
