@@ -1,18 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ⚠️  DEVELOPMENT / TESTING MODE — open access for all reads and writes.
-    //
-    // The app authenticates users via Firebase Auth + a localStorage session.
-    // Because the Firebase Auth SDK re-hydrates asynchronously after each page
-    // load, Firestore queries can fire before `request.auth` is populated,
-    // causing "Missing or insufficient permissions" errors with the stricter rule.
-    //
-    // TODO: Before going to production, replace this with collection-scoped
-    //       rules that validate `request.auth.uid` against the stored `uid`
-    //       field on each document.
+    
+    // Matches any document in any collection
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
+    
   }
 }
