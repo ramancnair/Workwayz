@@ -69,8 +69,8 @@ const severityStyles: Record<BugSeverity, string> = {
 
 
 const bugFormSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
-  description: z.string().optional(),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
   relatedTestCaseId: z.string().optional(),
   reporterId: z.string().optional(),

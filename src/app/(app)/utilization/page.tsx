@@ -32,7 +32,8 @@ import {
     Info,
     Briefcase,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -323,32 +324,58 @@ export default function UtilizationPage() {
                 <CardContent className="p-4">
                     <div className="max-w-sm">
                         <label htmlFor="user-search" className="text-sm font-medium">Select a User</label>
-                        <Input
-                            id="user-search"
-                            list="user-options"
-                            placeholder="Search by name or employee ID..."
-                            value={userInput}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setUserInput(val);
-                                if (!val) {
-                                    setSelectedUser(null);
-                                } else {
-                                    const matchingOption = userOptions.find(opt => opt.label === val);
-                                    if (matchingOption) {
-                                        handleUserSelect(val);
+                        <div className="relative flex items-center mt-1">
+                            <Input
+                                id="user-search"
+                                list="user-options"
+                                placeholder="Search by name or employee ID..."
+                                value={userInput}
+                                onFocus={() => {
+                                    setUserInput('');
+                                }}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setUserInput(val);
+                                    if (!val) {
+                                        setSelectedUser(null);
+                                    } else {
+                                        const matchingOption = userOptions.find(opt => opt.label === val);
+                                        if (matchingOption) {
+                                            handleUserSelect(val);
+                                        }
                                     }
-                                }
-                            }}
-                            onBlur={(e) => {
-                                const val = e.target.value;
-                                if (!userOptions.some(opt => opt.label === val)) {
-                                    setSelectedUser(null);
-                                } else {
-                                    handleUserSelect(val);
-                                }
-                            }}
-                        />
+                                }}
+                                onBlur={(e) => {
+                                    const val = e.target.value;
+                                    setTimeout(() => {
+                                        const matchingOption = userOptions.find(opt => opt.label === val);
+                                        if (!matchingOption) {
+                                            if (selectedUser) {
+                                                const currentOpt = userOptions.find(opt => opt.value === selectedUser.id);
+                                                setUserInput(currentOpt ? currentOpt.label : '');
+                                            } else {
+                                                setUserInput('');
+                                            }
+                                        } else {
+                                            handleUserSelect(val);
+                                        }
+                                    }, 200);
+                                }}
+                                className="pr-8"
+                            />
+                            {selectedUser && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedUser(null);
+                                        setUserInput('');
+                                    }}
+                                    className="absolute right-2.5 text-muted-foreground hover:text-foreground p-1 rounded-sm focus:outline-none"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
                         <datalist id="user-options">
                             {userOptions.map(opt => <option key={opt.value} value={opt.label} />)}
                         </datalist>

@@ -233,6 +233,11 @@ body {
     -moz-appearance: textfield;
   }
 
+  /* Hide datalist dropdown picker indicator arrows */
+  input::-webkit-calendar-picker-indicator {
+    display: none !important;
+  }
+
   /* ── Sidebar input visibility fix ─────────────────────────────────────
      Shadcn Input uses bg-background which is the page background.
      Inside the near-black sidebar, these appear invisible.

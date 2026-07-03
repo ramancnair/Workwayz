@@ -81,7 +81,7 @@ const systemSchema = z.object({
 
 const horizontalFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
-  weightage: z.coerce.number().min(0, 'Weightage must be positive.'),
+  weightage: z.coerce.number().min(0, 'Weightage must be positive.').max(100, 'Weightage cannot exceed 100%.'),
 });
 
 const categories: ImpactedSystemCategory[] = ['Technology', 'Function'];
@@ -499,7 +499,7 @@ export default function InitialEstimationPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40%]">Name</TableHead>
+                  <TableHead className="w-[40%]">System Name</TableHead>
                   <TableHead>Effort (man-days)</TableHead>
                   <TableHead>Daily Billing Rate (USD)</TableHead>
                   <TableHead>Cost (USD)</TableHead>
@@ -561,7 +561,7 @@ export default function InitialEstimationPage() {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle>Horizontals</CardTitle>
+                    <CardTitle>Horizontal</CardTitle>
                     <CardDescription>Effort derived from the Total Development Effort.</CardDescription>
                 </div>
                 {project?.status === 'Initial Estimation' && (
@@ -576,12 +576,12 @@ export default function InitialEstimationPage() {
                                disabled={!project?.summary || isEditingSummary}
                             >
                               <Bot className="mr-2 h-4 w-4" />
-                              Horizontals Suggest
+                              Horizontal Suggest
                             </Button>
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>AI based horizontals suggestion</p>
+                          <p>AI based horizontal suggestion</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -615,12 +615,18 @@ export default function InitialEstimationPage() {
                                     <TableCell>
                                         <Input
                                             type="number"
+                                            min={0}
+                                            max={100}
                                             defaultValue={h.weightage || ''}
                                             onWheel={(e) => e.currentTarget.blur()}
                                             onBlur={(e) => {
-                                                const newWeightage = parseFloat(e.target.value);
-                                                if (!isNaN(newWeightage) && newWeightage !== h.weightage) {
-                                                    updateInitialHorizontal(h.id, { weightage: newWeightage });
+                                                let newWeightage = parseFloat(e.target.value);
+                                                if (!isNaN(newWeightage)) {
+                                                    newWeightage = Math.max(0, Math.min(100, newWeightage));
+                                                    e.target.value = newWeightage.toString();
+                                                    if (newWeightage !== h.weightage) {
+                                                        updateInitialHorizontal(h.id, { weightage: newWeightage });
+                                                    }
                                                 }
                                             }}
                                             className="w-24"
@@ -788,7 +794,7 @@ export default function InitialEstimationPage() {
                   name="estimate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Estimation (man-days)</FormLabel>
+                      <FormLabel>Effort (man-days)</FormLabel>
                       <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>

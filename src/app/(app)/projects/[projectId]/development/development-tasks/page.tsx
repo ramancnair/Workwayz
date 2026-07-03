@@ -54,8 +54,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 const subTaskSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
-  description: z.string().optional(),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   parentStoryId: z.string().min(1, 'A parent story is required.'),
   assigneeId: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),

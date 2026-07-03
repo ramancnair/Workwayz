@@ -49,9 +49,9 @@ const priorityStyles: Record<Priority, string> = {
 
 const storyFormSchema = z.object({
   itemType: z.enum(workItemTypes as [string, ...string[]]),
-  title: z.string().min(1, 'Title is required.'),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   status: z.enum(statusOptions as [string, ...string[]]).optional(),
-  description: z.string().optional(),
+  description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
   parentStoryId: z.string().optional(),
@@ -72,8 +72,8 @@ const storyFormSchema = z.object({
 });
 
 const subTaskFormSchema = z.object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
+    title: z.string().min(1, 'Title is required').max(60, 'Title cannot exceed 60 characters.'),
+    description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),

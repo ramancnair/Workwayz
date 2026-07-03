@@ -44,7 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const testPlanSchemaBase = z.object({
-  name: z.string().min(1, 'Plan name is required.'),
+  name: z.string().min(1, 'Plan name is required.').max(60, 'Plan name cannot exceed 60 characters.'),
   planType: z.enum(['Sprint', 'Release']),
   sprintId: z.string().optional(),
   releaseId: z.string().optional(),
@@ -71,9 +71,9 @@ const refinedTestPlanSchema = testPlanSchemaBase.superRefine((data, ctx) => {
 });
 
 const testCaseFormSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   type: z.enum(['Functional', 'Non-functional']),
-  description: z.string().min(1, 'Description is required.'),
+  description: z.string().min(1, 'Description is required.').max(300, 'Description cannot exceed 300 characters.'),
   expectedResult: z.string().min(1, 'Expected result is required.'),
   status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
   assigneeId: z.string().optional(),

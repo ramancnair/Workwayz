@@ -8,6 +8,7 @@ import { ProjectProvider, useProject } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarNav } from '@/components/SidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
+import { cn } from '@/lib/utils';
 
 function ProjectLayoutContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -99,7 +100,15 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
           </div>
           <Tabs value={getTabValue()} onValueChange={onTabChange}>
             <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-              <TabsTrigger value="initial-estimation" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Initial Estimation</TabsTrigger>
+              <TabsTrigger 
+                value="initial-estimation" 
+                className={cn(
+                  "data-[state=active]:bg-background data-[state=active]:text-foreground",
+                  isInitialStatus && !dynamicTab && "pointer-events-none cursor-default"
+                )}
+              >
+                Initial Estimation
+              </TabsTrigger>
               {!isInitialStatus && (
                 <>
                   <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>

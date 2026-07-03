@@ -29,7 +29,7 @@ import {
   subMonths 
 } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Printer, Calendar } from 'lucide-react';
+import { PlusCircle, Trash2, Printer, Calendar, Edit } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +75,10 @@ export default function ResourceBillingPage() {
   const [newCostValue, setNewCostValue] = useState(0);
   const [newCostType, setNewCostType] = useState<'One time' | 'Monthly'>('One time');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingCostItem, setEditingCostItem] = useState<FixedCost | null>(null);
+  const [editCostName, setEditCostName] = useState('');
+  const [editCostType, setEditCostType] = useState<'One time' | 'Monthly'>('One time');
+  const [editCostValue, setEditCostValue] = useState(0);
 
   // Generate selectable months for the project duration
   const selectableMonths = useMemo(() => {
@@ -204,6 +208,32 @@ export default function ResourceBillingPage() {
       toast({ title: 'Success', description: 'Fixed cost item added.' });
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not add fixed cost item.' });
+    }
+  };
+
+  const handleStartEditFixedCost = (item: FixedCost) => {
+    setEditingCostItem(item);
+    setEditCostName(item.name);
+    setEditCostType(item.type || 'One time');
+    setEditCostValue(item.cost || 0);
+  };
+
+  const handleEditFixedCost = async () => {
+    if (!editingCostItem) return;
+    if (!editCostName.trim() || editCostValue < 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and cost.' });
+      return;
+    }
+    const success = await updateFixedCost(editingCostItem.id, {
+      name: editCostName,
+      cost: editCostValue,
+      type: editCostType,
+    });
+    if (success) {
+      setEditingCostItem(null);
+      toast({ title: 'Success', description: 'Fixed cost item updated.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update fixed cost item.' });
     }
   };
 
@@ -492,6 +522,56 @@ export default function ResourceBillingPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={!!editingCostItem} onOpenChange={(open) => { if (!open) setEditingCostItem(null); }}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Edit Fixed Cost Item</DialogTitle>
+                <DialogDescription>
+                  Modify the details of this fixed cost item.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Item Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={editCostName}
+                    onChange={(e) => setEditCostName(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-type">Type</Label>
+                    <Select value={editCostType} onValueChange={(val: 'One time' | 'Monthly') => setEditCostType(val)}>
+                      <SelectTrigger id="edit-type">
+                        <SelectValue placeholder="One time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="One time">One time</SelectItem>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-cost">Cost (USD)</Label>
+                    <Input
+                      id="edit-cost"
+                      type="number"
+                      placeholder="0"
+                      value={editCostValue}
+                      onChange={(e) => setEditCostValue(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleEditFixedCost}>
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
             <Table>
@@ -511,41 +591,24 @@ export default function ResourceBillingPage() {
                         const totalCost = isCharged ? (item.cost || 0) : 0;
 
                         return (
-                            <TableRow key={item.id} className={!isCharged ? 'opacity-40' : ''}>
+                             <TableRow key={item.id} className={!isCharged ? 'opacity-40' : ''}>
                                 <TableCell className="font-medium">
-                                    <Input
-                                        defaultValue={item.name}
-                                        onBlur={(e) => handleFixedCostChange(item.id, 'name', e.target.value)}
-                                        className="border-none bg-transparent -ml-2 focus-visible:ring-1"
-                                    />
+                                    {item.name}
                                 </TableCell>
                                 <TableCell>
-                                    <Select
-                                        defaultValue={item.type || 'One time'}
-                                        onValueChange={(val) => handleFixedCostChange(item.id, 'type', val)}
-                                    >
-                                        <SelectTrigger className="border-none bg-transparent shadow-none w-32 focus:ring-0">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="One time">One time</SelectItem>
-                                            <SelectItem value="Monthly">Monthly</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    {item.type || 'One time'}
                                 </TableCell>
                                 <TableCell>
-                                    <Input
-                                        type="number"
-                                        defaultValue={item.cost}
-                                        onBlur={(e) => handleFixedCostChange(item.id, 'cost', parseFloat(e.target.value) || 0)}
-                                        className="w-32"
-                                    />
+                                    ${(item.cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-purple-500">
                                     ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     {!isCharged && <span className="block text-[10px] text-muted-foreground">(Charged only first month)</span>}
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-right space-x-1">
+                                    <Button variant="ghost" size="icon" onClick={() => handleStartEditFixedCost(item)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
                                     <Button variant="ghost" size="icon" onClick={() => deleteFixedCost(item.id)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>

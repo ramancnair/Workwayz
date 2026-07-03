@@ -58,9 +58,9 @@ import { DatePicker } from '@/components/ui/datepicker';
 
 
 const testCaseFormSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   type: z.enum(['Functional', 'Non-functional']),
-  description: z.string().min(1, 'Description is required.'),
+  description: z.string().min(1, 'Description is required.').max(300, 'Description cannot exceed 300 characters.'),
   expectedResult: z.string().min(1, 'Expected result is required.'),
   storyId: z.string().optional(),
   releaseId: z.string().optional(),

@@ -88,7 +88,7 @@ const systemSchema = z.object({
 
 const horizontalSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
-  weightage: z.coerce.number().min(0, 'Weightage must be positive.'),
+  weightage: z.coerce.number().min(0, 'Weightage must be positive.').max(100, 'Weightage cannot exceed 100%.'),
 });
 
 const systemCategories: ImpactedSystemCategory[] = ['Technology', 'Function'];
@@ -637,7 +637,7 @@ export default function EnvironmentsPage() {
              <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[30%]">Name</TableHead>
+                  <TableHead className="w-[30%]">System Name</TableHead>
                   <TableHead className="w-[30%]">Description</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Effort (man-days)</TableHead>
@@ -698,7 +698,7 @@ export default function EnvironmentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Horizontals</CardTitle>
+              <CardTitle>Horizontal</CardTitle>
               <CardDescription>Manage horizontal capabilities for the project.</CardDescription>
             </div>
             <div className="flex gap-2">
@@ -712,12 +712,12 @@ export default function EnvironmentsPage() {
                          disabled={!project?.summary || isEditingSummary}
                       >
                         <Bot className="mr-2 h-4 w-4" />
-                        Horizontals Suggest
+                        Horizontal Suggest
                       </Button>
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>AI based horizontals suggestion</p>
+                    <p>AI based horizontal suggestion</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -750,12 +750,18 @@ export default function EnvironmentsPage() {
                       <TableCell>
                         <Input
                           type="number"
+                          min={0}
+                          max={100}
                           defaultValue={horizontal.weightage || ''}
                           onWheel={(e) => e.currentTarget.blur()}
                           onBlur={(e) => {
-                              const newWeightage = parseFloat(e.target.value);
-                              if (!isNaN(newWeightage) && newWeightage !== horizontal.weightage) {
-                                  updateHorizontal(horizontal.id, { weightage: newWeightage });
+                              let newWeightage = parseFloat(e.target.value);
+                              if (!isNaN(newWeightage)) {
+                                  newWeightage = Math.max(0, Math.min(100, newWeightage));
+                                  e.target.value = newWeightage.toString();
+                                  if (newWeightage !== horizontal.weightage) {
+                                      updateHorizontal(horizontal.id, { weightage: newWeightage });
+                                  }
                               }
                           }}
                           className="w-24"
@@ -935,7 +941,7 @@ export default function EnvironmentsPage() {
                   name="estimate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Estimation (man-days)</FormLabel>
+                      <FormLabel>Effort (man-days)</FormLabel>
                       <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>

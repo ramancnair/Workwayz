@@ -51,8 +51,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 
 const releaseSchemaBase = z.object({
-  name: z.string().min(1, 'Name is required.'),
-  description: z.string().optional(),
+  name: z.string().min(1, 'Name is required.').max(60, 'Release name cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Release description cannot exceed 300 characters.').optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   milestoneDate: z.string().optional(),

@@ -76,12 +76,12 @@ const ragStatusStyles: Record<RagStatus, string> = {
 
 
 const portfolioSchema = z.object({
-  name: z.string().min(1, 'Portfolio name is required.'),
-  description: z.string().optional(),
+  name: z.string().min(1, 'Portfolio name is required.').max(60, 'Portfolio name cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Portfolio description cannot exceed 300 characters.').optional(),
 });
 
 const projectSchema = z.object({
-  name: z.string().min(1, 'Project name is required.'),
+  name: z.string().min(1, 'Project name is required.').max(60, 'Project name cannot exceed 60 characters.'),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
   projectManagerId: z.string().optional(),
   pricingModel: z.enum(['Fixed Bid', 'T&M'] as const).optional(),
