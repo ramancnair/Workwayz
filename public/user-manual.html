@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectFlow - Comprehensive User & PMO Manual</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #1A1C29;
+            background: #F8F9FA;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: white;
+            padding: 15mm;
+            page-break-after: always;
+            page-break-inside: avoid;
+        }
+        @media print {
+            body { background: white; }
+            .page { margin: 0; padding: 15mm; box-shadow: none; }
+        }
+        .title-page {
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center; min-height: 297mm;
+        }
+        .title-page h1 { font-size: 48px; color: #0f0f23; margin-bottom: 20px; }
+        .title-page .subtitle { font-size: 24px; color: #4a4a6a; margin-bottom: 40px; }
+        .title-page .version { font-size: 16px; color: #666; margin-top: 60px; }
+        h1 { font-size: 32px; color: #0f0f23; margin-bottom: 20px; border-bottom: 3px solid #3F51B5; padding-bottom: 10px; }
+        h2 { font-size: 26px; color: #1A1C29; margin-top: 30px; margin-bottom: 15px; border-left: 4px solid #3F51B5; padding-left: 15px; }
+        h3 { font-size: 20px; color: #2a2a4a; margin-top: 25px; margin-bottom: 10px; }
+        h4 { font-size: 17px; color: #3a3a5a; margin-top: 20px; margin-bottom: 8px; }
+        p { margin-bottom: 12px; text-align: justify; }
+        .screenshot { width: 100%; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .screenshot img { width: 100%; height: auto; display: block; }
+        .screenshot-caption { background: #f8f9fa; padding: 10px 15px; font-size: 13px; color: #555; border-top: 1px solid #eee; }
+        .screenshot-caption strong { color: #3F51B5; }
+        .note { background: #e8f4fd; border-left: 4px solid #3F51B5; padding: 12px 15px; margin: 15px 0; border-radius: 0 4px 4px 0; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; margin: 15px 0; border-radius: 0 4px 4px 0; }
+        .info-box { background: #d4edda; border-left: 4px solid #28a745; padding: 12px 15px; margin: 15px 0; border-radius: 0 4px 4px 0; }
+        .toc { background: #f8f9fa; padding: 20px 30px; border-radius: 8px; margin: 20px 0; }
+        .toc h2 { border: none; padding: 0; margin-bottom: 15px; }
+        .toc ul { list-style: none; padding-left: 0; }
+        .toc li { margin: 8px 0; padding: 4px 0; }
+        .toc a { color: #3F51B5; text-decoration: none; font-size: 15px; }
+        .toc a:hover { text-decoration: underline; }
+        .toc .section-num { font-weight: bold; color: #0f0f23; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
+        table th { background: #0f0f23; color: white; padding: 10px 12px; text-align: left; font-weight: 600; }
+        table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+        table tr:nth-child(even) { background: #f8f9fa; }
+        .step { margin: 15px 0; padding: 10px 15px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #3F51B5; }
+        .step-number { font-weight: bold; color: #3F51B5; }
+        .key { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 13px; border: 1px solid #dee2e6; }
+        .card { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .card h4 { margin-top: 0; color: #3F51B5; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; font-size: 12px; color: #999; }
+        .workflow-step { margin: 15px 0; padding: 12px 15px 12px 50px; background: #f8f9fa; border-radius: 6px; position: relative; border-left: 3px solid #3F51B5; }
+        .workflow-step::before { content: attr(data-step); position: absolute; left: 12px; top: 12px; background: #3F51B5; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; }
+        .workflow-step strong { color: #0f0f23; }
+        ul, ol { margin: 10px 0 10px 20px; }
+        li { margin: 5px 0; }
+    </style>
+</head>
+<body>
+
+<!-- TITLE PAGE -->
+<div class="page title-page">
+    <h1>ProjectFlow</h1>
+    <div class="subtitle">Comprehensive User & PMO Manual</div>
+    <p style="font-size: 18px; color: #4a4a6a; max-width: 600px; line-height: 1.8;">
+        The complete guide for Project Management Office teams, project managers, and team members using the ProjectFlow enterprise AI-powered Project & Portfolio Management platform.
+    </p>
+    <div class="version">
+        <p><strong>Version:</strong> 1.0</p>
+        <p><strong>Date:</strong> July 2026</p>
+        <p><strong>Application:</strong> http://localhost:3000</p>
+        <p><strong>Target Audience:</strong> PMO Team, Project Managers, Team Members</p>
+    </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="page">
+    <h1>Table of Contents</h1>
+    <div class="toc">
+        <h2>Part A: End-User Guide</h2>
+        <ul>
+            <li><span class="section-num">1.</span> Getting Started</li>
+            <li><span class="section-num">1.1</span> Landing Page Overview</li>
+            <li><span class="section-num">1.2</span> Logging In</li>
+            <li><span class="section-num">1.3</span> Signing Up</li>
+            <li><span class="section-num">1.4</span> Password Recovery</li>
+            <li><span class="section-num">2.</span> Dashboard & Navigation</li>
+            <li><span class="section-num">2.1</span> My Projects Dashboard</li>
+            <li><span class="section-num">2.2</span> Left Sidebar Navigation</li>
+            <li><span class="section-num">2.3</span> Top-Level Menu Structure</li>
+            <li><span class="section-num">3.</span> Project-Level Navigation</li>
+            <li><span class="section-num">3.1</span> Project Header Tabs</li>
+            <li><span class="section-num">3.2</span> Entering a Project</li>
+            <li><span class="section-num">4.</span> My Profile & Settings</li>
+            <li><span class="section-num">4.1</span> User Profile Management</li>
+            <li><span class="section-num">4.2</span> Theme Settings</li>
+            <li><span class="section-num">5.</span> Notifications</li>
+        </ul>
+    </div>
+    <div class="toc">
+        <h2>Part B: PMO & Admin Guide</h2>
+        <ul>
+            <li><span class="section-num">6.</span> Initial Estimation Module</li>
+            <li><span class="section-num">6.1</span> Ballpark Estimation</li>
+            <li><span class="section-num">7.</span> Project Details</li>
+            <li><span class="section-num">8.</span> Resources Management</li>
+            <li><span class="section-num">8.1</span> Adding Resources</li>
+            <li><span class="section-num">8.2</span> Resource Availability & Dates</li>
+            <li><span class="section-num">9.</span> Releases, Stages & Milestones</li>
+            <li><span class="section-num">9.1</span> Release Timeline</li>
+            <li><span class="section-num">9.2</span> Managing Releases</li>
+            <li><span class="section-num">9.3</span> Managing Stages</li>
+            <li><span class="section-num">9.4</span> Managing Milestones</li>
+            <li><span class="section-num">10.</span> Development Dashboard</li>
+            <li><span class="section-num">10.1</span> Key Metrics</li>
+            <li><span class="section-num">10.2</span> Sprint Burndown Chart</li>
+            <li><span class="section-num">10.3</span> Release Burnup Chart</li>
+            <li><span class="section-num">11.</span> Testing Module</li>
+            <li><span class="section-num">11.1</span> Test Dashboard</li>
+            <li><span class="section-num">11.2</span> Test Backlog</li>
+            <li><span class="section-num">12.</span> Governance & RAID</li>
+            <li><span class="section-num">12.1</span> RAID Dashboard</li>
+            <li><span class="section-num">12.2</span> Risks</li>
+            <li><span class="section-num">12.3</span> Assumptions</li>
+            <li><span class="section-num">12.4</span> Issues</li>
+            <li><span class="section-num">12.5</span> Dependencies</li>
+            <li><span class="section-num">13.</span> Holidays & Leave Management</li>
+            <li><span class="section-num">13.1</span> Holiday Calendar</li>
+            <li><span class="section-num">13.2</span> Leave Calendar</li>
+            <li><span class="section-num">14.</span> PMO Module</li>
+            <li><span class="section-num">14.1</span> Project Documents</li>
+            <li><span class="section-num">14.2</span> TnM Billing</li>
+            <li><span class="section-num">14.3</span> TnM Payment Milestones</li>
+            <li><span class="section-num">14.4</span> Business Continuity</li>
+            <li><span class="section-num">14.5</span> PMO Approval Sign-offs</li>
+            <li><span class="section-num">15.</span> Project Simulation</li>
+            <li><span class="section-num">15.1</span> Running Simulations</li>
+            <li><span class="section-num">15.2</span> Test Date Controls</li>
+            <li><span class="section-num">16.</span> Project Management</li>
+            <li><span class="section-num">16.1</span> Project Trash</li>
+            <li><span class="section-num">16.2</span> Project Settings</li>
+        </ul>
+    </div>
+    <div class="toc">
+        <h2>Appendices</h2>
+        <ul>
+            <li><span class="section-num">A.</span> Quick Reference Guide</li>
+            <li><span class="section-num">A.1</span> Navigation Quick Reference</li>
+            <li><span class="section-num">A.2</span> Keyboard Shortcuts</li>
+            <li><span class="section-num">A.3</span> Common Workflows</li>
+            <li><span class="section-num">B.</span> Glossary</li>
+        </ul>
+    </div>
+</div>
+
+<!-- PART A: END-USER GUIDE -->
+<div class="page">
+    <h1>Part A: End-User Guide</h1>
+    <p>This section covers everything end-users need to know to navigate and use the ProjectFlow application effectively. It includes account management, dashboard navigation, project access, and user settings.</p>
+</div>
+
+<div class="page">
+    <h2>1. Getting Started</h2>
+
+    <h3>1.1 Landing Page Overview</h3>
+    <p>When you first access ProjectFlow at <span class="key">http://localhost:3000</span>, you will see the landing page. This is the public-facing entry point of the application.</p>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_2158f1e08e434ad3b7821e36f4788681.png" alt="ProjectFlow Landing Page">
+        <div class="screenshot-caption"><strong>Figure 1:</strong> ProjectFlow Landing Page. Shows the main heading "Manage Portfolios and Projects with Clarity" with "Get Started" and "Log In" buttons, plus three feature sections: Portfolio Management, Project Tracking, and Team Collaboration.</div>
+    </div>
+
+    <h4>Landing Page Elements:</h4>
+    <ul>
+        <li><strong>Logo:</strong> Top-left corner displays the ProjectFlow logo (blue wave icon with text)</li>
+        <li><strong>Navigation Links:</strong> "Log in" and "Sign up free" links in the top-right corner</li>
+        <li><strong>Main Heading:</strong> "Manage Portfolios and Projects with Clarity"</li>
+        <li><strong>Get Started Button:</strong> Prominent blue button to begin onboarding</li>
+        <li><strong>Log In Button:</strong> Direct access to the login page</li>
+        <li><strong>Feature Sections:</strong> Three highlighted areas:
+            <ul>
+                <li>Portfolio Management</li>
+                <li>Project Tracking</li>
+                <li>Team Collaboration</li>
+            </ul>
+        </li>
+    </ul>
+
+    <div class="info-box">
+        <strong>Tip:</strong> If you already have an account, click "Log In" to access your dashboard. New users can click "Sign up free" to create an account.
+    </div>
+
+    <h3>1.2 Logging In</h3>
+    <p>To access your ProjectFlow workspace, you need to log in with your registered credentials.</p>
+
+    <h4>Step-by-Step Login Process:</h4>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Navigate to <span class="key">http://localhost:3000</span> and click the <strong>"Log In"</strong> button on the landing page, or go directly to the login page.</div>
+
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> You will see the login page with:
+        <ul>
+            <li>ProjectFlow logo at the top</li>
+            <li>Heading: "Welcome back!"</li>
+            <li>Subheading: "Sign in to your account"</li>
+            <li>Email input field</li>
+            <li>Password input field</li>
+            <li>"Forgot password?" link</li>
+            <li>"Log In" button (blue)</li>
+            <li>"Don't have an account? Sign up free" link</li>
+        </ul>
+    </div>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_7bc26d4276f0465c97b7ffe58977b6c6.png" alt="Login Page">
+        <div class="screenshot-caption"><strong>Figure 2:</strong> Login Page. Dark-themed login form with email and password fields, "Forgot password?" link, and "Log In" button.</div>
+    </div>
+
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Enter your registered email address in the <strong>Email</strong> field.</div>
+
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Enter your password in the <strong>Password</strong> field. Your password will be masked with dots for security.</div>
+
+    <div class="workflow-step" data-step="5"><strong>Step 5:</strong> Click the <strong>"Log In"</strong> button. If your credentials are valid, you will be redirected to the <strong>My Projects Dashboard</strong>.</div>
+
+    <div class="warning">
+        <strong>Warning:</strong> If you enter incorrect credentials, you will see an error message. Please verify your email and password, or click "Forgot password?" to reset.
+    </div>
+
+    <h4>Login Troubleshooting:</h4>
+    <table>
+        <tr><th>Issue</th><th>Solution</th></tr>
+        <tr><td>Invalid email/password</td><td>Double-check your credentials. Ensure caps lock is off.</td></tr>
+        <tr><td>Forgot password</td><td>Click "Forgot password?" link and follow the reset process.</td></tr>
+        <tr><td>Account not found</td><td>You may need to sign up first. Click "Sign up free".</td></tr>
+    </table>
+
+    <h3>1.3 Signing Up</h3>
+    <p>New users can create an account by clicking "Sign up free" on the landing page or the login page.</p>
+
+    <h4>Registration Process:</h4>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click <strong>"Sign up free"</strong> on the landing page or login page.</div>
+
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> On the sign-up page, you will see:
+        <ul>
+            <li>ProjectFlow logo</li>
+            <li>Heading: "Create your account"</li>
+            <li>Input fields for: Name, Email, Password</li>
+            <li>"Sign Up" button</li>
+            <li>"Already have an account? Log in" link</li>
+        </ul>
+    </div>
+
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Fill in all required fields:
+        <ul>
+            <li><strong>Name:</strong> Your full name</li>
+            <li><strong>Email:</strong> Your work email address</li>
+            <li><strong>Password:</strong> Create a strong password (minimum 8 characters recommended)</li>
+        </ul>
+    </div>
+
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Click <strong>"Sign Up"</strong>. If successful, you will be redirected to the dashboard.</div>
+
+    <div class="note">
+        <strong>Note:</strong> Password requirements may include minimum length, uppercase letters, numbers, and special characters. Follow the on-screen guidelines.
+    </div>
+
+    <h3>1.4 Password Recovery</h3>
+    <p>If you have forgotten your password, you can reset it through the login page.</p>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> On the login page, click <strong>"Forgot password?"</strong> link below the password field.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Enter your registered email address on the password reset page.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Check your email inbox for a password reset link. Click the link and follow the instructions to set a new password.</div>
+</div>
+
+<div class="page">
+    <h2>2. Dashboard & Navigation</h2>
+
+    <h3>2.1 My Projects Dashboard</h3>
+    <p>After logging in, you will be taken to the <strong>My Projects Dashboard</strong>. This is your central hub for viewing all projects you are associated with.</p>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_ccf53110f223487b9b7d5155d44c44e0.png" alt="My Projects Dashboard">
+        <div class="screenshot-caption"><strong>Figure 3:</strong> My Projects Dashboard. Shows the "Welcome back!" notification, "My Projects" heading, project cards with status indicators, and the left sidebar with navigation options.</div>
+    </div>
+
+    <h4>Dashboard Elements:</h4>
+    <ul>
+        <li><strong>Notification Banner:</strong> "Welcome back!" appears at the top after login</li>
+        <li><strong>Page Heading:</strong> "My Projects" with a description of your project portfolio</li>
+        <li><strong>Project Cards:</strong> Each project is displayed as a card showing:
+            <ul>
+                <li>Project name (e.g., "Autogen Project 1")</li>
+                <li>Project ID (e.g., "P2600001")</li>
+                <li>Project status indicator</li>
+                <li>Quick stats (stories, features, tasks, bugs)</li>
+            </ul>
+        </li>
+        <li><strong>Clicking a project card</strong> opens that project's detail page</li>
+    </ul>
+
+    <h3>2.2 Left Sidebar Navigation</h3>
+    <p>The left sidebar provides access to all major sections of the application. Its contents change contextually depending on whether you are on the dashboard or inside a project.</p>
+
+    <h4>Dashboard Sidebar Items:</h4>
+    <ul>
+        <li><strong>My Projects:</strong> Returns to the projects dashboard (home icon)</li>
+        <li><strong>Project Resources:</strong> Access resource management for current project</li>
+        <li><strong>Project Releases:</strong> Access release management</li>
+        <li><strong>Project Simulation:</strong> Widget with percentage dropdown and "Run" button</li>
+        <li><strong>Test Date:</strong> Time and date pickers for simulation controls</li>
+        <li><strong>Project Trash:</strong> Access deleted projects</li>
+        <li><strong>Project Settings:</strong> Configure project settings</li>
+    </ul>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_a54c706d67154383b794d4e40c505778.png" alt="Sidebar Navigation">
+        <div class="screenshot-caption"><strong>Figure 4:</strong> Left Sidebar. Shows navigation menu items, Project Simulation widget with percentage dropdown and Run button, Test Date controls (time and date pickers), and user profile section at the bottom.</div>
+    </div>
+
+    <h3>2.3 Top-Level Menu Structure</h3>
+    <p>The application has a hierarchical menu structure:</p>
+
+    <table>
+        <tr><th>Level</th><th>Location</th><th>Items</th></tr>
+        <tr><td>Level 1</td><td>Left Sidebar</td><td>My Projects, Documents, TnM Billing, TnM Payment Milestones, Business Continuity</td></tr>
+        <tr><td>Level 2</td><td>Top Header Tabs</td><td>Initial Estimation, Project Details, Resources, Releases, Development, Testing, Governance, Holidays, PMO</td></tr>
+        <tr><td>Level 3</td><td>Sub-navigation</td><td>Context-specific items within each tab (e.g., Ballpark, RAID Dashboard, Test Dashboard)</td></tr>
+    </table>
+</div>
+
+<div class="page">
+    <h2>3. Project-Level Navigation</h2>
+
+    <h3>3.1 Project Header Tabs</h3>
+    <p>Inside any project, you will see a horizontal tab bar at the top of the page. These tabs provide access to all project management modules.</p>
+
+    <h4>Available Project Tabs:</h4>
+    <table>
+        <tr><th>Tab Name</th><th>Module</th><th>Purpose</th></tr>
+        <tr><td><strong>Initial Estimation</strong></td><td>Ballpark Estimation</td><td>Define project summary and impacted systems for initial cost/effort estimates</td></tr>
+        <tr><td><strong>Project Details</strong></td><td>Project Configuration</td><td>Configure project settings, milestones, and parameters</td></tr>
+        <tr><td><strong>Resources</strong></td><td>Resource Management</td><td>Manage users assigned to this project, their roles, capabilities, and availability</td></tr>
+        <tr><td><strong>Releases</strong></td><td>Release Management</td><td>Manage release cycles, stages, milestones, and timelines</td></tr>
+        <tr><td><strong>Development</strong></td><td>Development Dashboard</td><td>Overview of development progress, sprint burndown, release burnup charts</td></tr>
+        <tr><td><strong>Testing</strong></td><td>Test Management</td><td>Test execution status, test cases, bugs, and test plans</td></tr>
+        <tr><td><strong>Governance</strong></td><td>RAID Management</td><td>Risks, Assumptions, Issues, and Dependencies tracking</td></tr>
+        <tr><td><strong>Holidays</strong></td><td>Holiday/Leave Management</td><td>Holiday calendar and leave management for the project</td></tr>
+        <tr><td><strong>PMO</strong></td><td>PMO Management</td><td>Project documents, billing, payment milestones, and business continuity</td></tr>
+    </table>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_ff215eebd9284013ae615cd8fcc454fb.png" alt="Project Header Tabs">
+        <div class="screenshot-caption"><strong>Figure 5:</strong> Project Header Tabs. Shows all 9 project-level tabs: Initial Estimation, Project Details, Resources, Releases, Development, Testing, Governance, Holidays, and PMO. The active tab is highlighted.</div>
+    </div>
+
+    <h3>3.2 Entering a Project</h3>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> From the My Projects Dashboard, locate the project card you want to access.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click on the <strong>project card</strong> (anywhere on the card). This will navigate to the project's default view (typically the Development Dashboard).</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Use the <strong>top header tabs</strong> to switch between different project modules.</div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Use the <strong>left sidebar</strong> to access sub-sections within each module (e.g., RAID Dashboard, Risks, Assumptions under Governance).</div>
+</div>
+
+<div class="page">
+    <h2>4. My Profile & Settings</h2>
+
+    <h3>4.1 User Profile Management</h3>
+    <p>Your user profile is accessible from the bottom of the left sidebar. It displays your avatar, name, and email address.</p>
+
+    <h4>Profile Information Displayed:</h4>
+    <ul>
+        <li><strong>Avatar:</strong> Initials-based avatar (e.g., "R" for Raman)</li>
+        <li><strong>Name:</strong> Your display name</li>
+        <li><strong>Email:</strong> Your registered email address</li>
+    </ul>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_77811d7b7a2a47348a72d6571476b0cc.png" alt="User Profile">
+        <div class="screenshot-caption"><strong>Figure 6:</strong> User Profile Section. Bottom-left corner of the sidebar showing user avatar with initial, name, and email address.</div>
+    </div>
+
+    <div class="note">
+        <strong>Note:</strong> To update your profile information (name, email, password), click on your profile section to access profile settings. Contact your PMO administrator if you need to change your email address.
+    </div>
+
+    <h3>4.2 Theme Settings</h3>
+    <p>ProjectFlow supports theme switching to suit your preference.</p>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Look for the <strong>"Toggle theme"</strong> button in the left sidebar (light/dark mode icon).</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click the button to switch between <strong>Light</strong> and <strong>Dark</strong> themes.</div>
+
+    <div class="info-box">
+        <strong>Tip:</strong> The theme preference is saved per user. Your selected theme will persist across sessions.
+    </div>
+</div>
+
+<div class="page">
+    <h2>5. Notifications</h2>
+    <p>ProjectFlow includes a notification system to keep you informed of important events and updates.</p>
+
+    <h4>Accessing Notifications:</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Look for the <strong>notification bell icon</strong> in the top-right area of the page.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click the bell icon to open the <strong>Notifications panel</strong>.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> You can also use the keyboard shortcut <span class="key">F8</span> to quickly open notifications.</div>
+
+    <h4>Notification Types:</h4>
+    <ul>
+        <li><strong>Project Updates:</strong> Changes to project status, milestones, or deadlines</li>
+        <li><strong>Task Assignments:</strong> New tasks assigned to you</li>
+        <li><strong>Bug Reports:</strong> New bugs filed or status changes</li>
+        <li><strong>Resource Changes:</strong> Updates to team composition</li>
+        <li><strong>PMO Approvals:</strong> Status of PMO sign-off requests</li>
+    </ul>
+
+    <div class="warning">
+        <strong>Important:</strong> Regularly check your notifications to stay informed about project changes and ensure you do not miss critical updates.
+    </div>
+</div>
+
+<!-- PART B: PMO & ADMIN GUIDE -->
+<div class="page">
+    <h1>Part B: PMO & Admin Guide</h1>
+    <p>This section is designed for Project Management Office (PMO) teams, project managers, and administrators. It covers project setup, resource management, release planning, governance, billing, and all administrative functions within ProjectFlow.</p>
+</div>
+
+<div class="page">
+    <h2>6. Initial Estimation Module</h2>
+    <p>The Initial Estimation module is the starting point for any new project. It captures the project summary and impacted systems to generate an initial cost and effort estimate.</p>
+
+    <h3>6.1 Ballpark Estimation</h3>
+    <p>Ballpark Estimation allows you to define the project summary and impacted systems for an initial estimate. This is typically the first step in project creation.</p>
+
+    <h4>Navigating to Ballpark Estimation:</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Open a project from the My Projects Dashboard.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click on the <strong>"Initial Estimation"</strong> tab in the top header.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> In the left sidebar, click on <strong>"Ballpark"</strong> to access the Ballpark Estimation view.</div>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_aada5c7e8654417cb65f92ca355dce30.png" alt="Ballpark Estimation">
+        <div class="screenshot-caption"><strong>Figure 7:</strong> Ballpark Estimation Page. Shows the Project Summary section with project description and the Impacted Systems table with Name, Effort (man-days), Daily Billing Rate (USD), Cost (USD), and Actions columns.</div>
+    </div>
+
+    <h4>Ballpark Estimation Sections:</h4>
+
+    <h5>6.1.1 Project Summary</h5>
+    <p>The Project Summary section captures the high-level description of the project.</p>
+    <ul>
+        <li><strong>Title:</strong> "Project Summary"</li>
+        <li><strong>Description:</strong> "Provide a brief overview of the project's goals and scope."</li>
+        <li><strong>Input:</strong> Text area for project description</li>
+    </ul>
+
+    <div class="note">
+        <strong>Example:</strong> "This project covers the end-to-end delivery of a new product feature across Front End, Middleware, and DB layers, following agile delivery principles."
+    </div>
+
+    <h5>6.1.2 Impacted Systems</h5>
+    <p>The Impacted Systems table lists all systems affected by the project, along with effort estimates and costs.</p>
+
+    <table>
+        <tr><th>Column</th><th>Description</th><th>Example</th></tr>
+        <tr><td><strong>Name</strong></td><td>Name of the impacted system</td><td>DB, Front End, Middleware</td></tr>
+        <tr><td><strong>Effort</strong></td><td>Estimated effort in man-days</td><td>56</td></tr>
+        <tr><td><strong>Daily Billing Rate (USD)</strong></td><td>Cost per day for this system</td><td>$9,562</td></tr>
+        <tr><td><strong>Cost (USD)</strong></td><td>Total cost (Effort x Rate)</td><td>$535,472.00</td></tr>
+        <tr><td><strong>Actions</strong></td><td>Edit/Delete options</td><td>Pencil icon, Trash icon</td></tr>
+    </table>
+
+    <h4>Managing Impacted Systems:</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click the <strong>"Add"</strong> button or equivalent to add a new impacted system.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Enter the system name, effort (man-days), and daily billing rate.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> The total cost is calculated automatically (Effort x Daily Rate).</div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Click the <strong>pencil icon</strong> to edit a system entry, or the <strong>trash icon</strong> to delete it.</div>
+
+    <div class="warning">
+        <strong>Important:</strong> Accurate estimation of effort and billing rates is critical for project budgeting. Review with your PMO team before finalizing.
+    </div>
+</div>
+
+<div class="page">
+    <h2>7. Project Details</h2>
+    <p>The Project Details tab provides configuration options for the project, including project parameters, milestones, and other settings.</p>
+
+    <h4>Accessing Project Details:</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Open a project from the My Projects Dashboard.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click on the <strong>"Project Details"</strong> tab in the top header.</div>
+
+    <h4>Project Details typically includes:</h4>
+    <ul>
+        <li>Project name and ID</li>
+        <li>Project description and scope</li>
+        <li>Milestone definitions</li>
+        <li>Project timeline settings</li>
+        <li>Custom parameters</li>
+    </ul>
+
+    <div class="note">
+        <strong>PMO Note:</strong> Project Details configuration should be reviewed by the PMO team before project execution begins. Changes to project parameters may affect downstream estimates and timelines.
+    </div>
+</div>
+
+<div class="page">
+    <h2>8. Resources Management</h2>
+    <p>The Resources module is used to manage all users assigned to a project, including their roles, capabilities, availability, and onboarding/offloading dates.</p>
+
+    <h3>8.1 Adding Resources</h3>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Open a project and click on the <strong>"Resources"</strong> tab in the top header.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> In the left sidebar, click on <strong>"Project Resources"</strong> (highlighted/active).</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Click the <strong>"Add User"</strong> button in the top-right corner of the main content area.</div>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_77811d7b7a2a47348a72d6571476b0cc.png" alt="Resources Management">
+        <div class="screenshot-caption"><strong>Figure 9:</strong> Project Resources Page. Shows the "Add User" button, resource table with columns for User ID, Name, Role, Capabilities, Availability, Onboarding Date, Offloading Date, and Actions. Three sample resources are displayed: ProjectManager1 (Developer), ProjectManager2 (PM), and TeamMember1 (Architect).</div>
+    </div>
+
+    <h4>Resource Table Columns:</h4>
+    <table>
+        <tr><th>Column</th><th>Description</th><th>Example</th></tr>
+        <tr><td><strong>User ID</strong></td><td>Unique identifier for the resource</td><td>E003, E004, E007</td></tr>
+        <tr><td><strong>Name</strong></td><td>Full name of the user</td><td>ProjectManager1 User</td></tr>
+        <tr><td><strong>Role</strong></td><td>Project role</td><td>Developer, PM, Architect</td></tr>
+        <tr><td><strong>Capabilities</strong></td><td>Technical capabilities (displayed as badges)</td><td>Front End, Middleware, DB</td></tr>
+        <tr><td><strong>Availability</strong></td><td>Percentage of time available for this project</td><td>100%</td></tr>
+        <tr><td><strong>Onboarding Date</strong></td><td>Date the user joins the project</td><td>May 24th, 2026</td></tr>
+        <tr><td><strong>Offloading Date</strong></td><td>Date the user leaves the project</td><td>July 24th, 2026</td></tr>
+        <tr><td><strong>Actions</strong></td><td>Edit and delete options</td><td>Pencil icon, Trash icon</td></tr>
+    </table>
+
+    <h3>8.2 Resource Availability & Dates</h3>
+    <p>When adding or editing a resource, you can configure:</p>
+    <ul>
+        <li><strong>Role:</strong> Select from available roles (Developer, PM, Architect, etc.)</li>
+        <li><strong>Capabilities:</strong> Select technical capabilities (Front End, Middleware, DB, etc.)</li>
+        <li><strong>Availability:</strong> Set percentage of time available (0-100%)</li>
+        <li><strong>Onboarding Date:</strong> When the resource starts on the project</li>
+        <li><strong>Offloading Date:</strong> When the resource will be removed from the project</li>
+    </ul>
+
+    <div class="warning">
+        <strong>PMO Guideline:</strong> Ensure resource availability is accurately set to avoid over-allocation. Resources with less than 100% availability will have their work distributed proportionally.
+    </div>
+</div>
+
+<div class="page">
+    <h2>9. Releases, Stages & Milestones</h2>
+    <p>The Releases module manages all project release cycles, stages, milestones, and their associated timelines.</p>
+
+    <h3>9.1 Release Timeline</h3>
+    <p>The Release Timeline provides a Gantt-style visual representation of release durations across the project timeline.</p>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_a54c706d67154383b794d4e40c505778.png" alt="Releases Management">
+        <div class="screenshot-caption"><strong>Figure 10:</strong> Releases Page. Shows the Release Timeline chart spanning May-July 2026 with a Gantt-style bar for "v1.0 Final Release", the "Add Release", "Add Stage", and "Add Milestone" action buttons, and a filter bar with search and dropdown filters.</div>
+    </div>
+
+    <h4>Release Timeline Elements:</h4>
+    <ul>
+        <li><strong>Timeline Chart:</strong> Gantt-style visualization spanning project months</li>
+        <li><strong>Release Bars:</strong> Colored bars representing release durations</li>
+        <li><strong>Current Date Indicator:</strong> Red vertical line showing today's date</li>
+        <li><strong>Release Links:</strong> Clickable release names (e.g., "v1.0 Final Release")</li>
+    </ul>
+
+    <h3>9.2 Managing Releases</h3>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click on the <strong>"Releases"</strong> tab in the top header.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click the <strong>"Add Release"</strong> button.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Fill in the release details:
+        <ul>
+            <li>Release name (e.g., "v1.0 Final Release")</li>
+            <li>Start date</li>
+            <li>End date</li>
+            <li>Description</li>
+        </ul>
+    </div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Save the release. It will appear on the Release Timeline.</div>
+
+    <h3>9.3 Managing Stages</h3>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click the <strong>"Add Stage"</strong> button.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Associate the stage with a parent release.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Define stage dates and details.</div>
+
+    <h3>9.4 Managing Milestones</h3>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click the <strong>"Add Milestone"</strong> button.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Associate the milestone with a parent release.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Define milestone date and details.</div>
+
+    <h4>Releases Data Table Columns:</h4>
+    <table>
+        <tr><th>Column</th><th>Description</th></tr>
+        <tr><td><strong>ID</strong></td><td>Unique identifier (e.g., M-2, REL-1)</td></tr>
+        <tr><td><strong>Name</strong></td><td>Name of the release/stage/milestone</td></tr>
+        <tr><td><strong>Parent Release</strong></td><td>Parent release association</td></tr>
+        <tr><td><strong>Start/Milestone Date</strong></td><td>Start date or milestone date</td></tr>
+        <tr><td><strong>End Date</strong></td><td>End date (may be N/A for milestones)</td></tr>
+        <tr><td><strong>Completed</strong></td><td>Toggle switch for completion status</td></tr>
+        <tr><td><strong>Actions</strong></td><td>Edit (pencil icon)</td></tr>
+    </table>
+
+    <div class="note">
+        <strong>Filter Options:</strong> Use the filter bar below the timeline to narrow down by ID, name, description, item type, or parent release. Click "Clear Filters" to reset.
+    </div>
+</div>
+
+<div class="page">
+    <h2>10. Development Dashboard</h2>
+    <p>The Development Dashboard provides an overview of the project's development progress, including key metrics and charts.</p>
+
+    <h3>10.1 Key Metrics</h3>
+    <p>The dashboard displays four key metric cards at the top:</p>
+
+    <table>
+        <tr><th>Metric</th><th>Description</th><th>Example Value</th></tr>
+        <tr><td><strong>Total Stories</strong></td><td>Total user stories in the project</td><td>10 (100% complete)</td></tr>
+        <tr><td><strong>Feature Changes</strong></td><td>Number of feature changes</td><td>2 (100% complete, 8h Total)</td></tr>
+        <tr><td><strong>Tasks</strong></td><td>Total tasks assigned</td><td>32 (100% complete)</td></tr>
+        <tr><td><strong>Bugs</strong></td><td>Total bugs identified</td><td>47 (91% complete)</td></tr>
+    </table>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_76f0752fe75245888ed8298cd214bbd8.png" alt="Development Dashboard">
+        <div class="screenshot-caption"><strong>Figure 11:</strong> Development Dashboard. Shows four key metric cards (Total Stories, Feature Changes, Tasks, Bugs) and two charts: Sprint Burndown (left) and Release Burnup (right).</div>
+    </div>
+
+    <h3>10.2 Sprint Burndown Chart</h3>
+    <p>The Sprint Burndown chart shows the progress of work within a sprint.</p>
+
+    <h4>Chart Elements:</h4>
+    <ul>
+        <li><strong>Sprint Dropdown:</strong> Select which sprint to view (e.g., "Sprint 2")</li>
+        <li><strong>Solid Blue Line:</strong> Actual progress (work remaining over time)</li>
+        <li><strong>Dotted Blue Line:</strong> Ideal/planned trajectory</li>
+        <li><strong>Y-Axis:</strong> Work units (stories, points, or hours)</li>
+        <li><strong>X-Axis:</strong> Days in the sprint</li>
+    </ul>
+
+    <div class="info-box">
+        <strong>Interpretation:</strong> If the solid line is below the dotted line, the sprint is ahead of schedule. If above, it is behind schedule.
+    </div>
+
+    <h3>10.3 Release Burnup Chart</h3>
+    <p>The Release Burnup chart shows cumulative work completed versus total scope for a release.</p>
+
+    <h4>Chart Elements:</h4>
+    <ul>
+        <li><strong>Release Dropdown:</strong> Select which release to view (e.g., "v1.0 Final Release")</li>
+        <li><strong>Solid Blue Line:</strong> Completed work (trending upward)</li>
+        <li><strong>Dotted Line:</strong> Total scope</li>
+        <li><strong>Y-Axis:</strong> Work units</li>
+        <li><strong>X-Axis:</strong> Days</li>
+    </ul>
+
+    <div class="info-box">
+        <strong>Interpretation:</strong> The gap between the solid and dotted lines represents remaining work. A narrowing gap indicates progress toward release completion.
+    </div>
+</div>
+
+<div class="page">
+    <h2>11. Testing Module</h2>
+    <p>The Testing module manages all testing activities including test cases, test plans, bug tracking, and test execution status.</p>
+
+    <h3>11.1 Test Dashboard</h3>
+    <p>The Test Dashboard provides an overview of testing status and issues.</p>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_81db4f3d2f0844ffab0b990016e111e3.png" alt="Testing Dashboard">
+        <div class="screenshot-caption"><strong>Figure 12:</strong> Testing Dashboard. Shows the Test Execution Summary with three pie charts: Test Cases by Status, Bugs by Status, and Open Bugs by Severity. Also shows the "All Test Plans" filter dropdown.</div>
+    </div>
+
+    <h4>Test Dashboard Sections:</h4>
+    <table>
+        <tr><th>Chart</th><th>Purpose</th><th>Segments</th></tr>
+        <tr><td><strong>Test Cases by Status</strong></td><td>Distribution of test cases by execution status</td><td>Passed, Failed, In Progress, Not Executed</td></tr>
+        <tr><td><strong>Bugs by Status</strong></td><td>Distribution of bugs by current status</td><td>Open, In Progress, Fixed, Closed</td></tr>
+        <tr><td><strong>Open Bugs by Severity</strong></td><td>Distribution of open bugs by severity level</td><td>Critical (Red), High (Orange), Medium (Yellow), Low (Blue)</td></tr>
+    </table>
+
+    <h4>Accessing Test Dashboard:</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click on the <strong>"Testing"</strong> tab in the top header.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> In the left sidebar, click on <strong>"Test Dashboard"</strong> (highlighted/active).</div>
+
+    <h3>11.2 Test Backlog</h3>
+    <p>The Test Backlog contains all test cases that need to be executed.</p>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar under Testing, click on <strong>"Test Backlog"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Review the list of test cases, their status, and assign them to testers.</div>
+
+    <div class="note">
+        <strong>PMO Note:</strong> Regularly review the Test Backlog to ensure all critical test cases are assigned and executed before release.
+    </div>
+</div>
+
+<div class="page">
+    <h2>12. Governance & RAID</h2>
+    <p>The Governance module manages Risks, Assumptions, Issues, and Dependencies (RAID) -- critical elements of project governance.</p>
+
+    <h3>12.1 RAID Dashboard</h3>
+    <p>The RAID Dashboard provides an overview of all RAID elements with summary cards and visual charts.</p>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_ff215eebd9284013ae615cd8fcc454fb.png" alt="RAID Dashboard">
+        <div class="screenshot-caption"><strong>Figure 13:</strong> RAID Dashboard. Shows four summary cards (Total Risks: 3, Total Assumptions: 2, Total Issues: 3, Total Dependencies: 2) and two visual charts: Risks by Potential (yellow circle) and Assumptions by Status (red circle).</div>
+    </div>
+
+    <h4>RAID Summary Cards:</h4>
+    <table>
+        <tr><th>Card</th><th>Count</th><th>Detail</th><th>Icon</th></tr>
+        <tr><td><strong>Total Risks</strong></td><td>3</td><td>0 high potential</td><td>Shield</td></tr>
+        <tr><td><strong>Total Assumptions</strong></td><td>2</td><td>2 active</td><td>Document/List</td></tr>
+        <tr><td><strong>Total Issues</strong></td><td>3</td><td>3 open</td><td>Clock/Warning</td></tr>
+        <tr><td><strong>Total Dependencies</strong></td><td>2</td><td>1 at risk</td><td>Link/Chain</td></tr>
+    </table>
+
+    <h4>Accessing RAID Dashboard:</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click on the <strong>"Governance"</strong> tab in the top header.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> In the left sidebar, click on <strong>"RAID Dashboard"</strong>.</div>
+
+    <h3>12.2 Risks</h3>
+    <p>The Risks section allows you to identify, track, and mitigate project risks.</p>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar under Governance, click on <strong>"Risks"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click "Add Risk" to create a new risk entry.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Fill in risk details:
+        <ul>
+            <li>Risk description</li>
+            <li>Potential level (Low, Medium, High, Critical)</li>
+            <li>Owner</li>
+            <li>Mitigation strategy</li>
+            <li>Status</li>
+        </ul>
+    </div>
+
+    <h3>12.3 Assumptions</h3>
+    <p>The Assumptions section tracks all project assumptions and their validation status.</p>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar under Governance, click on <strong>"Assumptions"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click "Add Assumption" to create a new entry.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Fill in assumption details:
+        <ul>
+            <li>Assumption description</li>
+            <li>Status (Active, Validated, Invalidated)</li>
+            <li>Owner</li>
+            <li>Validation date</li>
+        </ul>
+    </div>
+
+    <h3>12.4 Issues</h3>
+    <p>The Issues section tracks all open and resolved project issues.</p>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar under Governance, click on <strong>"Issues"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click "Add Issue" to create a new entry.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Fill in issue details:
+        <ul>
+            <li>Issue description</li>
+            <li>Severity</li>
+            <li>Owner</li>
+            <li>Status (Open, In Progress, Resolved, Closed)</li>
+            <li>Resolution date</li>
+        </ul>
+    </div>
+
+    <h3>12.5 Dependencies</h3>
+    <p>The Dependencies section tracks external dependencies between projects, teams, or systems.</p>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar under Governance, click on <strong>"Dependencies"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click "Add Dependency" to create a new entry.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Fill in dependency details:
+        <ul>
+            <li>Dependency description</li>
+            <li>Source (project/team)</li>
+            <li>Target (project/team)</li>
+            <li>Status (Active, At Risk, Resolved)</li>
+            <li>Due date</li>
+        </ul>
+    </div>
+</div>
+
+<div class="page">
+    <h2>13. Holidays & Leave Management</h2>
+    <p>The Holidays module manages project-specific holiday calendars and team leave tracking.</p>
+
+    <h3>13.1 Holiday Calendar</h3>
+    <p>The Holiday Calendar allows you to manage weekly off-days and yearly holidays for the project.</p>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_585b8990e2a14a478ab0537c33c54501.png" alt="Holiday Calendar">
+        <div class="screenshot-caption"><strong>Figure 14:</strong> Holiday Calendar Page. Shows Holiday Settings section with "Override global holiday settings" toggle, and Weekly Off-Days section with checkboxes for days of the week.</div>
+    </div>
+
+    <h4>Holiday Calendar Sections:</h4>
+
+    <h5>13.1.1 Holiday Settings</h5>
+    <ul>
+        <li><strong>Toggle:</strong> "Override global holiday settings for this project"</li>
+        <li><strong>Information Box:</strong> Indicates whether the project is using global or project-specific settings</li>
+    </ul>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click on the <strong>"Holidays"</strong> tab in the top header.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> In the left sidebar, click on <strong>"Holiday Calendar"</strong>.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> To override global settings, toggle <strong>"Override global holiday settings for this project"</strong> to ON.</div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Configure project-specific holidays (enabled only when override is ON).</div>
+
+    <h5>13.1.2 Weekly Off-Days</h5>
+    <ul>
+        <li>Checkboxes for each day of the week (Monday through Sunday)</li>
+        <li>Selected days are treated as consistent off-days for the project</li>
+    </ul>
+
+    <h3>13.2 Leave Calendar</h3>
+    <p>The Leave Calendar tracks individual team member leave requests and approvals.</p>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar under Holidays, click on <strong>"Leave Calendar"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> View the leave calendar showing team member leave dates.</div>
+
+    <div class="note">
+        <strong>PMO Note:</strong> Regularly review the Leave Calendar to ensure adequate team coverage. Schedule critical activities around known leave dates.
+    </div>
+</div>
+
+<div class="page">
+    <h2>14. PMO Module</h2>
+    <p>The PMO (Project Management Office) module provides document management, billing tracking, payment milestones, and business continuity planning.</p>
+
+    <h3>14.1 Project Documents</h3>
+    <p>The Project Documents section manages all important project documents and links.</p>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_6c9e07bfbd0b4e48b30de2db1b9558dc.png" alt="Project Documents">
+        <div class="screenshot-caption"><strong>Figure 15:</strong> Project Documents Page. Shows the "Add Custom Document" button, and a table with Document Name, Location, Date Added, and Actions columns. Documents include SOW, Status Reports, Requirements, HLD/DD, Lessons learned, BCP, GIT, UI/UX Designs, Closure, and QA Approval.</div>
+    </div>
+
+    <h4>Standard Project Documents:</h4>
+    <table>
+        <tr><th>Document Name</th><th>Description</th><th>Required for</th></tr>
+        <tr><td><strong>SOW</strong></td><td>Statement of Work</td><td>Permit to Build sign-off</td></tr>
+        <tr><td><strong>Status Reports</strong></td><td>Regular project status updates</td><td>PMO review</td></tr>
+        <tr><td><strong>Requirements</strong></td><td>Business and technical requirements</td><td>Development planning</td></tr>
+        <tr><td><strong>HLD/DD</strong></td><td>High-Level Design / Detailed Design documents</td><td>Development approval</td></tr>
+        <tr><td><strong>Lessons learned</strong></td><td>Lessons from previous projects</td><td>Continuous improvement</td></tr>
+        <tr><td><strong>BCP</strong></td><td>Business Continuity Plan</td><td>Risk management</td></tr>
+        <tr><td><strong>GIT</strong></td><td>Repository access and configuration</td><td>Development setup</td></tr>
+        <tr><td><strong>UI/UX Designs</strong></td><td>Design mockups and specifications</td><td>Front-end development</td></tr>
+        <tr><td><strong>Closure</strong></td><td>Project closure documents</td><td>Project completion</td></tr>
+        <tr><td><strong>QA Approval</strong></td><td>Quality Assurance sign-off</td><td>Permit to Deploy sign-off</td></tr>
+    </table>
+
+    <h4>Managing Documents:</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click on the <strong>"PMO"</strong> tab in the top header.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> In the left sidebar, click on <strong>"Documents"</strong>.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> To add a custom document, click <strong>"Add Custom Document"</strong> button.</div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> To link a URL, click the <strong>"Add URL here"</strong> link in the Location column for any document.</div>
+    <div class="workflow-step" data-step="5"><strong>Step 5:</strong> To edit, click the <strong>pencil icon</strong>. To delete, click the <strong>trash icon</strong>.</div>
+
+    <h3>14.2 TnM Billing</h3>
+    <p>TnM (Time and Material) Billing tracks billable hours and costs for the project.</p>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar, click on <strong>"TnM Billing"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Review billing entries, including:
+        <ul>
+            <li>Billing period</li>
+            <li>Resource allocation</li>
+            <li>Hours worked</li>
+            <li>Billable amounts</li>
+        </ul>
+    </div>
+
+    <h3>14.3 TnM Payment Milestones</h3>
+    <p>TnM Payment Milestones tracks payment stages linked to project deliverables.</p>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar, click on <strong>"TnM Payment Milestones"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Review payment milestones, their status, and associated deliverables.</div>
+
+    <h3>14.4 Business Continuity</h3>
+    <p>Business Continuity management ensures the project can continue despite disruptions.</p>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar, click on <strong>"Business Continuity"</strong>.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Review and update business continuity plans, including:
+        <ul>
+            <li>Risk mitigation strategies</li>
+            <li>Contingency plans</li>
+            <li>Recovery procedures</li>
+            <li>Key personnel assignments</li>
+        </ul>
+    </div>
+
+    <h3>14.5 PMO Approval Sign-offs</h3>
+    <p>PMO Approval Sign-offs manages critical build and deployment milestones. Only PMO, Senior Management, or Administrators can sign off.</p>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_6c9e07bfbd0b4e48b30de2db1b9558dc.png" alt="PMO Approval Sign-offs">
+        <div class="screenshot-caption"><strong>Figure 16:</strong> PMO Approval Sign-offs. Shows two approval checkboxes: "Permit to Build" (requires SOW link) and "Permit to Deploy" (requires QA Approval link). Both show "Pending" status with indicator icons.</div>
+    </div>
+
+    <h4>PMO Sign-off Requirements:</h4>
+    <table>
+        <tr><th>Approval</th><th>Purpose</th><th>Requirement</th><th>Status</th></tr>
+        <tr><td><strong>Permit to Build</strong></td><td>Authorizes development to begin</td><td>Valid SOW link in documents list</td><td>Pending (SOW Link Missing)</td></tr>
+        <tr><td><strong>Permit to Deploy</strong></td><td>Authorizes deployment to production</td><td>Valid QA Approval link in documents list</td><td>Pending (QA Sign-off Missing)</td></tr>
+    </table>
+
+    <div class="warning">
+        <strong>Important:</strong> Both PMO approvals must be obtained before corresponding activities can begin. Ensure all prerequisite documents are linked before requesting sign-offs.
+    </div>
+</div>
+
+<div class="page">
+    <h2>15. Project Simulation</h2>
+    <p>The Project Simulation feature allows PMO teams to run simulations to predict project outcomes based on current parameters.</p>
+
+    <h3>15.1 Running Simulations</h3>
+    <p>Simulations use the project's current configuration (resources, effort estimates, timelines) to model project outcomes.</p>
+
+    <h4>Accessing Simulation:</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Open any project. The <strong>Project Simulation</strong> widget is always visible in the left sidebar.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Set the <strong>percentage</strong> using the dropdown menu (default: 100%).</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Click the blue <strong>"Run"</strong> button (with play icon) to execute the simulation.</div>
+
+    <div class="screenshot">
+        <img src="screenshots/browser_screenshot_a54c706d67154383b794d4e40c505778.png" alt="Project Simulation">
+        <div class="screenshot-caption"><strong>Figure 17:</strong> Project Simulation Widget. Located in the left sidebar, showing a percentage dropdown (set to 100%) and a blue "Run" button with a play icon.</div>
+    </div>
+
+    <h4>Simulation Parameters:</h4>
+    <ul>
+        <li><strong>Percentage:</strong> Controls the simulation intensity/scenario (0-100%)</li>
+        <li><strong>Test Date:</strong> The date context for the simulation (see below)</li>
+        <li><strong>Resources:</strong> Uses currently assigned resources and their availability</li>
+        <li><strong>Effort Estimates:</strong> Uses impacted systems and effort data from Ballpark Estimation</li>
+    </ul>
+
+    <h3>15.2 Test Date Controls</h3>
+    <p>The Test Date controls set the temporal context for simulations.</p>
+
+    <h4>Test Date Elements:</h4>
+    <table>
+        <tr><th>Control</th><th>Format</th><th>Example</th><th>Purpose</th></tr>
+        <tr><td><strong>Time</strong></td><td>HH:MM AM/PM</td><td>09:39 AM</td><td>Time of day for simulation context</td></tr>
+        <tr><td><strong>Date</strong></td><td>YYYY-MM-DD</td><td>2026-07-02</td><td>Date context for simulation</td></tr>
+    </table>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Click the <strong>clock icon</strong> next to the time field to open the time picker.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click the <strong>calendar icon</strong> next to the date field to open the date picker.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Select the desired time and date.</div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Click <strong>"Run"</strong> to execute the simulation with the selected parameters.</div>
+
+    <div class="note">
+        <strong>PMO Tip:</strong> Use the Test Date controls to simulate project status at different points in time. This helps in forecasting and planning.
+    </div>
+</div>
+
+<div class="page">
+    <h2>16. Project Management</h2>
+    <p>Project Management features include Project Trash (for deleted projects) and Project Settings (for project configuration).</p>
+
+    <h3>16.1 Project Trash</h3>
+    <p>The Project Trash contains deleted projects that can be restored or permanently removed.</p>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar, click on <strong>"Project Trash"</strong> (trash can icon).</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Review the list of deleted projects.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> To restore a project, click the <strong>restore</strong> button. To permanently delete, click the <strong>permanent delete</strong> button.</div>
+
+    <div class="warning">
+        <strong>Warning:</strong> Permanently deleted projects cannot be recovered. Exercise caution when using permanent delete.
+    </div>
+
+    <h3>16.2 Project Settings</h3>
+    <p>Project Settings allows configuration of project-specific parameters.</p>
+
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> In the left sidebar, click on <strong>"Project Settings"</strong> (gear icon).</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Configure project settings including:
+        <ul>
+            <li>Project name and description</li>
+            <li>Project status</li>
+            <li>Notification preferences</li>
+            <li>Access control settings</li>
+            <li>Integration settings</li>
+        </ul>
+    </div>
+
+    <div class="note">
+        <strong>PMO Note:</strong> Changes to project settings may affect downstream modules. Review the impact before making changes.
+    </div>
+</div>
+
+<!-- APPENDIX A: QUICK REFERENCE -->
+<div class="page">
+    <h1>Appendix A: Quick Reference Guide</h1>
+
+    <h2>A.1 Navigation Quick Reference</h2>
+    <table>
+        <tr><th>Goal</th><th>Navigation Path</th></tr>
+        <tr><td>View all projects</td><td>Left Sidebar -> My Projects</td></tr>
+        <tr><td>View a project</td><td>Dashboard -> Click project card</td></tr>
+        <tr><td>Ballpark Estimation</td><td>Project -> Initial Estimation tab -> Ballpark (sidebar)</td></tr>
+        <tr><td>Resource Management</td><td>Project -> Resources tab -> Project Resources (sidebar)</td></tr>
+        <tr><td>Release Management</td><td>Project -> Releases tab</td></tr>
+        <tr><td>Development Dashboard</td><td>Project -> Development tab</td></tr>
+        <tr><td>Test Dashboard</td><td>Project -> Testing tab -> Test Dashboard (sidebar)</td></tr>
+        <tr><td>RAID Dashboard</td><td>Project -> Governance tab -> RAID Dashboard (sidebar)</td></tr>
+        <tr><td>Holiday Calendar</td><td>Project -> Holidays tab -> Holiday Calendar (sidebar)</td></tr>
+        <tr><td>Project Documents</td><td>Project -> PMO tab -> Documents (sidebar)</td></tr>
+        <tr><td>TnM Billing</td><td>Project -> PMO tab -> TnM Billing (sidebar)</td></tr>
+        <tr><td>Project Settings</td><td>Left Sidebar -> Project Settings (gear icon)</td></tr>
+        <tr><td>Notifications</td><td>Top-right bell icon or press F8</td></tr>
+    </table>
+
+    <h2>A.2 Keyboard Shortcuts</h2>
+    <table>
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><span class="key">F8</span></td><td>Open Notifications panel</td></tr>
+    </table>
+
+    <h2>A.3 Common Workflows</h2>
+
+    <h4>A.3.1 Creating a New Project</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Log in to ProjectFlow.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click "Get Started" or navigate to the project creation flow.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Fill in project details (name, description, timeline).</div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Configure Initial Estimation (Ballpark) with impacted systems.</div>
+    <div class="workflow-step" data-step="5"><strong>Step 5:</strong> Assign resources in the Resources module.</div>
+    <div class="workflow-step" data-step="6"><strong>Step 6:</strong> Set up releases and milestones in the Releases module.</div>
+    <div class="workflow-step" data-step="7"><strong>Step 7:</strong> Link required documents in the PMO module.</div>
+    <div class="workflow-step" data-step="8"><strong>Step 8:</strong> Request PMO approvals (Permit to Build, Permit to Deploy).</div>
+
+    <h4>A.3.2 Adding a Resource to a Project</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Open the project.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> Click <strong>Resources</strong> tab -> <strong>Project Resources</strong> (sidebar).</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> Click <strong>"Add User"</strong> button.</div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Enter user details (name, role, capabilities, availability, dates).</div>
+    <div class="workflow-step" data-step="5"><strong>Step 5:</strong> Save the resource.</div>
+
+    <h4>A.3.3 Requesting PMO Approval</h4>
+    <div class="workflow-step" data-step="1"><strong>Step 1:</strong> Ensure all prerequisite documents are linked in PMO -> Documents.</div>
+    <div class="workflow-step" data-step="2"><strong>Step 2:</strong> For <strong>Permit to Build:</strong> Ensure SOW link is present.</div>
+    <div class="workflow-step" data-step="3"><strong>Step 3:</strong> For <strong>Permit to Deploy:</strong> Ensure QA Approval link is present.</div>
+    <div class="workflow-step" data-step="4"><strong>Step 4:</strong> Request sign-off from PMO/Senior Management.</div>
+    <div class="workflow-step" data-step="5"><strong>Step 5:</strong> Status updates will appear in the PMO Approval Sign-offs section.</div>
+</div>
+
+<!-- APPENDIX B: GLOSSARY -->
+<div class="page">
+    <h1>Appendix B: Glossary</h1>
+
+    <table>
+        <tr><th>Term</th><th>Definition</th></tr>
+        <tr><td><strong>ProjectFlow</strong></td><td>Enterprise AI-powered Project & Portfolio Management platform</td></tr>
+        <tr><td><strong>PMO</strong></td><td>Project Management Office -- team responsible for governance and standards</td></tr>
+        <tr><td><strong>RAID</strong></td><td>Risks, Assumptions, Issues, and Dependencies -- governance tracking elements</td></tr>
+        <tr><td><strong>SOW</strong></td><td>Statement of Work -- formal document defining project scope and deliverables</td></tr>
+        <tr><td><strong>TnM</strong></td><td>Time and Material -- billing model based on hours worked</td></tr>
+        <tr><td><strong>HLD</strong></td><td>High-Level Design -- architectural design document</td></tr>
+        <tr><td><strong>DD</strong></td><td>Detailed Design -- detailed technical design document</td></tr>
+        <tr><td><strong>BCP</strong></td><td>Business Continuity Plan -- plan for maintaining operations during disruptions</td></tr>
+        <tr><td><strong>Permit to Build</strong></td><td>PMO approval authorizing development to begin</td></tr>
+        <tr><td><strong>Permit to Deploy</strong></td><td>PMO approval authorizing deployment to production</td></tr>
+        <tr><td><strong>Ballpark Estimation</strong></td><td>Initial cost/effort estimate based on project summary and impacted systems</td></tr>
+        <tr><td><strong>Sprint Burndown</strong></td><td>Chart showing work remaining in a sprint over time</td></tr>
+        <tr><td><strong>Release Burnup</strong></td><td>Chart showing cumulative work completed vs. total scope for a release</td></tr>
+        <tr><td><strong>Front End</strong></td><td>Client-side application layer (UI/UX)</td></tr>
+        <tr><td><strong>Middleware</strong></td><td>Server-side application layer (business logic)</td></tr>
+        <tr><td><strong>DB</strong></td><td>Database layer (data storage and management)</td></tr>
+    </table>
+
+    <div class="footer">
+        <p>ProjectFlow Comprehensive User & PMO Manual -- Version 1.0 -- July 2026</p>
+        <p>Generated for the PMO team of ProjectFlow</p>
+    </div>
+</div>
+
+</body>
+</html>
