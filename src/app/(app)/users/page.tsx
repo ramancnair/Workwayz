@@ -663,18 +663,20 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDialogOpen(user)}
-                        disabled={user.isEnabled === false && !isAdmin}
-                        title={user.isEnabled === false && !isAdmin ? "Only Administrators can enable users" : undefined}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDialogOpen(user)}
+                          disabled={user.isEnabled === false && !isAdmin}
+                          title={user.isEnabled === false && !isAdmin ? "Only Administrators can enable users" : undefined}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

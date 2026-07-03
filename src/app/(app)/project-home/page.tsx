@@ -959,22 +959,24 @@ export default function ProjectsDashboard() {
                                       </Link>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      {project.status === 'Completed' && (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => setArchivingProject(project)}>
-                                              <Archive className="h-4 w-4" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Archive Project</TooltipContent>
-                                        </Tooltip>
-                                      )}
-                                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
+                                      <div className="flex items-center justify-end gap-1">
+                                        {project.status === 'Completed' && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button variant="ghost" size="icon" onClick={() => setArchivingProject(project)}>
+                                                <Archive className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Archive Project</TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
                                     </TableCell>
                                   </TableRow>
                                 )
@@ -1048,22 +1050,24 @@ export default function ProjectsDashboard() {
                                       {project.archivedAt ? format(parseISO(project.archivedAt), 'MMM dd, yyyy') : 'N/A'}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button variant="ghost" size="icon" onClick={() => handleRestoreProject(project)}>
-                                            <RotateCcw className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Restore Project</TooltipContent>
-                                      </Tooltip>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Delete permanently</TooltipContent>
-                                      </Tooltip>
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => handleRestoreProject(project)}>
+                                              <RotateCcw className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Restore Project</TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete permanently</TooltipContent>
+                                        </Tooltip>
+                                      </div>
                                     </TableCell>
                                   </TableRow>
                                 )

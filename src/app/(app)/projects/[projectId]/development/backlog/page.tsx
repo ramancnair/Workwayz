@@ -825,7 +825,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   const handleBulkDelete = async () => {
     const success = await bulkDeleteStories(storiesToDelete);
     if(success) {
-      toast({ title: 'Success', description: `${storiesToDelete.length} stories moved to trash.` });
+      toast({ title: 'Success', description: `${storiesToDelete.length} ${storiesToDelete.length === 1 ? 'story' : 'stories'} moved to trash.` });
       setSelectedStories(prev => prev.filter(id => !storiesToDelete.includes(id)));
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not delete stories." });
@@ -851,7 +851,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
     const success = await bulkMoveStories(storiesToMove, epicId, releaseId);
     if(success) {
-      toast({ title: 'Success', description: `${storiesToMove.length} stories moved.` });
+      toast({ title: 'Success', description: `${storiesToMove.length} ${storiesToMove.length === 1 ? 'story' : 'stories'} moved successfully.` });
       setSelectedStories(prev => prev.filter(id => !storiesToMove.includes(id)));
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not move stories." });
@@ -1633,7 +1633,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
       <Dialog open={storiesToMove.length > 0} onOpenChange={(isOpen) => !isOpen && setStoriesToMove([])}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Move {storiesToMove.length} Stories</DialogTitle>
+                <DialogTitle>Reassign Stories</DialogTitle>
                 <DialogDescription>
                     Select a new epic to move the selected stories to.
                 </DialogDescription>
@@ -1641,55 +1641,55 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
             <Form {...bulkMoveForm}>
                 <form onSubmit={bulkMoveForm.handleSubmit(handleBulkMove)} className="space-y-4">
                     <FormField
-                        control={bulkMoveForm.control}
-                        name="targetEpicId"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>New Epic</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select an epic" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="no_change">No Change</SelectItem>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {epics.map(epic => (
-                                            <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                         control={bulkMoveForm.control}
+                         name="targetEpicId"
+                         render={({ field }) => (
+                             <FormItem>
+                                 <FormLabel>Epic</FormLabel>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                     <FormControl>
+                                         <SelectTrigger>
+                                             <SelectValue placeholder="Select an epic" />
+                                         </SelectTrigger>
+                                     </FormControl>
+                                     <SelectContent>
+                                         <SelectItem value="no_change">No Change</SelectItem>
+                                         <SelectItem value="unassigned">Unassigned</SelectItem>
+                                         {epics.map(epic => (
+                                             <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                                         ))}
+                                     </SelectContent>
+                                 </Select>
+                                 <FormMessage />
+                             </FormItem>
+                         )}
+                     />
                     <FormField
-                        control={bulkMoveForm.control}
-                        name="targetReleaseId"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>New Release</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a release" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="no_change">No Change</SelectItem>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {releases.map(release => (
-                                            <SelectItem key={release.id} value={release.id}>{release.releaseId} - {release.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                         control={bulkMoveForm.control}
+                         name="targetReleaseId"
+                         render={({ field }) => (
+                             <FormItem>
+                                 <FormLabel>Release</FormLabel>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                     <FormControl>
+                                         <SelectTrigger>
+                                             <SelectValue placeholder="Select a release" />
+                                         </SelectTrigger>
+                                     </FormControl>
+                                     <SelectContent>
+                                         <SelectItem value="no_change">No Change</SelectItem>
+                                         <SelectItem value="unassigned">Unassigned</SelectItem>
+                                         {releases.map(release => (
+                                             <SelectItem key={release.id} value={release.id}>{release.releaseId} - {release.name}</SelectItem>
+                                         ))}
+                                     </SelectContent>
+                                 </Select>
+                                 <FormMessage />
+                             </FormItem>
+                         )}
+                     />
                     <DialogFooter>
-                        <Button type="submit">Move Stories</Button>
+                        <Button type="submit">Apply Changes</Button>
                     </DialogFooter>
                 </form>
             </Form>

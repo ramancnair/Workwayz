@@ -605,13 +605,15 @@ export default function ResourceBillingPage() {
                                     ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     {!isCharged && <span className="block text-[10px] text-muted-foreground">(Charged only first month)</span>}
                                 </TableCell>
-                                <TableCell className="text-right space-x-1">
-                                    <Button variant="ghost" size="icon" onClick={() => handleStartEditFixedCost(item)}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => deleteFixedCost(item.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                        <Button variant="ghost" size="icon" onClick={() => handleStartEditFixedCost(item)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => deleteFixedCost(item.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         );
