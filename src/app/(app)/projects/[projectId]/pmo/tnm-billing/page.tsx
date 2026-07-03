@@ -70,15 +70,15 @@ export default function ResourceBillingPage() {
   if (!project || project.pricingModel !== 'T&M') {
     return null;
   }
-  const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: number; costRate?: number }>>({});
+  const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: string; costRate?: string }>>({});
   const [newCostName, setNewCostName] = useState('');
-  const [newCostValue, setNewCostValue] = useState(0);
+  const [newCostValue, setNewCostValue] = useState('');
   const [newCostType, setNewCostType] = useState<'One time' | 'Monthly'>('One time');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCostItem, setEditingCostItem] = useState<FixedCost | null>(null);
   const [editCostName, setEditCostName] = useState('');
   const [editCostType, setEditCostType] = useState<'One time' | 'Monthly'>('One time');
-  const [editCostValue, setEditCostValue] = useState(0);
+  const [editCostValue, setEditCostValue] = useState('');
 
   // Generate selectable months for the project duration
   const selectableMonths = useMemo(() => {
@@ -153,29 +153,46 @@ export default function ResourceBillingPage() {
   }, [activeMonthDate, holidays, weeklyOffDays]);
 
   const handleRateChange = (userId: string, field: 'billedRate' | 'costRate', value: string) => {
-    const numericValue = value === '' ? undefined : parseFloat(value);
+    const regex = /^(0|[1-9]\d*)?(\.\d{0,2})?$/;
+    if (!regex.test(value)) return;
     setEditingRates(prev => ({
       ...prev,
       [userId]: {
         ...prev[userId],
-        [field]: numericValue,
+        [field]: value,
       }
     }));
   };
   
-  const handleSaveChanges = async (userId: string) => {
+  const handleSaveChanges = async (userId: string, customRates?: { billedRate?: string; costRate?: string }) => {
     const user = employees.find(e => e.id === userId);
-    const rates = editingRates[userId];
+    const rates = customRates || editingRates[userId];
 
-    if (!user || !rates) return;
+    if (!user || !rates) {
+      setEditingRates(prev => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      return;
+    }
 
     const payload: Partial<User> = {};
-    if (rates.billedRate !== user.billedRate) {
-        payload.billedRate = rates.billedRate;
+    const newBilledRate = rates.billedRate === undefined ? user.billedRate : (rates.billedRate === '' ? 0 : parseFloat(rates.billedRate));
+    const newCostRate = rates.costRate === undefined ? user.costRate : (rates.costRate === '' ? 0 : parseFloat(rates.costRate));
+
+    if (newBilledRate !== undefined && newBilledRate !== user.billedRate) {
+        payload.billedRate = newBilledRate;
     }
-    if (rates.costRate !== user.costRate) {
-        payload.costRate = rates.costRate;
+    if (newCostRate !== undefined && newCostRate !== user.costRate) {
+        payload.costRate = newCostRate;
     }
+
+    setEditingRates(prev => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
 
     if (Object.keys(payload).length === 0) {
         return;
@@ -195,14 +212,22 @@ export default function ResourceBillingPage() {
   };
 
   const handleAddNewFixedCost = async () => {
-    if (!newCostName.trim() || newCostValue < 0) {
+    const numericCost = Math.round((parseFloat(newCostValue) || 0) * 100) / 100;
+    if (!newCostName.trim() || numericCost < 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and cost.' });
       return;
     }
-    const success = await addFixedCost({ name: newCostName, cost: newCostValue, type: newCostType });
+    const isDuplicate = fixedCosts.some(
+      fc => fc.name.trim().toLowerCase() === newCostName.trim().toLowerCase()
+    );
+    if (isDuplicate) {
+      toast({ variant: 'destructive', title: 'Error', description: 'A fixed cost item with this name already exists.' });
+      return;
+    }
+    const success = await addFixedCost({ name: newCostName, cost: numericCost, type: newCostType });
     if (success) {
       setNewCostName('');
-      setNewCostValue(0);
+      setNewCostValue('');
       setNewCostType('One time');
       setIsAddDialogOpen(false);
       toast({ title: 'Success', description: 'Fixed cost item added.' });
@@ -215,18 +240,26 @@ export default function ResourceBillingPage() {
     setEditingCostItem(item);
     setEditCostName(item.name);
     setEditCostType(item.type || 'One time');
-    setEditCostValue(item.cost || 0);
+    setEditCostValue(item.cost !== undefined ? item.cost.toString() : '');
   };
 
   const handleEditFixedCost = async () => {
     if (!editingCostItem) return;
-    if (!editCostName.trim() || editCostValue < 0) {
+    const numericCost = Math.round((parseFloat(editCostValue) || 0) * 100) / 100;
+    if (!editCostName.trim() || numericCost < 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and cost.' });
+      return;
+    }
+    const isDuplicate = fixedCosts.some(
+      fc => fc.name.trim().toLowerCase() === editCostName.trim().toLowerCase() && fc.id !== editingCostItem.id
+    );
+    if (isDuplicate) {
+      toast({ variant: 'destructive', title: 'Error', description: 'A fixed cost item with this name already exists.' });
       return;
     }
     const success = await updateFixedCost(editingCostItem.id, {
       name: editCostName,
-      cost: editCostValue,
+      cost: numericCost,
       type: editCostType,
     });
     if (success) {
@@ -399,21 +432,49 @@ export default function ResourceBillingPage() {
                       <TableCell>{user.availability || 100}%</TableCell>
                       <TableCell>
                         <Input
-                          type="number"
-                          placeholder="Enter rate"
-                          value={editingRates[user.id]?.billedRate ?? user.billedRate ?? ''}
+                          type="text"
+                          placeholder="0.00"
+                          value={editingRates[user.id]?.billedRate ?? (user.billedRate !== undefined ? user.billedRate.toString() : '')}
                           onChange={(e) => handleRateChange(user.id, 'billedRate', e.target.value)}
-                          onBlur={() => handleSaveChanges(user.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveChanges(user.id, editingRates[user.id]);
+                              e.currentTarget.blur();
+                            } else if (e.key === 'Tab') {
+                              handleSaveChanges(user.id, editingRates[user.id]);
+                            }
+                          }}
+                          onBlur={() => {
+                            setEditingRates(prev => {
+                              const next = { ...prev };
+                              delete next[user.id];
+                              return next;
+                            });
+                          }}
                           className="w-28"
                         />
                       </TableCell>
                       <TableCell>
                          <Input
-                          type="number"
-                          placeholder="Enter rate"
-                          value={editingRates[user.id]?.costRate ?? user.costRate ?? ''}
+                          type="text"
+                          placeholder="0.00"
+                          value={editingRates[user.id]?.costRate ?? (user.costRate !== undefined ? user.costRate.toString() : '')}
                           onChange={(e) => handleRateChange(user.id, 'costRate', e.target.value)}
-                          onBlur={() => handleSaveChanges(user.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveChanges(user.id, editingRates[user.id]);
+                              e.currentTarget.blur();
+                            } else if (e.key === 'Tab') {
+                              handleSaveChanges(user.id, editingRates[user.id]);
+                            }
+                          }}
+                          onBlur={() => {
+                            setEditingRates(prev => {
+                              const next = { ...prev };
+                              delete next[user.id];
+                              return next;
+                            });
+                          }}
                           className="w-28"
                         />
                       </TableCell>
@@ -507,10 +568,15 @@ export default function ResourceBillingPage() {
                     <Label htmlFor="cost">Cost (USD)</Label>
                     <Input
                       id="cost"
-                      type="number"
+                      type="text"
                       placeholder="0"
                       value={newCostValue}
-                      onChange={(e) => setNewCostValue(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
+                          setNewCostValue(val);
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -557,10 +623,15 @@ export default function ResourceBillingPage() {
                     <Label htmlFor="edit-cost">Cost (USD)</Label>
                     <Input
                       id="edit-cost"
-                      type="number"
+                      type="text"
                       placeholder="0"
                       value={editCostValue}
-                      onChange={(e) => setEditCostValue(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
+                          setEditCostValue(val);
+                        }
+                      }}
                     />
                   </div>
                 </div>

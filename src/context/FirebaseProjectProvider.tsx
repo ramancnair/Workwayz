@@ -227,8 +227,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         { name: 'settings', setState: setProjectSettings, isDoc: true },
     ];
 
-    const neededCollectionNames = getCollectionsForPage(pathname);
-    const neededCollections = allCollections.filter(c => neededCollectionNames.includes(c.name));
+    const neededCollections = allCollections;
     
     const initialFetchPromises: Promise<any>[] = [];
     const unsubscribers = neededCollections.map(({ name, setState, isDoc }) => {
@@ -403,7 +402,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       unsubGlobalHolidays();
       unsubAllUsers();
     }
-  }, [projectId, pathname, getCollectionsForPage]);
+  }, [projectId]);
 
   // Auto-repair: If employee capabilities are unpopulated (e.g. for older seeded projects),
   // automatically map capabilities to the project's impacted systems so capacity bars show correctly.

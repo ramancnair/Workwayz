@@ -129,7 +129,7 @@ const subTaskFormSchema = z.object({
 
 function StoryItemCard({ 
     story, 
-    epic,
+    epic, 
     assignee,
     subItems,
     parentStory,
@@ -142,7 +142,7 @@ function StoryItemCard({
     assignee?: User,
     subItems?: Story[],
     parentStory?: Story,
-    onMove: (storyId: string | null) => void,
+    onMove: (storyId: string, sprintId: string | null) => void,
     onEdit: () => void;
     onSubItemClick: (story: Story) => void;
 }) {
@@ -292,14 +292,14 @@ function StoryItemCard({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                     {!!story.sprintId && (
-                        <DropdownMenuItem onClick={() => onMove(null)}>
+                        <DropdownMenuItem onClick={() => onMove(story.id, null)}>
                         Backlog
                         </DropdownMenuItem>
                     )}
                     {sortedSprints
                         .filter((sprint) => sprint.id !== story.sprintId)
                         .map((sprint) => (
-                        <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
+                        <DropdownMenuItem key={sprint.id} onClick={() => onMove(story.id, sprint.id)}>
                             {sprint.title} {sprint.status === 'Current' && "(current)"}
                         </DropdownMenuItem>
                         ))}
@@ -970,7 +970,7 @@ export default function GroomingPage() {
                                             assignee={assignee}
                                             subItems={subItems}
                                             parentStory={parentStory}
-                                            onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
+                                            onMove={moveStoryToSprint}
                                             onEdit={() => handleSetSelectedStory(story)}
                                             onSubItemClick={handleDrillDown}
                                         />

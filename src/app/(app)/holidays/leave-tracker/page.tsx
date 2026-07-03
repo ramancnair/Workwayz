@@ -610,7 +610,7 @@ export default function LeaveTrackerPage() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="hover:bg-transparent cursor-default select-none">
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Type</TableHead>
@@ -620,7 +620,7 @@ export default function LeaveTrackerPage() {
                 </TableHeader>
                 <TableBody>
                   {sortedLeavePeriods.length > 0 ? sortedLeavePeriods.map(period => (
-                    <TableRow key={period.id}>
+                    <TableRow key={period.id} className="hover:bg-transparent cursor-default select-none">
                       <TableCell>{format(new Date(period.startDate), 'PPP')}</TableCell>
                       <TableCell>{format(new Date(period.endDate), 'PPP')}</TableCell>
                       <TableCell>
@@ -636,7 +636,7 @@ export default function LeaveTrackerPage() {
                       </TableCell>
                     </TableRow>
                   )) : (
-                    <TableRow>
+                    <TableRow className="hover:bg-transparent cursor-default select-none">
                       <TableCell colSpan={5} className="text-center text-muted-foreground">
                         No leave periods logged for you.
                       </TableCell>

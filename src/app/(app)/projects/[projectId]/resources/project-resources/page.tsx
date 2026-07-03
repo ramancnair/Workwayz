@@ -39,7 +39,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check, ChevronsUpDown, Info } from 'lucide-react';
 import { type User, type UserRole, type Story, type ImpactedSystem, type Project, type Horizontal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,8 @@ import { buttonVariants } from '@/components/ui/button';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, addYears, isWithinInterval, differenceInDays } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Popover,
   PopoverContent,
@@ -166,10 +167,10 @@ function ResourceDialog({
     } else {
       const userToAdd = allUsers.find(emp => emp.id === values.employeeId);
       if (!userToAdd) {
-          toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
-          return;
+        toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
+        return;
       }
-      
+
       const projectUserData: User = {
         ...userToAdd,
         role: values.role as UserRole,
@@ -181,7 +182,7 @@ function ResourceDialog({
         capabilities: values.capabilities,
         isBcpSupport: values.isBcpSupport,
       };
-      
+
       const success = await addUserToProject(projectUserData);
 
       if (success) {
@@ -190,19 +191,19 @@ function ResourceDialog({
         toast({ variant: "destructive", title: "Error", description: `Could not add user to project. They may already be on the team.` });
       }
     }
-    
+
     setIsOpen(false);
     setEditingUser(null);
   };
-  
+
   const availableUsers = allUsers.filter(emp => !emp.isDeleted && !projectUsers.some(pe => pe.id === emp.id));
   const availableUserOptions = availableUsers.map(emp => ({
-      value: emp.id,
-      label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
+    value: emp.id,
+    label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
   }));
-  
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if(!open) setEditingUser(null); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setEditingUser(null); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editingUser ? 'Edit Resource' : 'Add User to Project'}</DialogTitle>
@@ -215,44 +216,44 @@ function ResourceDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>User</FormLabel>
-                   <FormControl>
-                     <Input 
-                        list="user-options"
-                        placeholder="Search for a user..."
-                        value={userInputText}
-                        readOnly={!!editingUser}
-                        onChange={(e) => {
-                            if (editingUser) return;
-                            const inputText = e.target.value;
-                            setUserInputText(inputText);
+                  <FormControl>
+                    <Input
+                      list="user-options"
+                      placeholder="Search for a user..."
+                      value={userInputText}
+                      readOnly={!!editingUser}
+                      onChange={(e) => {
+                        if (editingUser) return;
+                        const inputText = e.target.value;
+                        setUserInputText(inputText);
 
-                            const matchingOption = availableUserOptions.find(opt => opt.label === inputText);
-                            field.onChange(matchingOption ? matchingOption.value : '');
-                        }}
-                        onBlur={(e) => {
-                            if (editingUser) return;
-                            const matchingOption = availableUserOptions.find(opt => opt.label === e.target.value);
-                            if(!matchingOption) {
-                                setUserInputText('');
-                                field.onChange('');
-                            }
-                        }}
-                     />
-                    </FormControl>
-                    <datalist id="user-options">
-                        {availableUserOptions.map(emp => (
-                            <option key={emp.value} value={emp.label} />
-                        ))}
-                    </datalist>
+                        const matchingOption = availableUserOptions.find(opt => opt.label === inputText);
+                        field.onChange(matchingOption ? matchingOption.value : '');
+                      }}
+                      onBlur={(e) => {
+                        if (editingUser) return;
+                        const matchingOption = availableUserOptions.find(opt => opt.label === e.target.value);
+                        if (!matchingOption) {
+                          setUserInputText('');
+                          field.onChange('');
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <datalist id="user-options">
+                    {availableUserOptions.map(emp => (
+                      <option key={emp.value} value={emp.label} />
+                    ))}
+                  </datalist>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="role" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel className="flex items-center h-5">Role</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                     <SelectContent>
@@ -262,9 +263,21 @@ function ResourceDialog({
                   <FormMessage />
                 </FormItem>
               )} />
-               <FormField control={form.control} name="availability" render={({ field }) => (
+              <FormField control={form.control} name="availability" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Availability (%)</FormLabel>
+                  <FormLabel className="flex items-center gap-1.5 h-5">
+                    Availability (%)
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-pointer animate-pulse" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[250px] p-2 text-xs font-normal">
+                          This availability is the resource's total availability for the project, not capability wise.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </FormLabel>
                   <FormControl><Input type="number" placeholder="100" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -274,65 +287,46 @@ function ResourceDialog({
             <FormField
               control={form.control}
               name="capabilities"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Capabilities</FormLabel>
+                  <FormLabel>Capability</FormLabel>
                   <Card>
                     <CardContent className="p-4 space-y-4 max-h-48 overflow-y-auto">
-                        <div>
+                      <RadioGroup
+                        value={field.value?.[0] || "none"}
+                        onValueChange={(val) => {
+                          field.onChange(val === "none" ? [] : [val]);
+                        }}
+                      >
+                        <div className="flex flex-row items-center space-x-3 space-y-0 pb-2 border-b border-border mb-3">
+                          <RadioGroupItem value="none" id="capability-none" />
+                          <Label htmlFor="capability-none" className="font-normal text-muted-foreground cursor-pointer">None / Unassigned</Label>
+                        </div>
+                        <div className="space-y-4">
+                          <div>
                             <h4 className="text-sm font-medium text-muted-foreground mb-2">Impacted Systems</h4>
                             <div className="space-y-2">
-                            {impactedSystems.map((system) => (
-                                <FormField
-                                key={system.id}
-                                control={form.control}
-                                name="capabilities"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                        <Checkbox
-                                        checked={field.value?.includes(system.id)}
-                                        onCheckedChange={(checked) => {
-                                            return checked
-                                            ? field.onChange([...(field.value || []), system.id])
-                                            : field.onChange(field.value?.filter((id) => id !== system.id));
-                                        }}
-                                        />
-                                    </FormControl>
-                                    <FormLabel className="font-normal">{system.name}</FormLabel>
-                                    </FormItem>
-                                )}
-                                />
-                            ))}
+                              {impactedSystems.map((system) => (
+                                <div key={system.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                  <RadioGroupItem value={system.id} id={system.id} />
+                                  <Label htmlFor={system.id} className="font-normal cursor-pointer">{system.name}</Label>
+                                </div>
+                              ))}
                             </div>
-                        </div>
-                        <div>
+                          </div>
+                          <div>
                             <h4 className="text-sm font-medium text-muted-foreground mb-2">Horizontals</h4>
-                             <div className="space-y-2">
-                            {horizontals.map((horizontal) => (
-                                <FormField
-                                key={horizontal.id}
-                                control={form.control}
-                                name="capabilities"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                        <Checkbox
-                                        checked={field.value?.includes(horizontal.id)}
-                                        onCheckedChange={(checked) => {
-                                            return checked
-                                            ? field.onChange([...(field.value || []), horizontal.id])
-                                            : field.onChange(field.value?.filter((id) => id !== horizontal.id));
-                                        }}
-                                        />
-                                    </FormControl>
-                                    <FormLabel className="font-normal">{horizontal.name}</FormLabel>
-                                    </FormItem>
-                                )}
-                                />
-                            ))}
+                            <div className="space-y-2">
+                              {horizontals.map((horizontal) => (
+                                <div key={horizontal.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                  <RadioGroupItem value={horizontal.id} id={horizontal.id} />
+                                  <Label htmlFor={horizontal.id} className="font-normal cursor-pointer">{horizontal.name}</Label>
+                                </div>
+                              ))}
                             </div>
+                          </div>
                         </div>
+                      </RadioGroup>
                     </CardContent>
                   </Card>
                   <FormMessage />
@@ -341,22 +335,22 @@ function ResourceDialog({
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <FormField control={form.control} name="onboardingDate" render={({ field }) => (
+              <FormField control={form.control} name="onboardingDate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Onboarding Date</FormLabel>
                   <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
-               <FormField control={form.control} name="offloadingDate" render={({ field }) => (
+              <FormField control={form.control} name="offloadingDate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Offloading Date</FormLabel>
-                  <FormControl><Input type="date" {...field} value={field.value || ''}/></FormControl>
+                  <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="clientEmpId" render={({ field }) => (
                 <FormItem>
@@ -418,7 +412,7 @@ function CapacityPlanning() {
   const [unit, setUnit] = useState<'hours' | 'days'>('hours');
 
   const currentSprint = useMemo(() => sprints.find(s => s.isCurrent), [sprints]);
-  
+
   useEffect(() => {
     if (currentSprint) {
       setSelectedSprintId(currentSprint.id);
@@ -426,7 +420,7 @@ function CapacityPlanning() {
       setSelectedSprintId(sprints[0].id);
     }
   }, [currentSprint, sprints]);
-  
+
   const { periodStart, periodEnd } = useMemo(() => {
     if (viewType === 'sprint') {
       const sprint = sprints.find(s => s.id === selectedSprintId);
@@ -450,11 +444,11 @@ function CapacityPlanning() {
 
   const getWorkingDays = useCallback((start: Date, end: Date): number => {
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
-        return 0;
+      return 0;
     }
     const holidayDates = holidays.map(h => parseISO(h.date));
     const interval = eachDayOfInterval({ start, end });
-    
+
     return interval.filter(day => {
       const dayOfWeek = day.getDay();
       const isWeekend = weeklyOffDays.includes(dayOfWeek);
@@ -470,67 +464,67 @@ function CapacityPlanning() {
 
   const capacityData = useMemo(() => {
     if (!periodStart || !periodEnd) return [];
-  
+
     return impactedSystems.map(system => {
       const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
-      
+
       let totalCapacityHours = 0;
       resourcesForSystem.forEach(emp => {
         const availabilityFactor = (emp.availability || 100) / 100;
         totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
       });
-  
+
       const utilizedHours = stories
         .filter(story => {
           if (story.itemType !== 'Sub Task' || story.impactedSystemId !== system.id) return false;
-          
+
           if (story.startDate && story.endDate) {
             const taskStart = parseISO(story.startDate);
             const taskEnd = parseISO(story.endDate);
-            return isWithinInterval(periodStart, { start: taskStart, end: taskEnd }) || 
-                   isWithinInterval(periodEnd, { start: taskStart, end: taskEnd }) ||
-                   isWithinInterval(taskStart, { start: periodStart, end: periodEnd });
+            return isWithinInterval(periodStart, { start: taskStart, end: taskEnd }) ||
+              isWithinInterval(periodEnd, { start: taskStart, end: taskEnd }) ||
+              isWithinInterval(taskStart, { start: periodStart, end: periodEnd });
           }
-          
+
           // Fallback for tasks without dates - check parent story's sprint
           const parentStory = stories.find(s => s.id === story.parentStoryId);
           if (!parentStory?.sprintId) return false;
-          
+
           const sprint = sprints.find(s => s.id === parentStory.sprintId);
           if (sprint?.startDate && sprint?.endDate) {
             const sprintStart = parseISO(sprint.startDate);
             const sprintEnd = parseISO(sprint.endDate);
-            return isWithinInterval(periodStart, { start: sprintStart, end: sprintEnd }) || 
-                   isWithinInterval(periodEnd, { start: sprintStart, end: sprintEnd }) ||
-                   isWithinInterval(sprintStart, { start: periodStart, end: periodEnd });
+            return isWithinInterval(periodStart, { start: sprintStart, end: sprintEnd }) ||
+              isWithinInterval(periodEnd, { start: sprintStart, end: sprintEnd }) ||
+              isWithinInterval(sprintStart, { start: periodStart, end: periodEnd });
           }
-          
+
           return false;
         })
         .reduce((sum, task) => {
-            const taskStart = task.startDate ? parseISO(task.startDate) : periodStart;
-            const taskEnd = task.endDate ? parseISO(task.endDate) : periodEnd;
-            const overlapStart = new Date(Math.max(periodStart.getTime(), taskStart.getTime()));
-            const overlapEnd = new Date(Math.min(periodEnd.getTime(), taskEnd.getTime()));
-            
-            if (overlapStart > overlapEnd) return sum;
+          const taskStart = task.startDate ? parseISO(task.startDate) : periodStart;
+          const taskEnd = task.endDate ? parseISO(task.endDate) : periodEnd;
+          const overlapStart = new Date(Math.max(periodStart.getTime(), taskStart.getTime()));
+          const overlapEnd = new Date(Math.min(periodEnd.getTime(), taskEnd.getTime()));
 
-            const overlapWorkingDays = getWorkingDays(overlapStart, overlapEnd);
-            const taskTotalWorkingDays = getWorkingDays(taskStart, taskEnd) || 1;
-            const dailyEffort = (task.estimatedHours || 0) / taskTotalWorkingDays;
-            
-            return sum + (dailyEffort * overlapWorkingDays);
+          if (overlapStart > overlapEnd) return sum;
+
+          const overlapWorkingDays = getWorkingDays(overlapStart, overlapEnd);
+          const taskTotalWorkingDays = getWorkingDays(taskStart, taskEnd) || 1;
+          const dailyEffort = (task.estimatedHours || 0) / taskTotalWorkingDays;
+
+          return sum + (dailyEffort * overlapWorkingDays);
         }, 0);
-      
+
       const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
-    
+
       return {
-          systemId: system.id,
-          systemName: system.name,
-          totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
-          utilizedHours: parseFloat(utilizedHours.toFixed(2)),
-          remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
-          utilization: parseFloat(utilization.toFixed(2)),
+        systemId: system.id,
+        systemName: system.name,
+        totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
+        utilizedHours: parseFloat(utilizedHours.toFixed(2)),
+        remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
+        utilization: parseFloat(utilization.toFixed(2)),
       };
     });
   }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod, sprints, getWorkingDays]);
@@ -541,24 +535,24 @@ function CapacityPlanning() {
 
   const periodTitle = useMemo(() => {
     if (viewType === 'sprint') {
-        const sprint = sprints.find(s => s.id === selectedSprintId)
-        if (!sprint) return "Select a Sprint";
-        const start = sprint.startDate ? format(parseISO(sprint.startDate), 'MMM d') : '?';
-        const end = sprint.endDate ? format(parseISO(sprint.endDate), 'MMM d') : '?';
-        return `${sprint.title} (${start} - ${end})`;
+      const sprint = sprints.find(s => s.id === selectedSprintId)
+      if (!sprint) return "Select a Sprint";
+      const start = sprint.startDate ? format(parseISO(sprint.startDate), 'MMM d') : '?';
+      const end = sprint.endDate ? format(parseISO(sprint.endDate), 'MMM d') : '?';
+      return `${sprint.title} (${start} - ${end})`;
     }
     if (viewType === 'month') {
-        return format(currentDate, 'MMMM yyyy');
+      return format(currentDate, 'MMMM yyyy');
     }
     if (viewType === 'week') {
-        return `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d, yyyy')}`;
+      return `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d, yyyy')}`;
     }
     return '';
   }, [viewType, selectedSprintId, currentDate, sprints]);
 
   const displayValue = useCallback((valueInHours: number) => {
     if (unit === 'days') {
-        return (valueInHours / 8).toFixed(2);
+      return (valueInHours / 8).toFixed(2);
     }
     return valueInHours.toFixed(2);
   }, [unit]);
@@ -571,69 +565,69 @@ function CapacityPlanning() {
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div className="flex items-center gap-4">
-                <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)} className="w-auto">
-                <TabsList>
-                    <TabsTrigger value="sprint">Sprint</TabsTrigger>
-                    <TabsTrigger value="month">Month</TabsTrigger>
-                    <TabsTrigger value="week">Week</TabsTrigger>
-                </TabsList>
-                </Tabs>
-                
-                {viewType === 'sprint' ? (
-                    <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-                        <SelectTrigger className="w-[250px]">
-                            <SelectValue placeholder="Select Sprint" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                ) : (
-                    <div className="flex items-center gap-2 border rounded-md p-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subMonths : subWeeks)}> <ChevronLeft /> </Button>
-                        <span className="font-semibold text-sm w-48 text-center">{periodTitle}</span>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addMonths : addWeeks)}> <ChevronRight /> </Button>
-                    </div>
-                )}
-            </div>
-            <div className="flex items-center space-x-2">
-                <Label htmlFor="unit-switch">Days</Label>
-                <Switch
-                    id="unit-switch"
-                    checked={unit === 'hours'}
-                    onCheckedChange={(checked) => setUnit(checked ? 'hours' : 'days')}
-                />
-                <Label htmlFor="unit-switch">Hours</Label>
-            </div>
+          <div className="flex items-center gap-4">
+            <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="sprint">Sprint</TabsTrigger>
+                <TabsTrigger value="month">Month</TabsTrigger>
+                <TabsTrigger value="week">Week</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {viewType === 'sprint' ? (
+              <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Select Sprint" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex items-center gap-2 border rounded-md p-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subMonths : subWeeks)}> <ChevronLeft /> </Button>
+                <span className="font-semibold text-sm w-48 text-center">{periodTitle}</span>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addMonths : addWeeks)}> <ChevronRight /> </Button>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="unit-switch">Days</Label>
+            <Switch
+              id="unit-switch"
+              checked={unit === 'hours'}
+              onCheckedChange={(checked) => setUnit(checked ? 'hours' : 'days')}
+            />
+            <Label htmlFor="unit-switch">Hours</Label>
+          </div>
         </div>
-        
+
         <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="w-[25%]">Impacted System</TableHead>
-                    <TableHead>Total Capacity ({unit})</TableHead>
-                    <TableHead>Utilized ({unit})</TableHead>
-                    <TableHead>Remaining ({unit})</TableHead>
-                    <TableHead className="w-[25%]">Utilization</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {capacityData.map(data => (
-                    <TableRow key={data.systemId}>
-                        <TableCell className="font-medium">{data.systemName}</TableCell>
-                        <TableCell>{displayValue(data.totalCapacityHours)}</TableCell>
-                        <TableCell>{displayValue(data.utilizedHours)}</TableCell>
-                        <TableCell>{displayValue(data.remainingHours)}</TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-2">
-                                <Progress value={data.utilization} className="w-full h-3" />
-                                <span className="text-xs font-semibold">{data.utilization.toFixed(0)}%</span>
-                            </div>
-                        </TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[25%]">Impacted System</TableHead>
+              <TableHead>Total Capacity ({unit})</TableHead>
+              <TableHead>Utilized ({unit})</TableHead>
+              <TableHead>Remaining ({unit})</TableHead>
+              <TableHead className="w-[25%]">Utilization</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {capacityData.map(data => (
+              <TableRow key={data.systemId}>
+                <TableCell className="font-medium">{data.systemName}</TableCell>
+                <TableCell>{displayValue(data.totalCapacityHours)}</TableCell>
+                <TableCell>{displayValue(data.utilizedHours)}</TableCell>
+                <TableCell>{displayValue(data.remainingHours)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Progress value={data.utilization} className="w-full h-3" />
+                    <span className="text-xs font-semibold">{data.utilization.toFixed(0)}%</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
         </Table>
 
       </CardContent>
@@ -642,19 +636,19 @@ function CapacityPlanning() {
 }
 
 export default function ResourcesPage() {
-  const { 
+  const {
     project,
-    employees: projectUsers, 
+    employees: projectUsers,
     allUsers,
     impactedSystems,
     horizontals,
-    deleteEmployee: removeUserFromProject 
+    deleteEmployee: removeUserFromProject
   } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
-  
+
   const handleOpenDialog = (user: User | null) => {
     setEditingUser(user);
     setIsDialogOpen(true);
@@ -664,10 +658,10 @@ export default function ResourcesPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <PageHeader title="Project Resources" description="Manage users assigned to this project.">
-           <Button onClick={() => handleOpenDialog(null)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add User
-            </Button>
+          <Button onClick={() => handleOpenDialog(null)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
         </PageHeader>
         <Card>
           <Table>
@@ -687,36 +681,37 @@ export default function ResourcesPage() {
               {projectUsers.map((user) => {
                 const allCapabilities = [...impactedSystems, ...horizontals];
                 return (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.empId}</TableCell>
-                  <TableCell>{user.firstName} {user.lastName}</TableCell>
-                  <TableCell>{user.role || 'N/A'}</TableCell>
-                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {user.capabilities && user.capabilities.length > 0
-                        ? user.capabilities.map(capId => {
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.empId}</TableCell>
+                    <TableCell>{user.firstName} {user.lastName}</TableCell>
+                    <TableCell>{user.role || 'N/A'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {user.capabilities && user.capabilities.length > 0
+                          ? user.capabilities.map(capId => {
                             const capability = allCapabilities.find(s => s.id === capId);
                             return capability ? <Badge key={capId} variant="secondary">{capability.name}</Badge> : null;
                           })
-                        : 'N/A'
-                      }
-                    </div>
-                  </TableCell>
-                  <TableCell>{user.availability ? `${user.availability}%` : 'N/A'}</TableCell>
-                  <TableCell>{user.onboardingDate ? format(parseISO(user.onboardingDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell>{user.offloadingDate ? format(parseISO(user.offloadingDate), 'PPP') : 'N/A'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )})}
+                          : 'N/A'
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.availability ? `${user.availability}%` : 'N/A'}</TableCell>
+                    <TableCell>{user.onboardingDate ? format(parseISO(user.onboardingDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{user.offloadingDate ? format(parseISO(user.offloadingDate), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(user)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </Card>
@@ -724,7 +719,7 @@ export default function ResourcesPage() {
         <CapacityPlanning />
       </div>
 
-      <ResourceDialog 
+      <ResourceDialog
         isOpen={isDialogOpen}
         setIsOpen={setIsDialogOpen}
         editingUser={editingUser}
@@ -735,7 +730,7 @@ export default function ResourcesPage() {
         impactedSystems={impactedSystems}
         horizontals={horizontals}
       />
-      
+
       <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -746,9 +741,9 @@ export default function ResourcesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => {
-                if(deletingUser) {
+                if (deletingUser) {
                   removeUserFromProject(deletingUser.id).then(success => {
                     if (success) {
                       toast({ title: "Success", description: "User removed from project." });

@@ -234,7 +234,7 @@ body {
   }
 
   /* Hide datalist dropdown picker indicator arrows */
-  input::-webkit-calendar-picker-indicator {
+  input[list]::-webkit-calendar-picker-indicator {
     display: none !important;
   }
 

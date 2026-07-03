@@ -36,8 +36,17 @@ export default function LeaveCalendarPage() {
     return { weeks, dateRange: { start: startDate, end: endDate } };
   }, [currentMonth]);
 
+  const holidayMap = useMemo(() => {
+    const map = new Map<string, string>();
+    holidays.forEach(h => {
+        const dayStr = format(parseISO(h.date), 'yyyy-MM-dd');
+        map.set(dayStr, h.description);
+    });
+    return map;
+  }, [holidays]);
+
   const leavesByDay = useMemo(() => {
-    const leaves: Record<string, { id: string; firstName: string; lastName: string; avatar?: string }[]> = {};
+    const leaves: Record<string, { id: string; firstName: string; lastName: string; leaveType?: string }[]> = {};
     const daysInView = eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
     daysInView.forEach(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
@@ -53,24 +62,25 @@ export default function LeaveCalendarPage() {
         daysInView.forEach(day => {
             if (isSameDay(day, leaveStart) || isSameDay(day, leaveEnd) || (day > leaveStart && day < leaveEnd)) {
                  const dayStr = format(day, 'yyyy-MM-dd');
+                 
+                 const isWeekend = weeklyOffDays.includes(day.getDay());
+                 const isHoliday = holidayMap.has(dayStr);
+                 if (isWeekend || isHoliday) return;
+
                  if(leaves[dayStr]) {
-                    leaves[dayStr].push({ id: emp.id, firstName: emp.firstName, lastName: emp.lastName, avatar: emp.avatar });
+                    leaves[dayStr].push({ 
+                      id: emp.id, 
+                      firstName: emp.firstName, 
+                      lastName: emp.lastName, 
+                      leaveType: period.type || 'Paid Leave' 
+                    });
                  }
             }
         })
       });
     });
     return leaves;
-  }, [employees, dateRange]);
-  
-  const holidayMap = useMemo(() => {
-    const map = new Map<string, string>();
-    holidays.forEach(h => {
-        const dayStr = format(parseISO(h.date), 'yyyy-MM-dd');
-        map.set(dayStr, h.description);
-    });
-    return map;
-  }, [holidays]);
+  }, [employees, dateRange, holidayMap, weeklyOffDays]);
 
   // Premium business days calculator strictly clamped to a specific year
   const calculateBusinessDaysForYear = useMemo(() => {
@@ -226,12 +236,13 @@ export default function LeaveCalendarPage() {
                                 {holidayInfo && <Badge variant="outline" className="mt-2 bg-yellow-100 text-yellow-800">{holidayInfo}</Badge>}
                                 <div className="mt-4 space-y-2">
                                     {leavesByDay[dayStr]?.map(emp => (
-                                        <div key={emp.id} className="flex items-center gap-2 bg-background p-1.5 rounded-md border text-xs">
-                                            <Avatar className="h-5 w-5">
-                                                <AvatarImage src={emp.avatar} alt={`${emp.firstName} ${emp.lastName}`} data-ai-hint="employee avatar" />
-                                                <AvatarFallback>{emp.firstName.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="truncate">{emp.firstName} {emp.lastName}</span>
+                                        <div key={emp.id} className="flex items-center gap-1.5 bg-background p-1 rounded-md border text-xs justify-between">
+                                            <span className="truncate font-medium">{emp.firstName} {emp.lastName}</span>
+                                            {emp.leaveType === 'Loss of Pay' ? (
+                                              <Badge variant="destructive" className="px-1 py-0 h-4 text-[9px] font-semibold leading-none flex-shrink-0">LOP</Badge>
+                                            ) : (
+                                              <Badge variant="secondary" className="px-1 py-0 h-4 text-[9px] font-semibold leading-none flex-shrink-0 bg-blue-500/10 text-blue-500 hover:bg-blue-500/10 border-0">PL</Badge>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

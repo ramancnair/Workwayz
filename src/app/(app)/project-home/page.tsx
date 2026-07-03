@@ -495,6 +495,16 @@ export default function ProjectsDashboard() {
 
   const onPortfolioSubmit = async (values: z.infer<typeof portfolioSchema>) => {
     if (!db) return;
+    const isDuplicate = portfolios.some(
+      p => p.name.trim().toLowerCase() === values.name.trim().toLowerCase() && p.id !== editingPortfolio?.id
+    );
+    if (isDuplicate) {
+      portfolioForm.setError('name', {
+        type: 'manual',
+        message: 'A portfolio with this name already exists.',
+      });
+      return;
+    }
     try {
       if (editingPortfolio) {
         const portfolioRef = doc(db, 'portfolios', editingPortfolio.id);

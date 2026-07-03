@@ -111,7 +111,6 @@ export default function DevelopmentTasksPage() {
   const [editingSubTask, setEditingSubTask] = useState<Story | null>(null);
   const [deletingSubTask, setDeletingSubTask] = useState<Story | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingCell, setEditingCell] = useState<{ taskId: string; columnId: ColumnId } | null>(null);
   const [selectedSubTasks, setSelectedSubTasks] = useState<string[]>([]);
   const [tasksToAssign, setTasksToAssign] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -281,22 +280,7 @@ export default function DevelopmentTasksPage() {
     }
   }, [isDialogOpen, editingSubTask, form]);
   
-  const handleUpdateCell = async (taskId: string, columnId: ColumnId, value: any) => {
-    let payload: Partial<Story> = {};
 
-    if (columnId === 'assigneeId') {
-        payload[columnId] = value === 'unassigned' ? undefined : value;
-    } else if (columnId === 'sprintId') {
-        payload[columnId] = value === 'backlog' ? null : value;
-    } else if (['startDate', 'endDate'].includes(columnId) && value) {
-        (payload as any)[columnId] = new Date(value).toISOString();
-    } else {
-        (payload as any)[columnId] = value;
-    }
-    
-    await updateStory(taskId, payload);
-    setEditingCell(null);
-  };
 
 
   const handleDialogOpen = (task: Story | null) => {
@@ -550,10 +534,10 @@ export default function DevelopmentTasksPage() {
               const sprint = sprints.find(s => s.id === task.sprintId);
               const release = releases.find(r => r.id === task.releaseId);
               
-              const isEditing = (colId: ColumnId) => editingCell?.taskId === task.id && editingCell?.columnId === colId;
+
 
               return (
-                <TableRow key={task.id} data-state={selectedSubTasks.includes(task.id) && "selected"}>
+                <TableRow key={task.id} className="cursor-default select-none" data-state={selectedSubTasks.includes(task.id) && "selected"}>
                    <TableCell>
                     <Checkbox
                       checked={selectedSubTasks.includes(task.id)}
@@ -566,14 +550,8 @@ export default function DevelopmentTasksPage() {
                     />
                   </TableCell>
                   {columnVisibility.storyId && <TableCell className="font-medium">{task.storyId}</TableCell>}
-                  {columnVisibility.title && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'title' })}>
-                      {isEditing('title') ? (
-                           <Input
-                                defaultValue={task.title}
-                                onBlur={(e) => handleUpdateCell(task.id, 'title', e.target.value)}
-                                autoFocus
-                            />
-                      ) : task.title}
+                  {columnVisibility.title && <TableCell>
+                      {task.title}
                   </TableCell>}
                   {columnVisibility.parentStoryId && <TableCell>
                     {parentStory ? (
@@ -587,104 +565,36 @@ export default function DevelopmentTasksPage() {
                       </TooltipProvider>
                     ) : 'N/A'}
                   </TableCell>}
-                  {columnVisibility.status && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'status' })}>
-                    {isEditing('status') ? (
-                        <Select
-                            defaultValue={task.status}
-                            onValueChange={(value) => handleUpdateCell(task.id, 'status', value)}
-                        >
-                            <SelectTrigger autoFocus onBlur={() => setEditingCell(null)}><SelectValue/></SelectTrigger>
-                            <SelectContent>
-                                {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    ) : (
+                  {columnVisibility.status && <TableCell>
                         <Badge className={cn('font-semibold', statusStyles[task.status])}>
                           {task.status}
                         </Badge>
-                    )}
                   </TableCell>}
-                  {columnVisibility.assigneeId && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'assigneeId' })}>
-                    {isEditing('assigneeId') ? (
-                        <Select
-                            defaultValue={task.assigneeId || 'unassigned'}
-                            onValueChange={(value) => handleUpdateCell(task.id, 'assigneeId', value)}
-                        >
-                            <SelectTrigger autoFocus onBlur={() => setEditingCell(null)}><SelectValue/></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    ) : (
-                      assignee ? (
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar" />
-                            <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          {assignee.firstName} {assignee.lastName}
-                        </div>
-                      ) : "Unassigned"
-                    )}
+                  {columnVisibility.assigneeId && <TableCell>
+                    {assignee ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar" />
+                          <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        {assignee.firstName} {assignee.lastName}
+                      </div>
+                    ) : "Unassigned"}
                   </TableCell>}
-                  {columnVisibility.impactedSystemId && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'impactedSystemId' })}>
-                      {isEditing('impactedSystemId') ? (
-                          <Select
-                            defaultValue={task.impactedSystemId || ''}
-                            onValueChange={(value) => handleUpdateCell(task.id, 'impactedSystemId', value)}
-                          >
-                            <SelectTrigger autoFocus onBlur={() => setEditingCell(null)}><SelectValue placeholder="Select system..." /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="">None</SelectItem>
-                                {impactedSystems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                      ) : (impactedSystem?.name || 'N/A')}
+                  {columnVisibility.impactedSystemId && <TableCell>
+                      {impactedSystem?.name || 'N/A'}
                   </TableCell>}
-                  {columnVisibility.estimatedHours && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'estimatedHours' })}>
-                      {isEditing('estimatedHours') ? (
-                          <Input
-                            type="number"
-                            defaultValue={task.estimatedHours}
-                            onBlur={(e) => handleUpdateCell(task.id, 'estimatedHours', parseFloat(e.target.value))}
-                            autoFocus
-                          />
-                      ) : (task.estimatedHours ? `${task.estimatedHours}h` : 'N/A')}
+                  {columnVisibility.estimatedHours && <TableCell>
+                      {task.estimatedHours ? `${task.estimatedHours}h` : 'N/A'}
                   </TableCell>}
-                  {columnVisibility.startDate && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'startDate' })}>
-                      {isEditing('startDate') ? (
-                          <Input
-                            type="date"
-                            defaultValue={task.startDate ? format(parseISO(task.startDate), 'yyyy-MM-dd') : ''}
-                            onBlur={(e) => handleUpdateCell(task.id, 'startDate', e.target.value)}
-                            autoFocus
-                          />
-                      ) : (task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A')}
+                  {columnVisibility.startDate && <TableCell>
+                      {task.startDate ? format(parseISO(task.startDate), 'PPP') : 'N/A'}
                   </TableCell>}
-                  {columnVisibility.endDate && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'endDate' })}>
-                      {isEditing('endDate') ? (
-                          <Input
-                            type="date"
-                            defaultValue={task.endDate ? format(parseISO(task.endDate), 'yyyy-MM-dd') : ''}
-                            onBlur={(e) => handleUpdateCell(task.id, 'endDate', e.target.value)}
-                            autoFocus
-                          />
-                      ) : (task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A')}
+                  {columnVisibility.endDate && <TableCell>
+                      {task.endDate ? format(parseISO(task.endDate), 'PPP') : 'N/A'}
                   </TableCell>}
-                  {columnVisibility.sprintId && <TableCell onDoubleClick={() => setEditingCell({ taskId: task.id, columnId: 'sprintId' })}>
-                      {isEditing('sprintId') ? (
-                           <Select
-                                defaultValue={task.sprintId || 'backlog'}
-                                onValueChange={(value) => handleUpdateCell(task.id, 'sprintId', value)}
-                            >
-                                <SelectTrigger autoFocus onBlur={() => setEditingCell(null)}><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="backlog">Backlog</SelectItem>
-                                    {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                      ) : (sprint?.title || 'Backlog')}
+                  {columnVisibility.sprintId && <TableCell>
+                      {sprint?.title || 'Backlog'}
                   </TableCell>}
                   {columnVisibility.releaseId && <TableCell>{release?.releaseId || 'N/A'}</TableCell>}
                   <TableCell className="text-right">
