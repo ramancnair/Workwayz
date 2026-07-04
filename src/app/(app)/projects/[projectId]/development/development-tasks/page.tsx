@@ -292,7 +292,7 @@ export default function DevelopmentTasksPage() {
     if (!deletingSubTask) return;
     const success = await deleteStory(deletingSubTask.id);
     if (success) {
-      toast({ title: "Success", description: "Sub-task deleted." });
+      toast({ title: "Success", description: "Sub-task moved to trash." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not delete sub-task." });
     }
@@ -820,7 +820,7 @@ export default function DevelopmentTasksPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the sub-task.
+              This will move the sub-task "{deletingSubTask?.title}" to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -829,7 +829,7 @@ export default function DevelopmentTasksPage() {
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

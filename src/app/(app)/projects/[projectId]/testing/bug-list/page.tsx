@@ -81,13 +81,15 @@ const bugFormSchema = z.object({
   attachments: z.string().optional(),
   relatedBugId: z.string().optional(),
   releaseId: z.string().optional(),
+  foundInTestPlanId: z.string().optional(),
+  epicId: z.string().optional(),
   createdAt: z.date().optional(),
   closedAt: z.date().optional(),
 });
 
 
 export default function BugListPage() {
-  const { stories, employees, sprints, addStory, updateStory, deleteStory, environments, releasesAndMilestones, testCases, testPlans, testDate } = useProject();
+  const { stories, epics, employees, sprints, addStory, updateStory, deleteStory, environments, releasesAndMilestones, testCases, testPlans, testDate } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -141,6 +143,7 @@ export default function BugListPage() {
           relatedBugId: editingBug.relatedBugId || 'unassigned',
           attachments: editingBug.attachments || '',
           releaseId: editingBug.releaseId || 'unassigned',
+          epicId: editingBug.epicId || 'unassigned',
           createdAt: editingBug.createdAt ? parseISO(editingBug.createdAt) : undefined,
           closedAt: editingBug.closedAt ? parseISO(editingBug.closedAt) : undefined,
         });
@@ -161,6 +164,7 @@ export default function BugListPage() {
             relatedBugId: 'unassigned',
             attachments: '',
             releaseId: 'unassigned',
+            epicId: 'unassigned',
         });
       }
     }
@@ -189,6 +193,7 @@ export default function BugListPage() {
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
         attachments: values.attachments,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
     };
 
     if (editingBug) {
@@ -581,6 +586,31 @@ export default function BugListPage() {
                                   {severities.map((s) => (
                                     <SelectItem key={s} value={s}>
                                       {s}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name="epicId"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Epic</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                  <SelectValue placeholder="Assign to an epic" />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  {epics.map((epic) => (
+                                    <SelectItem key={epic.id} value={epic.id}>
+                                      {epic.title}
                                     </SelectItem>
                                   ))}
                               </SelectContent>

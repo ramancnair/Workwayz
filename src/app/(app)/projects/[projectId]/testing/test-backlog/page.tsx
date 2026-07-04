@@ -296,7 +296,7 @@ export default function TestBacklogPage() {
     if (!deletingTestCase) return;
     const success = await deleteTestCase(deletingTestCase.id);
     if (success) {
-      toast({ title: "Success", description: "Test case deleted." });
+      toast({ title: "Success", description: "Test case moved to trash." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not delete test case." });
     }
@@ -706,7 +706,7 @@ export default function TestBacklogPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the test case "{deletingTestCase?.title}".
+              This will move the test case "{deletingTestCase?.title}" to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -715,7 +715,7 @@ export default function TestBacklogPage() {
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

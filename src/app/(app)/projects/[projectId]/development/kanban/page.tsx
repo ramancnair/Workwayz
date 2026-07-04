@@ -1032,7 +1032,7 @@ export default function KanbanPage() {
                                       )}
                                   />
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {['Requirement/Story', 'Task'].includes(selectedStory.itemType) ? (
+                                  {['Requirement/Story', 'Task', 'Bug', 'Feature Change'].includes(selectedStory.itemType) ? (
                                       <FormField
                                       control={editStoryForm.control}
                                       name="epicId"
