@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -14,8 +14,80 @@ import { useToast } from '@/hooks/use-toast';
 export default function MyAccountPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [user, setUser] = useState({ name: '', email: '', id: '', role: '', empId: '', avatar: '' });
+  const [user, setUser] = useState({ name: '', email: '', id: '', role: '', empId: '', avatar: '', authProvider: '' });
   const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Password change states
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [isFirebaseLoaded, setIsFirebaseLoaded] = useState(false);
+
+  useEffect(() => {
+    if (user.authProvider === 'firebase') {
+      const { auth } = require('@/lib/firebase');
+      const { onAuthStateChanged } = require('firebase/auth');
+      if (auth) {
+        const unsubscribe = onAuthStateChanged(auth, (fbUser: any) => {
+          if (fbUser) {
+            setIsFirebaseLoaded(true);
+          }
+        });
+        return () => unsubscribe();
+      }
+    } else {
+      setIsFirebaseLoaded(true);
+    }
+  }, [user.authProvider]);
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+
+    setIsPasswordUpdating(true);
+    try {
+      const { changeUserPassword } = await import('@/lib/auth-utils');
+      const res = await changeUserPassword(newPassword, user.authProvider || 'firebase');
+      
+      if (res.success) {
+        setPasswordSuccess('Your password has been changed successfully.');
+        setNewPassword('');
+        setConfirmPassword('');
+        toast({
+          title: "Password Changed",
+          description: "Your password has been updated successfully.",
+        });
+        
+        // Also update local storage needsPasswordReset flag if it was true
+        const storedUser = localStorage.getItem('projectflow_user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (parsed.needsPasswordReset) {
+            parsed.needsPasswordReset = false;
+            localStorage.setItem('projectflow_user', JSON.stringify(parsed));
+          }
+        }
+      } else {
+        setPasswordError(res.error || 'Failed to update password.');
+      }
+    } catch (err: any) {
+      setPasswordError(err.message || 'An unexpected error occurred.');
+    } finally {
+      setIsPasswordUpdating(false);
+    }
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('projectflow_user');
@@ -221,6 +293,65 @@ export default function MyAccountPage() {
               <p className="text-sm text-muted-foreground">Profile information is currently read-only. Contact an administrator to make changes.</p>
           </div>
         </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Change Password</CardTitle>
+          <CardDescription>
+            Update your password to secure your account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {passwordError && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/20 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-md font-medium">
+              {passwordError}
+            </div>
+          )}
+          {passwordSuccess && (
+            <div className="p-3 text-sm text-green-600 bg-green-50 dark:bg-green-950/20 dark:text-green-400 border border-green-200 dark:border-green-900 rounded-md font-medium">
+              {passwordSuccess}
+            </div>
+          )}
+          {user.authProvider === 'keycloak' ? (
+            <p className="text-sm text-muted-foreground">
+              Your account is managed via Keycloak. Password changes must be performed through your organization's portal.
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+        {user.authProvider !== 'keycloak' && (
+          <CardFooter className="border-t px-6 py-4 flex justify-end">
+            <Button 
+              onClick={handleChangePassword} 
+              disabled={isPasswordUpdating || (user.authProvider === 'firebase' && !isFirebaseLoaded)}
+            >
+              {isPasswordUpdating ? 'Updating...' : (user.authProvider === 'firebase' && !isFirebaseLoaded) ? 'Connecting session...' : 'Change Password'}
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

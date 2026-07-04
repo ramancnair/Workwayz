@@ -255,8 +255,12 @@ export default function ProjectTrashPage() {
                 <AlertDialogDescription>
                   {dialogDescription}
                 </AlertDialogDescription>
-                <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground max-h-40 overflow-y-auto">
-                  {selectedItems.map(i => <li key={i.id} className="truncate">{i.name} ({i.type})</li>)}
+                <ul className="mt-2 list-disc list-outside pl-5 text-sm text-muted-foreground max-h-40 overflow-y-auto space-y-1">
+                  {selectedItems.map(i => (
+                    <li key={i.id} className="break-words">
+                      {i.name} ({i.type})
+                    </li>
+                  ))}
                 </ul>
               </AlertDialogHeader>
               <AlertDialogFooter>

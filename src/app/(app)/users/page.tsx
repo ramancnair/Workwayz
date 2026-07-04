@@ -65,6 +65,7 @@ const userFormSchema = z.object({
   }),
   costAmount: z.coerce.number().optional(),
   costCurrency: z.string().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 });
 
 const autoGenFormSchema = z.object({
@@ -185,6 +186,7 @@ export default function UsersPage() {
             ...editingUser,
             costAmount: editingUser.costAmount ?? 0,
             costCurrency: editingUser.costCurrency ?? 'USD',
+            password: '',
         });
         } else {
         form.reset({
@@ -197,6 +199,7 @@ export default function UsersPage() {
             accessLevel: undefined,
             costAmount: 0,
             costCurrency: 'USD',
+            password: 'P@ssw0rd',
         });
         }
     }
@@ -207,12 +210,12 @@ export default function UsersPage() {
     setIsDialogOpen(true);
   };
   
-  const createIdentityInAuthPool = async (email: string, firstName?: string, lastName?: string, accessLevel?: string) => {
+  const createIdentityInAuthPool = async (email: string, firstName?: string, lastName?: string, accessLevel?: string, password?: string) => {
       try {
           const res = await fetch('/api/users', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, firstName, lastName, accessLevel })
+              body: JSON.stringify({ email, firstName, lastName, accessLevel, password })
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Failed to create identity');
@@ -378,7 +381,7 @@ export default function UsersPage() {
         });
         
         // Push single identity to auth pool
-        await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
+        await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel, values.password);
         
         toast({ title: "Success", description: `User added to database and Authentication cache.` });
       }
@@ -755,6 +758,17 @@ export default function UsersPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                  {!editingUser && (
+                    <FormField control={form.control} name="password" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password *</FormLabel>
+                        <FormControl>
+                          <Input type="text" placeholder="Password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
                   <div className="space-y-2">
                     <FormLabel>Cost</FormLabel>
                     <div className="flex h-10 w-full items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">

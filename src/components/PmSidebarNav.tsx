@@ -88,6 +88,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
 
       localStorage.removeItem('projectflow_user');
+      sessionStorage.removeItem('projectflow_session_active');
 
       if (sessionProvider === 'keycloak') {
         const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
@@ -114,6 +115,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     } catch (error) {
       console.error("Error logging out:", error);
       localStorage.removeItem('projectflow_user');
+      sessionStorage.removeItem('projectflow_session_active');
       router.push('/');
     }
   };

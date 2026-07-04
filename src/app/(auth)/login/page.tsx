@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, setDoc } from '@/lib/db-provider';
 import Keycloak from 'keycloak-js';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const determineAccessLevel = (keycloak: any) => {
     const roles = keycloak.realmAccess?.roles || [];
@@ -94,6 +95,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +165,13 @@ export default function LoginPage() {
           ...userData,
           authProvider: 'supabase',
           issuedAt: Date.now(),
+          needsPasswordReset: passwordInput === 'P@ssw0rd',
+          rememberMe: rememberMe
         }));
+
+        if (!rememberMe) {
+          sessionStorage.setItem('projectflow_session_active', 'true');
+        }
 
       } else {
         if (!auth || !db) {
@@ -203,7 +211,13 @@ export default function LoginPage() {
           ...userData,
           authProvider: 'firebase',
           issuedAt: Date.now(),
+          needsPasswordReset: passwordInput === 'P@ssw0rd',
+          rememberMe: rememberMe
         }));
+
+        if (!rememberMe) {
+          sessionStorage.setItem('projectflow_session_active', 'true');
+        }
       }
 
       toast({
@@ -349,6 +363,16 @@ export default function LoginPage() {
                   </Link>
                 </div>
                 <Input id="password" type="password" required />
+              </div>
+              <div className="flex items-center space-x-2 pt-1">
+                <Checkbox 
+                  id="remember-me" 
+                  checked={rememberMe} 
+                  onCheckedChange={(checked) => setRememberMe(!!checked)} 
+                />
+                <Label htmlFor="remember-me" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                  Remember me on this computer
+                </Label>
               </div>
             </>
           )}

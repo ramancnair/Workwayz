@@ -100,6 +100,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
       // Always clear local session first
       localStorage.removeItem('projectflow_user');
+      sessionStorage.removeItem('projectflow_session_active');
 
       if (sessionProvider === 'keycloak') {
         // Terminate the Keycloak SSO session server-side to prevent re-entry via session cookie
@@ -129,6 +130,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       console.error("Error logging out:", error);
       // Even on error, ensure local session is cleared and redirect
       localStorage.removeItem('projectflow_user');
+      sessionStorage.removeItem('projectflow_session_active');
       router.push('/');
     }
   };
