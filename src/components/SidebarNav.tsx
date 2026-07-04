@@ -74,17 +74,22 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
   const { project, testDate, setTestDate } = useProject();
-  const [user, setUser] = useState({ name: '', email: '' });
+  const [user, setUser] = useState({ name: '', email: '', avatar: '' });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user from local storage");
+    const loadUser = () => {
+      const storedUser = localStorage.getItem('projectflow_user');
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Failed to parse user from local storage", e);
+        }
       }
-    }
+    };
+    loadUser();
+    window.addEventListener('user-profile-updated', loadUser);
+    return () => window.removeEventListener('user-profile-updated', loadUser);
   }, []);
 
   const handleLogout = async () => {
@@ -163,6 +168,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: KanbanSquare,
     },
     {
+      href: `${basePath}/development/defect-tracker`,
+      label: "Defect Tracker",
+      icon: Bug,
+    },
+    {
       href: `${basePath}/development/development-tasks`,
       label: "Sub-Tasks",
       icon: Component,
@@ -186,8 +196,8 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: FileText,
     },
     {
-      href: `${basePath}/testing/bug-list`,
-      label: "Bug List",
+      href: `${basePath}/testing/defects`,
+      label: "Defects",
       icon: Bug,
     },
   ];
@@ -340,7 +350,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     }
   ];
 
-  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
+  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
@@ -451,6 +461,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
           <DropdownMenuTrigger asChild>
             <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">
               <Avatar className="h-8 w-8 shrink-0">
+                {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                 <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">

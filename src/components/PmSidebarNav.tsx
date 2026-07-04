@@ -63,18 +63,23 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
-  const [user, setUser] = useState({ name: '', email: '' });
+  const [user, setUser] = useState({ name: '', email: '', avatar: '' });
   const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user from local storage");
+    const loadUser = () => {
+      const storedUser = localStorage.getItem('projectflow_user');
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Failed to parse user from local storage", e);
+        }
       }
-    }
+    };
+    loadUser();
+    window.addEventListener('user-profile-updated', loadUser);
+    return () => window.removeEventListener('user-profile-updated', loadUser);
   }, []);
 
   const handleLogout = async () => {
@@ -347,6 +352,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
           <DropdownMenuTrigger asChild>
             <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">
               <Avatar className="h-8 w-8 shrink-0">
+                  {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                   <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col ml-3 transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">

@@ -19,7 +19,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const basePath = `/projects/${projectId}`;
 
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
-  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
+  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
@@ -93,43 +93,45 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
     return (
       <>
-        <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold">{project?.name || 'Loading Project...'}</h1>
+        <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-3 border-b border-border flex flex-col xl:flex-row xl:items-center justify-between gap-4 overflow-hidden shrink-0">
+          <div className="flex-shrink-0">
+            <h1 className="text-xl font-bold leading-tight">{project?.name || 'Loading Project...'}</h1>
             <p className="text-xs text-muted-foreground">{project?.id}</p>
           </div>
-          <Tabs value={getTabValue()} onValueChange={onTabChange}>
-            <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-              <TabsTrigger 
-                value="initial-estimation" 
-                className={cn(
-                  "data-[state=active]:bg-background data-[state=active]:text-foreground",
-                  isInitialStatus && !dynamicTab && "pointer-events-none cursor-default"
-                )}
-              >
-                Initial Estimation
-              </TabsTrigger>
-              {!isInitialStatus && (
-                <>
-                  <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
-                  <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
-                  <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
-                  <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
-                  <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
-                  <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
-                  <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
-                  <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
-                </>
-              )}
-              {dynamicTab && (
-                <TabsTrigger value={dynamicTab.value} className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                  {dynamicTab.label}
+          <div className="overflow-x-auto max-w-full py-1 -my-1 shrink-0">
+            <Tabs value={getTabValue()} onValueChange={onTabChange} className="w-auto">
+              <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 flex whitespace-nowrap w-max">
+                <TabsTrigger 
+                  value="initial-estimation" 
+                  className={cn(
+                    "data-[state=active]:bg-background data-[state=active]:text-foreground",
+                    isInitialStatus && !dynamicTab && "pointer-events-none cursor-default"
+                  )}
+                >
+                  Initial Estimation
                 </TabsTrigger>
-              )}
-            </TabsList>
-          </Tabs>
+                {!isInitialStatus && (
+                  <>
+                    <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
+                    <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
+                    <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
+                    <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
+                    <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
+                    <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
+                    <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                    <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
+                  </>
+                )}
+                {dynamicTab && (
+                  <TabsTrigger value={dynamicTab.value} className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                    {dynamicTab.label}
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col">
           {children}
         </div>
       </>

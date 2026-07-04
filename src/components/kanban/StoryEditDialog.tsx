@@ -50,7 +50,7 @@ const priorityStyles: Record<Priority, string> = {
 const storyFormSchema = z.object({
   itemType: z.enum(workItemTypes as [string, ...string[]]),
   title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
-  status: z.enum(statusOptions as [string, ...string[]]).optional(),
+  status: z.string().optional(),
   description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
@@ -793,7 +793,9 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    {statusOptions.map((s) => (
+                                     {(selectedStory?.itemType === 'Bug' 
+                                       ? ['Open', 'In Progress', 'Resolved', 'Reopened', 'Closed']
+                                       : statusOptions).map((s) => (
                                     <SelectItem key={s} value={s}>
                                         {s}
                                     </SelectItem>
@@ -962,25 +964,40 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                 )}
                             />
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Created On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange as any} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Closed On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange as any} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
+                                 <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
+                                     <FormItem>
+                                         <FormLabel>Created On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 disabled
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                                 <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
+                                     <FormItem>
+                                         <FormLabel>Closed On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                             </div>
                             </>
                         )}
                       </div>

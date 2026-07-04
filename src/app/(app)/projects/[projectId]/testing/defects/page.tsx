@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -23,7 +21,6 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -46,18 +43,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Story, StoryStatus, Release, TestCase, BugSeverity } from '@/types';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { Bot, PlusCircle, Trash2, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { format, parseISO } from 'date-fns';
-import { DatePicker } from '@/components/ui/datepicker';
+import { parseISO } from 'date-fns';
 
-const statusStyles: Record<StoryStatus, string> = {
-  'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+const statusStyles: Record<string, string> = {
+  'Open': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  'Reopened': 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
   'In Progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  'Resolved': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300',
+  'Closed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
   'Done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
 };
 
-const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
 
 const severityStyles: Record<BugSeverity, string> = {
@@ -67,7 +66,6 @@ const severityStyles: Record<BugSeverity, string> = {
     'Low': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };
 
-
 const bugFormSchema = z.object({
   title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
@@ -75,7 +73,7 @@ const bugFormSchema = z.object({
   relatedTestCaseId: z.string().optional(),
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
-  status: z.enum(['To Do', 'In Progress', 'Done']),
+  status: z.string(),
   severity: z.enum(severities).optional(),
   sprintId: z.string().optional(),
   attachments: z.string().optional(),
@@ -87,9 +85,8 @@ const bugFormSchema = z.object({
   closedAt: z.date().optional(),
 });
 
-
-export default function BugListPage() {
-  const { stories, epics, employees, sprints, addStory, updateStory, deleteStory, environments, releasesAndMilestones, testCases, testPlans, testDate } = useProject();
+export default function DefectsPage() {
+  const { stories, epics, employees, sprints, addStory, updateStory, deleteStory, environments, releasesAndMilestones, testCases, testPlans } = useProject();
   const { toast } = useToast();
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -98,14 +95,11 @@ export default function BugListPage() {
   const [selectedBugs, setSelectedBugs] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-
-  const sortedEnvironments = [...environments].sort((a,b) => a.order - b.order);
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const [testCaseInputText, setTestCaseInputText] = useState('');
   const [relatedBugInputText, setRelatedBugInputText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'storyId', desc: false });
-
 
   const form = useForm<z.infer<typeof bugFormSchema>>({
     resolver: zodResolver(bugFormSchema),
@@ -157,7 +151,7 @@ export default function BugListPage() {
             relatedTestCaseId: 'unassigned',
             reporterId: 'unassigned',
             assigneeId: 'unassigned',
-            status: 'To Do',
+            status: 'Open',
             severity: 'Medium',
             sprintId: 'backlog',
             foundInTestPlanId: 'unassigned',
@@ -168,7 +162,7 @@ export default function BugListPage() {
         });
       }
     }
-  }, [isDialogOpen, editingBug, form, testCases]);
+  }, [isDialogOpen, editingBug, form, testCases, bugs]);
   
   const handleDialogOpen = (bug: Story | null) => {
     setEditingBug(bug);
@@ -207,11 +201,11 @@ export default function BugListPage() {
     }
     
     if (success) {
-      toast({ title: "Success", description: `Bug ${editingBug ? 'updated' : 'added'} successfully.` });
+      toast({ title: "Success", description: `Defect ${editingBug ? 'updated' : 'added'} successfully.` });
       setIsDialogOpen(false);
       setEditingBug(null);
     } else {
-      toast({ variant: "destructive", title: "Error", description: `Could not ${editingBug ? 'update' : 'add'} bug.` });
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingBug ? 'update' : 'add'} defect.` });
     }
     setIsSubmitting(false);
   };
@@ -224,10 +218,10 @@ export default function BugListPage() {
 
     const successCount = results.filter(Boolean).length;
     if (successCount > 0) {
-        toast({ title: "Success", description: `${successCount} bug(s) moved to trash.` });
+        toast({ title: "Success", description: `${successCount} defect(s) moved to trash.` });
     }
     if (successCount < selectedBugs.length) {
-        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedBugs.length - successCount} bug(s).` });
+        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedBugs.length - successCount} defect(s).` });
     }
     
     setSelectedBugs([]);
@@ -267,7 +261,7 @@ export default function BugListPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Bug List" description="A list of all bugs reported in the project.">
+      <PageHeader title="Defects" description="A list of all defects reported in the project.">
         {selectedBugs.length > 0 && (
             <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -275,7 +269,7 @@ export default function BugListPage() {
             </Button>
         )}
         <Button onClick={() => handleDialogOpen(null)}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Bug
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Defect
         </Button>
       </PageHeader>
       <Card>
@@ -348,7 +342,7 @@ export default function BugListPage() {
                     {assignee ? (
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar" />
+                          <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} />
                           <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         {assignee.firstName} {assignee.lastName}
@@ -366,9 +360,9 @@ export default function BugListPage() {
     <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingBug(null); setIsDialogOpen(open); }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
           <DialogHeader className="px-6 py-4 border-b shrink-0">
-            <DialogTitle>{editingBug ? 'Edit Bug' : 'Add New Bug'}</DialogTitle>
+            <DialogTitle>{editingBug ? 'Edit Defect' : 'Add New Defect'}</DialogTitle>
             <DialogDescription>
-              {editingBug ? 'Make changes to the bug details here.' : 'Log a new bug found during testing.'}
+              {editingBug ? 'Make changes to the defect details here.' : 'Log a new defect found during testing.'}
             </DialogDescription>
           </DialogHeader>
             <Form {...form}>
@@ -381,7 +375,7 @@ export default function BugListPage() {
                       <FormItem>
                         <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="Bug title" {...field} />
+                          <Input placeholder="Defect title" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -394,7 +388,7 @@ export default function BugListPage() {
                       <FormItem>
                         <FormLabel>Description (Steps to Reproduce)</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Describe the steps to reproduce the bug..." {...field} />
+                          <Textarea placeholder="Describe the steps to reproduce the defect..." {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -542,11 +536,11 @@ export default function BugListPage() {
                         name="relatedBugId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Related / Original Bug</FormLabel>
+                            <FormLabel>Related / Original Defect</FormLabel>
                             <FormControl>
                               <Input
                                 list="bug-options"
-                                placeholder="Search for a bug..."
+                                placeholder="Search for a defect..."
                                 value={relatedBugInputText}
                                 onChange={(e) => {
                                   const text = e.target.value;
@@ -634,7 +628,7 @@ export default function BugListPage() {
                               </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                              {statusOptions.map((p) => (
+                              {['Open', 'In Progress', 'Resolved', 'Reopened', 'Closed'].map((p) => (
                                   <SelectItem key={p} value={p}>
                                   {p}
                                   </SelectItem>
@@ -666,38 +660,53 @@ export default function BugListPage() {
                       />
                   </div>
                    <FormField
-                    control={form.control}
-                    name="attachments"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Attachments</FormLabel>
-                        <FormControl>
-                        <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                  />
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField control={form.control} name="createdAt" render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Created On</FormLabel>
-                              <FormControl>
-                                  <DatePicker date={field.value} setDate={field.onChange} />
-                              </FormControl>
-                              <FormMessage />
-                          </FormItem>
-                      )} />
-                      <FormField control={form.control} name="closedAt" render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Closed On</FormLabel>
-                              <FormControl>
-                                  <DatePicker date={field.value} setDate={field.onChange} />
-                              </FormControl>
-                              <FormMessage />
-                          </FormItem>
-                      )} />
-                  </div>
+                     control={form.control}
+                     name="attachments"
+                     render={({ field }) => (
+                     <FormItem>
+                         <FormLabel>Attachments</FormLabel>
+                         <FormControl>
+                         <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
+                         </FormControl>
+                         <FormMessage />
+                     </FormItem>
+                     )}
+                   />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="createdAt" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Created On</FormLabel>
+                                <FormControl>
+                                    <Input 
+                                        type="date" 
+                                        disabled
+                                        value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            field.onChange(val ? new Date(val) : undefined);
+                                        }}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="closedAt" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Closed On</FormLabel>
+                                <FormControl>
+                                    <Input 
+                                        type="date" 
+                                        value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            field.onChange(val ? new Date(val) : undefined);
+                                        }}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
                 </div>
                 <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                   <Button type="submit" disabled={isSubmitting}>
@@ -713,7 +722,7 @@ export default function BugListPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move {selectedBugs.length} bug(s) to the trash.
+              This will move {selectedBugs.length} defect(s) to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

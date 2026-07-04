@@ -153,6 +153,7 @@ export default function LoginPage() {
             email: data.email || emailInput,
             accessLevel: data.accessLevel || 'Team Member',
             empId: data.empId || docSnap.id,
+            avatar: data.avatar || '',
             uid: user.id
           };
         }
@@ -193,6 +194,7 @@ export default function LoginPage() {
           email: data.email || emailInput,
           accessLevel: data.accessLevel || 'Team Member',
           empId: data.empId || docSnap.id,
+          avatar: data.avatar || '',
           uid: user.uid
         };
 

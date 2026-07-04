@@ -1438,24 +1438,39 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             />
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField control={addStoryForm.control} name="createdAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Created On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={addStoryForm.control} name="closedAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Closed On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
+                                     <FormItem>
+                                         <FormLabel>Created On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 disabled
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                                 <FormField control={addStoryForm.control} name="closedAt" render={({ field }) => (
+                                     <FormItem>
+                                         <FormLabel>Closed On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                             </div>
                             </>
                         )}
                     </div>
@@ -2335,24 +2350,39 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             />
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Created On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Closed On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
+                                     <FormItem>
+                                         <FormLabel>Created On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 disabled
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                                 <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
+                                     <FormItem>
+                                         <FormLabel>Closed On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                             </div>
                             </>
                         )}
                       </div>

@@ -79,6 +79,18 @@ const priorityStyles: Record<Priority, string> = {
     'Backburner': 'text-gray-500 fill-gray-500',
 };
 
+const getColumnForBugStatus = (status: string, columns: KanbanColumn[]): string => {
+  const doneColName = columns.find(c => c.isDoneColumn)?.name || 'Done';
+  const inQaColName = columns.find(c => c.name === 'In QA' || c.name === 'QA')?.name || 'In QA';
+  const firstColName = columns[0]?.name || 'To Do';
+
+  if (status === 'Open' || status === 'Reopened') return firstColName;
+  if (status === 'In Progress') return 'In Progress';
+  if (status === 'Resolved') return inQaColName;
+  if (status === 'Closed') return doneColName;
+  return status;
+};
+
 
 const storyFormSchema = z.object({
   title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
@@ -93,7 +105,7 @@ const storyFormSchema = z.object({
   relatedBugId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   attachments: z.string().optional(),
-  status: z.enum(statusOptions).optional(),
+  status: z.string().optional(),
   sprintId: z.string().optional(),
   releaseId: z.string().optional(),
   predecessorId: z.string().optional(),
@@ -170,12 +182,12 @@ function StoryCard({
     <Collapsible>
     <Card className={cn("bg-card", className)}>
       <div className="p-4">
-        <div className="flex justify-between items-start">
-            <div className="flex-1 pr-2 space-y-1">
-                <div className="flex items-center gap-2">
+        <div className="flex justify-between items-start gap-2">
+            <div className="flex-1 space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
                     {showSubItems ? (
                       <CollapsibleTrigger asChild>
-                          <button>
+                          <button type="button" className="focus:outline-none">
                             <Icon className="h-4 w-4 text-muted-foreground" />
                           </button>
                       </CollapsibleTrigger>
@@ -186,7 +198,7 @@ function StoryCard({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button>
+                              <button type="button" className="focus:outline-none">
                                 <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[story.priority])} />
                               </button>
                             </TooltipTrigger>
@@ -196,23 +208,29 @@ function StoryCard({
                           </Tooltip>
                         </TooltipProvider>
                     )}
-                    <p className="text-xs font-semibold text-muted-foreground">
+                    <p className="text-xs font-semibold text-muted-foreground truncate">
                     {parentStory ? `${parentStory.storyId} > ${story.storyId}` : story.storyId}
                     </p>
-                    {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500" />}
+                    {isReadyForDev && <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />}
                 </div>
-                <p className="font-semibold break-words">{story.title}</p>
+                <p className="font-semibold break-words text-sm">{story.title}</p>
+                {epic && (
+                  <div className="pt-1">
+                    <Badge variant="secondary" className="max-w-full truncate inline-block text-[10px] px-2 py-0.5">
+                      {epic.title}
+                    </Badge>
+                  </div>
+                )}
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-                {epic && <Badge variant="secondary">{epic.title}</Badge>}
+            <div className="flex items-center flex-shrink-0">
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
                     <Edit className="h-4 w-4" />
                 </Button>
             </div>
         </div>
       </div>
-      <CardFooter className="flex justify-between items-center p-4 pt-0" onClick={(e) => e.stopPropagation()}>
-         <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <CardFooter className="flex justify-between items-center p-4 pt-0 gap-2" onClick={(e) => e.stopPropagation()}>
+         <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground min-w-0">
             {assignee && (
                 <TooltipProvider>
                     <Tooltip>
@@ -227,7 +245,7 @@ function StoryCard({
                 </TooltipProvider>
             )}
             {displayEffort !== undefined && (
-                <div className="flex items-center gap-1" title="Development effort">
+                <div className="flex items-center gap-1 whitespace-nowrap" title="Development effort">
                     <Clock className="h-3 w-3" />
                     <span>{displayEffort}h</span>
                 </div>
@@ -236,13 +254,13 @@ function StoryCard({
               <CollapsibleTrigger asChild>
                 <div className="flex items-center gap-2 cursor-pointer">
                   {subTasks.length > 0 && (
-                    <div className="flex items-center gap-1" title={`${subTasks.length} sub-tasks`}>
+                    <div className="flex items-center gap-1 whitespace-nowrap" title={`${subTasks.length} sub-tasks`}>
                       <CheckSquare className="h-3 w-3" />
                       <span>{subTasks.length}</span>
                     </div>
                   )}
                   {bugs.length > 0 && (
-                    <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
+                    <div className="flex items-center gap-1 whitespace-nowrap" title={`${bugs.length} bugs`}>
                       <Bug className="h-3 w-3" />
                       <span>{bugs.length}</span>
                     </div>
@@ -251,16 +269,19 @@ function StoryCard({
               </CollapsibleTrigger>
             )}
           </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
             {onStatusChange && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-7">
-                        Move <ChevronDown className="ml-2 h-4 w-4" />
+                        <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                        Move <ChevronDown className="ml-1 h-3 w-3" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        {columns.filter(col => col.name !== story.status).map(col => {
+                        {columns.filter(col => {
+                            const currentColumnName = story.itemType === 'Bug' ? getColumnForBugStatus(story.status, columns) : story.status;
+                            return col.name !== currentColumnName;
+                        }).map(col => {
                             const isDoneAndDisabled = doneColumn && col.id === doneColumn.id && isMoveToDoneDisabled;
 
                             if (isDoneAndDisabled) {
@@ -302,31 +323,50 @@ function StoryCard({
                 const impactedSystem = useProject().impactedSystems.find(s => s.id === item.impactedSystemId);
 
                 return (
-                    <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-xs">
-                        <ItemIcon className="h-3 w-3 text-muted-foreground" />
-                        <span 
-                            className="font-medium cursor-pointer hover:underline truncate"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSubItemClick(item);
-                            }}
-                        >
-                            [{item.storyId}] {item.title}
-                        </span>
-                        <Badge variant="outline" className="w-20 justify-center truncate">{impactedSystem?.name || 'N/A'}</Badge>
-                        <span className="w-12 text-center text-muted-foreground">{item.estimatedHours || 0}h</span>
-                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Badge variant="outline" className="cursor-pointer w-20 justify-center">{item.status}</Badge>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                            {statusOptions.filter(s => s !== item.status).map(status => (
-                              <DropdownMenuItem key={status} onSelect={() => onSubItemStatusChange(item.id, status)}>
-                                {status}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                    <div key={item.id} className="flex flex-col gap-1 py-1.5 border-b border-border/40 last:border-0 min-w-0">
+                        <div className="flex items-start gap-2 min-w-0">
+                            <ItemIcon className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+                            <span 
+                                className="font-medium cursor-pointer hover:underline truncate flex-1 text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSubItemClick(item);
+                                }}
+                            >
+                                [{item.storyId}] {item.title}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground pl-5" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                {impactedSystem && (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 truncate max-w-[100px]">
+                                        {impactedSystem.name}
+                                    </Badge>
+                                )}
+                                {item.estimatedHours ? (
+                                    <span className="flex items-center gap-0.5 whitespace-nowrap">
+                                        <Clock className="h-2.5 w-2.5" />
+                                        {item.estimatedHours}h
+                                    </span>
+                                ) : null}
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Badge variant="outline" className="cursor-pointer text-[9px] px-1.5 py-0 h-4 bg-background whitespace-nowrap">
+                                  {item.status}
+                                </Badge>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                {(item.itemType === 'Bug' 
+                                  ? ['Open', 'In Progress', 'Resolved', 'Reopened', 'Closed']
+                                  : statusOptions).filter(s => s !== item.status).map(status => (
+                                  <DropdownMenuItem key={status} onSelect={() => onSubItemStatusChange(item.id, status)}>
+                                    {status}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 )
             })}
@@ -343,7 +383,7 @@ export default function KanbanPage() {
   const { toast } = useToast();
   
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
-  const [viewBy, setViewBy] = useState<'story' | 'sub-task' | 'bug'>('story');
+  const [viewBy, setViewBy] = useState<'story' | 'sub-task'>('story');
   const [selectionStack, setSelectionStack] = useState<Story[]>([]);
   const selectedStory = selectionStack[selectionStack.length - 1] || null;
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
@@ -593,11 +633,9 @@ export default function KanbanPage() {
     let filteredByView: Story[];
 
     if (viewBy === 'story') {
-        filteredByView = baseSprintStories.filter(story => ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType) || (story.itemType === 'Bug' && !story.parentStoryId));
+        filteredByView = baseSprintStories.filter(story => ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
     } else if (viewBy === 'sub-task') {
         filteredByView = baseSprintStories.filter(story => story.itemType === 'Sub Task');
-    } else if (viewBy === 'bug') {
-        filteredByView = baseSprintStories.filter(story => story.itemType === 'Bug');
     } else {
         filteredByView = [];
     }
@@ -656,7 +694,7 @@ export default function KanbanPage() {
 
   return (
     <>
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col">
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col min-w-0 overflow-hidden">
         <PageHeader title={`Kanban Board: ${currentSprint.title}`} description={`Move work items to change their status.`}>
           <div className="flex items-center gap-2">
             <div className="grid gap-2">
@@ -668,7 +706,6 @@ export default function KanbanPage() {
                     <SelectContent>
                         <SelectItem value="story">Stories</SelectItem>
                         <SelectItem value="sub-task">Sub-tasks</SelectItem>
-                        <SelectItem value="bug">Bugs</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -699,9 +736,10 @@ export default function KanbanPage() {
             const allColumnNames = new Set(sortedColumns.map(c => c.name));
             const firstNonDoneColumn = sortedColumns.find(c => !c.isDoneColumn);
             const itemsInColumn = sprintStories.filter((story) => {
-              if (story.status === column.name) return true;
+              const currentStatus = story.itemType === 'Bug' ? getColumnForBugStatus(story.status, sortedColumns) : story.status;
+              if (currentStatus === column.name) return true;
               // Orphaned status: doesn't belong to any column
-              if (!allColumnNames.has(story.status) && firstNonDoneColumn && column.id === firstNonDoneColumn.id) return true;
+              if (!allColumnNames.has(currentStatus) && firstNonDoneColumn && column.id === firstNonDoneColumn.id) return true;
               return false;
             });
             return (
@@ -713,7 +751,7 @@ export default function KanbanPage() {
                     {itemsInColumn.length}
                   </span>
                 </h3>
-                <div className="flex-1 space-y-4 overflow-y-auto">
+                <div className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden min-w-0">
                   {itemsInColumn.map((story) => {
                       const epic = epics.find(e => e.id === story.epicId);
                       const assignee = users.find(u => u.id === story.assigneeId);
@@ -732,8 +770,25 @@ export default function KanbanPage() {
                             assignee={assignee}
                             parentStory={parentStory}
                             columns={sortedColumns}
-                            onStatusChange={(newStatus) => moveStoryStatus(story.id, newStatus)} 
-                            onEdit={() => handleSetSelectedStory(story)}
+                            onStatusChange={(newStatus) => {
+                               let finalStatus = newStatus;
+                               if (story.itemType === 'Bug') {
+                                   const doneColName = sortedColumns.find(c => c.isDoneColumn)?.name || 'Done';
+                                   const inQaColName = sortedColumns.find(c => c.name === 'In QA' || c.name === 'QA')?.name || 'In QA';
+                                   
+                                   if (newStatus === doneColName) {
+                                       finalStatus = 'Closed';
+                                   } else if (newStatus === inQaColName) {
+                                       finalStatus = 'Resolved';
+                                   } else if (newStatus === 'In Progress') {
+                                       finalStatus = 'In Progress';
+                                   } else {
+                                       finalStatus = 'Open';
+                                   }
+                               }
+                               moveStoryStatus(story.id, finalStatus as StoryStatus);
+                             }} 
+                             onEdit={() => handleSetSelectedStory(story)}
                             isMoveToDoneDisabled={isMoveToDoneDisabled}
                             subItems={subItems}
                             onSubItemClick={handleDrillDown}
@@ -1259,7 +1314,7 @@ export default function KanbanPage() {
                                             </SelectTrigger>
                                           </FormControl>
                                           <SelectContent>
-                                            {statusOptions.map((p) => (
+                                            {(selectedStory?.itemType === 'Bug' ? ['Open', 'In Progress', 'Resolved', 'Reopened', 'Closed'] : statusOptions).map((p) => (
                                               <SelectItem key={p} value={p}>
                                                 {p}
                                               </SelectItem>
@@ -1311,25 +1366,40 @@ export default function KanbanPage() {
                                               )}
                                           />
                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                               <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Created On</FormLabel>
-                                                        <FormControl>
-                                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )} />
-                                                <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Closed On</FormLabel>
-                                                        <FormControl>
-                                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )} />
-                                            </div>
+                                                 <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
+                                                      <FormItem>
+                                                          <FormLabel>Created On</FormLabel>
+                                                          <FormControl>
+                                                              <Input 
+                                                                  type="date" 
+                                                                  disabled
+                                                                  value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                                  onChange={(e) => {
+                                                                      const val = e.target.value;
+                                                                      field.onChange(val ? new Date(val) : undefined);
+                                                                  }}
+                                                              />
+                                                          </FormControl>
+                                                         <FormMessage />
+                                                     </FormItem>
+                                                 )} />
+                                                 <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
+                                                     <FormItem>
+                                                         <FormLabel>Closed On</FormLabel>
+                                                         <FormControl>
+                                                             <Input 
+                                                                 type="date" 
+                                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                                 onChange={(e) => {
+                                                                     const val = e.target.value;
+                                                                     field.onChange(val ? new Date(val) : undefined);
+                                                                 }}
+                                                             />
+                                                         </FormControl>
+                                                         <FormMessage />
+                                                     </FormItem>
+                                                 )} />
+                                             </div>
                                       </>
                                   )}
                                       <FormField

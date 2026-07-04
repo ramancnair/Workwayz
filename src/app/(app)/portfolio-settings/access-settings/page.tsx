@@ -59,7 +59,7 @@ const pageGroups = [
       'Test Dashboard',
       'Test Backlog',
       'Test Plan',
-      'Bug List',
+      'Defects',
       'Project Status',
       'PM Dashboard',
       'Specifications',
@@ -103,19 +103,19 @@ const appPages = pageGroups.flatMap(g => g.pages);
 const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, string[]> = {
   'Senior Management': [
     'My Projects', 'Project Home', 'Portfolio Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Allocated Leaves', 'Billing', 'Billing Rate', 'Trash',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Bug List', 'Project Status', 'PM Dashboard', 'Specifications', 'Ballpark (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO TnM Billing', 'Business Continuity'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Ballpark (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO TnM Billing', 'Business Continuity'
   ],
   'Project Manager': [
     'My Projects', 'Project Home', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Allocated Leaves', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Bug List', 'Project Status', 'PM Dashboard', 'Specifications', 'Ballpark (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO TnM Billing', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Ballpark (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO TnM Billing', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
   ],
   'Lead': [
     'My Projects', 'Project Home', 'User List', 'Holiday Calendar',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Bug List', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Defects', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
   ],
   'Team Member': [
     'My Projects', 'Project Home',
-    'Development Dashboard', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Bug List', 'Project Status', 'Specifications', 'Project Resources', 'Worklog', 'RAID Dashboard', 'Project Holiday Calendar', 'Leave Tracker', 'PMO Documents'
+    'Development Dashboard', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Defects', 'Project Status', 'Specifications', 'Project Resources', 'Worklog', 'RAID Dashboard', 'Project Holiday Calendar', 'Leave Tracker', 'PMO Documents'
   ],
   'PMO': [
     'My Projects', 'Project Home', 'User List', 'Utilization', 'Holiday Calendar', 'Billing', 'Billing Rate',
