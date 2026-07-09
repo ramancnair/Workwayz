@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { auth } from '@/lib/firebase';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -77,7 +78,24 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         router.push('/login');
       }
     } else {
-      setIsAuthenticated(true);
+      const activeProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
+      if (activeProvider === 'firebase' && auth) {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          if (user) {
+            setIsAuthenticated(true);
+          } else {
+            console.warn('[AuthGuard] Local session exists but Firebase user is null.');
+            localStorage.removeItem('projectflow_user');
+            setIsAuthenticated(false);
+            if (!isPublicPath) {
+              router.push('/login');
+            }
+          }
+        });
+        return () => unsubscribe();
+      } else {
+        setIsAuthenticated(true);
+      }
     }
   }, [router, pathname]);
 

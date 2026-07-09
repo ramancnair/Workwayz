@@ -1,24 +1,51 @@
-# Step 1: Use Node.js environment
-FROM node:20-alpine
+# Base image
+FROM node:20-alpine AS base
 
-# Step 2: Create app directory
+# Install dependencies only when needed
+FROM base AS deps
 WORKDIR /app
-
-# Step 3: Copy package files
-COPY package*.json ./
-
-# Step 4: Install ALL dependencies (needed for the build step)
+# Copy package files
+COPY package.json package-lock.json ./
+# Install dependencies cleanly
 RUN npm ci
 
-# Step 5: Copy the rest of your Next.js project files
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Step 6: Build your Next.js application 
-# (This creates the optimized production build)
+# Disable Next.js telemetry
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Build the project
 RUN npm run build
 
-# Step 7: Next.js runs on port 3000 by default
-EXPOSE 3000
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Step 8: Start the Next.js server using your exact script
-CMD ["npm", "start"]
+# Copy public directory and standalone trace
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+
+# Expose the port
+EXPOSE 3000
+ENV PORT 3000
+# Ensure hostname allows external connections
+ENV HOSTNAME "0.0.0.0"
+
+# Make entrypoint script executable and normalize line endings
+RUN apk add --no-cache dos2unix && \
+    dos2unix /app/docker-entrypoint.sh && \
+    chmod +x /app/docker-entrypoint.sh
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
+# Command to run the Next.js standalone server
+CMD ["node", "server.js"]
+
