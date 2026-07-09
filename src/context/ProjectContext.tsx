@@ -1500,6 +1500,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
           sprintId: originalTC.sprintId,
           status: 'Not Run',
           executionDate: executionDate,
+          attachment: originalTC.attachment || '',
         };
         batch.set(newRef, sanitizeForFirestore(copy));
       }
