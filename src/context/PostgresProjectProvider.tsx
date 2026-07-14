@@ -114,7 +114,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/testing/defects': ['stories', 'employees', 'sprints', 'environments', 'releases', 'testCases'],
     '/project-details/pm-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
     '/project-details/specifications': ['environments', 'impactedSystems', 'horizontals'],
-    '/initial-estimation/ballpark': ['initialImpactedSystems', 'initialHorizontals'],
+    '/initial-estimation/specifications': ['initialImpactedSystems', 'initialHorizontals'],
     '/releases/project-releases': ['releases'],
     '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays', 'horizontals'],
     '/resources/resource-workload': ['employees', 'worklogs', 'stories', 'holidays', 'weeklyOffDays'],

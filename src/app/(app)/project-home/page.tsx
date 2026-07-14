@@ -879,8 +879,8 @@ export default function ProjectsDashboard() {
                             <TableBody>
                               {portfolio.projects.map((project) => {
                                 const projectManager = users.find(u => u.id === project.projectManagerId);
-                                const projectUrl = project.status === 'Initial Estimation'
-                                  ? `/projects/${project.id}/initial-estimation/ballpark`
+                                const projectUrl = (project.status === 'Initial Estimation' || project.status === 'Not Started')
+                                  ? `/projects/${project.id}/initial-estimation/specifications`
                                   : `/projects/${project.id}/development/dashboard`;
                                 return (
                                   <TableRow key={project.id}>

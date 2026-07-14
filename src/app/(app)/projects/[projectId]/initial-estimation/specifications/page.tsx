@@ -408,7 +408,7 @@ export default function InitialEstimationPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Ballpark Estimation" description="Define the project summary and impacted systems for an initial estimate.">
+        <PageHeader title="Specifications" description="Define the project summary and impacted systems for an initial estimate.">
         </PageHeader>
         
         {aiError && (

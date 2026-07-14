@@ -43,7 +43,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Story, StoryStatus, Release, TestCase, BugSeverity } from '@/types';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Trash2, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowUpDown, Search, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { parseISO } from 'date-fns';
 
@@ -92,8 +92,26 @@ export default function DefectsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const bugs = useMemo(() => stories.filter(story => story.itemType === 'Bug'), [stories]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedBugs, setSelectedBugs] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
+  const filteredBugs = useMemo(() => {
+    if (!searchQuery.trim()) return bugs;
+    const searchLower = searchQuery.toLowerCase().trim();
+    return bugs.filter(bug => {
+      const assignee = employees.find(e => e.id === bug.assigneeId);
+      const assigneeName = assignee ? `${assignee.firstName} ${assignee.lastName}` : 'unassigned';
+      return (
+        bug.storyId?.toLowerCase().includes(searchLower) ||
+        bug.title?.toLowerCase().includes(searchLower) ||
+        (bug.description && bug.description.toLowerCase().includes(searchLower)) ||
+        bug.status?.toLowerCase().includes(searchLower) ||
+        (bug.severity && bug.severity.toLowerCase().includes(searchLower)) ||
+        assigneeName.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [bugs, searchQuery, employees]);
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -237,7 +255,7 @@ export default function DefectsPage() {
   };
 
   const sortedBugs = useMemo(() => {
-    let sorted = [...bugs];
+    let sorted = [...filteredBugs];
     if (sorting) {
       sorted.sort((a, b) => {
         const valA = (a as any)[sorting.id] || '';
@@ -247,7 +265,7 @@ export default function DefectsPage() {
       });
     }
     return sorted;
-  }, [bugs, sorting]);
+  }, [filteredBugs, sorting]);
 
   const SortableHeader = ({ columnId, children }: { columnId: string, children: React.ReactNode }) => (
     <TableHead>
@@ -272,15 +290,36 @@ export default function DefectsPage() {
             <PlusCircle className="mr-2 h-4 w-4" /> Add Defect
         </Button>
       </PageHeader>
+
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative w-full md:w-[350px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+          <Input 
+            placeholder="Search defects (ID, title, description, assignee...)" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 h-10 bg-background/50 border-border/50 rounded-lg shadow-sm focus-visible:ring-primary/20"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-10">
                 <Checkbox
-                    checked={bugs.length > 0 && selectedBugs.length === bugs.length}
+                    checked={filteredBugs.length > 0 && selectedBugs.length === filteredBugs.length}
                     onCheckedChange={(value) =>
-                        setSelectedBugs(value ? bugs.map(bug => bug.id) : [])
+                        setSelectedBugs(value ? filteredBugs.map(bug => bug.id) : [])
                     }
                     aria-label="Select all"
                 />
@@ -294,64 +333,72 @@ export default function DefectsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedBugs.map((bug) => {
-              const assignee = employees.find(e => e.id === bug.assigneeId);
-              const testPlan = testPlans.find(tp => tp.id === bug.foundInTestPlanId);
-              return (
-                <TableRow key={bug.id} data-state={selectedBugs.includes(bug.id) && "selected"}>
-                  <TableCell>
-                    <Checkbox
-                        checked={selectedBugs.includes(bug.id)}
-                        onCheckedChange={(value) =>
-                            setSelectedBugs(
-                                value
-                                ? [...selectedBugs, bug.id]
-                                : selectedBugs.filter((id) => id !== bug.id)
-                            )
-                        }
-                        aria-label="Select row"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{bug.storyId}</TableCell>
-                  <TableCell>
-                      <button
-                        onClick={() => handleDialogOpen(bug)}
-                        className="text-left font-medium text-primary hover:underline"
-                      >
-                          {bug.title}
-                      </button>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn('font-semibold', statusStyles[bug.status as StoryStatus])}>
-                      {bug.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {bug.severity && (
-                        <Badge className={cn('font-semibold', severityStyles[bug.severity])}>
-                            {bug.severity}
-                        </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {testPlan ? (
-                       <Badge variant="outline">{testPlan.name}</Badge>
-                    ) : 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    {assignee ? (
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} />
-                          <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        {assignee.firstName} {assignee.lastName}
-                      </div>
-                    ) : "Unassigned"}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {sortedBugs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  No defects found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedBugs.map((bug) => {
+                const assignee = employees.find(e => e.id === bug.assigneeId);
+                const testPlan = testPlans.find(tp => tp.id === bug.foundInTestPlanId);
+                return (
+                  <TableRow key={bug.id} data-state={selectedBugs.includes(bug.id) && "selected"}>
+                    <TableCell>
+                      <Checkbox
+                          checked={selectedBugs.includes(bug.id)}
+                          onCheckedChange={(value) =>
+                              setSelectedBugs(
+                                  value
+                                  ? [...selectedBugs, bug.id]
+                                  : selectedBugs.filter((id) => id !== bug.id)
+                              )
+                          }
+                          aria-label="Select row"
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{bug.storyId}</TableCell>
+                    <TableCell>
+                        <button
+                          onClick={() => handleDialogOpen(bug)}
+                          className="text-left font-medium text-primary hover:underline"
+                        >
+                            {bug.title}
+                        </button>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn('font-semibold', statusStyles[bug.status as StoryStatus])}>
+                        {bug.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {bug.severity && (
+                          <Badge className={cn('font-semibold', severityStyles[bug.severity])}>
+                              {bug.severity}
+                          </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {testPlan ? (
+                         <Badge variant="outline">{testPlan.name}</Badge>
+                       ) : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {assignee ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} />
+                            <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          {assignee.firstName} {assignee.lastName}
+                        </div>
+                      ) : "Unassigned"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </Card>

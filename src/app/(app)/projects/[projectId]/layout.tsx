@@ -3,7 +3,7 @@
 
 import { usePathname, useRouter, useParams } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { type PropsWithChildren, use, useMemo } from "react";
+import { type PropsWithChildren, use, useMemo, useEffect } from "react";
 import { ProjectProvider, useProject } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarNav } from '@/components/SidebarNav';
@@ -17,6 +17,35 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const { project, isLoading } = useProject();
 
   const basePath = `/projects/${projectId}`;
+
+  useEffect(() => {
+    if (!isLoading && project && (project.status === 'Initial Estimation' || project.status === 'Not Started')) {
+      const allowedPaths = [
+        `${basePath}/initial-estimation`,
+        `${basePath}/settings`,
+        `${basePath}/trash`,
+        '/my-account'
+      ];
+      const isAllowed = allowedPaths.some(p => pathname.startsWith(p));
+      if (!isAllowed) {
+        router.replace(`${basePath}/initial-estimation/specifications`);
+      }
+    }
+  }, [project, isLoading, pathname, basePath, router]);
+
+  const isAllowed = useMemo(() => {
+    if (isLoading || !project) return true;
+    if (project.status === 'Initial Estimation' || project.status === 'Not Started') {
+      const allowedPaths = [
+        `${basePath}/initial-estimation`,
+        `${basePath}/settings`,
+        `${basePath}/trash`,
+        '/my-account'
+      ];
+      return allowedPaths.some(p => pathname.startsWith(p));
+    }
+    return true;
+  }, [project, isLoading, basePath, pathname]);
 
   const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
   const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
@@ -54,7 +83,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     } else if (value === 'project') {
       router.push(`${basePath}/project-details/project-status`);
     } else if (value === 'initial-estimation') {
-      router.push(`${basePath}/initial-estimation/ballpark`);
+      router.push(`${basePath}/initial-estimation/specifications`);
     } else if (value === 'releases') {
       router.push(`${basePath}/releases/project-releases`);
     } else if (value === 'resources') {
@@ -89,7 +118,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   }
 
   const renderContent = () => {
-    const isInitialStatus = project?.status === 'Initial Estimation';
+    const showInitialTabsOnly = project?.status === 'Initial Estimation' || project?.status === 'Not Started';
 
     return (
       <>
@@ -105,12 +134,12 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                   value="initial-estimation" 
                   className={cn(
                     "data-[state=active]:bg-background data-[state=active]:text-foreground",
-                    isInitialStatus && !dynamicTab && "pointer-events-none cursor-default"
+                    showInitialTabsOnly && !dynamicTab && "pointer-events-none cursor-default"
                   )}
                 >
                   Initial Estimation
                 </TabsTrigger>
-                {!isInitialStatus && (
+                {!showInitialTabsOnly && (
                   <>
                     <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
                     <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
@@ -132,7 +161,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
           </div>
         </div>
         <div className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col">
-          {children}
+          {isAllowed ? children : <div className="flex h-full w-full items-center justify-center text-muted-foreground">Redirecting...</div>}
         </div>
       </>
     );

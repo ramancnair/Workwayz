@@ -195,9 +195,9 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'holidays'
     },
     {
-      id: 'allocated-leaves',
-      href: `/holidays/allocated`,
-      label: "Allocated Leaves",
+      id: 'leave-settings',
+      href: `/holidays/leave-settings`,
+      label: "Leave Settings",
       icon: ClipboardList,
       group: 'holidays'
     },

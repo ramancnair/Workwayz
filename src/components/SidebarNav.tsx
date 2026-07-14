@@ -224,9 +224,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const initialEstimationMenuItems = [
     {
-      href: `${basePath}/initial-estimation/ballpark`,
-      label: "Ballpark",
+      href: `${basePath}/initial-estimation/specifications`,
+      label: "Specifications",
       icon: DollarSign,
+    },
+    {
+      href: `${basePath}/initial-estimation/project-status`,
+      label: "Project Status",
+      icon: ClipboardList,
     },
   ];
 

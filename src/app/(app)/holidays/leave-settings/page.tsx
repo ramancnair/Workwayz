@@ -213,11 +213,11 @@ export default function AllocatedLeavesPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader 
-        title="Allocated Leaves" 
+        title="Leave Settings" 
         description="Manage global paid leave allocation quotas, carry-overs, and active resource balances." 
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="max-w-2xl">
         <Card>
           <CardHeader>
             <CardTitle>Global Leave Quota Settings</CardTitle>
@@ -270,33 +270,6 @@ export default function AllocatedLeavesPage() {
               <Button onClick={handleSaveLeaveSettings} className="w-full">
                 Save Settings
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Allocation Overview</CardTitle>
-            <CardDescription>Quick reference of active policies for the year {currentYear}.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-2">
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-sm font-medium text-muted-foreground">Base Quota</span>
-              <span className="font-semibold text-lg">{allocatedPaidLeaves} days</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-sm font-medium text-muted-foreground">Carry-Over Enabled</span>
-              <Badge variant={allowCarryOver ? 'default' : 'secondary'}>
-                {allowCarryOver ? 'Yes' : 'No'}
-              </Badge>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-sm font-medium text-muted-foreground">Carry-Over Cap</span>
-              <span className="font-semibold text-lg">{allowCarryOver ? `${carryOverLimit} days` : 'N/A'}</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm font-medium text-muted-foreground">Total Team Size</span>
-              <span className="font-semibold text-lg">{employees.length} resources</span>
             </div>
           </CardContent>
         </Card>

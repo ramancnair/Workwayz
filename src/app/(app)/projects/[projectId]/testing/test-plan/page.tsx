@@ -121,7 +121,7 @@ export default function TestPlanPage() {
   const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
   const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
   const [currentExecutionDay, setCurrentExecutionDay] = useState<Date | null>(null);
-  
+
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const testPlanForm = useForm<z.infer<typeof refinedTestPlanSchema>>({
@@ -130,25 +130,25 @@ export default function TestPlanPage() {
       planType: 'Sprint',
     }
   });
-  
+
   const testCaseForm = useForm<z.infer<typeof testCaseFormSchema>>({});
 
   const watchedPlanType = useWatch({ control: testPlanForm.control, name: 'planType' });
   const watchedSprintId = useWatch({ control: testPlanForm.control, name: 'sprintId' });
   const watchedReleaseId = useWatch({ control: testPlanForm.control, name: 'releaseId' });
-  
+
   const [sorting, setSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
-  
+
   useEffect(() => {
     const sprint = sprints.find(s => s.id === watchedSprintId);
     const release = releases.find(r => r.id === watchedReleaseId);
-    
+
     if (watchedPlanType === 'Sprint' && sprint?.startDate && sprint?.endDate && !testPlanForm.formState.isDirty) {
-        testPlanForm.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
-        testPlanForm.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
+      testPlanForm.setValue('startDate', format(parseISO(sprint.startDate), 'yyyy-MM-dd'));
+      testPlanForm.setValue('endDate', format(parseISO(sprint.endDate), 'yyyy-MM-dd'));
     } else if (watchedPlanType === 'Release' && release?.startDate && release?.endDate && !testPlanForm.formState.isDirty) {
-        testPlanForm.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
-        testPlanForm.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
+      testPlanForm.setValue('startDate', format(parseISO(release.startDate), 'yyyy-MM-dd'));
+      testPlanForm.setValue('endDate', format(parseISO(release.endDate), 'yyyy-MM-dd'));
     }
   }, [watchedPlanType, watchedSprintId, watchedReleaseId, sprints, releases, testPlanForm]);
 
@@ -156,7 +156,7 @@ export default function TestPlanPage() {
   const selectedPlan = useMemo(() => {
     if (!testPlans || testPlans.length === 0) return null;
     const currentPlan = testPlans.find(p => p.id === selectedPlanId);
-    if(currentPlan) return currentPlan;
+    if (currentPlan) return currentPlan;
     if (testPlans.length > 0) {
       const firstPlanId = testPlans[0].id;
       setSelectedPlanId(firstPlanId);
@@ -164,7 +164,7 @@ export default function TestPlanPage() {
     }
     return null;
   }, [selectedPlanId, testPlans]);
-  
+
   useEffect(() => {
     if (testPlans && testPlans.length > 0 && !selectedPlanId) {
       setSelectedPlanId(testPlans[0].id);
@@ -178,25 +178,25 @@ export default function TestPlanPage() {
     return () => unsubscribe();
   }, [selectedPlanId, subscribeToTestPlanTestCases]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (selectedPlan && selectedPlan.startDate) {
       setCurrentExecutionDay(parseISO(selectedPlan.startDate));
     } else {
       setCurrentExecutionDay(null);
     }
   }, [selectedPlan]);
-  
+
   useEffect(() => {
-    if(isPlanDialogOpen && editingPlan) {
-        testPlanForm.reset({
-            name: editingPlan.name,
-            planType: editingPlan.planType,
-            sprintId: editingPlan.sprintId,
-            releaseId: editingPlan.releaseId,
-            environmentId: editingPlan.environmentId,
-            startDate: editingPlan.startDate ? format(parseISO(editingPlan.startDate), 'yyyy-MM-dd') : '',
-            endDate: editingPlan.endDate ? format(parseISO(editingPlan.endDate), 'yyyy-MM-dd') : '',
-        });
+    if (isPlanDialogOpen && editingPlan) {
+      testPlanForm.reset({
+        name: editingPlan.name,
+        planType: editingPlan.planType,
+        sprintId: editingPlan.sprintId,
+        releaseId: editingPlan.releaseId,
+        environmentId: editingPlan.environmentId,
+        startDate: editingPlan.startDate ? format(parseISO(editingPlan.startDate), 'yyyy-MM-dd') : '',
+        endDate: editingPlan.endDate ? format(parseISO(editingPlan.endDate), 'yyyy-MM-dd') : '',
+      });
     } else if (isPlanDialogOpen && !editingPlan) {
       testPlanForm.reset({
         name: '',
@@ -212,24 +212,24 @@ export default function TestPlanPage() {
 
   useEffect(() => {
     if (isTestCaseDialogOpen && editingTestCase) {
-        testCaseForm.reset({
-            title: editingTestCase.title,
-            type: editingTestCase.type,
-            description: editingTestCase.description,
-            expectedResult: editingTestCase.expectedResult,
-            status: editingTestCase.status || 'Not Run',
-            assigneeId: editingTestCase.assigneeId || 'unassigned',
-            executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
-        });
+      testCaseForm.reset({
+        title: editingTestCase.title,
+        type: editingTestCase.type,
+        description: editingTestCase.description,
+        expectedResult: editingTestCase.expectedResult,
+        status: editingTestCase.status || 'Not Run',
+        assigneeId: editingTestCase.assigneeId || 'unassigned',
+        executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
+      });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
 
 
   const onTestPlanSubmit = async (values: z.infer<typeof refinedTestPlanSchema>) => {
-    const success = editingPlan 
+    const success = editingPlan
       ? await updateTestPlan(editingPlan.id, values)
       : await addTestPlan(values);
-      
+
     if (success) {
       toast({ title: 'Success', description: `Test plan ${editingPlan ? 'updated' : 'created'}.` });
       setIsPlanDialogOpen(false);
@@ -242,7 +242,7 @@ export default function TestPlanPage() {
 
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     if (!editingTestCase || !selectedPlanId) return;
-    
+
     const updateData: Partial<TestPlanTestCase> = {
       title: values.title,
       type: values.type,
@@ -261,15 +261,15 @@ export default function TestPlanPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update Test Case.' });
     }
   };
-  
+
   const handleDeletePlan = async () => {
     if (!deletingPlan) return;
     const success = await deleteTestPlan(deletingPlan.id);
-    if(success) {
-      toast({title: "Success", description: "Test plan deleted."});
+    if (success) {
+      toast({ title: "Success", description: "Test plan deleted." });
       setSelectedPlanId(null);
     } else {
-      toast({variant: "destructive", title: "Error", description: "Could not delete test plan."})
+      toast({ variant: "destructive", title: "Error", description: "Could not delete test plan." })
     }
     setDeletingPlan(null);
   };
@@ -277,14 +277,44 @@ export default function TestPlanPage() {
   const handleBulkMoveToTP = async () => {
     if (selectedBacklogTCs.length === 0 || !currentExecutionDay || !selectedPlan) return;
 
+    const existingOrigIds = new Set(planTestCases.map(ptc => ptc.originalTestCaseId));
+    const toAdd = selectedBacklogTCs.filter(tcId => !existingOrigIds.has(tcId));
+    const alreadyInPlan = selectedBacklogTCs.filter(tcId => existingOrigIds.has(tcId));
+
+    if (toAdd.length === 0) {
+      if (alreadyInPlan.length === 1) {
+        toast({
+          title: 'Info',
+          description: 'TC already exists in the plan.',
+        });
+      } else {
+        toast({
+          title: 'Info',
+          description: 'Selected test cases already exist in the plan.',
+        });
+      }
+      setSelectedBacklogTCs([]);
+      return;
+    }
+
     const success = await addTestCasesToPlan(
       selectedPlan.id,
-      selectedBacklogTCs,
+      toAdd,
       currentExecutionDay.toISOString()
     );
 
     if (success) {
-      toast({ title: 'Success', description: `${selectedBacklogTCs.length} test cases added to plan.` });
+      if (alreadyInPlan.length > 0) {
+        toast({
+          title: 'Success',
+          description: `${toAdd.length} test case${toAdd.length > 1 ? 's' : ''} added to plan. (${alreadyInPlan.length} already existed)`,
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: `${toAdd.length} test case${toAdd.length > 1 ? 's' : ''} added to plan.`,
+        });
+      }
       setSelectedBacklogTCs([]);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not add test cases to plan.' });
@@ -324,35 +354,35 @@ export default function TestPlanPage() {
     }
 
     if (sorting) {
-        const sortKey = sorting.id as string;
-        const sortFn = (a: any, b: any) => {
-            let valA, valB;
-            if (sortKey === 'status') {
-               valA = a.status || 'Not Run';
-               valB = b.status || 'Not Run';
-            } else {
-               valA = a[sortKey];
-               valB = b[sortKey];
-            }
-            
-            if (valA === null || valA === undefined) return 1;
-            if (valB === null || valB === undefined) return -1;
+      const sortKey = sorting.id as string;
+      const sortFn = (a: any, b: any) => {
+        let valA, valB;
+        if (sortKey === 'status') {
+          valA = a.status || 'Not Run';
+          valB = b.status || 'Not Run';
+        } else {
+          valA = a[sortKey];
+          valB = b[sortKey];
+        }
 
-            let comparison = 0;
-            if (typeof valA === 'string' && typeof valB === 'string') {
-              comparison = valA.localeCompare(valB, undefined, { numeric: true });
-            } else if (valA > valB) {
-              comparison = 1;
-            } else if (valA < valB) {
-              comparison = -1;
-            }
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
 
-            return sorting.desc ? -comparison : comparison;
-        };
-        backlogTCs.sort(sortFn);
-        dayTCs.sort(sortFn);
+        let comparison = 0;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB, undefined, { numeric: true });
+        } else if (valA > valB) {
+          comparison = 1;
+        } else if (valA < valB) {
+          comparison = -1;
+        }
+
+        return sorting.desc ? -comparison : comparison;
+      };
+      backlogTCs.sort(sortFn);
+      dayTCs.sort(sortFn);
     }
-    
+
     return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
   }, [selectedPlan, testCases, planTestCases, currentExecutionDay, sorting]);
 
@@ -367,14 +397,14 @@ export default function TestPlanPage() {
     if (!currentExecutionDay || !selectedPlan || planDays.length === 0) return;
     const currentIndex = planDays.findIndex(day => isSameDay(day, currentExecutionDay));
     if (direction === 'next') {
-        const nextIndex = Math.min(planDays.length - 1, currentIndex + 1);
-        setCurrentExecutionDay(planDays[nextIndex]);
+      const nextIndex = Math.min(planDays.length - 1, currentIndex + 1);
+      setCurrentExecutionDay(planDays[nextIndex]);
     } else {
-        const prevIndex = Math.max(0, currentIndex - 1);
-        setCurrentExecutionDay(planDays[prevIndex]);
+      const prevIndex = Math.max(0, currentIndex - 1);
+      setCurrentExecutionDay(planDays[prevIndex]);
     }
   };
-  
+
   const handleSort = (columnId: string) => {
     setSorting(current => {
       if (current?.id === columnId) {
@@ -385,12 +415,12 @@ export default function TestPlanPage() {
       return { id: columnId, desc: false };
     });
   };
-  
+
   const handleTestCaseDialogOpen = (testCase: TestPlanTestCase) => {
     setEditingTestCase(testCase);
     setIsTestCaseDialogOpen(true);
   };
-  
+
   const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => {
     const isSorting = sorting?.id === columnId;
     const sortIcon = isSorting ? (<ArrowUpDown className="h-4 w-4" />) : (<ChevronsUpDown className="h-4 w-4 text-muted-foreground" />);
@@ -398,8 +428,8 @@ export default function TestPlanPage() {
     return (
       <TableHead>
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleSort(columnId)}>
-            <span>{children}</span>
-            {sortIcon}
+          <span>{children}</span>
+          {sortIcon}
         </div>
       </TableHead>
     );
@@ -409,321 +439,321 @@ export default function TestPlanPage() {
     <div className="flex flex-col h-full space-y-4 p-4 md:p-8 pt-6">
       <PageHeader title="Test Plan" description="Create and manage test execution plans.">
         <Select onValueChange={setSelectedPlanId} value={selectedPlanId || ''}>
-            <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Select a Test Plan" />
-            </SelectTrigger>
-            <SelectContent>
-                {testPlans?.map(plan => (
-                    <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
-                ))}
-            </SelectContent>
+          <SelectTrigger className="w-[280px]">
+            <SelectValue placeholder="Select a Test Plan" />
+          </SelectTrigger>
+          <SelectContent>
+            {testPlans?.map(plan => (
+              <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
+            ))}
+          </SelectContent>
         </Select>
         <Button onClick={() => { setEditingPlan(null); setIsPlanDialogOpen(true); }}>
           <PlusCircle className="mr-2 h-4 w-4" /> Create Test Plan
         </Button>
       </PageHeader>
-      
+
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
-          {/* Left Column: Backlog */}
-          <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-bold text-lg">Test Case Backlog ({backlog.length})</h3>
-              <Button 
-                size="sm" 
-                onClick={handleBulkMoveToTP}
-                disabled={selectedBacklogTCs.length === 0 || !currentExecutionDay}
-              >
-                Move to TP
+        {/* Left Column: Backlog */}
+        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-bold text-lg">Test Case Backlog ({backlog.length})</h3>
+            <Button
+              size="sm"
+              onClick={handleBulkMoveToTP}
+              disabled={selectedBacklogTCs.length === 0 || !currentExecutionDay}
+            >
+              Move to TP
+            </Button>
+          </div>
+          <div className="border rounded-lg flex-1 flex flex-col min-h-0">
+            <div className="overflow-y-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                  <TableRow>
+                    <TableHead>
+                      <Checkbox
+                        onCheckedChange={(checked) => setSelectedBacklogTCs(checked ? backlog.map(tc => tc.id) : [])}
+                        checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
+                      />
+                    </TableHead>
+                    <SortableHeader columnId="testCaseId">ID</SortableHeader>
+                    <SortableHeader columnId="title">Title</SortableHeader>
+                    <SortableHeader columnId="sprintId">Sprint</SortableHeader>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {backlog.map(tc => {
+                    const sprint = sprints.find(s => s.id === tc.sprintId);
+                    return (
+                      <TableRow key={tc.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedBacklogTCs.includes(tc.id)}
+                            onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                          />
+                        </TableCell>
+                        <TableCell className="py-1">
+                          <Badge variant="secondary">{tc.testCaseId}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
+                        <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Execution Plan */}
+        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-4">
+              {selectedPlan ? (
+                <>
+                  <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
+                  <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => { setDeletingPlan(selectedPlan); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </>
+              ) : (
+                <h3 className="font-bold text-lg">Execution Plan</h3>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
+                Remove
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleDayChange('next')} disabled={!selectedPlan}>
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+          {selectedPlan ? (
             <div className="border rounded-lg flex-1 flex flex-col min-h-0">
-              <div className="overflow-y-auto">
+              <div className="p-2 border-b bg-background flex justify-between items-center">
+                <h4 className="font-semibold">{currentExecutionDay ? format(currentExecutionDay, 'EEE, MMM d') : 'No Date Selected'}</h4>
+              </div>
+              <div className="overflow-y-auto flex-1">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                  <TableHeader>
                     <TableRow>
                       <TableHead>
-                          <Checkbox 
-                              onCheckedChange={(checked) => setSelectedBacklogTCs(checked ? backlog.map(tc => tc.id) : [])}
-                              checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
-                          />
+                        <Checkbox
+                          onCheckedChange={(checked) => setSelectedScheduledTCs(checked ? tcsForCurrentDay.map(tc => tc.id) : [])}
+                          checked={tcsForCurrentDay.length > 0 && selectedScheduledTCs.length === tcsForCurrentDay.length}
+                        />
                       </TableHead>
                       <SortableHeader columnId="testCaseId">ID</SortableHeader>
                       <SortableHeader columnId="title">Title</SortableHeader>
-                      <SortableHeader columnId="sprintId">Sprint</SortableHeader>
+                      <SortableHeader columnId="status">Status</SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {backlog.map(tc => {
-                      const sprint = sprints.find(s => s.id === tc.sprintId);
+                    {tcsForCurrentDay.map(tc => {
                       return (
                         <TableRow key={tc.id}>
                           <TableCell>
-                              <Checkbox
-                                  checked={selectedBacklogTCs.includes(tc.id)}
-                                  onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                              />
+                            <Checkbox
+                              checked={selectedScheduledTCs.includes(tc.id)}
+                              onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                            />
                           </TableCell>
                           <TableCell className="py-1">
-                               <Badge variant="secondary">{tc.testCaseId}</Badge>
+                            <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left font-medium text-primary hover:underline">
+                              <Badge variant="secondary">{tc.testCaseId}</Badge>
+                            </button>
                           </TableCell>
                           <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
-                          <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                          <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
                         </TableRow>
-                      )
+                      );
                     })}
                   </TableBody>
                 </Table>
               </div>
             </div>
-          </div>
-          
-          {/* Right Column: Execution Plan */}
-          <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-4">
-                {selectedPlan ? (
-                  <>
-                    <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
-                    <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => { setDeletingPlan(selectedPlan); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </>
-                ) : (
-                  <h3 className="font-bold text-lg">Execution Plan</h3>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
-                  Remove
-                </Button>
-                 <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={() => handleDayChange('next')} disabled={!selectedPlan}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+          ) : (
+            <div className="border rounded-lg flex-1 flex flex-col items-center justify-center text-muted-foreground">
+              <p>No test plan selected.</p>
+              <p className="text-sm">Please select a plan from the dropdown or create a new one.</p>
             </div>
-            {selectedPlan ? (
-                <div className="border rounded-lg flex-1 flex flex-col min-h-0">
-                    <div className="p-2 border-b bg-background flex justify-between items-center">
-                        <h4 className="font-semibold">{currentExecutionDay ? format(currentExecutionDay, 'EEE, MMM d') : 'No Date Selected'}</h4>
-                    </div>
-                    <div className="overflow-y-auto flex-1">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>
-                                        <Checkbox 
-                                            onCheckedChange={(checked) => setSelectedScheduledTCs(checked ? tcsForCurrentDay.map(tc => tc.id) : [])}
-                                            checked={tcsForCurrentDay.length > 0 && selectedScheduledTCs.length === tcsForCurrentDay.length}
-                                        />
-                                    </TableHead>
-                                    <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                                    <SortableHeader columnId="title">Title</SortableHeader>
-                                    <SortableHeader columnId="status">Status</SortableHeader>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {tcsForCurrentDay.map(tc => {
-                                    return (
-                                        <TableRow key={tc.id}>
-                                            <TableCell>
-                                                <Checkbox
-                                                    checked={selectedScheduledTCs.includes(tc.id)}
-                                                    onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="py-1">
-                                                <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left font-medium text-primary hover:underline">
-                                                    <Badge variant="secondary">{tc.testCaseId}</Badge>
-                                                </button>
-                                            </TableCell>
-                                            <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
-                                            <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
-              ) : (
-                <div className="border rounded-lg flex-1 flex flex-col items-center justify-center text-muted-foreground">
-                    <p>No test plan selected.</p>
-                    <p className="text-sm">Please select a plan from the dropdown or create a new one.</p>
-                </div>
-              )}
-          </div>
+          )}
+        </div>
       </div>
 
-    <Dialog open={isPlanDialogOpen} onOpenChange={(open) => { setIsPlanDialogOpen(open); if(!open) setEditingPlan(null); }}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{editingPlan ? 'Edit Test Plan' : 'Create New Test Plan'}</DialogTitle>
-        </DialogHeader>
-         <Tabs defaultValue="details" className="w-full">
-          <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-          </TabsList>
-          <TabsContent value="details">
-            <Form {...testPlanForm}>
-              <form onSubmit={testPlanForm.handleSubmit(onTestPlanSubmit)} className="space-y-4 pt-4">
-                <FormField control={testPlanForm.control} name="name" render={({ field }) => (
+      <Dialog open={isPlanDialogOpen} onOpenChange={(open) => { setIsPlanDialogOpen(open); if (!open) setEditingPlan(null); }}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingPlan ? 'Edit Test Plan' : 'Create New Test Plan'}</DialogTitle>
+          </DialogHeader>
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList>
+              <TabsTrigger value="details">Details</TabsTrigger>
+            </TabsList>
+            <TabsContent value="details">
+              <Form {...testPlanForm}>
+                <form onSubmit={testPlanForm.handleSubmit(onTestPlanSubmit)} className="space-y-4 pt-4">
+                  <FormField control={testPlanForm.control} name="name" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Plan Name</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                )}/>
-                <FormField control={testPlanForm.control} name="planType" render={({ field }) => (
+                  )} />
+                  <FormField control={testPlanForm.control} name="planType" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Plan Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="Sprint">Sprint</SelectItem>
-                                <SelectItem value="Release">Release</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
+                      <FormLabel>Plan Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="Sprint">Sprint</SelectItem>
+                          <SelectItem value="Release">Release</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
-                )}/>
-                {watchedPlanType === 'Sprint' && (
-                  <FormField control={testPlanForm.control} name="sprintId" render={({ field }) => (
+                  )} />
+                  {watchedPlanType === 'Sprint' && (
+                    <FormField control={testPlanForm.control} name="sprintId" render={({ field }) => (
                       <FormItem>
-                          <FormLabel>Sprint</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Select a sprint..." /></SelectTrigger></FormControl>
-                              <SelectContent>
-                                  {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                      </FormItem>
-                  )}/>
-                )}
-                {watchedPlanType === 'Release' && (
-                    <FormField control={testPlanForm.control} name="releaseId" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Release</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select a release..." /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                )}
-                <FormField control={testPlanForm.control} name="environmentId" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Environment</FormLabel>
+                        <FormLabel>Sprint</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select an environment..." /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {environments.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
-                            </SelectContent>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select a sprint..." /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                          </SelectContent>
                         </Select>
                         <FormMessage />
-                    </FormItem>
-                )}/>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={testPlanForm.control} name="startDate" render={({ field }) => (
+                      </FormItem>
+                    )} />
+                  )}
+                  {watchedPlanType === 'Release' && (
+                    <FormField control={testPlanForm.control} name="releaseId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Release</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select a release..." /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
+                  <FormField control={testPlanForm.control} name="environmentId" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''}  readOnly={!testPlanForm.formState.isDirty && (watchedPlanType === 'Sprint' || watchedPlanType === 'Release')} /></FormControl>
+                      <FormLabel>Environment</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select an environment..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {environments.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
-                  )}/>
-                  <FormField control={testPlanForm.control} name="endDate" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
-                      <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!testPlanForm.formState.isDirty && (watchedPlanType === 'Sprint' || watchedPlanType === 'Release')} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}/>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Plan'}</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </TabsContent>
-         </Tabs>
-      </DialogContent>
-    </Dialog>
-    
-    {/* Edit Test Case (Plan Copy) Dialog */}
-    <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
-        <DialogHeader className="px-6 py-4 border-b shrink-0">
-          <DialogTitle>Edit Test Case — {selectedPlan?.name}</DialogTitle>
-          <DialogDescription>Editing the test case copy within this test plan. Changes here do not affect the original backlog test case.</DialogDescription>
-        </DialogHeader>
-         <Form {...testCaseForm}>
-          <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
-              <FormField control={testCaseForm.control} name="title" render={({ field }) => (
+                  )} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={testPlanForm.control} name="startDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date</FormLabel>
+                        <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!testPlanForm.formState.isDirty && (watchedPlanType === 'Sprint' || watchedPlanType === 'Release')} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={testPlanForm.control} name="endDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date</FormLabel>
+                        <FormControl><Input type="date" {...field} value={field.value || ''} readOnly={!testPlanForm.formState.isDirty && (watchedPlanType === 'Sprint' || watchedPlanType === 'Release')} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Plan'}</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Test Case (Plan Copy) Dialog */}
+      <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
+            <DialogTitle>Edit Test Case — {selectedPlan?.name}</DialogTitle>
+            <DialogDescription>Editing the test case copy within this test plan. Changes here do not affect the original backlog test case.</DialogDescription>
+          </DialogHeader>
+          <Form {...testCaseForm}>
+            <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+                <FormField control={testCaseForm.control} name="title" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl><Input placeholder="E.g., Verify user login with valid credentials" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
-              )} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                )} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={testCaseForm.control} name="type" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Test Case Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {testCaseTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                    <FormItem>
+                      <FormLabel>Test Case Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {testCaseTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                   <FormField control={testCaseForm.control} name="status" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {testCaseStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {testCaseStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )} />
-              </div>
-               <FormField control={testCaseForm.control} name="description" render={({ field }) => (
+                </div>
+                <FormField control={testCaseForm.control} name="description" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description (Steps)</FormLabel>
                     <FormControl><Textarea placeholder="1. Navigate to login page..." {...field} rows={4} /></FormControl>
                     <FormMessage />
                   </FormItem>
-              )} />
-               <FormField control={testCaseForm.control} name="expectedResult" render={({ field }) => (
+                )} />
+                <FormField control={testCaseForm.control} name="expectedResult" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Expected Result</FormLabel>
                     <FormControl><Textarea placeholder="User should be successfully logged in and redirected to the dashboard." {...field} rows={3} /></FormControl>
                     <FormMessage />
                   </FormItem>
-              )} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                )} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={testCaseForm.control} name="assigneeId" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assignee</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Assign to a resource" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                    <FormItem>
+                      <FormLabel>Assignee</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Assign to a resource" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                   {/* Related Story (read-only, from the original) */}
                   <FormItem>
@@ -732,23 +762,23 @@ export default function TestPlanPage() {
                       readOnly
                       value={editingTestCase?.storyId
                         ? (() => {
-                            const story = stories.find(s => s.id === editingTestCase.storyId);
-                            return story ? `[${story.storyId}] ${story.title}` : 'N/A';
-                          })()
+                          const story = stories.find(s => s.id === editingTestCase.storyId);
+                          return story ? `[${story.storyId}] ${story.title}` : 'N/A';
+                        })()
                         : 'N/A'}
                       className="bg-muted"
                     />
                   </FormItem>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={testCaseForm.control} name="executionDate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Execution Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    <FormItem>
+                      <FormLabel>Execution Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                   {/* Close Date — read-only, auto-set when status = Passed */}
                   <FormItem>
@@ -762,35 +792,35 @@ export default function TestPlanPage() {
                     />
                     <p className="text-xs text-muted-foreground">Auto-set when status is &quot;Passed&quot;</p>
                   </FormItem>
+                </div>
               </div>
-            </div>
-            <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
-              <Button type="submit">Save Changes</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-    
-    <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => { if (!isOpen) setDeletingPlan(null); }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action will delete the test plan &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={handleDeletePlan}
-            className={cn(buttonVariants({ variant: 'destructive' }))}
-          >
-            Continue
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => { if (!isOpen) setDeletingPlan(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will delete the test plan &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePlan}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

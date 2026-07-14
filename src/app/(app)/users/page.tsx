@@ -640,8 +640,8 @@ export default function UsersPage() {
                         />
                     </TableCell>
                     <TableCell className="font-medium">{user.empId}</TableCell>
-                    <TableCell>{user.firstName} {user.lastName}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="max-w-[150px] truncate" title={`${user.firstName} ${user.lastName}`}>{user.firstName} {user.lastName}</TableCell>
+                    <TableCell className="max-w-[220px] truncate" title={user.email}>{user.email}</TableCell>
                     <TableCell>{user.accessLevel || 'N/A'}</TableCell>
                     <TableCell>
                       {user.isEnabled === false ? (
