@@ -109,6 +109,11 @@ export default function MyProjectsPage() {
       const projectIds: string[] = [];
 
       for (const project of allProjects) {
+        if (project.projectManagerId === currentUser.empId) {
+          projectIds.push(project.id);
+          continue;
+        }
+
         try {
           const empRef = collection(db!, 'projects', project.id, 'employees');
           const empSnap = await getDocs(empRef);
@@ -180,37 +185,42 @@ export default function MyProjectsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {myProjects.map((project) => (
-            <Link key={project.id} href={`/projects/${project.id}/development/dashboard`}>
-              <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base truncate">{project.name}</CardTitle>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                  </div>
-                  <CardDescription className="text-xs font-mono">{project.id}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    {project.status && (
-                      <Badge className={cn('text-xs', statusStyles[project.status])}>
-                        {project.status}
-                      </Badge>
+          {myProjects.map((project) => {
+            const projectUrl = (project.status === 'Initial Estimation' || project.status === 'Not Started')
+              ? `/projects/${project.id}/initial-estimation/specifications`
+              : `/projects/${project.id}/development/dashboard`;
+            return (
+              <Link key={project.id} href={projectUrl}>
+                <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base truncate">{project.name}</CardTitle>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                    </div>
+                    <CardDescription className="text-xs font-mono">{project.id}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      {project.status && (
+                        <Badge className={cn('text-xs', statusStyles[project.status])}>
+                          {project.status}
+                        </Badge>
+                      )}
+                      {project.overallStatus && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">Health</span>
+                          <div className={cn('h-3 w-3 rounded-full', ragColors[project.overallStatus])} />
+                        </div>
+                      )}
+                    </div>
+                    {project.summary && (
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{project.summary}</p>
                     )}
-                    {project.overallStatus && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-muted-foreground">Health</span>
-                        <div className={cn('h-3 w-3 rounded-full', ragColors[project.overallStatus])} />
-                      </div>
-                    )}
-                  </div>
-                  {project.summary && (
-                    <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{project.summary}</p>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
