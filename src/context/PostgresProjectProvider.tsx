@@ -494,6 +494,52 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         }
       }
 
+      // Handle Project Manager updates and sync to resource list
+      if (data.hasOwnProperty('projectManagerId')) {
+        const oldPmId = project?.projectManagerId;
+        const newPmId = data.projectManagerId;
+
+        if (oldPmId !== newPmId) {
+          // 1. Clean up old PM if present
+          if (oldPmId) {
+            const oldPmEmpRef = doc(db, 'projects', projectId, 'employees', oldPmId);
+            const oldPmSnap = await getDoc(oldPmEmpRef);
+            if (oldPmSnap.exists()) {
+              const oldPmData = oldPmSnap.data();
+              // Only remove them if their role in the resource list is 'PM' (meaning they were added as PM)
+              if (oldPmData.role === 'PM') {
+                await deleteDoc(oldPmEmpRef);
+              }
+            }
+          }
+
+          // 2. Add/Sync new PM if present
+          if (newPmId && newPmId !== 'unassigned') {
+            const pmDocRef = doc(db, 'employees', newPmId);
+            const pmSnap = await getDoc(pmDocRef);
+            if (pmSnap.exists()) {
+              const pmData = pmSnap.data();
+              const pmEmployeeRef = doc(db, 'projects', projectId, 'employees', newPmId);
+              
+              const employeeData = {
+                ...pmData,
+                id: newPmId,
+                role: 'PM',
+                availability: 100,
+                onboardingDate: data.startDate || project?.startDate || new Date().toISOString(),
+                offloadingDate: data.endDate || project?.endDate || null,
+              };
+              await setDoc(pmEmployeeRef, sanitizeForFirestore(employeeData));
+            }
+          }
+        }
+
+        // Map undefined or 'unassigned' to null so Firestore cleans up the field
+        if (newPmId === undefined || newPmId === null || newPmId === 'unassigned') {
+          payload.projectManagerId = null;
+        }
+      }
+
       await updateDoc(doc(db, 'projects', projectId), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
@@ -2010,6 +2056,30 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       
       // 3. Update project status
       batch.update(projectDocRef, { status: 'Not Started' });
+
+      // 4. Add Project Manager to Resource List if set
+      const projectSnap = await getDoc(projectDocRef);
+      if (projectSnap.exists()) {
+        const projectData = projectSnap.data();
+        const pmId = projectData?.projectManagerId;
+        if (pmId) {
+          const pmDocRef = doc(db, 'employees', pmId);
+          const pmSnap = await getDoc(pmDocRef);
+          if (pmSnap.exists()) {
+            const pmData = pmSnap.data();
+            const pmEmployeeRef = doc(db, 'projects', projectId, 'employees', pmId);
+            const employeeData = {
+              ...pmData,
+              id: pmId,
+              role: 'PM',
+              availability: 100,
+              onboardingDate: projectData.startDate || new Date().toISOString(),
+              offloadingDate: projectData.endDate || null,
+            };
+            batch.set(pmEmployeeRef, sanitizeForFirestore(employeeData));
+          }
+        }
+      }
 
       await batch.commit();
       return true;
