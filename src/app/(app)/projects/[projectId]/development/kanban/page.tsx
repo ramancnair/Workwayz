@@ -84,9 +84,9 @@ const getColumnForBugStatus = (status: string, columns: KanbanColumn[]): string 
   const inQaColName = columns.find(c => c.name === 'In QA' || c.name === 'QA')?.name || 'In QA';
   const firstColName = columns[0]?.name || 'To Do';
 
-  if (status === 'Open' || status === 'Reopened') return firstColName;
+  if (status === 'In Triage' || status === 'Defect Backlog' || status === 'Open' || status === 'Reopened') return firstColName;
   if (status === 'In Progress') return 'In Progress';
-  if (status === 'Resolved') return inQaColName;
+  if (status === 'Retest' || status === 'Resolved') return inQaColName;
   if (status === 'Closed') return doneColName;
   return status;
 };
@@ -358,7 +358,7 @@ function StoryCard({
                               </DropdownMenuTrigger>
                               <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
                                 {(item.itemType === 'Bug' 
-                                  ? ['Open', 'In Progress', 'Resolved', 'Reopened', 'Closed']
+                                  ? ['In Triage', 'Defect Backlog', 'In Progress', 'Retest', 'Closed']
                                   : statusOptions).filter(s => s !== item.status).map(status => (
                                   <DropdownMenuItem key={status} onSelect={() => onSubItemStatusChange(item.id, status)}>
                                     {status}
@@ -1314,7 +1314,7 @@ export default function KanbanPage() {
                                             </SelectTrigger>
                                           </FormControl>
                                           <SelectContent>
-                                            {(selectedStory?.itemType === 'Bug' ? ['Open', 'In Progress', 'Resolved', 'Reopened', 'Closed'] : statusOptions).map((p) => (
+                                            {(selectedStory?.itemType === 'Bug' ? ['In Triage', 'Defect Backlog', 'In Progress', 'Retest', 'Closed'] : statusOptions).map((p) => (
                                               <SelectItem key={p} value={p}>
                                                 {p}
                                               </SelectItem>

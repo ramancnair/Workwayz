@@ -174,11 +174,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Kanban Board",
       icon: KanbanSquare,
     },
-    {
-      href: `${basePath}/development/defect-tracker`,
-      label: "Defect Tracker",
-      icon: Bug,
-    },
   ];
 
   const testMenuItems = [
@@ -200,6 +195,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     {
       href: `${basePath}/testing/defects`,
       label: "Defects",
+      icon: Bug,
+    },
+    {
+      href: `${basePath}/testing/defect-tracker`,
+      label: "Defect Tracker",
       icon: Bug,
     },
   ];
@@ -357,7 +357,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     }
   ];
 
-  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
+  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/defect-tracker', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);

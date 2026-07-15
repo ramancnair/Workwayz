@@ -48,13 +48,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { parseISO } from 'date-fns';
 
 const statusStyles: Record<string, string> = {
-  'Open': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-  'Reopened': 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
+  'In Triage': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  'Defect Backlog': 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
   'In Progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  'Resolved': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300',
+  'Retest': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300',
   'Closed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
   'Done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  'Open': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  'Reopened': 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
+  'Resolved': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300',
 };
 
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
@@ -88,6 +91,7 @@ const bugFormSchema = z.object({
 export default function DefectsPage() {
   const { stories, epics, employees, sprints, addStory, updateStory, deleteStory, environments, releasesAndMilestones, testCases, testPlans } = useProject();
   const { toast } = useToast();
+  const currentSprint = useMemo(() => sprints.find(s => s.status === 'Current' || s.isCurrent), [sprints]);
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -169,9 +173,9 @@ export default function DefectsPage() {
             relatedTestCaseId: 'unassigned',
             reporterId: 'unassigned',
             assigneeId: 'unassigned',
-            status: 'Open',
+            status: 'In Triage',
             severity: 'Medium',
-            sprintId: 'backlog',
+            sprintId: currentSprint?.id || 'backlog',
             foundInTestPlanId: 'unassigned',
             relatedBugId: 'unassigned',
             attachments: '',
@@ -662,50 +666,71 @@ export default function DefectsPage() {
                       />
                   </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value as StoryStatus}>
-                              <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue />
-                              </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                              {['Open', 'In Progress', 'Resolved', 'Reopened', 'Closed'].map((p) => (
-                                  <SelectItem key={p} value={p}>
-                                  {p}
-                                  </SelectItem>
-                              ))}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                      <FormField
-                      control={form.control}
-                      name="releaseId"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Release</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
-                              <SelectContent>
-                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {releases.map(release => (
-                                  <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
-                              ))}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                  </div>
+                       <FormField
+                       control={form.control}
+                       name="status"
+                       render={({ field }) => (
+                           <FormItem>
+                           <FormLabel>Status</FormLabel>
+                           <Select onValueChange={field.onChange} value={field.value as StoryStatus}>
+                               <FormControl>
+                               <SelectTrigger>
+                                   <SelectValue />
+                               </SelectTrigger>
+                               </FormControl>
+                               <SelectContent>
+                               {['In Triage', 'Defect Backlog', 'In Progress', 'Retest', 'Closed'].map((p) => (
+                                   <SelectItem key={p} value={p}>
+                                   {p}
+                                   </SelectItem>
+                               ))}
+                               </SelectContent>
+                           </Select>
+                           <FormMessage />
+                           </FormItem>
+                       )}
+                       />
+                       <FormField
+                       control={form.control}
+                       name="sprintId"
+                       render={({ field }) => (
+                           <FormItem>
+                           <FormLabel>Sprint</FormLabel>
+                           <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                               <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                               <SelectContent>
+                               <SelectItem value="backlog">Backlog (No Sprint)</SelectItem>
+                               {sprints.map(s => (
+                                   <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                               ))}
+                               </SelectContent>
+                           </Select>
+                           <FormMessage />
+                           </FormItem>
+                       )}
+                       />
+                   </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <FormField
+                       control={form.control}
+                       name="releaseId"
+                       render={({ field }) => (
+                           <FormItem>
+                           <FormLabel>Release</FormLabel>
+                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                               <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                               <SelectContent>
+                               <SelectItem value="unassigned">Unassigned</SelectItem>
+                               {releases.map(release => (
+                                   <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                               ))}
+                               </SelectContent>
+                           </Select>
+                           <FormMessage />
+                           </FormItem>
+                       )}
+                       />
+                   </div>
                    <FormField
                      control={form.control}
                      name="attachments"

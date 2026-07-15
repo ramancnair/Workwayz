@@ -7,10 +7,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { parseISO } from 'date-fns';
-import { 
-  Edit, 
-  ChevronDown, 
-  Bug, 
+import {
+  Edit,
+  ChevronDown,
+  Bug,
   Circle,
   Paperclip
 } from 'lucide-react';
@@ -68,10 +68,10 @@ import { cn } from '@/lib/utils';
 
 // Swimlanes config with requested styling
 const BUG_COLUMNS = [
-  { id: 'open', name: 'Open', colorClass: 'border-t-4 border-t-gray-400 bg-gray-500/5' },
-  { id: 'reopened', name: 'Reopened', colorClass: 'border-t-4 border-t-orange-500 bg-orange-500/5' },
+  { id: 'in-triage', name: 'In Triage', colorClass: 'border-t-4 border-t-gray-400 bg-gray-500/5' },
+  { id: 'defect-backlog', name: 'Defect Backlog', colorClass: 'border-t-4 border-t-orange-500 bg-orange-500/5' },
   { id: 'in-progress', name: 'In Progress', colorClass: 'border-t-4 border-t-blue-500 bg-blue-500/5' },
-  { id: 'resolved', name: 'Resolved', colorClass: 'border-t-4 border-t-indigo-500 bg-indigo-500/5' },
+  { id: 'retest', name: 'Retest', colorClass: 'border-t-4 border-t-indigo-500 bg-indigo-500/5' },
   { id: 'closed', name: 'Closed', colorClass: 'border-t-4 border-t-green-500 bg-green-500/5' },
 ];
 
@@ -187,7 +187,7 @@ function BugCard({
             </TooltipProvider>
           )}
         </div>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-7 text-xs px-2">
@@ -208,13 +208,13 @@ function BugCard({
 }
 
 export default function DefectTrackerPage() {
-  const { 
-    stories, 
-    sprints, 
-    moveStoryStatus, 
-    employees: users, 
-    updateStory, 
-    deleteStory, 
+  const {
+    stories,
+    sprints,
+    moveStoryStatus,
+    employees: users,
+    updateStory,
+    deleteStory,
     releasesAndMilestones,
     testCases
   } = useProject();
@@ -241,7 +241,7 @@ export default function DefectTrackerPage() {
       relatedTestCaseId: bug.relatedTestCaseId || '',
       reporterId: bug.reporterId || '',
       assigneeId: bug.assigneeId || '',
-      status: bug.status || 'Open',
+      status: bug.status || 'In Triage',
       severity: bug.severity || 'Medium',
       sprintId: bug.sprintId || '',
       releaseId: bug.releaseId || '',
@@ -273,7 +273,7 @@ export default function DefectTrackerPage() {
   const currentSprint = useMemo(() => sprints.find((s) => s.isCurrent), [sprints]);
 
   const sprintBugs = useMemo(() => {
-    const baseBugs = currentSprint 
+    const baseBugs = currentSprint
       ? stories.filter(story => story.itemType === 'Bug' && story.sprintId === currentSprint.id)
       : [];
 
@@ -334,7 +334,7 @@ export default function DefectTrackerPage() {
         <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
           {BUG_COLUMNS.map((column) => {
             const itemsInColumn = sprintBugs.filter(bug => {
-              const bugStatus = bug.status || 'Open';
+              const bugStatus = bug.status || 'In Triage';
               return bugStatus.toLowerCase() === column.name.toLowerCase();
             });
 
@@ -352,10 +352,10 @@ export default function DefectTrackerPage() {
                   {itemsInColumn.map((bug) => {
                     const assignee = users.find(u => u.id === bug.assigneeId);
                     return (
-                      <BugCard 
-                        key={bug.id} 
-                        bug={bug} 
-                        assignee={assignee} 
+                      <BugCard
+                        key={bug.id}
+                        bug={bug}
+                        assignee={assignee}
                         columns={BUG_COLUMNS}
                         onStatusChange={(newStatus) => moveStoryStatus(bug.id, newStatus as StoryStatus)}
                         onEdit={() => handleOpenEdit(bug)}
@@ -552,8 +552,8 @@ export default function DefectTrackerPage() {
                       <FormItem>
                         <FormLabel>Created On</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="date" 
+                          <Input
+                            type="date"
                             disabled
                             value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
                             onChange={(e) => {
@@ -574,8 +574,8 @@ export default function DefectTrackerPage() {
                       <FormItem>
                         <FormLabel>Closed On</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="date" 
+                          <Input
+                            type="date"
                             value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -605,9 +605,9 @@ export default function DefectTrackerPage() {
               </div>
 
               <DialogFooter className="mt-4 flex justify-between gap-2 border-t pt-4">
-                <Button 
-                  type="button" 
-                  variant="destructive" 
+                <Button
+                  type="button"
+                  variant="destructive"
                   onClick={() => setDeletingBug(selectedBug)}
                 >
                   Delete Defect
@@ -635,7 +635,7 @@ export default function DefectTrackerPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => {
                 if (deletingBug) {
                   deleteStory(deletingBug.id).then(success => {

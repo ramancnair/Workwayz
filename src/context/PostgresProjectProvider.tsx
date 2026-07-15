@@ -104,7 +104,7 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
     '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
-    '/development/defect-tracker': ['stories', 'epics', 'sprints', 'employees', 'environments', 'releases', 'testCases'],
+    '/testing/defect-tracker': ['stories', 'epics', 'sprints', 'employees', 'environments', 'releases', 'testCases', 'testPlans'],
     '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'testCases'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
