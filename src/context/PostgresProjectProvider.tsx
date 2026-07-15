@@ -2,7 +2,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   db,
@@ -136,6 +136,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/pmo/business-continuity': ['environments', 'codeRepositories', 'employees'],
     '/pmo/fb-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts'],
     '/pmo/tnm-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts', 'worklogs'],
+    '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
 };
 
 
@@ -189,6 +190,20 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       return [...new Set([...baseCollections, ...mappedCollections])];
   }, []);
 
+  const neededCollectionNames = useMemo(() => {
+    return getCollectionsForPage(pathname);
+  }, [pathname, getCollectionsForPage]);
+
+  const neededCollectionsKey = neededCollectionNames.join(',');
+
+  const isInitialLoad = useRef(true);
+  const prevProjectId = useRef(projectId);
+
+  if (prevProjectId.current !== projectId) {
+    isInitialLoad.current = true;
+    prevProjectId.current = projectId;
+  }
+
   useEffect(() => {
     if (!db || !projectId) {
         if (!db) {
@@ -198,7 +213,10 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         return;
     }
     
-    setIsLoading(true);
+    if (isInitialLoad.current) {
+        setIsLoading(true);
+        isInitialLoad.current = false;
+    }
 
     const rootProjectDocRef = doc(db, 'projects', projectId);
 
@@ -231,7 +249,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         { name: 'settings', setState: setProjectSettings, isDoc: true },
     ];
 
-    const neededCollections = allCollections;
+    const neededCollections = allCollections.filter(c => neededCollectionNames.includes(c.name));
     
     const initialFetchPromises: Promise<any>[] = [];
     const unsubscribers = neededCollections.map(({ name, setState, isDoc }) => {
@@ -406,7 +424,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       unsubGlobalHolidays();
       unsubAllUsers();
     }
-  }, [projectId]);
+  }, [projectId, neededCollectionsKey]);
 
   // Auto-repair: If employee capabilities are unpopulated (e.g. for older seeded projects),
   // automatically map capabilities to the project's impacted systems so capacity bars show correctly.
