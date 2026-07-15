@@ -160,6 +160,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Layers,
     },
     {
+      href: `${basePath}/development/development-tasks`,
+      label: "Sub-Tasks",
+      icon: Component,
+    },
+    {
       href: `${basePath}/development/grooming`,
       label: "Grooming",
       icon: ChevronsUpDown,
@@ -173,11 +178,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/development/defect-tracker`,
       label: "Defect Tracker",
       icon: Bug,
-    },
-    {
-      href: `${basePath}/development/development-tasks`,
-      label: "Sub-Tasks",
-      icon: Component,
     },
   ];
 
