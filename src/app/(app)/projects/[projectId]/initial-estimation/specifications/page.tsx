@@ -510,9 +510,29 @@ export default function InitialEstimationPage() {
                 {initialImpactedSystems.map((system) => (
                   <TableRow key={system.id}>
                     <TableCell className="font-medium">{system.name}</TableCell>
-                    <TableCell>{system.estimate || 'N/A'}</TableCell>
                     <TableCell>
                       <Input
+                        key={`${system.id}-estimate-${system.estimate}`}
+                        type="number"
+                        step="any"
+                        defaultValue={system.estimate !== undefined ? system.estimate : ''}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        onBlur={(e) => {
+                            const newEstimate = parseFloat(e.target.value);
+                            if (!isNaN(newEstimate) && newEstimate !== system.estimate) {
+                                updateInitialImpactedSystem(system.id, { estimate: newEstimate });
+                            } else if (e.target.value === '' && system.estimate !== undefined) {
+                                updateInitialImpactedSystem(system.id, { estimate: undefined });
+                            }
+                        }}
+                        className="w-24"
+                        readOnly={project?.status !== 'Initial Estimation'}
+                        placeholder="0"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        key={`${system.id}-rate-${system.dailyBillingRate}`}
                         type="number"
                         defaultValue={system.dailyBillingRate || ''}
                         onWheel={(e) => e.currentTarget.blur()}

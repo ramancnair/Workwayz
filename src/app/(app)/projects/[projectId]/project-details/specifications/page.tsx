@@ -652,9 +652,28 @@ export default function EnvironmentsPage() {
                     <TableCell className="font-medium">{system.name}</TableCell>
                     <TableCell>{system.description}</TableCell>
                     <TableCell>{system.category}</TableCell>
-                    <TableCell>{system.estimate ?? 'N/A'}</TableCell>
                     <TableCell>
                       <Input
+                        key={`${system.id}-estimate-${system.estimate}`}
+                        type="number"
+                        step="any"
+                        defaultValue={system.estimate !== undefined ? system.estimate : ''}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        onBlur={(e) => {
+                            const newEstimate = parseFloat(e.target.value);
+                            if (!isNaN(newEstimate) && newEstimate !== system.estimate) {
+                                updateImpactedSystem(system.id, { estimate: newEstimate });
+                            } else if (e.target.value === '' && system.estimate !== undefined) {
+                                updateImpactedSystem(system.id, { estimate: undefined });
+                            }
+                        }}
+                        className="w-24"
+                        placeholder="0"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        key={`${system.id}-rate-${system.dailyBillingRate}`}
                         type="number"
                         defaultValue={system.dailyBillingRate || ''}
                         onWheel={(e) => e.currentTarget.blur()}
