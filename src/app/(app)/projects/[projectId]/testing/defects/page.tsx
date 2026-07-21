@@ -315,7 +315,7 @@ export default function DefectsPage() {
         </div>
       </div>
 
-      <Card>
+      <Card data-testid="defects-list" className="defects-list">
         <Table>
           <TableHeader>
             <TableRow>

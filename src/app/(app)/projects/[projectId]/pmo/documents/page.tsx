@@ -216,7 +216,7 @@ export default function DocumentsPage() {
             Add Custom Document
           </Button>
         </PageHeader>
-        <Card>
+        <Card data-testid="pmo-documents-list" className="pmo-documents">
           <Table>
             <TableHeader>
               <TableRow>
