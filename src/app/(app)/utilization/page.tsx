@@ -61,7 +61,7 @@ export default function UtilizationPage() {
         const fetchUsers = async () => {
             if (!db) return;
             const usersSnapshot = await getDocs(collection(db, 'employees'));
-            const usersList = usersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
+            const usersList = usersSnapshot.docs.map((doc: any) => ({ ...doc.data(), id: doc.id } as User));
             setAllUsers(usersList);
         };
         fetchUsers();
@@ -95,14 +95,14 @@ export default function UtilizationPage() {
                             where('assigneeId', '==', selectedUser.id)
                         );
                         const tasksSnapshot = await getDocs(tasksQuery);
-                        const planned = tasksSnapshot.docs.map(doc => {
+                        const planned = tasksSnapshot.docs.map((doc: any) => {
                             const task = doc.data() as Story;
                             return { 
                                 start: task.startDate ? new Date(task.startDate) : null, 
                                 end: task.endDate ? new Date(task.endDate) : null,
                                 name: task.title
                             };
-                        }).filter(t => t.start && t.end && !isNaN(t.start.getTime()) && !isNaN(t.end.getTime())) as Array<{ start: Date; end: Date; name: string; }>;
+                        }).filter((t: any) => t.start && t.end && !isNaN(t.start.getTime()) && !isNaN(t.end.getTime())) as Array<{ start: Date; end: Date; name: string; }>;
 
                         // Fetch actual worklogs
                         const worklogsQuery = query(
@@ -111,12 +111,12 @@ export default function UtilizationPage() {
                         );
                         const worklogsSnapshot = await getDocs(worklogsQuery);
                         const worklogDates = worklogsSnapshot.docs
-                            .map(doc => new Date(doc.id.split('-').slice(1).join('-')))
-                            .filter(d => !isNaN(d.getTime()));
+                            .map((doc: any) => new Date(doc.id.split('-').slice(1).join('-')))
+                            .filter((d: any) => !isNaN(d.getTime()));
                         
                         const actual: Array<{ start: Date; end: Date; name: string }> = [];
                         if (worklogDates.length > 0) {
-                            worklogDates.sort((a,b) => a.getTime() - b.getTime());
+                            worklogDates.sort((a: any, b: any) => a.getTime() - b.getTime());
                             let currentRange = { start: worklogDates[0], end: worklogDates[0], name: 'Work Logged' };
 
                             for(let i = 1; i < worklogDates.length; i++) {

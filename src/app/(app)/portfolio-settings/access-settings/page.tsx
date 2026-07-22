@@ -158,7 +158,7 @@ const defaultCrudSettings: Record<Exclude<AccessLevel, 'Administrator'>, Record<
 };
 
 export default function AccessSettingsPage() {
-    const [accessSettings, setAccessSettings] = useState<Record<AccessLevel, Record<string, boolean>>>({});
+    const [accessSettings, setAccessSettings] = useState<Record<AccessLevel, Record<string, boolean>>>({} as any);
     const [crudSettings, setCrudSettings] = useState<Record<AccessLevel, Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }>>>({} as any);
     const [isLoading, setIsLoading] = useState(true);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
@@ -182,7 +182,7 @@ export default function AccessSettingsPage() {
             const fetchedSettings: Record<string, any> = {};
             const fetchedCrudSettings: Record<string, any> = {};
             
-            snapshot.forEach(doc => {
+            snapshot.forEach((doc: any) => {
                 fetchedSettings[doc.id] = doc.data().pageAccess;
                 fetchedCrudSettings[doc.id] = doc.data().crudAccess;
             });
@@ -193,8 +193,8 @@ export default function AccessSettingsPage() {
                 newSettings[level] = {};
                 for (const page of appPages) {
                     newSettings[level][page] = fetchedSettings[level]?.[page] ?? (
-                        level === 'Administrator' ||
-                        (level !== 'Administrator' && defaultAccessSettings[level]?.includes(page))
+                        (level as string) === 'Administrator' ||
+                        ((level as string) !== 'Administrator' && (defaultAccessSettings as any)[level]?.includes(page))
                     );
                 }
             }

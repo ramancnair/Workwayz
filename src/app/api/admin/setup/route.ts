@@ -14,6 +14,8 @@ export async function POST(request: Request) {
         // Get unmasked firebase credentials
         let apiKey = (fbApiKey && !fbApiKey.includes('****')) ? fbApiKey : '';
         let projectId = (fbProjectId && !fbProjectId.includes('****')) ? fbProjectId : '';
+        let effectiveSupaUrl = supaUrl || '';
+        let effectiveSupaKey = supaKey || '';
         
         const profilesPath = path.join(process.cwd(), 'connections.json');
         if (fs.existsSync(profilesPath)) {
@@ -26,19 +28,13 @@ export async function POST(request: Request) {
                 }
             }
             
-            let finalSupaUrl = supaUrl;
-            let finalSupaKey = supaKey;
             if (conns.database) {
                 const activeDb = conns.database.find((p: any) => p.isActive);
                 if (activeDb && activeDb.provider === 'supabase') {
-                    finalSupaUrl = activeDb.supabaseUrl || supaUrl;
-                    finalSupaKey = activeDb.supabaseAnonKey || supaKey;
+                    effectiveSupaUrl = activeDb.supabaseUrl || supaUrl;
+                    effectiveSupaKey = activeDb.supabaseAnonKey || supaKey;
                 }
             }
-            // Assign to new let variables to avoid const assignment errors in SWC transpilation
-            let effectiveSupaUrl = finalSupaUrl;
-            let effectiveSupaKey = finalSupaKey;
-
         }
 
         // Fallback to env file if connections.json doesn't have it (e.g. they only chose Postgres)

@@ -77,7 +77,7 @@ const bugFormSchema = z.object({
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.string(),
-  severity: z.enum(severities).optional(),
+  severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
   sprintId: z.string().optional(),
   attachments: z.string().optional(),
   relatedBugId: z.string().optional(),
@@ -197,13 +197,13 @@ export default function DefectsPage() {
     
     const payload: Partial<Story> = {
         title: values.title,
-        description: values.description,
+        description: values.description || '',
         acceptanceCriteria: values.acceptanceCriteria,
         reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         status: values.status,
-        severity: values.severity,
+        severity: values.severity as BugSeverity | undefined,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
@@ -219,7 +219,8 @@ export default function DefectsPage() {
     } else {
         payload.createdAt = (values.createdAt || new Date()).toISOString();
         payload.closedAt = values.closedAt ? values.closedAt.toISOString() : undefined;
-        success = await addStory({ ...payload, itemType: 'Bug' });
+        const res = await addStory({ ...payload, itemType: 'Bug', title: payload.title || '', description: payload.description || '', status: payload.status || 'In Triage' });
+        success = !!res;
     }
     
     if (success) {

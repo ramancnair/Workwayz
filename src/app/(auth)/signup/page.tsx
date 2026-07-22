@@ -120,7 +120,7 @@ export default function SignupPage() {
 
         // Check if Employee ID already exists in Firestore
         const usersSnapshot = await getDocs(collection(db, 'employees'));
-        const isEmpIdTaken = usersSnapshot.docs.some(docSnap => docSnap.id === empId || docSnap.data().empId === empId);
+        const isEmpIdTaken = usersSnapshot.docs.some((docSnap: any) => docSnap.id === empId || docSnap.data().empId === empId);
         if (isEmpIdTaken) {
           throw new Error(`Employee ID ${empId} is already registered.`);
         }

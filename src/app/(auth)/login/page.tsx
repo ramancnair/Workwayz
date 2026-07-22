@@ -62,7 +62,7 @@ const syncKeycloakUserWithDatabase = async (userProfile: any, accessLevel: strin
         // Create new user in Firestore
         const usersSnapshot = await getDocs(collection(db, 'employees'));
         let highestId = 0;
-        usersSnapshot.forEach(docSnap => {
+        usersSnapshot.forEach((docSnap: any) => {
             const id = docSnap.id;
             if (id.startsWith('E')) {
                 const numPart = parseInt(id.substring(1));
@@ -144,6 +144,7 @@ export default function LoginPage() {
           email: emailInput,
           accessLevel: 'Team Member',
           empId: '',
+          avatar: '',
           uid: user.id
         };
 

@@ -246,7 +246,10 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        itemType: values.itemType as WorkItemType | undefined,
+        priority: values.priority as Priority | undefined,
+        severity: values.severity as BugSeverity | undefined,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
@@ -267,7 +270,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
     });

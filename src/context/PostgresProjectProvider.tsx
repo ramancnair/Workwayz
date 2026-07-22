@@ -99,7 +99,7 @@ const standardDocs = [
   'QA Approval',
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans' | 'weeklyOffDays' | 'projectSettings';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
@@ -207,7 +207,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
   useEffect(() => {
     if (!db || !projectId) {
         if (!db) {
-            setError(`Firebase is not configured correctly. The application is trying to use the Project ID: "${firebaseConfig.projectId || 'your-project-id'}". This is likely a placeholder. Please check your project setup in the Firebase Studio settings to ensure it's correctly linked to a Firebase project.`);
+            setError(`Database is not configured correctly. The application is trying to use the Project ID: "${projectId || 'your-project-id'}". This is likely a placeholder. Please check your project setup.`);
         }
         setIsLoading(false);
         return;
@@ -382,8 +382,8 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         setGlobalSettings(doc.exists() ? doc.data() as ProjectSettings : null);
     });
 
-    const unsubGlobalHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
-        const holidaysData = snapshot.docs.map(doc => {
+    const unsubGlobalHolidays = onSnapshot(collection(db, 'holidays'), (snapshot: any) => {
+        const holidaysData = snapshot.docs.map((doc: any) => {
             const data = doc.data();
             return {
                 ...data,
@@ -394,8 +394,8 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         setGlobalHolidays(holidaysData);
     });
     
-    const unsubAllUsers = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot) => {
-        const usersData = snapshot.docs.map(docSnap => {
+    const unsubAllUsers = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot: any) => {
+        const usersData = snapshot.docs.map((docSnap: any) => {
             const data = docSnap.data();
             const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
             if (data.leavePeriods && Array.isArray(data.leavePeriods)) {
@@ -694,6 +694,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
             const subTask: Omit<Story, 'id'> = {
               storyId: `SUB-${currentIdCounter}`,
               title: `Auto-generated sub-task ${j + 1} for ${newStory.storyId}`,
+              description: '',
               itemType: 'Sub Task',
               status: 'To Do',
               statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
@@ -791,7 +792,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
                     query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyToUpdate.parentStoryId))
                 );
                 const allSubTasks = allSubTasksSnapshot.docs
-                  .map(d => ({id: d.id, ...d.data() as Story}))
+                  .map(d => ({ ...d.data() as Story, id: d.id }))
                   .filter(t => !t.isDeleted);
                 
                 const updatedSubTasks = allSubTasks.map(t => t.id === storyId ? { ...t, status: data.status! } : t);
@@ -860,7 +861,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       const q = query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyId));
       const subItemsSnapshot = await getDocs(q);
   
-      subItemsSnapshot.forEach(subItemDoc => {
+      subItemsSnapshot.forEach((subItemDoc: any) => {
         batch.update(doc(db, 'projects', projectId, 'stories', subItemDoc.id), { sprintId });
       });
   
@@ -873,7 +874,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
   };
   
   const moveStoryStatus = (storyId: string, newStatus: StoryStatus) => updateStory(storyId, { status: newStatus });
-  const moveStoryToEpic = (storyId: string, epicId: string | null) => updateStory(storyId, { epicId });
+  const moveStoryToEpic = (storyId: string, epicId: string | null) => updateStory(storyId, { epicId: epicId ?? undefined });
 
   const bulkUpdateSubTaskReleases = async (releaseIdCode: string): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -1000,7 +1001,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       const q = query(collection(db, 'projects', projectId, 'stories'), where('epicId', '==', epicId));
       const storiesSnapshot = await getDocs(q);
       
-      storiesSnapshot.forEach(storyDoc => {
+      storiesSnapshot.forEach((storyDoc: any) => {
         if (deleteItems) {
             batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { isDeleted: true, deletedAt: Timestamp.now() });
         } else {
@@ -1029,7 +1030,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       // If the new sprint is 'Current', set all others to 'Yet to Start' (or another appropriate status)
       if (payload.status === 'Current') {
         const sprintsSnapshot = await getDocs(collection(db, 'projects', projectId, 'sprints'));
-        sprintsSnapshot.forEach(sprintDoc => {
+        sprintsSnapshot.forEach((sprintDoc: any) => {
           if (sprintDoc.data().status === 'Current') {
             batch.update(sprintDoc.ref, { status: 'Yet to Start', isCurrent: false });
           }
@@ -1060,7 +1061,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       // If this sprint is becoming 'Current', ensure no others are
       if (payload.status === 'Current') {
         const sprintsSnapshot = await getDocs(collection(db, 'projects', projectId, 'sprints'));
-        sprintsSnapshot.forEach(sprintDoc => {
+        sprintsSnapshot.forEach((sprintDoc: any) => {
           if (sprintDoc.id !== sprintId && sprintDoc.data().status === 'Current') {
             batch.update(sprintDoc.ref, { status: 'Completed', isCurrent: false });
           }
@@ -1086,7 +1087,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         
         const q = query(collection(db, 'projects', projectId, 'stories'), where('sprintId', '==', sprintId));
         const storiesSnapshot = await getDocs(q);
-        storiesSnapshot.forEach(storyDoc => {
+        storiesSnapshot.forEach((storyDoc: any) => {
             batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { sprintId: null });
         });
 
@@ -1400,7 +1401,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       // Auto-manage closeDate based on status
       if (data.status === 'Passed') {
         payload.closeDate = (testDate || new Date()).toISOString();
-      } else if (data.status && data.status !== 'Passed') {
+      } else if (data.status) {
         payload.closeDate = null; // Clear close date when not Passed
       }
 
@@ -1442,7 +1443,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
     const colRef = collection(db, 'projects', projectId, 'testPlans', planId, 'testCases');
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
-      const data = snapshot.docs.map(d => {
+      const data = snapshot.docs.map((d: any) => {
         const docData = d.data();
         // Convert timestamps
         ['executionDate', 'closeDate'].forEach(f => {

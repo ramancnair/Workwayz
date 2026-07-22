@@ -101,7 +101,7 @@ const bugFormSchema = z.object({
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.string(),
-  severity: z.enum(severities).optional(),
+  severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
   sprintId: z.string().optional(),
   releaseId: z.string().optional(),
   attachments: z.string().optional(),
@@ -246,8 +246,8 @@ export default function DefectTrackerPage() {
       sprintId: bug.sprintId || '',
       releaseId: bug.releaseId || '',
       attachments: bug.attachments || '',
-      createdAt: bug.createdAt instanceof Date ? bug.createdAt : (bug.createdAt ? parseISO(bug.createdAt as any) : new Date()),
-      closedAt: bug.closedAt instanceof Date ? bug.closedAt : (bug.closedAt ? parseISO(bug.closedAt as any) : undefined),
+      createdAt: typeof bug.createdAt === 'string' ? parseISO(bug.createdAt) : new Date(),
+      closedAt: typeof bug.closedAt === 'string' ? parseISO(bug.closedAt) : undefined,
     });
   }, [editBugForm]);
 
@@ -258,7 +258,7 @@ export default function DefectTrackerPage() {
     const success = await updateStory(selectedBug.id, {
       ...values,
       createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
-      closedAt: values.closedAt ? values.closedAt.toISOString() : null,
+      closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
     });
 
     if (success) {
@@ -513,7 +513,7 @@ export default function DefectTrackerPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.title}</SelectItem>)}
+                            {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name || r.releaseId}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />

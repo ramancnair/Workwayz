@@ -39,7 +39,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
       if (db && parsed.empId) {
         const empId = parsed.empId;
         const q = query(collection(db, 'employees'), where('empId', '==', empId));
-        getDocs(q).then((snapshot) => {
+        getDocs(q).then((snapshot: any) => {
           if (!snapshot.empty) {
             const data = snapshot.docs[0].data();
             // undefined isEnabled → treat as enabled (backward compat)

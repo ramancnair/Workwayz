@@ -119,14 +119,15 @@ export default function AssumptionsPage() {
           acceptanceCriteria: s.acceptanceCriteria,
         }))
       });
-      if (result.error) {
-        throw new Error(result.error);
+      const res = result as any;
+      if (res.error) {
+        throw new Error(res.error);
       }
 
-      for (const assumption of result.assumptions) {
+      for (const assumption of (res.assumptions || [])) {
         await addAssumption({ ...assumption, status: 'Active' });
       }
-      toast({ title: 'Success', description: `${result.assumptions.length} assumptions generated successfully.` });
+      toast({ title: 'Success', description: `${(res.assumptions || []).length} assumptions generated successfully.` });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message || 'Could not generate assumptions.' });
     } finally {

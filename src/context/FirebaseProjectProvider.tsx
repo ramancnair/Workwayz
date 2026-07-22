@@ -96,7 +96,7 @@ const standardDocs = [
   'QA Approval',
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans' | 'weeklyOffDays' | 'projectSettings';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
@@ -274,7 +274,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                         const docRef = doc(collection(rootProjectDocRef, 'kanbanColumns'), docId);
                         batch.set(docRef, col);
                     });
-                    batch.commit().catch(e => console.error("Failed to set default Kanban columns", e));
+                    batch.commit().catch((e: any) => console.error("Failed to set default Kanban columns", e));
                     return;
                 }
                 if (name === 'fixedCosts' && snapshot.empty) {
@@ -283,7 +283,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                         const docRef = doc(collection(rootProjectDocRef, 'fixedCosts'));
                         batch.set(docRef, cost);
                     });
-                    batch.commit().catch(e => console.error("Failed to set default Fixed Costs", e));
+                    batch.commit().catch((e: any) => console.error("Failed to set default Fixed Costs", e));
                     return;
                 }
                 if (name === 'documents' && snapshot.empty) {
@@ -296,7 +296,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                             createdAt: Timestamp.now(),
                         });
                     });
-                    batch.commit().catch(e => console.error("Failed to set default documents", e));
+                    batch.commit().catch((e: any) => console.error("Failed to set default documents", e));
                     return;
                 }
                  // ... other default data logic
@@ -361,7 +361,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                 setState(formatData(snapshot));
             } else {
                  if (name === 'settings') {
-                    setDoc(doc(rootProjectDocRef, 'settings', 'main'), defaultProjectSettings).catch(e => console.error("Failed to set default project settings", e));
+                    setDoc(doc(rootProjectDocRef, 'settings', 'main'), defaultProjectSettings).catch((e: any) => console.error("Failed to set default project settings", e));
                  } else if (name === 'project') {
                     setError(`Project with ID "${projectId}" not found.`);
                  }
@@ -375,12 +375,12 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     
     // Global listeners that are always active
     const globalSettingsDocRef = doc(db, 'settings', 'main');
-    const unsubGlobalSettings = onSnapshot(globalSettingsDocRef, (doc) => {
+    const unsubGlobalSettings = onSnapshot(globalSettingsDocRef, (doc: any) => {
         setGlobalSettings(doc.exists() ? doc.data() as ProjectSettings : null);
     });
 
-    const unsubGlobalHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
-        const holidaysData = snapshot.docs.map(doc => {
+    const unsubGlobalHolidays = onSnapshot(collection(db, 'holidays'), (snapshot: any) => {
+        const holidaysData = snapshot.docs.map((doc: any) => {
             const data = doc.data();
             return {
                 ...data,
@@ -391,8 +391,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         setGlobalHolidays(holidaysData);
     });
     
-    const unsubAllUsers = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot) => {
-        const usersData = snapshot.docs.map(docSnap => {
+    const unsubAllUsers = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot: any) => {
+        const usersData = snapshot.docs.map((docSnap: any) => {
             const data = docSnap.data();
             const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
             if (data.leavePeriods && Array.isArray(data.leavePeriods)) {
@@ -409,7 +409,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
 
     Promise.all(initialFetchPromises).then(() => {
         setIsLoading(false);
-    }).catch(err => {
+    }).catch((err: any) => {
         console.error("Error during initial data fetch:", err);
         setError("Failed to load initial project data.");
         setIsLoading(false);
@@ -457,7 +457,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
 
       batch.commit().then(() => {
         console.log(`[AutoRepair] Successfully populated capabilities for project ${projectId}`);
-      }).catch(err => {
+      }).catch((err: any) => {
         console.error(`[AutoRepair] Failed to populate capabilities for project ${projectId}:`, err);
       });
     }
@@ -550,20 +550,20 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     const parentStoryRef = doc(db, 'projects', projectId, 'stories', storyId);
 
     const subItemsSnapshot = await getDocs(query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyId)));
-    const subItems = subItemsSnapshot.docs.map(doc => doc.data() as Story);
+    const subItems = subItemsSnapshot.docs.map((doc: any) => doc.data() as Story);
 
-    const totalHours = subItems.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+    const totalHours = subItems.reduce((sum: number, task: Story) => sum + (task.estimatedHours || 0), 0);
     
     const updatePayload: any = { estimatedHours: totalHours };
 
-    const subItemsWithDates = subItems.filter(s => s.developmentStartDate);
+    const subItemsWithDates = subItems.filter((s: Story) => s.developmentStartDate);
     if(subItemsWithDates.length > 0) {
-      const parentDevStart = Math.min(...subItemsWithDates.map(s => new Date(s.developmentStartDate!).getTime()));
+      const parentDevStart = Math.min(...subItemsWithDates.map((s: Story) => new Date(s.developmentStartDate!).getTime()));
       updatePayload.developmentStartDate = new Date(parentDevStart).toISOString();
 
-      const completedSubItems = subItems.filter(s => s.completionDate);
+      const completedSubItems = subItems.filter((s: Story) => s.completionDate);
       if(completedSubItems.length === subItems.length) {
-        const parentCompletion = Math.max(...completedSubItems.map(s => new Date(s.completionDate!).getTime()));
+        const parentCompletion = Math.max(...completedSubItems.map((s: Story) => new Date(s.completionDate!).getTime()));
         updatePayload.completionDate = new Date(parentCompletion).toISOString();
       }
     }
@@ -579,7 +579,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         const storiesSnapshot = await getDocs(collection(projectDocRef, 'stories'));
         const newIdNumber = storiesSnapshot.size > 0
             ? Math.max(0, ...storiesSnapshot.docs
-                .map(doc => doc.data().storyId)
+                .map((doc: any) => doc.data().storyId)
                 .filter((id: string | undefined) => id && typeof id === 'string')
                 .map((id: string) => parseInt(id.replace(/^[A-Z]+-/, ''), 10) || 0)
             ) + 1
@@ -639,7 +639,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       
       const storiesSnapshot = await getDocs(collection(db, 'projects', projectId, 'stories'));
         
-      const highestId = storiesSnapshot.docs.reduce((maxId, doc) => {
+      const highestId = storiesSnapshot.docs.reduce((maxId: number, doc: any) => {
         const storyId = doc.data().storyId;
         if (typeof storyId === 'string') {
           const numericPart = storyId.match(/\d+$/);
@@ -691,6 +691,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
             const subTask: Omit<Story, 'id'> = {
               storyId: `SUB-${currentIdCounter}`,
               title: `Auto-generated sub-task ${j + 1} for ${newStory.storyId}`,
+              description: '',
               itemType: 'Sub Task',
               status: 'To Do',
               statusHistory: [{ fromStatus: null, toStatus: 'To Do', date: now }],
@@ -788,15 +789,15 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                     query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyToUpdate.parentStoryId))
                 );
                 const allSubTasks = allSubTasksSnapshot.docs
-                  .map(d => ({id: d.id, ...d.data() as Story}))
-                  .filter(t => !t.isDeleted);
+                  .map((d: any) => ({ ...d.data() as Story, id: d.id }))
+                  .filter((t: any) => !t.isDeleted);
                 
-                const updatedSubTasks = allSubTasks.map(t => t.id === storyId ? { ...t, status: data.status! } : t);
+                const updatedSubTasks = allSubTasks.map((t: any) => t.id === storyId ? { ...t, status: data.status! } : t);
 
                 // If no active subtasks remain, don't change parent status automatically.
                 if (updatedSubTasks.length > 0) {
                     // Check if all subtasks are "Done"
-                    const allDone = updatedSubTasks.every(t => t.status === 'Done');
+                    const allDone = updatedSubTasks.every((t: any) => t.status === 'Done');
                     if (allDone) {
                         const parentStory = stories.find(s => s.id === storyToUpdate.parentStoryId);
                         if (parentStory && parentStory.status !== 'Done') {
@@ -805,14 +806,14 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
                     } else {
                         // Optionally: if all subtasks have the same status (e.g. 'To Do' or 'In Progress')
                         const firstStatus = updatedSubTasks[0]?.status;
-                        if (updatedSubTasks.every(t => t.status === firstStatus)) {
+                        if (updatedSubTasks.every((t: any) => t.status === firstStatus)) {
                              const parentStory = stories.find(s => s.id === storyToUpdate.parentStoryId);
                              if (parentStory && parentStory.status !== firstStatus) {
                                  await updateStory(parentStory.id, { status: firstStatus });
                              }
                         } else {
                             // If mixed, but at least one is in progress or done, move parent to In Progress if it's To Do
-                            const anyInProgressOrDone = updatedSubTasks.some(t => t.status === 'In Progress' || t.status === 'Done');
+                            const anyInProgressOrDone = updatedSubTasks.some((t: any) => t.status === 'In Progress' || t.status === 'Done');
                             const parentStory = stories.find(s => s.id === storyToUpdate.parentStoryId);
                             if (anyInProgressOrDone && parentStory && parentStory.status === 'To Do') {
                                 await updateStory(parentStory.id, { status: 'In Progress' });
@@ -857,7 +858,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       const q = query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyId));
       const subItemsSnapshot = await getDocs(q);
   
-      subItemsSnapshot.forEach(subItemDoc => {
+      subItemsSnapshot.forEach((subItemDoc: any) => {
         batch.update(doc(db, 'projects', projectId, 'stories', subItemDoc.id), { sprintId });
       });
   
@@ -870,7 +871,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   };
   
   const moveStoryStatus = (storyId: string, newStatus: StoryStatus) => updateStory(storyId, { status: newStatus });
-  const moveStoryToEpic = (storyId: string, epicId: string | null) => updateStory(storyId, { epicId });
+  const moveStoryToEpic = (storyId: string, epicId: string | null) => updateStory(storyId, { epicId: epicId ?? undefined });
 
   const bulkUpdateSubTaskReleases = async (releaseIdCode: string): Promise<boolean> => {
     if (!db || !projectId) return false;
@@ -997,7 +998,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       const q = query(collection(db, 'projects', projectId, 'stories'), where('epicId', '==', epicId));
       const storiesSnapshot = await getDocs(q);
       
-      storiesSnapshot.forEach(storyDoc => {
+      storiesSnapshot.forEach((storyDoc: any) => {
         if (deleteItems) {
             batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { isDeleted: true, deletedAt: Timestamp.now() });
         } else {
@@ -1026,7 +1027,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       // If the new sprint is 'Current', set all others to 'Yet to Start' (or another appropriate status)
       if (payload.status === 'Current') {
         const sprintsSnapshot = await getDocs(collection(db, 'projects', projectId, 'sprints'));
-        sprintsSnapshot.forEach(sprintDoc => {
+        sprintsSnapshot.forEach((sprintDoc: any) => {
           if (sprintDoc.data().status === 'Current') {
             batch.update(sprintDoc.ref, { status: 'Yet to Start', isCurrent: false });
           }
@@ -1057,7 +1058,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       // If this sprint is becoming 'Current', ensure no others are
       if (payload.status === 'Current') {
         const sprintsSnapshot = await getDocs(collection(db, 'projects', projectId, 'sprints'));
-        sprintsSnapshot.forEach(sprintDoc => {
+        sprintsSnapshot.forEach((sprintDoc: any) => {
           if (sprintDoc.id !== sprintId && sprintDoc.data().status === 'Current') {
             batch.update(sprintDoc.ref, { status: 'Completed', isCurrent: false });
           }
@@ -1083,7 +1084,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         
         const q = query(collection(db, 'projects', projectId, 'stories'), where('sprintId', '==', sprintId));
         const storiesSnapshot = await getDocs(q);
-        storiesSnapshot.forEach(storyDoc => {
+        storiesSnapshot.forEach((storyDoc: any) => {
             batch.update(doc(db, 'projects', projectId, 'stories', storyDoc.id), { sprintId: null });
         });
 
@@ -1191,7 +1192,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         const testCasesSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCases'));
         const newIdNumber = testCasesSnapshot.size > 0
             ? Math.max(0, ...testCasesSnapshot.docs
-                .map(doc => doc.data().testCaseId)
+                .map((doc: any) => doc.data().testCaseId)
                 .filter((id: string | undefined) => id && typeof id === 'string')
                 .map((id: string) => parseInt(id.replace('TC-', ''), 10) || 0)
             ) + 1
@@ -1218,7 +1219,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     try {
       const batch = writeBatch(db);
       const testCasesSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCases'));
-      let currentIdCounter = testCasesSnapshot.size > 0 ? Math.max(0, ...testCasesSnapshot.docs.map(doc => parseInt(doc.data().testCaseId.replace('TC-', ''), 10) || 0)) + 1 : 1;
+      let currentIdCounter = testCasesSnapshot.size > 0 ? Math.max(0, ...testCasesSnapshot.docs.map((doc: any) => parseInt(doc.data().testCaseId.replace('TC-', ''), 10) || 0)) + 1 : 1;
 
       const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story');
 
@@ -1287,7 +1288,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         const testPlansSnapshot = await getDocs(collection(db, 'projects', projectId, 'testPlans'));
         const newIdNumber = testPlansSnapshot.size > 0
             ? Math.max(0, ...testPlansSnapshot.docs
-                .map(doc => doc.data().testPlanId)
+                .map((doc: any) => doc.data().testPlanId)
                 .filter((id: string | undefined) => id && typeof id === 'string')
                 .map((id: string) => parseInt(id.replace('TP-', ''), 10) || 0)
             ) + 1
@@ -1330,7 +1331,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
 
       // Delete all test case copies in this plan's subcollection
       const planTCsSnapshot = await getDocs(collection(db, 'projects', projectId, 'testPlans', id, 'testCases'));
-      planTCsSnapshot.docs.forEach(tcDoc => {
+      planTCsSnapshot.docs.forEach((tcDoc: any) => {
         batch.delete(tcDoc.ref);
       });
 
@@ -1397,7 +1398,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       // Auto-manage closeDate based on status
       if (data.status === 'Passed') {
         payload.closeDate = (testDate || new Date()).toISOString();
-      } else if (data.status && data.status !== 'Passed') {
+      } else if (data.status) {
         payload.closeDate = null; // Clear close date when not Passed
       }
 
@@ -1437,9 +1438,9 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   const subscribeToTestPlanTestCases = useCallback((planId: string): (() => void) => {
     if (!db || !projectId || !planId) return () => {};
     const colRef = collection(db, 'projects', projectId, 'testPlans', planId, 'testCases');
-    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+    const unsubscribe = onSnapshot(colRef, (snapshot: any) => {
       const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
-      const data = snapshot.docs.map(d => {
+      const data = snapshot.docs.map((d: any) => {
         const docData = d.data();
         // Convert timestamps
         ['executionDate', 'closeDate'].forEach(f => {
@@ -1465,7 +1466,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       const risksSnapshot = await getDocs(collection(db, 'projects', projectId, 'risks'));
       const newIdNumber = risksSnapshot.size > 0
         ? Math.max(0, ...risksSnapshot.docs
-            .map(doc => doc.data().riskId)
+            .map((doc: any) => doc.data().riskId)
             .filter((id: string | undefined) => id && typeof id === 'string')
             .map((id: string) => parseInt(id.replace('R-', ''), 10) || 0)
         ) + 1
@@ -1508,7 +1509,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     try {
       const batch = writeBatch(db);
       const risksSnapshot = await getDocs(collection(db, 'projects', projectId, 'risks'));
-      let currentIdCounter = risksSnapshot.size > 0 ? Math.max(0, ...risksSnapshot.docs.map(doc => parseInt(doc.data().riskId.replace('R-', ''), 10) || 0)) + 1 : 1;
+      let currentIdCounter = risksSnapshot.size > 0 ? Math.max(0, ...risksSnapshot.docs.map((doc: any) => parseInt(doc.data().riskId.replace('R-', ''), 10) || 0)) + 1 : 1;
       
       const riskSamples = [
         { desc: 'Unexpected third-party API changes', mitigation: 'Regularly review API documentation and maintain a wrapper.', contingency: 'Temporarily switch to a fallback service.' },
@@ -1588,7 +1589,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     try {
       const batch = writeBatch(db);
       const snapshot = await getDocs(collection(db, 'projects', projectId, 'assumptions'));
-      let currentIdCounter = snapshot.size > 0 ? Math.max(0, ...snapshot.docs.map(doc => parseInt(doc.data().assumptionId.replace('A-', ''), 10) || 0)) + 1 : 1;
+      let currentIdCounter = snapshot.size > 0 ? Math.max(0, ...snapshot.docs.map((doc: any) => parseInt(doc.data().assumptionId.replace('A-', ''), 10) || 0)) + 1 : 1;
       
       const assumptionSamples = [
         'Necessary hardware will be available on time.',
@@ -1714,7 +1715,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     try {
       const batch = writeBatch(db);
       const snapshot = await getDocs(collection(db, 'projects', projectId, 'dependencies'));
-      let currentIdCounter = snapshot.size > 0 ? Math.max(0, ...snapshot.docs.map(doc => parseInt(doc.data().dependencyId.replace('D-', ''), 10) || 0)) + 1 : 1;
+      let currentIdCounter = snapshot.size > 0 ? Math.max(0, ...snapshot.docs.map((doc: any) => parseInt(doc.data().dependencyId.replace('D-', ''), 10) || 0)) + 1 : 1;
       
       const dependencySamples = [
         { on: 'Marketing Team', desc: 'Finalized ad copy for the new feature.' },
@@ -1965,7 +1966,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         const batch = writeBatch(db);
         const projectDocRef = doc(db, 'projects', projectId);
         const existingSnapshot = await getDocs(collection(projectDocRef, 'impactedSystems'));
-        existingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        existingSnapshot.docs.forEach((doc: any) => batch.delete(doc.ref));
 
         systems.forEach(sys => {
             const newRef = doc(collection(projectDocRef, 'impactedSystems'));
@@ -2010,7 +2011,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         const batch = writeBatch(db);
         const projectDocRef = doc(db, 'projects', projectId);
         const existingSnapshot = await getDocs(collection(projectDocRef, 'initialImpactedSystems'));
-        existingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        existingSnapshot.docs.forEach((doc: any) => batch.delete(doc.ref));
 
         systems.forEach(sys => {
             const newRef = doc(collection(projectDocRef, 'initialImpactedSystems'));
@@ -2034,8 +2035,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       // 1. Copy Impacted Systems
       const initialSystemsSnapshot = await getDocs(collection(projectDocRef, 'initialImpactedSystems'));
       const liveSystemsSnapshot = await getDocs(collection(projectDocRef, 'impactedSystems'));
-      liveSystemsSnapshot.docs.forEach(liveDoc => batch.delete(liveDoc.ref));
-      initialSystemsSnapshot.docs.forEach(initialDoc => {
+      liveSystemsSnapshot.docs.forEach((liveDoc: any) => batch.delete(liveDoc.ref));
+      initialSystemsSnapshot.docs.forEach((initialDoc: any) => {
           const newDocRef = doc(collection(projectDocRef, 'impactedSystems'));
           batch.set(newDocRef, initialDoc.data());
       });
@@ -2043,8 +2044,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       // 2. Copy enabled Horizontals
       const initialHorizontalsSnapshot = await getDocs(collection(projectDocRef, 'initialHorizontals'));
       const liveHorizontalsSnapshot = await getDocs(collection(projectDocRef, 'horizontals'));
-      liveHorizontalsSnapshot.docs.forEach(liveDoc => batch.delete(liveDoc.ref));
-      initialHorizontalsSnapshot.docs.forEach(initialDoc => {
+      liveHorizontalsSnapshot.docs.forEach((liveDoc: any) => batch.delete(liveDoc.ref));
+      initialHorizontalsSnapshot.docs.forEach((initialDoc: any) => {
           if (initialDoc.data().isEnabled) {
               const newDocRef = doc(collection(projectDocRef, 'horizontals'));
               batch.set(newDocRef, initialDoc.data());
@@ -2116,7 +2117,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         const batch = writeBatch(db);
         const projectDocRef = doc(db, 'projects', projectId);
         const existingSnapshot = await getDocs(collection(projectDocRef, 'horizontals'));
-        existingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        existingSnapshot.docs.forEach((doc: any) => batch.delete(doc.ref));
 
         horizontals.forEach(hor => {
             const newRef = doc(collection(projectDocRef, 'horizontals'));
@@ -2161,7 +2162,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         const batch = writeBatch(db);
         const projectDocRef = doc(db, 'projects', projectId);
         const existingSnapshot = await getDocs(collection(projectDocRef, 'initialHorizontals'));
-        existingSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        existingSnapshot.docs.forEach((doc: any) => batch.delete(doc.ref));
 
         horizontals.forEach(hor => {
             const newRef = doc(collection(projectDocRef, 'initialHorizontals'));
@@ -2299,7 +2300,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
             const snapshot = await getDocs(collection(db, 'projects', projectId, 'paymentMilestones'));
             const newIdNumber = snapshot.size > 0
                 ? Math.max(0, ...snapshot.docs
-                    .map(doc => doc.data().milestoneId)
+                    .map((doc: any) => doc.data().milestoneId)
                     .filter((id: string | undefined) => id && typeof id === 'string')
                     .map((id: string) => parseInt(id.replace('PM-', ''), 10) || 0)
                 ) + 1

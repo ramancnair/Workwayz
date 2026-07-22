@@ -100,7 +100,7 @@ const storyFormSchema = z.object({
   parentStoryId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
-  priority: z.enum(priorities).optional(),
+  priority: z.enum(['Critical', 'High', 'Medium', 'Low', 'Backburner']).optional(),
   foundInTestPlanId: z.string().optional(),
   relatedBugId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
@@ -120,7 +120,7 @@ const subTaskFormSchema = z.object({
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
-    status: z.enum(statusOptions),
+    status: z.string(),
     sprintId: z.string().optional(),
     releaseId: z.string().optional(),
 });
@@ -588,6 +588,7 @@ export default function KanbanPage() {
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
+        priority: values.priority as Priority | undefined,
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
         createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
         closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
@@ -1243,11 +1244,11 @@ export default function KanbanPage() {
                                       />
                                       <FormField
                                         control={editStoryForm.control}
-                                        name="severity"
+                                        name={"severity" as any}
                                         render={({ field }) => (
                                           <FormItem>
                                             <FormLabel>Severity</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                                            <Select onValueChange={field.onChange} value={(field.value as string) || ''}>
                                               <FormControl>
                                                 <SelectTrigger>
                                                   <SelectValue placeholder="Set severity" />

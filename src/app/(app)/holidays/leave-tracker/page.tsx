@@ -77,7 +77,7 @@ export default function LeaveTrackerPage() {
     if (!db) return;
     
     // Fetch Settings
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'main'), (docSnap) => {
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'main'), (docSnap: any) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setLeaveSettings({
@@ -90,14 +90,14 @@ export default function LeaveTrackerPage() {
     });
 
     // Fetch Employees
-    const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot) => {
-      const emps = snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as User);
+    const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot: any) => {
+      const emps = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() }) as User);
       setAllUsers(emps);
     });
 
     // Fetch Holidays
-    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
-      const hols = snapshot.docs.map(d => {
+    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot: any) => {
+      const hols = snapshot.docs.map((d: any) => {
         const data = d.data();
         return {
           id: d.id,

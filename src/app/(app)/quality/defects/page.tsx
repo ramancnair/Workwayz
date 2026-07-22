@@ -66,8 +66,8 @@ export default function QualityDefectsPage() {
 
     const projectsQuery = query(collection(db, 'projects'), where('isDeleted', '!=', true));
     
-    const unsubscribe = onSnapshot(projectsQuery, async (snapshot) => {
-      const projectsData = snapshot.docs.map((doc) => ({
+    const unsubscribe = onSnapshot(projectsQuery, async (snapshot: any) => {
+      const projectsData = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...(doc.data() as Omit<Project, 'id'>),
       })) as Project[];
@@ -82,8 +82,8 @@ export default function QualityDefectsPage() {
           getDocs(collection(projectDocRef, 'testPlans')),
         ]);
 
-        const stories = storiesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-        const testPlans = testPlansSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        const stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
+        const testPlans = testPlansSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
 
         // Extract active bugs (defects)
         const bugs = stories.filter(s => s.itemType === 'Bug' && !s.isDeleted);

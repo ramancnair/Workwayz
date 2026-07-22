@@ -31,7 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
 
-const defaultSettings: Omit<ProjectSettings, 'id'> = {
+const defaultSettings = {
   weeklyOffDays: [0, 6],
 };
 
@@ -52,8 +52,8 @@ export default function AllocatedLeavesPage() {
     if (!db) return;
     
     // Listener for holidays
-    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
-        const holidaysData = snapshot.docs.map(doc => {
+    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot: any) => {
+        const holidaysData = snapshot.docs.map((doc: any) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -66,7 +66,7 @@ export default function AllocatedLeavesPage() {
     
     // Listener for settings
     const settingsDocRef = doc(db, 'settings', 'main');
-    const unsubSettings = onSnapshot(settingsDocRef, (docSnap) => {
+    const unsubSettings = onSnapshot(settingsDocRef, (docSnap: any) => {
       if (docSnap.exists()) {
         const data = docSnap.data() as ProjectSettings;
         setWeeklyOffDays(data.weeklyOffDays || defaultSettings.weeklyOffDays);
@@ -80,15 +80,15 @@ export default function AllocatedLeavesPage() {
           allocatedPaidLeavesPerYear: 24,
           allowCarryOver: false,
           carryOverLimit: 10,
-        }).catch(e => console.error("Failed to set default settings", e));
+        }).catch((e: any) => console.error("Failed to set default settings", e));
       }
     });
 
     // Listener for global employees list
     const unsubEmployees = onSnapshot(
       query(collection(db, 'employees'), where('isDeleted', '!=', true)),
-      (snapshot) => {
-        const employeesData = snapshot.docs.map(docSnap => {
+      (snapshot: any) => {
+        const employeesData = snapshot.docs.map((docSnap: any) => {
           const data = docSnap.data();
           return {
             id: docSnap.id,

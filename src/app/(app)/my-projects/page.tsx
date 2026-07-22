@@ -68,14 +68,14 @@ export default function MyProjectsPage() {
       return;
     }
     const docRef = doc(db, 'employees', currentUser.empId);
-    const unsub = onSnapshot(docRef, (snapshot) => {
+    const unsub = onSnapshot(docRef, (snapshot: any) => {
       if (snapshot.exists()) {
         setCurrentUserFromDb({ ...snapshot.data(), id: snapshot.id } as User);
       } else {
         setCurrentUserFromDb(null);
       }
       setIsLoadingUsers(false);
-    }, (error) => {
+    }, (error: any) => {
       console.error("Error listening to current user status:", error);
       setIsLoadingUsers(false);
     });
@@ -86,10 +86,10 @@ export default function MyProjectsPage() {
   useEffect(() => {
     if (!db) return;
     const q = query(collection(db, 'projects'), where('isDeleted', '!=', true));
-    const unsub = onSnapshot(q, (snapshot) => {
+    const unsub = onSnapshot(q, (snapshot: any) => {
       const projectsData = snapshot.docs
-        .map(doc => ({ ...doc.data(), id: doc.id } as Project))
-        .filter(p => !p.isArchived);
+        .map((doc: any) => ({ ...doc.data(), id: doc.id } as Project))
+        .filter((p: any) => !p.isArchived);
       setAllProjects(projectsData);
     });
     return () => unsub();
@@ -118,7 +118,7 @@ export default function MyProjectsPage() {
           const empRef = collection(db!, 'projects', project.id, 'employees');
           const empSnap = await getDocs(empRef);
 
-          const isInProject = empSnap.docs.some(doc => {
+          const isInProject = empSnap.docs.some((doc: any) => {
             const data = doc.data();
             return doc.id === currentUser.empId || data.empId === currentUser.empId;
           });

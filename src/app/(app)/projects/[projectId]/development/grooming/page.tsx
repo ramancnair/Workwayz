@@ -64,7 +64,7 @@ const sprintSchema = z.object({
   title: z.string().min(1, 'Title is required.').max(60, 'Sprint name cannot exceed 60 characters.'),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  status: z.enum(sprintStatuses).optional(),
+  status: z.enum(['Yet to Start', 'Current', 'Completed', 'Cancelled']).optional(),
 });
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -95,7 +95,7 @@ const storyFormSchema = z.object({
   parentStoryId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
-  priority: z.enum(priorities).optional(),
+  priority: z.enum(['Critical', 'High', 'Medium', 'Low', 'Backburner']).optional(),
   foundInTestPlanId: z.string().optional(),
   relatedBugId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
@@ -111,7 +111,7 @@ const subTaskFormSchema = z.object({
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
-    status: z.enum(statusOptions),
+    status: z.string(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
     sprintId: z.string().optional(),
@@ -780,7 +780,7 @@ export default function GroomingPage() {
             title: values.title,
             startDate: values.startDate ? new Date(values.startDate) : undefined,
             endDate: values.endDate ? new Date(values.endDate) : undefined,
-            status: values.status,
+            status: values.status as SprintStatus | undefined,
         };
         const success = editingSprint
             ? await updateSprint(editingSprint.id, payload)
@@ -800,7 +800,8 @@ export default function GroomingPage() {
         setIsEditStorySubmitting(true);
         const success = await updateStory(selectedStory.id, {
             ...values,
-            assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+            priority: values.priority as Priority | undefined,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         });
         if (success) {
             handleSetSelectedStory(null);
@@ -817,7 +818,7 @@ export default function GroomingPage() {
         
         const success = await updateStory(selectedStory.id, {
             ...values,
-            assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
             startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
             endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         });

@@ -89,18 +89,18 @@ export default function BillingPage() {
     setIsLoading(true);
 
     const q = query(collection(db, 'projects'), where('isDeleted', '!=', true));
-    const unsubscribe = onSnapshot(q, async (projectsSnapshot) => {
+    const unsubscribe = onSnapshot(q, async (projectsSnapshot: any) => {
       try {
         const rawProjects = projectsSnapshot.docs
-          .map(doc => ({ ...doc.data(), id: doc.id } as Project))
-          .filter(p => !p.isArchived);
+          .map((doc: any) => ({ ...doc.data(), id: doc.id } as Project))
+          .filter((p: any) => !p.isArchived);
 
         // Fetch global settings & holidays
         const globalSettingsDoc = await getDoc(doc(db, 'settings', 'main'));
         const globalSettings = globalSettingsDoc.exists() ? globalSettingsDoc.data() as ProjectSettings : null;
 
         const globalHolidaysSnapshot = await getDocs(collection(db, 'holidays'));
-        const globalHolidays = globalHolidaysSnapshot.docs.map(doc => {
+        const globalHolidays = globalHolidaysSnapshot.docs.map((doc: any) => {
           const data = doc.data();
           return {
             ...data,
@@ -110,7 +110,7 @@ export default function BillingPage() {
         });
 
         // Gather billing information for each project in parallel
-        const billingPromises = rawProjects.map(async (project) => {
+        const billingPromises = rawProjects.map(async (project: any) => {
           const [empSnap, fcSnap, pmSnap, settingsSnap, holidaysSnap] = await Promise.all([
             getDocs(collection(db, 'projects', project.id, 'employees')),
             getDocs(collection(db, 'projects', project.id, 'fixedCosts')),
@@ -119,12 +119,12 @@ export default function BillingPage() {
             getDocs(collection(db, 'projects', project.id, 'holidays')),
           ]);
 
-          const employeesList = empSnap.docs.map(d => d.data() as User);
-          const fixedCostsList = fcSnap.docs.map(d => d.data() as FixedCost);
-          const paymentMilestonesList = pmSnap.docs.map(d => d.data() as PaymentMilestone);
+          const employeesList = empSnap.docs.map((d: any) => d.data() as User);
+          const fixedCostsList = fcSnap.docs.map((d: any) => d.data() as FixedCost);
+          const paymentMilestonesList = pmSnap.docs.map((d: any) => d.data() as PaymentMilestone);
           const projSettings = settingsSnap.exists() ? settingsSnap.data() as ProjectSettings : null;
           
-          const projHolidaysList = holidaysSnap.docs.map(d => {
+          const projHolidaysList = holidaysSnap.docs.map((d: any) => {
             const data = d.data();
             return {
               ...data,
@@ -153,17 +153,17 @@ export default function BillingPage() {
           let revenue = 0;
           let resourceCost = 0;
 
-          employeesList.forEach(user => {
+          employeesList.forEach((user: any) => {
             const start = convertToDate(user.onboardingDate);
             const end = convertToDate(user.offloadingDate);
             if (start && end && end >= start) {
-              const holidayDates = projHolidays.map(h => convertToDate(h.date)).filter((d): d is Date => d !== null);
+              const holidayDates = projHolidays.map((h: any) => convertToDate(h.date)).filter((d: any): d is Date => d !== null);
               const interval = eachDayOfInterval({ start, end });
               
               const businessDays = interval.filter(day => {
                 const dayOfWeek = day.getDay();
                 const isWeekend = projWeeklyOffDays.includes(dayOfWeek);
-                const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
+                const isHoliday = holidayDates.some((holiday: any) => isSameDay(day, holiday));
                 return !isWeekend && !isHoliday;
               });
 
@@ -174,7 +174,7 @@ export default function BillingPage() {
           });
 
           // Fixed Costs calculation (multiplying by calendar months if type is 'Monthly')
-          const fixedCosts = fixedCostsList.reduce((acc, fc) => {
+          const fixedCosts = fixedCostsList.reduce((acc: number, fc: any) => {
             if (fc.type === 'Monthly') {
               return acc + ((fc.cost || 0) * months);
             }
@@ -186,8 +186,8 @@ export default function BillingPage() {
 
           // Completed Payments (milestones with status 'Payment Completed')
           const completedPayments = paymentMilestonesList
-            .filter(pm => pm.status === 'Payment Completed')
-            .reduce((acc, pm) => acc + (pm.amount || 0), 0);
+            .filter((pm: any) => pm.status === 'Payment Completed')
+            .reduce((acc: number, pm: any) => acc + (pm.amount || 0), 0);
 
           return {
             id: project.id,

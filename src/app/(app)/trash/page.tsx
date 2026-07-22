@@ -44,7 +44,7 @@ export default function TrashPage() {
              Promise.all(collectionsToQuery.map(async cName => {
                 const trashQuery = query(collection(db, cName), where('isDeleted', '==', true));
                 const snapshot = await getDocs(trashQuery);
-                return snapshot.docs.map(d => {
+                 return snapshot.docs.map((d: any) => {
                     const data = d.data();
                     if (!data.deletedAt) return null; // Skip items without a deletion date
                     
@@ -56,7 +56,7 @@ export default function TrashPage() {
                     }
 
                     const name = cName === 'employees' ? `${data.firstName} ${data.lastName}` : data.name;
-                    const type = cName === 'portfolios' ? 'Portfolio' : (cName === 'projects' ? 'Project' : 'User');
+                    const type: any = cName === 'portfolios' ? 'Portfolio' : (cName === 'projects' ? 'Project' : 'User');
                     return { id: d.id, name: name, type, deletedAt: data.deletedAt.toDate().toISOString() };
                 }).filter(Boolean) as TrashedItem[]; // filter(Boolean) removes nulls
             })).then(allTrashed => {
@@ -76,7 +76,7 @@ export default function TrashPage() {
         // Set up listeners to refetch when data changes
         const unsubscribers = collectionsToQuery.map(collectionName => {
             const q = query(collection(db, collectionName), where('isDeleted', '==', true));
-            return onSnapshot(q, fetchAndSetData, (error) => {
+            return onSnapshot(q, fetchAndSetData, (error: any) => {
                  console.error(`Error listening to ${collectionName}:`, error);
                  setError(`Failed to listen for updates in ${collectionName}.`);
             });
@@ -114,7 +114,7 @@ export default function TrashPage() {
                 if (item.type === 'Portfolio') {
                     const projectsQuery = query(collection(db, 'projects'), where('portfolioId', '==', item.id), where('isDeleted', '==', true));
                     const projectsSnapshot = await getDocs(projectsQuery);
-                    projectsSnapshot.forEach(projectDoc => {
+                    projectsSnapshot.forEach((projectDoc: any) => {
                         batch.update(projectDoc.ref, { isDeleted: false, deletedAt: null });
                     });
                 }

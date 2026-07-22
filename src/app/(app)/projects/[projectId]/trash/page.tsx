@@ -76,7 +76,7 @@ export default function ProjectTrashPage() {
       .map(s => ({
         id: s.id,
         name: s.title,
-        type: s.itemType === 'Requirement/Story' ? 'Story' : s.itemType,
+        type: (s.itemType === 'Requirement/Story' ? 'Story' : s.itemType) as TrashedItemType,
         deletedAt: s.deletedAt!,
         collection: 'stories' as 'stories',
       }));

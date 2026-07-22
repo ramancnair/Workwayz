@@ -139,10 +139,11 @@ export default function TestBacklogPage() {
         }))
       });
 
-      if (result.error) throw new Error(result.error);
+      const res = result as any;
+      if (res.error) throw new Error(res.error);
       
       let successCount = 0;
-      for (const tc of result.testCases) {
+      for (const tc of (res.testCases || [])) {
         const success = await addTestCase({
           ...tc,
           status: 'Not Run',

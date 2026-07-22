@@ -99,7 +99,7 @@ export default function MyAccountPage() {
         // Fetch fresh details and avatar directly from database
         if (parsed.empId) {
           const q = query(collection(db, 'employees'), where('empId', '==', parsed.empId));
-          getDocs(q).then((snapshot) => {
+          getDocs(q).then((snapshot: any) => {
             if (!snapshot.empty) {
               const data = snapshot.docs[0].data();
               const updated = {

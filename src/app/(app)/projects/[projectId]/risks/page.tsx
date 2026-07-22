@@ -130,15 +130,15 @@ export default function RisksPage() {
     }
     setIsAiGenSubmitting(true);
     try {
-      const result = await getAiRiskSuggestions({ projectSummary: project.summary });
+      const result = await getAiRiskSuggestions({ projectSummary: project.summary }) as any;
       if (result.error) {
         throw new Error(result.error);
       }
 
-      for (const risk of result.risks) {
+      for (const risk of (result.risks || [])) {
         await addRisk(risk);
       }
-      toast({ title: 'Success', description: `${result.risks.length} risks generated successfully.` });
+      toast({ title: 'Success', description: `${(result.risks || []).length} risks generated successfully.` });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message || 'Could not generate risks.' });
     } finally {

@@ -357,16 +357,16 @@ export default function ProjectsDashboard() {
 
   useEffect(() => {
     if (!db) return;
-    const portfolioUnsubscribe = onSnapshot(query(collection(db, 'portfolios'), where('isDeleted', '!=', true)), (snapshot) => {
-      const portfoliosData = snapshot.docs.map((doc) => ({
+    const portfolioUnsubscribe = onSnapshot(query(collection(db, 'portfolios'), where('isDeleted', '!=', true)), (snapshot: any) => {
+      const portfoliosData = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...(doc.data() as Omit<Portfolio, 'id'>),
       }));
       setPortfolios(portfoliosData);
     });
 
-    const projectUnsubscribe = onSnapshot(query(collection(db, 'projects'), where('isDeleted', '!=', true)), (snapshot) => {
-      const projectsData = snapshot.docs.map((doc) => ({
+    const projectUnsubscribe = onSnapshot(query(collection(db, 'projects'), where('isDeleted', '!=', true)), (snapshot: any) => {
+      const projectsData = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...(doc.data() as Omit<Project, 'id'>),
       }));
@@ -374,8 +374,8 @@ export default function ProjectsDashboard() {
       setIsLoading(false);
     });
 
-    const usersUnsubscribe = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot) => {
-      const usersData = snapshot.docs.map((doc) => ({
+    const usersUnsubscribe = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot: any) => {
+      const usersData = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...(doc.data() as Omit<User, 'id'>),
       }));
@@ -430,11 +430,11 @@ export default function ProjectsDashboard() {
       const projectsSnapshot = await getDocs(collection(db, 'projects'));
 
       const projectsFromThisYear = projectsSnapshot.docs
-        .map((d) => d.id)
-        .filter((id) => id.startsWith(`P${currentYear}`));
+        .map((d: any) => d.id)
+        .filter((id: string) => id.startsWith(`P${currentYear}`));
 
       let currentMaxId = projectsFromThisYear.length > 0
-        ? Math.max(...projectsFromThisYear.map((id) => parseInt(id.substring(3), 10)))
+        ? Math.max(...projectsFromThisYear.map((id: string) => parseInt(id.substring(3), 10)))
         : 0;
 
       const numToGenerate = parseInt(autogenCount, 10);
@@ -513,8 +513,8 @@ export default function ProjectsDashboard() {
       } else {
         const portfoliosSnapshot = await getDocs(collection(db, 'portfolios'));
         const existingIds = portfoliosSnapshot.docs
-          .map(doc => parseInt(doc.id.replace('PF', ''), 10))
-          .filter(num => !isNaN(num));
+          .map((doc: any) => parseInt(doc.id.replace('PF', ''), 10))
+          .filter((num: number) => !isNaN(num));
         const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
         const portfolioId = `PF${nextId.toString().padStart(3, '0')}`;
 
@@ -583,11 +583,11 @@ export default function ProjectsDashboard() {
         const currentYear = new Date().getFullYear().toString().slice(-2);
 
         const projectsFromThisYear = projectsSnapshot.docs
-          .map(doc => doc.id)
-          .filter(id => id.startsWith(`P${currentYear}`));
+          .map((doc: any) => doc.id)
+          .filter((id: string) => id.startsWith(`P${currentYear}`));
 
         const newIdNumber = projectsFromThisYear.length > 0
-          ? Math.max(...projectsFromThisYear.map(id => parseInt(id.substring(3), 10))) + 1
+          ? Math.max(...projectsFromThisYear.map((id: string) => parseInt(id.substring(3), 10))) + 1
           : 1;
 
         const projectId = `P${currentYear}${newIdNumber.toString().padStart(5, '0')}`;

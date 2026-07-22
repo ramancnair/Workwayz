@@ -164,8 +164,8 @@ export default function UsersPage() {
   useEffect(() => {
     if (!db) { console.error('DB is null, aborting onSubmit!'); return; }
     const q = query(collection(db, 'employees'), where('isDeleted', '!=', true));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const usersData = querySnapshot.docs.map(doc => {
+    const unsubscribe = onSnapshot(q, (querySnapshot: any) => {
+        const usersData = querySnapshot.docs.map((doc: any) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -234,7 +234,7 @@ export default function UsersPage() {
         const usersSnapshot = await getDocs(collection(db, 'employees'));
         
         let highestId = 0;
-        usersSnapshot.forEach(doc => {
+        usersSnapshot.forEach((doc: any) => {
             const empId = doc.id;
             if (empId.startsWith('E')) {
                 const numPart = parseInt(empId.substring(1));

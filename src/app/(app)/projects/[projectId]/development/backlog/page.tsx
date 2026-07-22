@@ -102,7 +102,7 @@ const epicFormSchema = z.object({
 });
 
 const storyFormSchema = z.object({
-  itemType: z.enum(workItemTypes),
+  itemType: z.enum(['Requirement/Story', 'Bug', 'Task', 'Feature Change', 'Sub Task']),
   title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
@@ -111,8 +111,8 @@ const storyFormSchema = z.object({
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
-  priority: z.enum(priorities).optional(),
-  severity: z.enum(severities).optional(),
+  priority: z.enum(['Critical', 'High', 'Medium', 'Low', 'Backburner']).optional(),
+  severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
   releaseId: z.string().optional(),
   foundInTestPlanId: z.string().optional(),
   relatedBugId: z.string().optional(),
@@ -131,7 +131,7 @@ const subTaskFormSchema = z.object({
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
-    status: z.enum(statusOptions),
+    status: z.string(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
     sprintId: z.string().optional(),
@@ -622,11 +622,12 @@ export default function BacklogPage() {
         impactedSystems: impactedSystems.map(s => ({ id: s.id, name: s.name })),
       });
   
-      if (result.error) {
-        throw new Error(result.error);
+      const res = result as any;
+      if (res.error) {
+        throw new Error(res.error);
       }
   
-      for (const story of result.stories) {
+      for (const story of (res.stories || [])) {
         const storyPayload: Omit<Story, 'id' | 'storyId'> = {
           title: story.title,
           description: story.description,
@@ -643,6 +644,7 @@ export default function BacklogPage() {
           for (const subTask of story.subTasks) {
             const subTaskPayload: Omit<Story, 'id' | 'storyId'> = {
               title: subTask.title,
+              description: '',
               itemType: 'Sub Task',
               status: 'To Do',
               parentStoryId: storyRef.id,
@@ -653,7 +655,7 @@ export default function BacklogPage() {
           }
         }
       }
-      toast({ title: 'Success', description: `${result.stories.length} stories and their sub-tasks generated.` });
+      toast({ title: 'Success', description: `${(res.stories || []).length} stories and their sub-tasks generated.` });
       setIsAiGenOpen(false);
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message || 'An unknown error occurred.' });
@@ -709,7 +711,7 @@ export default function BacklogPage() {
         const newStory: Omit<Story, 'id' | 'storyId'> = {
           title: values.title,
           description: values.description || '',
-          itemType: values.itemType,
+          itemType: values.itemType as WorkItemType,
           acceptanceCriteria: values.acceptanceCriteria,
           reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
           assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
@@ -718,8 +720,8 @@ export default function BacklogPage() {
           relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
           status: 'To Do',
           estimatedHours: values.estimatedHours,
-          priority: values.priority,
-          severity: values.severity,
+          priority: values.priority as Priority | undefined,
+          severity: values.severity as BugSeverity | undefined,
           sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
           releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
           foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
@@ -747,7 +749,10 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        itemType: values.itemType as WorkItemType | undefined,
+        priority: values.priority as Priority | undefined,
+        severity: values.severity as BugSeverity | undefined,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
@@ -768,7 +773,7 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
     });

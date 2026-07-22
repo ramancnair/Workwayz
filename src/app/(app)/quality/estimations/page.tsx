@@ -74,8 +74,8 @@ export default function QualityEstimationsPage() {
 
     const projectsQuery = query(collection(db, 'projects'), where('isDeleted', '!=', true));
     
-    const unsubscribe = onSnapshot(projectsQuery, async (snapshot) => {
-      const projectsData = snapshot.docs.map((doc) => ({
+    const unsubscribe = onSnapshot(projectsQuery, async (snapshot: any) => {
+      const projectsData = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...(doc.data() as Omit<Project, 'id'>),
       })) as Project[];
@@ -100,11 +100,11 @@ export default function QualityEstimationsPage() {
           getDocs(collection(projectDocRef, 'worklogs')),
         ]);
 
-        const initialSystems = initialSystemsSnap.docs.map(d => d.data()) as any[];
-        const initialHorizontals = initialHorizontalsSnap.docs.map(d => d.data()) as any[];
-        const stories = storiesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-        const horizontals = horizontalsSnap.docs.map(d => d.data()) as any[];
-        const worklogs = worklogsSnap.docs.map(d => d.data()) as any[];
+        const initialSystems = initialSystemsSnap.docs.map((d: any) => d.data()) as any[];
+        const initialHorizontals = initialHorizontalsSnap.docs.map((d: any) => d.data()) as any[];
+        const stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
+        const horizontals = horizontalsSnap.docs.map((d: any) => d.data()) as any[];
+        const worklogs = worklogsSnap.docs.map((d: any) => d.data()) as any[];
 
         // --- 1. Initial Estimations Calculations ---
         const devInitial = initialSystems.reduce((acc, sys) => acc + (sys.estimate || 0), 0);
