@@ -26,6 +26,7 @@ import {
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, DependencyType, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan, TestPlanTestCase } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
+import { generateNextSprintId } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { eachDayOfInterval, format, isSameDay, parseISO } from 'date-fns';
 
@@ -1022,10 +1023,17 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
   };
 
   // Sprint Actions
-  const addSprint = async (sprint: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean> => {
+  const addSprint = async (sprint: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const payload: any = { title: sprint.title, status: sprint.status || 'Yet to Start', isCurrent: sprint.status === 'Current' };
+      const isDuplicate = sprints.some(s => s.title.trim().toLowerCase() === sprint.title.trim().toLowerCase());
+      if (isDuplicate) {
+        console.warn("Duplicate sprint name not allowed:", sprint.title);
+        return false;
+      }
+
+      const sprintId = sprint.sprintId || generateNextSprintId(sprints);
+      const payload: any = { sprintId, title: sprint.title, status: sprint.status || 'Yet to Start', isCurrent: sprint.status === 'Current' };
       if (sprint.startDate) payload.startDate = Timestamp.fromDate(sprint.startDate);
       if (sprint.endDate) payload.endDate = Timestamp.fromDate(sprint.endDate);
       
@@ -1052,10 +1060,17 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
     }
   };
 
-  const updateSprint = async (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean> => {
+  const updateSprint = async (sprintId: string, data: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
+      const isDuplicate = sprints.some(s => s.id !== sprintId && s.title.trim().toLowerCase() === data.title.trim().toLowerCase());
+      if (isDuplicate) {
+        console.warn("Duplicate sprint name not allowed:", data.title);
+        return false;
+      }
+
       const payload: any = { title: data.title, status: data.status, isCurrent: data.status === 'Current' };
+      if (data.sprintId) payload.sprintId = data.sprintId;
       payload.startDate = data.startDate ? Timestamp.fromDate(data.startDate) : null;
       payload.endDate = data.endDate ? Timestamp.fromDate(data.endDate) : null;
       

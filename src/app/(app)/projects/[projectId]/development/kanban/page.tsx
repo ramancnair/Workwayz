@@ -49,7 +49,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
-import { cn } from '@/lib/utils';
+import { cn, getSprintDisplayId } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -696,7 +696,7 @@ export default function KanbanPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col min-w-0 overflow-hidden">
-        <PageHeader title={`Kanban Board: ${currentSprint.title}`} description={`Move work items to change their status.`}>
+        <PageHeader title={`Kanban Board: [${getSprintDisplayId(currentSprint)}] ${currentSprint.title}`} description={`Move work items to change their status.`}>
           <div className="flex items-center gap-2">
             <div className="grid gap-2">
                 <Label htmlFor="view-by-filter">View</Label>

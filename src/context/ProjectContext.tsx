@@ -59,8 +59,8 @@ export interface ProjectContextType {
   deleteEpic: (epicId: string, deleteItems?: boolean) => Promise<boolean>;
 
   // Sprint actions
-  addSprint: (sprint: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }) => Promise<boolean>;
-  updateSprint: (sprintId: string, data: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }) => Promise<boolean>;
+  addSprint: (sprint: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }) => Promise<boolean>;
+  updateSprint: (sprintId: string, data: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }) => Promise<boolean>;
   deleteSprint: (sprintId: string) => Promise<boolean>;
 
   // Employee actions

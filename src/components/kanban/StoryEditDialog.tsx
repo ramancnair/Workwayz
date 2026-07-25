@@ -29,7 +29,7 @@ import { useProject } from '@/context/ProjectContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/datepicker';
-import { cn } from '@/lib/utils';
+import { cn, getSprintDisplayId } from '@/lib/utils';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Story, WorkItemType, StoryStatus, Priority, BugSeverity } from '@/types';
@@ -423,7 +423,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                                 <SelectContent>
                                                 <SelectItem value="backlog">Backlog</SelectItem>
                                                 {[...sprints].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })).map(sprint => (
-                                                    <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                                    <SelectItem key={sprint.id} value={sprint.id}>[{getSprintDisplayId(sprint)}] {sprint.title}</SelectItem>
                                                 ))}
                                                 </SelectContent>
                                             </Select>
@@ -904,9 +904,9 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                         <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
                                         <SelectContent>
                                         <SelectItem value="backlog">Backlog</SelectItem>
-                                        {sprints.map(sprint => (
-                                            <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                                        ))}
+                                         {sprints.map(sprint => (
+                                             <SelectItem key={sprint.id} value={sprint.id}>[{getSprintDisplayId(sprint)}] {sprint.title}</SelectItem>
+                                         ))}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />

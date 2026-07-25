@@ -32,7 +32,7 @@ import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown,
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getSprintDisplayId, generateNextSprintId } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -406,9 +406,12 @@ function SprintColumn({
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                     <h3 className="text-lg font-semibold">{sprint.title}</h3>
-                     {sprint.status === 'Current' && <Badge>Current</Badge>}
+                <div className="flex flex-col">
+                     <span className="text-xs font-mono text-muted-foreground">{getSprintDisplayId(sprint)}</span>
+                     <div className="flex items-center gap-2">
+                       <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                       {sprint.status === 'Current' && <Badge>Current</Badge>}
+                     </div>
                 </div>
                 <div className="flex items-center gap-1">
                     {showNav && (
@@ -775,9 +778,29 @@ export default function GroomingPage() {
         }
     }, [watchedStartDate, projectSettings?.sprintDurationInWeeks, sprintForm]);
     
+    const nextSprintId = useMemo(() => generateNextSprintId(sprints), [sprints]);
+    
     const handleSprintSubmit = async (values: z.infer<typeof sprintSchema>) => {
+        const trimmedTitle = values.title.trim();
+        const isDuplicate = sprints.some(s => 
+            s.title.trim().toLowerCase() === trimmedTitle.toLowerCase() &&
+            (!editingSprint || s.id !== editingSprint.id)
+        );
+
+        if (isDuplicate) {
+            toast({
+                variant: 'destructive',
+                title: 'Duplicate Sprint Name',
+                description: `A sprint named "${trimmedTitle}" already exists. Duplicate sprint names are not allowed.`
+            });
+            return;
+        }
+
+        const sprintId = editingSprint ? getSprintDisplayId(editingSprint) : nextSprintId;
+
         const payload = {
-            title: values.title,
+            sprintId,
+            title: trimmedTitle,
             startDate: values.startDate ? new Date(values.startDate) : undefined,
             endDate: values.endDate ? new Date(values.endDate) : undefined,
             status: values.status as SprintStatus | undefined,
@@ -1016,6 +1039,16 @@ export default function GroomingPage() {
                 </DialogHeader>
                 <Form {...sprintForm}>
                     <form onSubmit={sprintForm.handleSubmit(handleSprintSubmit)} className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="sprint-id-display">Sprint ID</Label>
+                            <Input
+                                id="sprint-id-display"
+                                value={editingSprint ? getSprintDisplayId(editingSprint) : nextSprintId}
+                                readOnly
+                                disabled
+                                className="bg-muted text-muted-foreground font-mono cursor-not-allowed"
+                            />
+                        </div>
                         <FormField
                             control={sprintForm.control}
                             name="title"

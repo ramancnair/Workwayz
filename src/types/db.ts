@@ -40,8 +40,8 @@ export interface DatabaseAdapter {
     deleteEpic(projectId: string, epicId: string, deleteItems?: boolean): Promise<boolean>;
 
     // Sprint actions
-    addSprint(projectId: string, sprint: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean>;
-    updateSprint(projectId: string, sprintId: string, data: { title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean>;
+    addSprint(projectId: string, sprint: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean>;
+    updateSprint(projectId: string, sprintId: string, data: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean>;
     deleteSprint(projectId: string, sprintId: string): Promise<boolean>;
 
     // Employee actions
