@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarNav } from '@/components/SidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 import { cn } from '@/lib/utils';
+import { Settings, Trash2 } from 'lucide-react';
 
 function ProjectLayoutContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -22,7 +23,9 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (!isLoading && project && (project.status === 'Initial Estimation' || project.status === 'Not Started')) {
       const allowedPaths = [
         `${basePath}/initial-estimation`,
+        `${basePath}/project-settings`,
         `${basePath}/settings`,
+        `${basePath}/project-trash`,
         `${basePath}/trash`,
         '/my-account'
       ];
@@ -38,7 +41,9 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (project.status === 'Initial Estimation' || project.status === 'Not Started') {
       const allowedPaths = [
         `${basePath}/initial-estimation`,
+        `${basePath}/project-settings`,
         `${basePath}/settings`,
+        `${basePath}/project-trash`,
         `${basePath}/trash`,
         '/my-account'
       ];
@@ -47,7 +52,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     return true;
   }, [project, isLoading, basePath, pathname]);
 
-  const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
+  const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
   const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/defect-tracker', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
@@ -69,8 +74,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (isGovernancePath) return 'governance';
     if (isHolidaysPath) return 'holidays';
     if (isPmoPath) return 'pmo';
-    if (pathname.startsWith(`${basePath}/settings`)) return 'settings';
-    if (pathname.startsWith(`${basePath}/trash`)) return 'trash';
+    if (pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`)) return 'settings';
+    if (pathname.startsWith(`${basePath}/project-trash`) || pathname.startsWith(`${basePath}/trash`)) return 'trash';
     if (pathname.startsWith('/my-account')) return 'my-account';
     return ''; // No active tab for settings
   };
@@ -95,20 +100,18 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     } else if (value === 'pmo') {
       router.push(`${basePath}/pmo/documents`);
     } else if (value === 'settings') {
-      router.push(`${basePath}/settings/board`);
+      router.push(`${basePath}/project-settings/board`);
     } else if (value === 'trash') {
-      router.push(`${basePath}/trash`);
+      router.push(`${basePath}/project-trash`);
     } else if (value === 'my-account') {
       router.push('/my-account');
     }
   };
 
   const dynamicTab = useMemo(() => {
-    if (pathname.startsWith(`${basePath}/settings`)) return { value: 'settings', label: 'Project Settings' };
-    if (pathname.startsWith(`${basePath}/trash`)) return { value: 'trash', label: 'Project Trash' };
     if (pathname.startsWith('/my-account')) return { value: 'my-account', label: 'Profile & Account' };
     return null;
-  }, [pathname, basePath]);
+  }, [pathname]);
 
   const { open, setOpen } = useSidebarPersistedState();
 
@@ -122,11 +125,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
     return (
       <>
-        <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-3 border-b border-border flex flex-col xl:flex-row xl:items-center justify-between gap-4 overflow-hidden shrink-0">
-          <div className="flex-shrink-0">
-            <h1 className="text-xl font-bold leading-tight">{project?.name || 'Loading Project...'}</h1>
-            <p className="text-xs text-muted-foreground">{project?.id}</p>
-          </div>
+        <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4 overflow-hidden shrink-0">
           <div className="overflow-x-auto max-w-full py-1 -my-1 shrink-0">
             <Tabs value={getTabValue()} onValueChange={onTabChange} className="w-auto">
               <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 flex whitespace-nowrap w-max">
@@ -149,6 +148,14 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                     <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
                     <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
                     <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
+                    <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+                      <Settings className="h-4 w-4" />
+                      <span>Project Settings</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="trash" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+                      <Trash2 className="h-4 w-4" />
+                      <span>Project Trash</span>
+                    </TabsTrigger>
                   </>
                 )}
                 {dynamicTab && (
@@ -158,6 +165,10 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                 )}
               </TabsList>
             </Tabs>
+          </div>
+          <div className="flex-shrink-0 text-right hidden sm:block">
+            <h1 className="text-base font-bold leading-tight truncate max-w-[250px] md:max-w-[350px]">{project?.name || 'Loading Project...'}</h1>
+            <p className="text-xs text-muted-foreground font-mono">{project?.id}</p>
           </div>
         </div>
         <div className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col">

@@ -341,17 +341,17 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const settingsMenuItems = [
     {
-      href: `${basePath}/settings/board`,
+      href: `${basePath}/project-settings/board`,
       label: "Board Settings",
       icon: KanbanSquare,
     },
     {
-      href: `${basePath}/settings/sprint`,
+      href: `${basePath}/project-settings/sprint`,
       label: "Sprint Settings",
       icon: Settings,
     },
     {
-      href: `${basePath}/settings/effort`,
+      href: `${basePath}/project-settings/effort`,
       label: "Effort Settings",
       icon: Hourglass,
     }
@@ -363,7 +363,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
-  const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
+  const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = ['/pmo/documents', '/pmo/fb-payment-milestones', '/pmo/tnm-payment-milestones', '/pmo/business-continuity', '/pmo/fb-billing', '/pmo/tnm-billing'].some(p => pathname.startsWith(basePath + p));
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
@@ -446,24 +446,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
           </div>
         </div>
         <Separator className="my-2 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:my-0 bg-sidebar-border" />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <Link href={`${basePath}/trash`}>
-              <SidebarMenuButton tooltip="Project Trash" isActive={pathname.startsWith(`${basePath}/trash`)}>
-                <Trash2 />
-                <span>Project Trash</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <Link href={`${basePath}/settings`}>
-              <SidebarMenuButton tooltip="Project Settings" isActive={pathname.startsWith(`${basePath}/settings`)}>
-                <Settings />
-                <span>Project Settings</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">

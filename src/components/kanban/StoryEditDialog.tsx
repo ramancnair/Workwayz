@@ -170,17 +170,17 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
     label: `[${s.storyId}] ${s.title}`
-  })), [parentStories]);
+  })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })), [parentStories]);
 
   const testCaseOptions = useMemo(() => testCases.map(tc => ({
     value: tc.id,
     label: `[${tc.testCaseId}] ${tc.title}`,
-  })), [testCases]);
+  })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })), [testCases]);
 
   const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
     value: b.id,
     label: `[${b.storyId}] ${b.title}`,
-  })), [stories]);
+  })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })), [stories]);
 
 
   useEffect(() => {
@@ -351,7 +351,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                             <FormItem><FormLabel>Impacted System</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{[...impactedSystems].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             <FormMessage/></FormItem>
                                         )}/>
@@ -362,7 +362,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -422,7 +422,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="backlog">Backlog</SelectItem>
-                                                {sprints.map(sprint => (
+                                                {[...sprints].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })).map(sprint => (
                                                     <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
                                                 ))}
                                                 </SelectContent>
@@ -437,7 +437,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {releases.map(release => (
+                                                {[...releases].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(release => (
                                                     <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
                                                 ))}
                                                 </SelectContent>
@@ -566,7 +566,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                               <FormItem>
                                 <FormLabel>Impacted Systems</FormLabel>
                                 <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
-                                  {impactedSystems.map((system) => (
+                                  {[...impactedSystems].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map((system) => (
                                     <FormField
                                       key={system.id}
                                       control={editStoryForm.control}
@@ -647,7 +647,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                     </FormControl>
                                     <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {epics.map((epic) => (
+                                    {[...epics].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })).map((epic) => (
                                         <SelectItem key={epic.id} value={epic.id}>
                                         {epic.title}
                                         </SelectItem>
@@ -674,7 +674,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                         </FormControl>
                                         <SelectContent>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users.map(emp => (
+                                        {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
                                             <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                                         ))}
                                         </SelectContent>

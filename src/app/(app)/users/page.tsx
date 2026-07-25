@@ -595,7 +595,7 @@ export default function UsersPage() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Access Levels</SelectItem>
-                        {accessLevels.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                        {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
                     </SelectContent>
                 </Select>
                 <Button variant="ghost" onClick={clearFilters}>
@@ -750,7 +750,7 @@ export default function UsersPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {accessLevels.map(level => (
+                            {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => (
                               <SelectItem key={level} value={level}>{level}</SelectItem>
                             ))}
                           </SelectContent>

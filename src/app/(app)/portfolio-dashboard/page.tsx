@@ -261,7 +261,7 @@ export default function PortfolioDashboardPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Portfolios</SelectItem>
-            {portfolios.map(p => (
+            {[...portfolios].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(p => (
                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
           </SelectContent>

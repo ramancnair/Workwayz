@@ -332,24 +332,6 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       </SidebarContent>
       <SidebarFooter className="p-2 transition-all duration-300">
         <Separator className="my-2 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:my-0 bg-sidebar-border" />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <Link href="/trash">
-              <SidebarMenuButton tooltip="Trash" isActive={pathname.startsWith(`/trash`)}>
-                <Trash2 />
-                <span>Trash</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <Link href="/portfolio-settings">
-              <SidebarMenuButton tooltip="Portfolio Settings" isActive={pathname.startsWith(`/portfolio-settings`)}>
-                <Settings />
-                <span>Portfolio Settings</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">
