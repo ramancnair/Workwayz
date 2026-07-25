@@ -1294,11 +1294,17 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
             ) + 1
             : 1;
 
+        const parseDate = (dStr: any) => {
+            if (!dStr) return null;
+            const d = new Date(dStr);
+            return isNaN(d.getTime()) ? null : d.toISOString();
+        };
+
         const payload = {
             ...plan,
             testPlanId: `TP-${newIdNumber}`,
-            startDate: new Date(plan.startDate).toISOString(),
-            endDate: new Date(plan.endDate).toISOString(),
+            startDate: parseDate(plan.startDate),
+            endDate: parseDate(plan.endDate),
         };
         await addDoc(collection(db, 'projects', projectId, 'testPlans'), sanitizeForFirestore(payload));
         return true;
@@ -1311,9 +1317,14 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   const updateTestPlan = async (id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId'>>) => {
     if (!db || !projectId) return false;
     try {
+      const parseDate = (dStr: any) => {
+          if (!dStr) return null;
+          const d = new Date(dStr);
+          return isNaN(d.getTime()) ? null : d.toISOString();
+      };
       const payload = { ...data };
-      if (data.startDate) payload.startDate = new Date(data.startDate).toISOString();
-      if (data.endDate) payload.endDate = new Date(data.endDate).toISOString();
+      if (data.startDate !== undefined) payload.startDate = parseDate(data.startDate);
+      if (data.endDate !== undefined) payload.endDate = parseDate(data.endDate);
       await updateDoc(doc(db, 'projects', projectId, 'testPlans', id), sanitizeForFirestore(payload));
       return true;
     } catch (e) {

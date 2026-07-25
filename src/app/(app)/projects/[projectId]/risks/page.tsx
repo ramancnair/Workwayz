@@ -251,7 +251,7 @@ export default function RisksPage() {
                         aria-label="Select all"
                     />
                 </TableHead>
-                <TableHead>ID</TableHead>
+                <TableHead className="whitespace-nowrap">ID</TableHead>
                 <TableHead className="w-[30%]">Description</TableHead>
                 <TableHead>Severity</TableHead>
                 <TableHead>Probability</TableHead>
@@ -278,7 +278,7 @@ export default function RisksPage() {
                                 aria-label="Select row"
                             />
                         </TableCell>
-                        <TableCell className="font-medium">{risk.riskId}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">{risk.riskId}</TableCell>
                         <TableCell className="break-words">{risk.description}</TableCell>
                         <TableCell>{severityOptions.find(o => o.value === risk.severity)?.label}</TableCell>
                         <TableCell>{probabilityOptions.find(o => o.value === risk.probability)?.label}</TableCell>
