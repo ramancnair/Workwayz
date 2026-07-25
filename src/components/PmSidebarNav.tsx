@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { usePermissions } from "@/hooks/use-permissions";
 import { SetupWizard } from "@/components/SetupWizard";
 import { 
   SidebarContent,
@@ -278,8 +279,11 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     }
   }
 
+  const { hasAccess } = usePermissions();
   const activeGroup = getGroupForTab(activeTab);
-  const menuItems = allMenuItems.filter(item => item.group === activeGroup);
+  const menuItems = allMenuItems
+    .filter(item => item.group === activeGroup)
+    .filter(item => hasAccess(item.label));
 
   return (
     <>

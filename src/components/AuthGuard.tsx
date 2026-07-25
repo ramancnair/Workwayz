@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { ShieldAlert } from 'lucide-react';
+import { db, doc, onSnapshot } from '@/lib/db-provider';
+import { getPageNameForRoute, hasPagePermission } from '@/lib/permissions';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -99,6 +102,11 @@ function ResetPasswordScreen({ user, onComplete }: { user: any; onComplete: () =
       return;
     }
 
+    if (newPassword === 'P@ssw0rd' || newPassword.toLowerCase() === 'p@ssw0rd') {
+      setError('New password cannot be the same as the default password (P@ssw0rd). Please enter a new password.');
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -183,12 +191,43 @@ function ResetPasswordScreen({ user, onComplete }: { user: any; onComplete: () =
   );
 }
 
+function AccessDeniedScreen({ pageName, onGoHome }: { pageName: string; onGoHome: () => void }) {
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md bg-card text-card-foreground shadow-xl rounded-xl border border-border p-6 text-center space-y-4">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold tracking-tight">Access Denied</h2>
+          <p className="text-sm text-muted-foreground">
+            You do not have permission to view the <span className="font-semibold text-foreground">{pageName}</span> page.
+          </p>
+          <p className="text-xs text-muted-foreground/80">
+            If you believe this is an error, please contact your system administrator to update your role permissions.
+          </p>
+        </div>
+        <div className="pt-2">
+          <button
+            onClick={onGoHome}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6 py-2 w-full cursor-pointer"
+          >
+            Go to My Projects
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [needsReset, setNeedsReset] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
+  const [customPageAccess, setCustomPageAccess] = useState<Record<string, boolean> | null>(null);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   useEffect(() => {
     const isPublicPath =
@@ -223,7 +262,36 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [router, pathname, isAuthenticated]);
 
-  if (isAuthenticated === null) {
+  useEffect(() => {
+    if (!sessionUser?.accessLevel || sessionUser.accessLevel === 'Administrator' || !db) {
+      setAccessChecked(true);
+      return;
+    }
+
+    setAccessChecked(false);
+    const docRef = doc(db, 'accessControl', sessionUser.accessLevel);
+    const unsubscribe = onSnapshot(
+      docRef,
+      (snapshot: any) => {
+        if (snapshot.exists()) {
+          setCustomPageAccess(snapshot.data()?.pageAccess || {});
+        } else {
+          setCustomPageAccess({});
+        }
+        setAccessChecked(true);
+      },
+      (err: any) => {
+        console.warn('[AuthGuard] Error listening to accessControl:', err);
+        setAccessChecked(true);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [sessionUser?.accessLevel]);
+
+  const isPublicPath = pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname === '/setup-wizard';
+
+  if (isAuthenticated === null || (isAuthenticated && !isPublicPath && !accessChecked && sessionUser?.accessLevel !== 'Administrator')) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -231,13 +299,19 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isPublicPath = pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname === '/setup-wizard';
   if (!isAuthenticated && !isPublicPath) {
     return null;
   }
 
   if (needsReset && !isPublicPath) {
     return <ResetPasswordScreen user={sessionUser} onComplete={() => setNeedsReset(false)} />;
+  }
+
+  const requiredPageName = getPageNameForRoute(pathname);
+  const isPermissionAllowed = !requiredPageName || hasPagePermission(sessionUser?.accessLevel, requiredPageName, customPageAccess);
+
+  if (isAuthenticated && !isPublicPath && accessChecked && !isPermissionAllowed) {
+    return <AccessDeniedScreen pageName={requiredPageName || 'Requested'} onGoHome={() => router.push('/my-projects')} />;
   }
 
   return <>{children}</>;

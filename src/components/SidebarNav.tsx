@@ -4,6 +4,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { usePermissions } from "@/hooks/use-permissions";
+import { getPageNameForRoute } from "@/lib/permissions";
 import {
   SidebarContent,
   SidebarHeader,
@@ -369,7 +371,9 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
 
-  const menuItems = isSettingsPath ? settingsMenuItems
+  const { hasAccess } = usePermissions();
+
+  const rawMenuItems = isSettingsPath ? settingsMenuItems
     : isTestingPath ? testMenuItems
       : isProjectPath ? projectMenuItems
         : isInitialEstimationPath ? initialEstimationMenuItems
@@ -380,6 +384,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
                   : isPmoPath ? pmoMenuItems
                     : isDevelopmentPath ? devMenuItems
                       : devMenuItems;
+
+  const menuItems = rawMenuItems.filter(item => {
+    const pageName = getPageNameForRoute(item.href);
+    return hasAccess(pageName || item.label);
+  });
 
   return (
     <>

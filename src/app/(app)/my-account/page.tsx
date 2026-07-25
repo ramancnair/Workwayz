@@ -51,6 +51,11 @@ export default function MyAccountPage() {
       return;
     }
 
+    if (newPassword === 'P@ssw0rd' || newPassword.toLowerCase() === 'p@ssw0rd') {
+      setPasswordError('New password cannot be the same as the default password (P@ssw0rd). Please choose a different password.');
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwords do not match.');
       return;

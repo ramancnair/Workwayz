@@ -10,12 +10,14 @@ import { SidebarNav } from '@/components/SidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 import { cn } from '@/lib/utils';
 import { Settings, Trash2 } from 'lucide-react';
+import { usePermissions } from '@/hooks/use-permissions';
 
 function ProjectLayoutContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
   const { projectId } = useParams() as { projectId: string };
   const { project, isLoading } = useProject();
+  const { hasAccess } = usePermissions();
 
   const basePath = `/projects/${projectId}`;
 
@@ -129,33 +131,55 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
           <div className="overflow-x-auto max-w-full py-1 -my-1 shrink-0">
             <Tabs value={getTabValue()} onValueChange={onTabChange} className="w-auto">
               <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 flex whitespace-nowrap w-max">
-                <TabsTrigger 
-                  value="initial-estimation" 
-                  className={cn(
-                    "data-[state=active]:bg-background data-[state=active]:text-foreground",
-                    showInitialTabsOnly && !dynamicTab && "pointer-events-none cursor-default"
-                  )}
-                >
-                  Initial Estimation
-                </TabsTrigger>
+                {(hasAccess('Specifications (Initial Estimation)') || hasAccess('Project Status (Initial Estimation)')) && (
+                  <TabsTrigger 
+                    value="initial-estimation" 
+                    className={cn(
+                      "data-[state=active]:bg-background data-[state=active]:text-foreground",
+                      showInitialTabsOnly && !dynamicTab && "pointer-events-none cursor-default"
+                    )}
+                  >
+                    Initial Estimation
+                  </TabsTrigger>
+                )}
                 {!showInitialTabsOnly && (
                   <>
-                    <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
-                    <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
-                    <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
-                    <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
-                    <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
-                    <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
-                    <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
-                    <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
-                    <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
-                      <Settings className="h-4 w-4" />
-                      <span>Project Settings</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="trash" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
-                      <Trash2 className="h-4 w-4" />
-                      <span>Project Trash</span>
-                    </TabsTrigger>
+                    {(hasAccess('Project Status') || hasAccess('PM Dashboard') || hasAccess('Specifications')) && (
+                      <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
+                    )}
+                    {(hasAccess('Project Resources') || hasAccess('Worklog') || hasAccess('Resource Workload') || hasAccess('Project Gantt')) && (
+                      <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
+                    )}
+                    {hasAccess('Project Releases') && (
+                      <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
+                    )}
+                    {(hasAccess('Development Dashboard') || hasAccess('Product Backlog') || hasAccess('Grooming') || hasAccess('Kanban Board') || hasAccess('Sub-Tasks') || hasAccess('Defect Tracker')) && (
+                      <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
+                    )}
+                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Plan') || hasAccess('Defects')) && (
+                      <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
+                    )}
+                    {(hasAccess('RAID Dashboard') || hasAccess('Risks') || hasAccess('Assumptions') || hasAccess('Issues') || hasAccess('Dependencies')) && (
+                      <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
+                    )}
+                    {(hasAccess('Project Holiday Calendar') || hasAccess('Leave Calendar')) && (
+                      <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                    )}
+                    {(hasAccess('PMO Documents') || hasAccess('PMO FB Billing') || hasAccess('PMO FB Payment Milestones') || hasAccess('PMO TnM Billing') || hasAccess('PMO TnM Payment Milestones') || hasAccess('Business Continuity')) && (
+                      <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
+                    )}
+                    {(hasAccess('Board Settings') || hasAccess('Sprint Settings') || hasAccess('Effort Settings')) && (
+                      <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+                        <Settings className="h-4 w-4" />
+                        <span>Project Settings</span>
+                      </TabsTrigger>
+                    )}
+                    {hasAccess('Project Trash') && (
+                      <TabsTrigger value="trash" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+                        <Trash2 className="h-4 w-4" />
+                        <span>Project Trash</span>
+                      </TabsTrigger>
+                    )}
                   </>
                 )}
                 {dynamicTab && (
