@@ -211,14 +211,22 @@ export default function ResourceBillingPage() {
   };
 
   const handleFixedCostChange = (id: string, field: 'name' | 'cost' | 'type', value: any) => {
+    if (field === 'cost') {
+      const numericCost = Math.round((parseFloat(value) || 0) * 100) / 100;
+      if (numericCost <= 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Cost must be greater than 0.' });
+        return;
+      }
+      value = numericCost;
+    }
     const updateData: Partial<FixedCost> = { [field]: value };
     updateFixedCost(id, updateData);
   };
 
   const handleAddNewFixedCost = async () => {
     const numericCost = Math.round((parseFloat(newCostValue) || 0) * 100) / 100;
-    if (!newCostName.trim() || numericCost < 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and cost.' });
+    if (!newCostName.trim() || isNaN(parseFloat(newCostValue)) || numericCost <= 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and a cost greater than 0.' });
       return;
     }
     const isDuplicate = fixedCosts.some(
@@ -250,8 +258,8 @@ export default function ResourceBillingPage() {
   const handleEditFixedCost = async () => {
     if (!editingCostItem) return;
     const numericCost = Math.round((parseFloat(editCostValue) || 0) * 100) / 100;
-    if (!editCostName.trim() || numericCost < 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and cost.' });
+    if (!editCostName.trim() || isNaN(parseFloat(editCostValue)) || numericCost <= 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and a cost greater than 0.' });
       return;
     }
     const isDuplicate = fixedCosts.some(

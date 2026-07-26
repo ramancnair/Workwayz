@@ -487,7 +487,7 @@ export default function BacklogPage() {
 
   const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
     value: b.id,
-    label: `[${b.storyId}] {b.title}`,
+    label: `[${b.storyId}] ${b.title}`,
   })), [stories]);
 
   const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && s.itemType !== 'Sub Task').map(s => ({

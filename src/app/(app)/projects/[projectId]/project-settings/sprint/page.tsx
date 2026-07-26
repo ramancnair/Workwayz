@@ -13,7 +13,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const sprintSettingsSchema = z.object({
-    sprintDurationInWeeks: z.coerce.number().min(1, 'Duration must be at least 1 week.').max(8, 'Duration cannot exceed 8 weeks.'),
+    sprintDurationInWeeks: z.coerce.number()
+      .int('Sprint duration must be a whole number of weeks (e.g. 1, 2, 3).')
+      .min(1, 'Duration must be at least 1 week.')
+      .max(8, 'Duration cannot exceed 8 weeks.'),
     sprintStartDay: z.coerce.number().min(0).max(6),
 });
 
@@ -71,7 +74,14 @@ export default function SprintSettingsPage() {
                               <FormItem>
                                   <FormLabel>Sprint Duration (in weeks)</FormLabel>
                                   <FormControl>
-                                      <Input type="number" {...field} />
+                                      <Input 
+                                        type="number" 
+                                        step="1" 
+                                        min="1" 
+                                        max="8" 
+                                        placeholder="2"
+                                        {...field} 
+                                      />
                                   </FormControl>
                                   <FormMessage />
                               </FormItem>

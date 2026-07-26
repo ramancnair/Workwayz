@@ -20,7 +20,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown, Search, ExternalLink } from 'lucide-react';
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan, TestPlanTestCase } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +78,8 @@ const testCaseFormSchema = z.object({
   status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
   assigneeId: z.string().optional(),
   executionDate: z.string().optional(),
+  effortHours: z.string().optional(),
+  attachments: z.string().optional(),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -137,7 +139,10 @@ export default function TestPlanPage() {
   const watchedSprintId = useWatch({ control: testPlanForm.control, name: 'sprintId' });
   const watchedReleaseId = useWatch({ control: testPlanForm.control, name: 'releaseId' });
 
-  const [sorting, setSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
+  const [backlogSorting, setBacklogSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
+  const [planSorting, setPlanSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
+  const [backlogSearchQuery, setBacklogSearchQuery] = useState('');
+  const [backlogSprintFilter, setBacklogSprintFilter] = useState<string>('all');
 
   useEffect(() => {
     const sprint = sprints.find(s => s.id === watchedSprintId);
@@ -220,6 +225,8 @@ export default function TestPlanPage() {
         status: editingTestCase.status || 'Not Run',
         assigneeId: editingTestCase.assigneeId || 'unassigned',
         executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
+        effortHours: editingTestCase.effortHours !== undefined ? String(editingTestCase.effortHours) : '',
+        attachments: editingTestCase.attachments || '',
       });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
@@ -243,6 +250,8 @@ export default function TestPlanPage() {
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     if (!editingTestCase || !selectedPlanId) return;
 
+    const parsedEffort = values.effortHours ? parseFloat(values.effortHours) : undefined;
+
     const updateData: Partial<TestPlanTestCase> = {
       title: values.title,
       type: values.type,
@@ -251,6 +260,8 @@ export default function TestPlanPage() {
       status: values.status,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
+      effortHours: parsedEffort !== undefined && !isNaN(parsedEffort) ? Math.max(0, parsedEffort) : undefined,
+      attachments: values.attachments,
     };
 
     const success = await updateTestPlanTestCase(selectedPlanId, editingTestCase.id, updateData);
@@ -345,6 +356,24 @@ export default function TestPlanPage() {
     // Backlog: all non-deleted test cases from the backlog
     let backlogTCs = testCases.filter(tc => !tc.isDeleted);
 
+    // Apply Search Query Filter (ID or Title)
+    if (backlogSearchQuery.trim()) {
+      const q = backlogSearchQuery.trim().toLowerCase();
+      backlogTCs = backlogTCs.filter(tc => 
+        (tc.testCaseId && tc.testCaseId.toLowerCase().includes(q)) ||
+        (tc.title && tc.title.toLowerCase().includes(q))
+      );
+    }
+
+    // Apply Sprint Filter
+    if (backlogSprintFilter !== 'all') {
+      if (backlogSprintFilter === 'unassigned') {
+        backlogTCs = backlogTCs.filter(tc => !tc.sprintId);
+      } else {
+        backlogTCs = backlogTCs.filter(tc => tc.sprintId === backlogSprintFilter);
+      }
+    }
+
     // Day TCs: filter plan copies by execution date
     let dayTCs: TestPlanTestCase[] = [];
     if (selectedPlan) {
@@ -353,38 +382,48 @@ export default function TestPlanPage() {
       });
     }
 
-    if (sorting) {
-      const sortKey = sorting.id as string;
-      const sortFn = (a: any, b: any) => {
-        let valA, valB;
-        if (sortKey === 'status') {
-          valA = a.status || 'Not Run';
-          valB = b.status || 'Not Run';
-        } else {
-          valA = a[sortKey];
-          valB = b[sortKey];
-        }
+    const sortFn = (sortObj: { id: string; desc: boolean | null } | null) => (a: any, b: any) => {
+      if (!sortObj || sortObj.desc === null) return 0;
+      const sortKey = sortObj.id as string;
+      let valA, valB;
+      if (sortKey === 'status') {
+        valA = a.status || 'Not Run';
+        valB = b.status || 'Not Run';
+      } else if (sortKey === 'sprintId') {
+        const sprintA = sprints.find(s => s.id === a.sprintId);
+        const sprintB = sprints.find(s => s.id === b.sprintId);
+        valA = sprintA?.title || 'Backlog';
+        valB = sprintB?.title || 'Backlog';
+      } else {
+        valA = a[sortKey];
+        valB = b[sortKey];
+      }
 
-        if (valA === null || valA === undefined) return 1;
-        if (valB === null || valB === undefined) return -1;
+      if (valA === null || valA === undefined) return 1;
+      if (valB === null || valB === undefined) return -1;
 
-        let comparison = 0;
-        if (typeof valA === 'string' && typeof valB === 'string') {
-          comparison = valA.localeCompare(valB, undefined, { numeric: true });
-        } else if (valA > valB) {
-          comparison = 1;
-        } else if (valA < valB) {
-          comparison = -1;
-        }
+      let comparison = 0;
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        comparison = valA.localeCompare(valB, undefined, { numeric: true });
+      } else if (valA > valB) {
+        comparison = 1;
+      } else if (valA < valB) {
+        comparison = -1;
+      }
 
-        return sorting.desc ? -comparison : comparison;
-      };
-      backlogTCs.sort(sortFn);
-      dayTCs.sort(sortFn);
+      return sortObj.desc ? -comparison : comparison;
+    };
+
+    if (backlogSorting && backlogSorting.desc !== null) {
+      backlogTCs = [...backlogTCs].sort(sortFn(backlogSorting));
+    }
+
+    if (planSorting && planSorting.desc !== null) {
+      dayTCs = [...dayTCs].sort(sortFn(planSorting));
     }
 
     return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
-  }, [selectedPlan, testCases, planTestCases, currentExecutionDay, sorting]);
+  }, [selectedPlan, testCases, planTestCases, currentExecutionDay, backlogSorting, planSorting, backlogSearchQuery, backlogSprintFilter, sprints]);
 
 
   const planDays = useMemo(() => {
@@ -405,8 +444,19 @@ export default function TestPlanPage() {
     }
   };
 
-  const handleSort = (columnId: string) => {
-    setSorting(current => {
+  const handleBacklogSort = (columnId: string) => {
+    setBacklogSorting(current => {
+      if (current?.id === columnId) {
+        if (current.desc === false) return { id: columnId, desc: true };
+        if (current.desc === true) return { id: columnId, desc: null };
+        return null;
+      }
+      return { id: columnId, desc: false };
+    });
+  };
+
+  const handlePlanSort = (columnId: string) => {
+    setPlanSorting(current => {
       if (current?.id === columnId) {
         if (current.desc === false) return { id: columnId, desc: true };
         if (current.desc === true) return { id: columnId, desc: null };
@@ -421,13 +471,23 @@ export default function TestPlanPage() {
     setIsTestCaseDialogOpen(true);
   };
 
-  const SortableHeader = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => {
-    const isSorting = sorting?.id === columnId;
-    const sortIcon = isSorting ? (<ArrowUpDown className="h-4 w-4" />) : (<ChevronsUpDown className="h-4 w-4 text-muted-foreground" />);
+  const SortableHeader = ({ 
+    columnId, 
+    children, 
+    sortState, 
+    onSort 
+  }: { 
+    columnId: string; 
+    children: React.ReactNode;
+    sortState: { id: string; desc: boolean | null } | null;
+    onSort: (columnId: string) => void;
+  }) => {
+    const isSorting = sortState?.id === columnId && sortState.desc !== null;
+    const sortIcon = isSorting ? (<ArrowUpDown className="h-4 w-4 text-primary" />) : (<ChevronsUpDown className="h-4 w-4 text-muted-foreground opacity-60" />);
 
     return (
       <TableHead>
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleSort(columnId)}>
+        <div className="flex items-center gap-2 cursor-pointer select-none hover:text-foreground" onClick={() => onSort(columnId)}>
           <span>{children}</span>
           {sortIcon}
         </div>
@@ -455,9 +515,9 @@ export default function TestPlanPage() {
 
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
         {/* Left Column: Backlog */}
-        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-bold text-lg">Test Case Backlog ({backlog.length})</h3>
+        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col space-y-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <h3 className="font-bold text-lg whitespace-nowrap">Test Case Backlog ({backlog.length})</h3>
             <Button
               size="sm"
               onClick={handleBulkMoveToTP}
@@ -466,6 +526,40 @@ export default function TestPlanPage() {
               Move to TP
             </Button>
           </div>
+
+          {/* Filters for Backlog */}
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by ID or Title..."
+                value={backlogSearchQuery}
+                onChange={(e) => setBacklogSearchQuery(e.target.value)}
+                className="pl-8 h-9 text-xs"
+              />
+              {backlogSearchQuery && (
+                <button
+                  onClick={() => setBacklogSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <Select value={backlogSprintFilter} onValueChange={setBacklogSprintFilter}>
+              <SelectTrigger className="w-full sm:w-[150px] h-9 text-xs">
+                <SelectValue placeholder="All Sprints" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sprints</SelectItem>
+                <SelectItem value="unassigned">Backlog / Unassigned</SelectItem>
+                {sprints.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="border rounded-lg flex-1 flex flex-col min-h-0">
             <div className="overflow-y-auto">
               <Table>
@@ -477,9 +571,9 @@ export default function TestPlanPage() {
                         checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
                       />
                     </TableHead>
-                    <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                    <SortableHeader columnId="title">Title</SortableHeader>
-                    <SortableHeader columnId="sprintId">Sprint</SortableHeader>
+                    <SortableHeader columnId="testCaseId" sortState={backlogSorting} onSort={handleBacklogSort}>ID</SortableHeader>
+                    <SortableHeader columnId="title" sortState={backlogSorting} onSort={handleBacklogSort}>Title</SortableHeader>
+                    <SortableHeader columnId="sprintId" sortState={backlogSorting} onSort={handleBacklogSort}>Sprint</SortableHeader>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -548,9 +642,10 @@ export default function TestPlanPage() {
                           checked={tcsForCurrentDay.length > 0 && selectedScheduledTCs.length === tcsForCurrentDay.length}
                         />
                       </TableHead>
-                      <SortableHeader columnId="testCaseId">ID</SortableHeader>
-                      <SortableHeader columnId="title">Title</SortableHeader>
-                      <SortableHeader columnId="status">Status</SortableHeader>
+                      <SortableHeader columnId="testCaseId" sortState={planSorting} onSort={handlePlanSort}>ID</SortableHeader>
+                      <SortableHeader columnId="title" sortState={planSorting} onSort={handlePlanSort}>Title</SortableHeader>
+                      <SortableHeader columnId="status" sortState={planSorting} onSort={handlePlanSort}>Status</SortableHeader>
+                      <SortableHeader columnId="effortHours" sortState={planSorting} onSort={handlePlanSort}>Effort (h)</SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -570,6 +665,7 @@ export default function TestPlanPage() {
                           </TableCell>
                           <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
                           <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{tc.effortHours !== undefined ? `${tc.effortHours} hrs` : '-'}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -770,7 +866,7 @@ export default function TestPlanPage() {
                     />
                   </FormItem>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField control={testCaseForm.control} name="executionDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Execution Date</FormLabel>
@@ -790,9 +886,66 @@ export default function TestPlanPage() {
                       className="bg-muted"
                       placeholder="Auto-set when Passed"
                     />
-                    <p className="text-xs text-muted-foreground">Auto-set when status is &quot;Passed&quot;</p>
+                    <p className="text-[11px] text-muted-foreground">Auto-set when status is &quot;Passed&quot;</p>
                   </FormItem>
+                  <FormField control={testCaseForm.control} name="effortHours" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Effort (Hours)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="E.g., 1.5"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => {
+                            let val = e.target.value;
+                            if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
+                              field.onChange(val);
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <p className="text-[11px] text-muted-foreground">Execution time in hours</p>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
+
+                <FormField control={testCaseForm.control} name="attachments" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Screenshot & Document Links (URLs)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Paste URLs here (one URL per line or separated by commas)&#10;https://example.com/screenshot.png&#10;https://drive.google.com/doc..."
+                        {...field}
+                        rows={3}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">Enter links to screenshots, logs, or document evidence.</p>
+                    {field.value && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {field.value
+                          .split(/[\n,\s]+/)
+                          .map(url => url.trim())
+                          .filter(url => url.startsWith('http://') || url.startsWith('https://'))
+                          .map((url, idx) => (
+                            <a
+                              key={idx}
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary hover:underline px-2 py-1 rounded border border-primary/20"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              <span>Link {idx + 1}</span>
+                            </a>
+                          ))}
+                      </div>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )} />
               </div>
               <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit">Save Changes</Button>
