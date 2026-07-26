@@ -13,9 +13,15 @@ import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 
 const effortSettingsSchema = z.object({
-    manMonthToDays: z.coerce.number().min(1, 'Value must be at least 1.'),
-    manDayToHours: z.coerce.number().min(1, 'Value must be at least 1.'),
-    storyPointToHours: z.coerce.number().min(1, 'Value must be at least 1.'),
+    manMonthToDays: z.coerce.number()
+      .min(1, 'Man-Month must be at least 1 day.')
+      .max(31, 'Man-Month cannot exceed 31 days.'),
+    manDayToHours: z.coerce.number()
+      .min(1, 'Man-Day must be at least 1 hour.')
+      .max(24, 'Man-Day cannot exceed 24 hours.'),
+    storyPointToHours: z.coerce.number()
+      .min(1, 'Story Point must be at least 1 hour.')
+      .max(100, 'Story Point cannot exceed 100 hours.'),
 });
 
 export default function EffortSettingsPage() {
@@ -65,7 +71,7 @@ export default function EffortSettingsPage() {
                               <FormControl>
                                   <div className="flex items-center gap-2">
                                       <span>1 Man-Month =</span>
-                                      <Input type="number" className="w-24" {...field} />
+                                      <Input type="number" min="1" max="31" className="w-24" {...field} />
                                       <span>Man-Days</span>
                                   </div>
                               </FormControl>
@@ -82,7 +88,7 @@ export default function EffortSettingsPage() {
                               <FormControl>
                                   <div className="flex items-center gap-2">
                                       <span>1 Man-Day =</span>
-                                      <Input type="number" className="w-24" {...field} />
+                                      <Input type="number" min="1" max="24" className="w-24" {...field} />
                                       <span>Man-Hours</span>
                                   </div>
                               </FormControl>
@@ -110,7 +116,7 @@ export default function EffortSettingsPage() {
                     <FormControl>
                       <div className="flex items-center gap-2">
                         <span>1 Story Point =</span>
-                        <Input type="number" className="w-24" {...field} />
+                        <Input type="number" min="1" max="100" className="w-24" {...field} />
                         <span>Hours</span>
                       </div>
                     </FormControl>

@@ -72,9 +72,13 @@ import {
 import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { usePermissions } from '@/hooks/use-permissions';
 import { z } from 'zod';
 
 export default function WorklogPage() {
+  const { userRole } = usePermissions();
+  const isAdmin = userRole === 'Administrator';
+
   const {
     employees,
     stories,
@@ -85,6 +89,29 @@ export default function WorklogPage() {
     isLoading,
   } = useProject();
   const { toast } = useToast();
+
+  const currentUser = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const userStr = localStorage.getItem('projectflow_user');
+    if (!userStr) return null;
+    try {
+      return JSON.parse(userStr);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const currentEmployee = useMemo(() => {
+    if (!currentUser || employees.length === 0) return null;
+    return (
+      employees.find(
+        (e) =>
+          (e.id && currentUser.empId && e.id.toLowerCase() === currentUser.empId.toLowerCase()) ||
+          (e.email && currentUser.email && e.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+          (`${e.firstName} ${e.lastName}`.trim().toLowerCase() === currentUser.name?.trim().toLowerCase())
+      ) || null
+    );
+  }, [employees, currentUser]);
 
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
     null
@@ -138,10 +165,14 @@ export default function WorklogPage() {
   }, [stories]);
 
   useEffect(() => {
-    if (employees.length > 0 && !selectedEmployee) {
-      setSelectedEmployee(employees[0]);
+    if (employees.length === 0) return;
+
+    if (!isAdmin && currentEmployee) {
+      setSelectedEmployee(currentEmployee);
+    } else if (!selectedEmployee) {
+      setSelectedEmployee(currentEmployee || employees[0]);
     }
-  }, [employees, selectedEmployee]);
+  }, [employees, isAdmin, currentEmployee, selectedEmployee]);
 
   const dailyHoursMap = useMemo(() => {
     if (!selectedEmployee) return {};
@@ -245,13 +276,23 @@ export default function WorklogPage() {
     handleAutoSave();
   };
 
+  const currentTotalHours = useMemo(() => {
+    return logItems.reduce((sum, item) => sum + (Number(item.hours) || 0), 0);
+  }, [logItems]);
+
   const handleItemChange = (
     id: string,
     field: keyof Omit<WorklogItem, 'id'>,
     value: any
   ) => {
+    let finalValue = value;
+    if (field === 'hours') {
+      let num = parseFloat(value);
+      if (isNaN(num)) num = 0;
+      finalValue = Math.max(0, Math.min(24, num));
+    }
     setLogItems(
-      logItems.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+      logItems.map((item) => (item.id === id ? { ...item, [field]: finalValue } : item))
     );
   };
 
@@ -284,6 +325,15 @@ export default function WorklogPage() {
   const handleAutoSave = async () => {
     if (!selectedEmployee || !selectedDate) return;
     
+    if (!isAdmin && currentEmployee && selectedEmployee.id !== currentEmployee.id) {
+      toast({
+        variant: 'destructive',
+        title: 'Permission Denied',
+        description: 'Only Administrators can log work effort for other resources.',
+      });
+      return;
+    }
+
     // De-duplicate items before saving
     const itemMap = new Map<string, WorklogItem>();
     logItems.forEach(item => {
@@ -301,9 +351,18 @@ export default function WorklogPage() {
     });
 
     const finalItems = Array.from(itemMap.values());
+    const totalHours = finalItems.reduce((sum, item) => sum + Number(item.hours), 0);
+
+    if (totalHours > 24) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: `Total logged effort for a single day cannot exceed 24 hours (Current total: ${totalHours.toFixed(1)}h).`,
+      });
+      return;
+    }
 
     setIsSaving(true);
-    const totalHours = finalItems.reduce((sum, item) => sum + Number(item.hours), 0);
 
     const worklogData = {
       employeeId: selectedEmployee.id,
@@ -340,8 +399,16 @@ export default function WorklogPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Employee</label>
+              <div className="flex items-center gap-2 mb-1">
+                <label className="text-sm font-medium">Employee</label>
+                {!isAdmin && (
+                  <span className="text-xs text-muted-foreground italic">
+                    (Only Administrators can select other resources)
+                  </span>
+                )}
+              </div>
               <Select
+                disabled={!isAdmin}
                 onValueChange={(id) =>
                   setSelectedEmployee(employees.find((e) => e.id === id) || null)
                 }
@@ -351,7 +418,7 @@ export default function WorklogPage() {
                   <SelectValue placeholder="Select an employee" />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees.map((emp) => (
+                  {(isAdmin ? employees : (currentEmployee ? [currentEmployee] : employees)).map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
                       {emp.firstName} {emp.lastName}
                     </SelectItem>
@@ -476,10 +543,11 @@ export default function WorklogPage() {
                       <Input
                         type="number"
                         placeholder="Hours"
-                        value={item.hours}
-                        onChange={(e) => handleItemChange(item.id, 'hours', parseFloat(e.target.value) || 0)}
+                        value={item.hours === 0 ? '' : item.hours}
+                        onChange={(e) => handleItemChange(item.id, 'hours', e.target.value)}
                         onBlur={handleAutoSave}
-                        min="0.5"
+                        min="0"
+                        max="24"
                         step="0.5"
                         disabled={isSaving}
                       />
@@ -517,10 +585,21 @@ export default function WorklogPage() {
                     <option key={option.value} value={option.label} />
                   ))}
                 </datalist>
-                <div className="flex justify-between items-center pt-4">
+                <div className="flex justify-between items-center pt-4 border-t mt-4">
                   <Button variant="outline" onClick={handleAddItem} disabled={isSaving}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                   </Button>
+                  <div className="text-right">
+                    <span className="text-sm font-medium mr-2">Total Logged:</span>
+                    <span className={cn("text-base font-bold", currentTotalHours > 24 ? "text-destructive" : "text-foreground")}>
+                      {currentTotalHours.toFixed(1)} / 24.0 hrs
+                    </span>
+                    {currentTotalHours > 24 && (
+                      <p className="text-xs text-destructive font-medium mt-0.5">
+                        Total effort for a single day cannot exceed 24 hours.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
