@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { type User, type FixedCost } from '@/types';
 import { differenceInDays, eachDayOfInterval, format, isSameDay, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Printer } from 'lucide-react';
+import { PlusCircle, Trash2, Printer, Edit } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
@@ -61,36 +61,61 @@ export default function ResourceBillingPage() {
   if (!project || project.pricingModel !== 'Fixed Bid') {
     return null;
   }
-  const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: number; costRate?: number }>>({});
+  const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: string; costRate?: string }>>({});
   const [newCostName, setNewCostName] = useState('');
-  const [newCostValue, setNewCostValue] = useState(0);
+  const [newCostValue, setNewCostValue] = useState('');
   const [newCostType, setNewCostType] = useState<'One time' | 'Monthly'>('One time');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingCostItem, setEditingCostItem] = useState<FixedCost | null>(null);
+  const [editCostName, setEditCostName] = useState('');
+  const [editCostType, setEditCostType] = useState<'One time' | 'Monthly'>('One time');
+  const [editCostValue, setEditCostValue] = useState('');
 
   const handleRateChange = (userId: string, field: 'billedRate' | 'costRate', value: string) => {
-    const numericValue = value === '' ? undefined : parseFloat(value);
+    let val = value;
+    if (val.length > 1 && /^0[0-9]/.test(val)) {
+      val = val.replace(/^0+/, '');
+    }
+    const regex = /^(0|[1-9]\d*)?(\.\d{0,2})?$/;
+    if (!regex.test(val)) return;
     setEditingRates(prev => ({
       ...prev,
       [userId]: {
         ...prev[userId],
-        [field]: numericValue,
+        [field]: val,
       }
     }));
   };
   
-  const handleSaveChanges = async (userId: string) => {
+  const handleSaveChanges = async (userId: string, customRates?: { billedRate?: string; costRate?: string }) => {
     const user = employees.find(e => e.id === userId);
-    const rates = editingRates[userId];
+    const rates = customRates || editingRates[userId];
 
-    if (!user || !rates) return;
+    if (!user || !rates) {
+      setEditingRates(prev => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      return;
+    }
 
     const payload: Partial<User> = {};
-    if (rates.billedRate !== user.billedRate) {
-        payload.billedRate = rates.billedRate;
+    const newBilledRate = rates.billedRate === undefined ? user.billedRate : (rates.billedRate === '' ? 0 : parseFloat(rates.billedRate));
+    const newCostRate = rates.costRate === undefined ? user.costRate : (rates.costRate === '' ? 0 : parseFloat(rates.costRate));
+
+    if (newBilledRate !== undefined && newBilledRate !== user.billedRate) {
+        payload.billedRate = newBilledRate;
     }
-     if (rates.costRate !== user.costRate) {
-        payload.costRate = rates.costRate;
+    if (newCostRate !== undefined && newCostRate !== user.costRate) {
+        payload.costRate = newCostRate;
     }
+
+    setEditingRates(prev => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
 
     if (Object.keys(payload).length === 0) {
         return;
@@ -105,24 +130,74 @@ export default function ResourceBillingPage() {
   };
 
   const handleFixedCostChange = (id: string, field: 'name' | 'cost' | 'type', value: any) => {
+    if (field === 'cost') {
+      const numericCost = Math.round((parseFloat(value) || 0) * 100) / 100;
+      if (numericCost <= 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Cost must be greater than 0.' });
+        return;
+      }
+      value = numericCost;
+    }
     const updateData: Partial<FixedCost> = { [field]: value };
     updateFixedCost(id, updateData);
   };
 
   const handleAddNewFixedCost = async () => {
-    if (!newCostName.trim() || newCostValue < 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and cost.' });
+    const numericCost = Math.round((parseFloat(newCostValue) || 0) * 100) / 100;
+    if (!newCostName.trim() || isNaN(parseFloat(newCostValue)) || numericCost <= 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and a cost greater than 0.' });
       return;
     }
-    const success = await addFixedCost({ name: newCostName, cost: newCostValue, type: newCostType });
+    const isDuplicate = fixedCosts.some(
+      fc => fc.name.trim().toLowerCase() === newCostName.trim().toLowerCase()
+    );
+    if (isDuplicate) {
+      toast({ variant: 'destructive', title: 'Error', description: 'A fixed cost item with this name already exists.' });
+      return;
+    }
+    const success = await addFixedCost({ name: newCostName, cost: numericCost, type: newCostType });
     if (success) {
       setNewCostName('');
-      setNewCostValue(0);
+      setNewCostValue('');
       setNewCostType('One time');
       setIsAddDialogOpen(false);
       toast({ title: 'Success', description: 'Fixed cost item added.' });
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not add fixed cost item.' });
+    }
+  };
+
+  const handleStartEditFixedCost = (item: FixedCost) => {
+    setEditingCostItem(item);
+    setEditCostName(item.name);
+    setEditCostType(item.type || 'One time');
+    setEditCostValue(item.cost !== undefined ? item.cost.toString() : '');
+  };
+
+  const handleEditFixedCost = async () => {
+    if (!editingCostItem) return;
+    const numericCost = Math.round((parseFloat(editCostValue) || 0) * 100) / 100;
+    if (!editCostName.trim() || isNaN(parseFloat(editCostValue)) || numericCost <= 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and a cost greater than 0.' });
+      return;
+    }
+    const isDuplicate = fixedCosts.some(
+      fc => fc.name.trim().toLowerCase() === editCostName.trim().toLowerCase() && fc.id !== editingCostItem.id
+    );
+    if (isDuplicate) {
+      toast({ variant: 'destructive', title: 'Error', description: 'A fixed cost item with this name already exists.' });
+      return;
+    }
+    const success = await updateFixedCost(editingCostItem.id, {
+      name: editCostName,
+      cost: numericCost,
+      type: editCostType,
+    });
+    if (success) {
+      setEditingCostItem(null);
+      toast({ title: 'Success', description: 'Fixed cost item updated.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update fixed cost item.' });
     }
   };
 
@@ -259,21 +334,49 @@ export default function ResourceBillingPage() {
                       <TableCell>{user.availability || 100}%</TableCell>
                       <TableCell>
                         <Input
-                          type="number"
-                          placeholder="Enter rate"
-                          value={editingRates[user.id]?.billedRate ?? user.billedRate ?? ''}
+                          type="text"
+                          placeholder=""
+                          value={editingRates[user.id]?.billedRate ?? (user.billedRate !== undefined ? user.billedRate.toString() : '')}
                           onChange={(e) => handleRateChange(user.id, 'billedRate', e.target.value)}
-                          onBlur={() => handleSaveChanges(user.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveChanges(user.id, editingRates[user.id]);
+                              e.currentTarget.blur();
+                            } else if (e.key === 'Tab') {
+                              handleSaveChanges(user.id, editingRates[user.id]);
+                            }
+                          }}
+                          onBlur={() => {
+                            setEditingRates(prev => {
+                              const next = { ...prev };
+                              delete next[user.id];
+                              return next;
+                            });
+                          }}
                           className="w-32"
                         />
                       </TableCell>
                       <TableCell>
                          <Input
-                          type="number"
-                          placeholder="Enter rate"
-                          value={editingRates[user.id]?.costRate ?? user.costRate ?? ''}
+                          type="text"
+                          placeholder=""
+                          value={editingRates[user.id]?.costRate ?? (user.costRate !== undefined ? user.costRate.toString() : '')}
                           onChange={(e) => handleRateChange(user.id, 'costRate', e.target.value)}
-                          onBlur={() => handleSaveChanges(user.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveChanges(user.id, editingRates[user.id]);
+                              e.currentTarget.blur();
+                            } else if (e.key === 'Tab') {
+                              handleSaveChanges(user.id, editingRates[user.id]);
+                            }
+                          }}
+                          onBlur={() => {
+                            setEditingRates(prev => {
+                              const next = { ...prev };
+                              delete next[user.id];
+                              return next;
+                            });
+                          }}
                           className="w-32"
                         />
                       </TableCell>
@@ -355,10 +458,19 @@ export default function ResourceBillingPage() {
                     <Label htmlFor="cost">Cost (USD)</Label>
                     <Input
                       id="cost"
-                      type="number"
-                      placeholder="0"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder=""
                       value={newCostValue}
-                      onChange={(e) => setNewCostValue(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val.length > 1 && /^0[0-9]/.test(val)) {
+                          val = val.replace(/^0+/, '');
+                        }
+                        if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
+                          setNewCostValue(val);
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -366,6 +478,65 @@ export default function ResourceBillingPage() {
               <DialogFooter>
                 <Button onClick={handleAddNewFixedCost}>
                   Submit
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!editingCostItem} onOpenChange={(open) => { if (!open) setEditingCostItem(null); }}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Edit Fixed Cost Item</DialogTitle>
+                <DialogDescription>
+                  Modify the details of this fixed cost item.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Item Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={editCostName}
+                    onChange={(e) => setEditCostName(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-type">Type</Label>
+                    <Select value={editCostType} onValueChange={(val: 'One time' | 'Monthly') => setEditCostType(val)}>
+                      <SelectTrigger id="edit-type">
+                        <SelectValue placeholder="One time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="One time">One time</SelectItem>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-cost">Cost (USD)</Label>
+                    <Input
+                      id="edit-cost"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder=""
+                      value={editCostValue}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val.length > 1 && /^0[0-9]/.test(val)) {
+                          val = val.replace(/^0+/, '');
+                        }
+                        if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
+                          setEditCostValue(val);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleEditFixedCost}>
+                  Save Changes
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -388,43 +559,28 @@ export default function ResourceBillingPage() {
                         const totalCost = item.type === 'Monthly' ? (item.cost || 0) * months : (item.cost || 0);
 
                         return (
-                            <TableRow key={item.id}>
+                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">
-                                    <Input
-                                        defaultValue={item.name}
-                                        onBlur={(e) => handleFixedCostChange(item.id, 'name', e.target.value)}
-                                        className="border-none bg-transparent -ml-2 focus-visible:ring-1"
-                                    />
+                                    {item.name}
                                 </TableCell>
                                 <TableCell>
-                                    <Select
-                                        defaultValue={item.type || 'One time'}
-                                        onValueChange={(val) => handleFixedCostChange(item.id, 'type', val)}
-                                    >
-                                        <SelectTrigger className="border-none bg-transparent shadow-none w-32 focus:ring-0">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="One time">One time</SelectItem>
-                                            <SelectItem value="Monthly">Monthly</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    {item.type || 'One time'}
                                 </TableCell>
                                 <TableCell>
-                                    <Input
-                                        type="number"
-                                        defaultValue={item.cost}
-                                        onBlur={(e) => handleFixedCostChange(item.id, 'cost', parseFloat(e.target.value) || 0)}
-                                        className="w-32"
-                                    />
+                                    ${(item.cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-purple-500">
                                     ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => deleteFixedCost(item.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex items-center justify-end gap-1">
+                                        <Button variant="ghost" size="icon" onClick={() => handleStartEditFixedCost(item)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => deleteFixedCost(item.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         );

@@ -24,7 +24,7 @@ const autoSeedFromEnv = (conns: any): boolean => {
     if (envMap.size === 0) return false;
 
     if (!conns.database || conns.database.length === 0) {
-        let dbProvider = envMap.get('NEXT_PUBLIC_DATABASE_PROVIDER') || (envMap.get('DATABASE_URL') ? 'postgresql' : (envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : null));
+        let dbProvider = envMap.get('NEXT_PUBLIC_DB_PROVIDER') || envMap.get('NEXT_PUBLIC_DATABASE_PROVIDER') || (envMap.get('DATABASE_URL') ? 'postgresql' : (envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : null));
         if (dbProvider) {
             const db: any = { id: crypto.randomUUID(), profileName: 'Primary .env Connection', provider: dbProvider, isActive: true };
             if (dbProvider === 'firebase') {

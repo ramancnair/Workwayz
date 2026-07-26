@@ -62,9 +62,9 @@ const categories: AssumptionCategory[] = ['Technical', 'Resource', 'Business', '
 const statuses: AssumptionStatus[] = ['Active', 'Validated', 'Invalidated'];
 
 const statusStyles: Record<AssumptionStatus, string> = {
-    'Active': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    'Validated': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    'Invalidated': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  'Active': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  'Validated': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  'Invalidated': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
 
@@ -88,17 +88,17 @@ export default function AssumptionsPage() {
     if (isDialogOpen) {
       if (editingAssumption) {
         form.reset({
-            ...editingAssumption,
-            ownerId: editingAssumption.ownerId || 'unassigned',
-            validationDate: editingAssumption.validationDate ? format(new Date(editingAssumption.validationDate), 'yyyy-MM-dd') : '',
+          ...editingAssumption,
+          ownerId: editingAssumption.ownerId || 'unassigned',
+          validationDate: editingAssumption.validationDate ? format(new Date(editingAssumption.validationDate), 'yyyy-MM-dd') : '',
         });
       } else {
         form.reset({
-            description: '',
-            category: 'Technical',
-            status: 'Active',
-            ownerId: 'unassigned',
-            validationDate: '',
+          description: '',
+          category: 'Technical',
+          status: 'Active',
+          ownerId: 'unassigned',
+          validationDate: '',
         });
       }
     }
@@ -119,14 +119,15 @@ export default function AssumptionsPage() {
           acceptanceCriteria: s.acceptanceCriteria,
         }))
       });
-      if (result.error) {
-        throw new Error(result.error);
+      const res = result as any;
+      if (res.error) {
+        throw new Error(res.error);
       }
 
-      for (const assumption of result.assumptions) {
+      for (const assumption of (res.assumptions || [])) {
         await addAssumption({ ...assumption, status: 'Active' });
       }
-      toast({ title: 'Success', description: `${result.assumptions.length} assumptions generated successfully.` });
+      toast({ title: 'Success', description: `${(res.assumptions || []).length} assumptions generated successfully.` });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message || 'Could not generate assumptions.' });
     } finally {
@@ -153,18 +154,18 @@ export default function AssumptionsPage() {
 
   const handleBulkDeleteConfirm = async () => {
     if (selectedAssumptions.length === 0) return;
-    
+
     const promises = selectedAssumptions.map(id => deleteAssumption(id));
     const results = await Promise.all(promises);
 
     const successCount = results.filter(Boolean).length;
     if (successCount > 0) {
-        toast({ title: "Success", description: `${successCount} assumption(s) moved to trash.` });
+      toast({ title: "Success", description: `${successCount} assumption(s) moved to trash.` });
     }
     if (successCount < selectedAssumptions.length) {
-        toast({ variant: "destructive", title: "Error", description: `Could not move ${selectedAssumptions.length - successCount} assumption(s) to trash.` });
+      toast({ variant: "destructive", title: "Error", description: `Could not move ${selectedAssumptions.length - successCount} assumption(s) to trash.` });
     }
-    
+
     setSelectedAssumptions([]);
     setShowBulkDeleteConfirm(false);
   };
@@ -172,9 +173,9 @@ export default function AssumptionsPage() {
   const onSubmit = async (values: z.infer<typeof assumptionSchema>) => {
     setIsSubmitting(true);
     const assumptionData = {
-        ...values,
-        ownerId: values.ownerId === 'unassigned' ? undefined : values.ownerId,
-        validationDate: values.validationDate ? new Date(values.validationDate) : undefined,
+      ...values,
+      ownerId: values.ownerId === 'unassigned' ? undefined : values.ownerId,
+      validationDate: values.validationDate ? new Date(values.validationDate) : undefined,
     };
 
     const success = editingAssumption
@@ -194,31 +195,31 @@ export default function AssumptionsPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Project Assumptions" description="Manage and track all project assumptions.">
+        <PageHeader title="Assumptions" description="Manage and track all project assumptions.">
           {selectedAssumptions.length > 0 && (
             <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Selected ({selectedAssumptions.length})
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Selected ({selectedAssumptions.length})
             </Button>
           )}
           <Dialog open={isAiGenOpen} onOpenChange={setIsAiGenOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline">
-                    <Bot className="mr-2 h-4 w-4" />
-                    AI Gen Assumptions
-                </Button>
+              <Button variant="outline">
+                <Bot className="mr-2 h-4 w-4" />
+                AI Gen Assumptions
+              </Button>
             </DialogTrigger>
             <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Generate Assumptions with AI</DialogTitle>
-                    <DialogDescription>The AI will analyze the project summary and stories to generate relevant assumptions. Do you want to proceed?</DialogDescription>
-                </DialogHeader>
-                 <DialogFooter>
-                    <Button variant="ghost" onClick={() => setIsAiGenOpen(false)}>Cancel</Button>
-                    <Button onClick={onAiGenSubmit} disabled={isAiGenSubmitting}>
-                        {isAiGenSubmitting ? 'Generating...' : 'Proceed'}
-                    </Button>
-                </DialogFooter>
+              <DialogHeader>
+                <DialogTitle>Generate Assumptions with AI</DialogTitle>
+                <DialogDescription>The AI will analyze the project summary and stories to generate relevant assumptions. Do you want to proceed?</DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsAiGenOpen(false)}>Cancel</Button>
+                <Button onClick={onAiGenSubmit} disabled={isAiGenSubmitting}>
+                  {isAiGenSubmitting ? 'Generating...' : 'Proceed'}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
           <Button onClick={() => handleDialogOpen(null)}>
@@ -231,15 +232,15 @@ export default function AssumptionsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
-                    <Checkbox
-                        checked={assumptions.length > 0 && selectedAssumptions.length === assumptions.length}
-                        onCheckedChange={(value) =>
-                            setSelectedAssumptions(value ? assumptions.map(item => item.id) : [])
-                        }
-                        aria-label="Select all"
-                    />
+                  <Checkbox
+                    checked={assumptions.length > 0 && selectedAssumptions.length === assumptions.length}
+                    onCheckedChange={(value) =>
+                      setSelectedAssumptions(value ? assumptions.map(item => item.id) : [])
+                    }
+                    aria-label="Select all"
+                  />
                 </TableHead>
-                <TableHead>ID</TableHead>
+                <TableHead className="whitespace-nowrap">ID</TableHead>
                 <TableHead className="w-[40%]">Description</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
@@ -251,40 +252,42 @@ export default function AssumptionsPage() {
               {assumptions.map((assumption) => {
                 const owner = users.find(e => e.id === assumption.ownerId);
                 return (
-                    <TableRow key={assumption.id} data-state={selectedAssumptions.includes(assumption.id) && "selected"}>
-                        <TableCell>
-                            <Checkbox
-                                checked={selectedAssumptions.includes(assumption.id)}
-                                onCheckedChange={(value) =>
-                                    setSelectedAssumptions(
-                                        value
-                                        ? [...selectedAssumptions, assumption.id]
-                                        : selectedAssumptions.filter((id) => id !== assumption.id)
-                                    )
-                                }
-                                aria-label="Select row"
-                            />
-                        </TableCell>
-                        <TableCell className="font-medium">{assumption.assumptionId}</TableCell>
-                        <TableCell className="break-words">{assumption.description}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{assumption.category}</Badge>
-                        </TableCell>
-                        <TableCell>
-                            <Badge className={cn('font-semibold', statusStyles[assumption.status])}>
-                                {assumption.status}
-                            </Badge>
-                        </TableCell>
-                        <TableCell>{owner ? `${owner.firstName} ${owner.lastName}` : 'N/A'}</TableCell>
-                        <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(assumption)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setDeletingAssumption(assumption)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </TableCell>
-                    </TableRow>
+                  <TableRow key={assumption.id} data-state={selectedAssumptions.includes(assumption.id) && "selected"}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedAssumptions.includes(assumption.id)}
+                        onCheckedChange={(value) =>
+                          setSelectedAssumptions(
+                            value
+                              ? [...selectedAssumptions, assumption.id]
+                              : selectedAssumptions.filter((id) => id !== assumption.id)
+                          )
+                        }
+                        aria-label="Select row"
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{assumption.assumptionId}</TableCell>
+                    <TableCell className="break-words">{assumption.description}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{assumption.category}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn('font-semibold', statusStyles[assumption.status])}>
+                        {assumption.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{owner ? `${owner.firstName} ${owner.lastName}` : 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(assumption)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingAssumption(assumption)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
             </TableBody>
@@ -301,39 +304,65 @@ export default function AssumptionsPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                 <FormField control={form.control} name="description" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Assumption Description</FormLabel>
-                        <FormControl><Textarea placeholder="Describe the assumption..." {...field} rows={4} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
+                  <FormItem>
+                    <FormLabel>Assumption Description</FormLabel>
+                    <FormControl><Textarea placeholder="Describe the assumption..." {...field} rows={4} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )} />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="category" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {categories.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="status" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Status</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {statuses.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
+                  <FormField control={form.control} name="category" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {categories.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="status" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {statuses.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
+<<<<<<< HEAD
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={form.control} name="ownerId" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Owner</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Assign an owner" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {users.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="validationDate" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Validation Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+=======
                 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="ownerId" render={({ field }) => (
@@ -343,7 +372,7 @@ export default function AssumptionsPage() {
                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign an owner" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {users.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                                    {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <FormMessage />
@@ -358,18 +387,19 @@ export default function AssumptionsPage() {
                             <FormMessage />
                         </FormItem>
                     )} />
+>>>>>>> 7fdef9f (Bugs 1 and Enhancement)
                 </div>
               </div>
               <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (editingAssumption ? 'Saving...' : 'Creating...') : (editingAssumption ? 'Save Changes' : 'Create Assumption')}
+                  {isSubmitting ? (editingAssumption ? 'Saving...' : 'Creating...') : (editingAssumption ? 'Save Changes' : 'Create Assumption')}
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      
+
       <AlertDialog open={!!deletingAssumption} onOpenChange={(isOpen) => !isOpen && setDeletingAssumption(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -380,7 +410,7 @@ export default function AssumptionsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
@@ -390,7 +420,7 @@ export default function AssumptionsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-       <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -400,7 +430,7 @@ export default function AssumptionsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleBulkDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >

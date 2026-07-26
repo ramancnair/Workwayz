@@ -216,7 +216,7 @@ export default function DocumentsPage() {
             Add Custom Document
           </Button>
         </PageHeader>
-        <Card>
+        <Card data-testid="pmo-documents-list" className="pmo-documents">
           <Table>
             <TableHeader>
               <TableRow>
@@ -244,18 +244,20 @@ export default function DocumentsPage() {
                   </TableCell>
                   <TableCell>{format(new Date(doc.createdAt), 'PPP')}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(doc)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => setDeletingDocument(doc)}
-                      disabled={defaultDocsList.includes(doc.name.toLowerCase())}
-                      className={defaultDocsList.includes(doc.name.toLowerCase()) ? "opacity-30 cursor-not-allowed" : ""}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(doc)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setDeletingDocument(doc)}
+                        disabled={defaultDocsList.includes(doc.name.toLowerCase())}
+                        className={defaultDocsList.includes(doc.name.toLowerCase()) ? "opacity-30 cursor-not-allowed" : ""}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

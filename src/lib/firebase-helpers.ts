@@ -1,6 +1,6 @@
 
-import { db } from './firebase';
-import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { db } from './db-provider';
+import { collection, getDocs, writeBatch, doc } from '@/lib/db-provider';
 
 const SUBCOLLECTIONS = [
   'epics', 'stories', 'sprints', 'employees', 'testCases', 'risks', 
@@ -18,7 +18,7 @@ async function deleteCollection(collectionPath: string, batch: any) {
     return;
   }
   
-  snapshot.docs.forEach(doc => {
+  snapshot.docs.forEach((doc: any) => {
     batch.delete(doc.ref);
   });
 }
@@ -36,7 +36,7 @@ export async function deleteProjectAndSubcollections(projectId: string) {
     const collectionPath = `projects/${projectId}/${subcollectionName}`;
     const subcollectionRef = collection(db, collectionPath);
     const subcollectionSnapshot = await getDocs(subcollectionRef);
-    subcollectionSnapshot.forEach(subDoc => {
+    subcollectionSnapshot.forEach((subDoc: any) => {
         batch.delete(subDoc.ref);
     });
   }

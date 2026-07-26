@@ -37,8 +37,8 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { type User, type LeavePeriod, type Holiday } from '@/types';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { db } from '@/lib/firebase';
-import { onSnapshot, doc, collection, query, where, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { onSnapshot, doc, collection, query, where, updateDoc, arrayUnion, arrayRemove } from '@/lib/db-provider';
 import { v4 as uuidv4 } from 'uuid';
 
 const leaveSchema = z.object({
@@ -77,7 +77,7 @@ export default function LeaveTrackerPage() {
     if (!db) return;
     
     // Fetch Settings
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'main'), (docSnap) => {
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'main'), (docSnap: any) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setLeaveSettings({
@@ -90,14 +90,14 @@ export default function LeaveTrackerPage() {
     });
 
     // Fetch Employees
-    const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot) => {
-      const emps = snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as User);
+    const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot: any) => {
+      const emps = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() }) as User);
       setAllUsers(emps);
     });
 
     // Fetch Holidays
-    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
-      const hols = snapshot.docs.map(d => {
+    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot: any) => {
+      const hols = snapshot.docs.map((d: any) => {
         const data = d.data();
         return {
           id: d.id,
@@ -610,7 +610,7 @@ export default function LeaveTrackerPage() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="hover:bg-transparent cursor-default select-none">
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Type</TableHead>
@@ -620,7 +620,7 @@ export default function LeaveTrackerPage() {
                 </TableHeader>
                 <TableBody>
                   {sortedLeavePeriods.length > 0 ? sortedLeavePeriods.map(period => (
-                    <TableRow key={period.id}>
+                    <TableRow key={period.id} className="hover:bg-transparent cursor-default select-none">
                       <TableCell>{format(new Date(period.startDate), 'PPP')}</TableCell>
                       <TableCell>{format(new Date(period.endDate), 'PPP')}</TableCell>
                       <TableCell>
@@ -636,7 +636,7 @@ export default function LeaveTrackerPage() {
                       </TableCell>
                     </TableRow>
                   )) : (
-                    <TableRow>
+                    <TableRow className="hover:bg-transparent cursor-default select-none">
                       <TableCell colSpan={5} className="text-center text-muted-foreground">
                         No leave periods logged for you.
                       </TableCell>

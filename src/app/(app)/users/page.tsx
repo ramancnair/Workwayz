@@ -6,8 +6,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
-import { db, firebaseConfig } from '@/lib/firebase';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where, writeBatch, db } from '@/lib/db-provider';
+import { firebaseConfig } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -65,6 +65,7 @@ const userFormSchema = z.object({
   }),
   costAmount: z.coerce.number().optional(),
   costCurrency: z.string().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 });
 
 const autoGenFormSchema = z.object({
@@ -161,10 +162,10 @@ export default function UsersPage() {
   });
   
   useEffect(() => {
-    if (!db) return;
+    if (!db) { console.error('DB is null, aborting onSubmit!'); return; }
     const q = query(collection(db, 'employees'), where('isDeleted', '!=', true));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const usersData = querySnapshot.docs.map(doc => {
+    const unsubscribe = onSnapshot(q, (querySnapshot: any) => {
+        const usersData = querySnapshot.docs.map((doc: any) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -185,6 +186,7 @@ export default function UsersPage() {
             ...editingUser,
             costAmount: editingUser.costAmount ?? 0,
             costCurrency: editingUser.costCurrency ?? 'USD',
+            password: '',
         });
         } else {
         form.reset({
@@ -197,6 +199,7 @@ export default function UsersPage() {
             accessLevel: undefined,
             costAmount: 0,
             costCurrency: 'USD',
+            password: 'P@ssw0rd',
         });
         }
     }
@@ -207,12 +210,12 @@ export default function UsersPage() {
     setIsDialogOpen(true);
   };
   
-  const createIdentityInAuthPool = async (email: string, firstName?: string, lastName?: string, accessLevel?: string) => {
+  const createIdentityInAuthPool = async (email: string, firstName?: string, lastName?: string, accessLevel?: string, password?: string) => {
       try {
           const res = await fetch('/api/users', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, firstName, lastName, accessLevel })
+              body: JSON.stringify({ email, firstName, lastName, accessLevel, password })
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Failed to create identity');
@@ -231,7 +234,7 @@ export default function UsersPage() {
         const usersSnapshot = await getDocs(collection(db, 'employees'));
         
         let highestId = 0;
-        usersSnapshot.forEach(doc => {
+        usersSnapshot.forEach((doc: any) => {
             const empId = doc.id;
             if (empId.startsWith('E')) {
                 const numPart = parseInt(empId.substring(1));
@@ -321,7 +324,8 @@ export default function UsersPage() {
   };
 
   const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
-    if (!db) return;
+    console.log('onSubmit called', values, 'db is', db);
+    if (!db) { console.error('DB is null, aborting onSubmit!'); return; }
     setIsSubmitting(true);
     
     // Check for unique email
@@ -377,7 +381,7 @@ export default function UsersPage() {
         });
         
         // Push single identity to auth pool
-        await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
+        await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel, values.password);
         
         toast({ title: "Success", description: `User added to database and Authentication cache.` });
       }
@@ -499,7 +503,7 @@ export default function UsersPage() {
                                     <FormItem>
                                         <FormLabel>{level}</FormLabel>
                                         <FormControl>
-                                        <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                                        <Input type="number" placeholder="" {...field} value={field.value ?? ''} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -591,7 +595,7 @@ export default function UsersPage() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Access Levels</SelectItem>
-                        {accessLevels.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                        {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
                     </SelectContent>
                 </Select>
                 <Button variant="ghost" onClick={clearFilters}>
@@ -636,8 +640,8 @@ export default function UsersPage() {
                         />
                     </TableCell>
                     <TableCell className="font-medium">{user.empId}</TableCell>
-                    <TableCell>{user.firstName} {user.lastName}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="max-w-[150px] truncate" title={`${user.firstName} ${user.lastName}`}>{user.firstName} {user.lastName}</TableCell>
+                    <TableCell className="max-w-[220px] truncate" title={user.email}>{user.email}</TableCell>
                     <TableCell>{user.accessLevel || 'N/A'}</TableCell>
                     <TableCell>
                       {user.isEnabled === false ? (
@@ -662,18 +666,20 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDialogOpen(user)}
-                        disabled={user.isEnabled === false && !isAdmin}
-                        title={user.isEnabled === false && !isAdmin ? "Only Administrators can enable users" : undefined}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDialogOpen(user)}
+                          disabled={user.isEnabled === false && !isAdmin}
+                          title={user.isEnabled === false && !isAdmin ? "Only Administrators can enable users" : undefined}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -744,7 +750,7 @@ export default function UsersPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {accessLevels.map(level => (
+                            {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => (
                               <SelectItem key={level} value={level}>{level}</SelectItem>
                             ))}
                           </SelectContent>
@@ -752,6 +758,17 @@ export default function UsersPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                  {!editingUser && (
+                    <FormField control={form.control} name="password" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password *</FormLabel>
+                        <FormControl>
+                          <Input type="text" placeholder="Password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
                   <div className="space-y-2">
                     <FormLabel>Cost</FormLabel>
                     <div className="flex h-10 w-full items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
@@ -777,7 +794,7 @@ export default function UsersPage() {
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder="0"
+                            placeholder=""
                             className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-l-none shadow-none h-full bg-transparent px-3"
                             {...field}
                             value={field.value ?? ''}

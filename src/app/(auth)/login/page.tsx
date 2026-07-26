@@ -9,11 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+import { db } from '@/lib/db-provider';
 import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from '@/lib/db-provider';
 import Keycloak from 'keycloak-js';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const determineAccessLevel = (keycloak: any) => {
     const roles = keycloak.realmAccess?.roles || [];
@@ -38,51 +40,8 @@ const syncKeycloakUserWithDatabase = async (userProfile: any, accessLevel: strin
         uid: subject
     };
 
-    if (process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
-        if (!supabase) return finalUserData;
-        const { data: employees } = await supabase.from('employees').select('*').eq('email', userProfile.email);
-        if (employees && employees.length > 0) {
-            const data = employees[0];
-            return {
-                name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-                email: data.email || userProfile.email,
-                accessLevel: data.accessLevel || accessLevel,
-                empId: data.empId || data.id,
-                uid: subject
-            };
-        }
-        
-        // Create new user in Supabase
-        const { data: allEmps } = await supabase.from('employees').select('empId');
-        let highestId = 0;
-        if (allEmps) {
-            allEmps.forEach((emp: any) => {
-                if (emp.empId && emp.empId.startsWith('E')) {
-                    const numPart = parseInt(emp.empId.substring(1));
-                    if (!isNaN(numPart) && numPart > highestId) highestId = numPart;
-                }
-            });
-        }
-        empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
-        
-        const firstName = userProfile.firstName || userProfile.username || 'Keycloak User';
-        const lastName = userProfile.lastName || '';
-        
-        await supabase.from('employees').insert([{
-            id: empId,
-            empId,
-            firstName,
-            lastName,
-            email: userProfile.email,
-            phone: 'N/A',
-            experience: 0,
-            accessLevel,
-            avatar: 'https://placehold.co/40x40.png',
-            isDeleted: false,
-            uid: subject
-        }]);
-        
-        return { name: `${firstName} ${lastName}`.trim(), email: userProfile.email, accessLevel, empId, uid: subject };
+    if (false) {
+        // Obsolete separate path for supabase. We now use the polyfill for everything!
     } else {
         if (!db) return finalUserData;
         const q = query(collection(db, 'employees'), where('email', '==', userProfile.email));
@@ -103,7 +62,7 @@ const syncKeycloakUserWithDatabase = async (userProfile: any, accessLevel: strin
         // Create new user in Firestore
         const usersSnapshot = await getDocs(collection(db, 'employees'));
         let highestId = 0;
-        usersSnapshot.forEach(docSnap => {
+        usersSnapshot.forEach((docSnap: any) => {
             const id = docSnap.id;
             if (id.startsWith('E')) {
                 const numPart = parseInt(id.substring(1));
@@ -136,26 +95,31 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!process.env.NEXT_PUBLIC_DATABASE_PROVIDER && (!auth || !db)) {
-       toast({ title: 'Error', description: 'Database not configured properly.', variant: 'destructive' });
-       return;
-    }
-
     setIsLoading(true);
     
     try {
       const emailInput = (document.getElementById('email') as HTMLInputElement)?.value;
       const passwordInput = (document.getElementById('password') as HTMLInputElement)?.value;
-      
-      const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
 
-      if (authProvider === 'keycloak') {
+      // Fetch runtime config to determine active provider (avoids NEXT_PUBLIC_ build-time baking issue)
+      let runtimeDbProvider = 'supabase';
+      let runtimeAuthProvider = 'supabase';
+      try {
+        const cfgRes = await fetch('/api/runtime-config');
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          runtimeDbProvider = cfg.dbProvider || 'supabase';
+          runtimeAuthProvider = cfg.authProvider || cfg.dbProvider || 'supabase';
+        }
+      } catch (_) {}
+
+      if (runtimeAuthProvider === 'keycloak') {
          throw new Error("Keycloak should use the dedicated login button.");
-      } else if (process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
+      } else if (runtimeDbProvider === 'supabase') {
         if (!supabase) {
            throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
         }
@@ -171,27 +135,28 @@ export default function LoginPage() {
 
         const user = authData.user;
 
-        // 2. Fetch user profile from Supabase 'employees' collection
-        const { data: employees, error: fetchError } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('email', emailInput);
+        // 2. Fetch user profile from 'employees' collection using polyfill
+        const q = query(collection(db, 'employees'), where('email', '==', emailInput));
+        const querySnapshot = await getDocs(q);
 
         let userData = {
           name: emailInput.split('@')[0],
           email: emailInput,
           accessLevel: 'Team Member',
           empId: '',
+          avatar: '',
           uid: user.id
         };
 
-        if (employees && employees.length > 0) {
-          const data = employees[0];
+        if (!querySnapshot.empty) {
+          const docSnap = querySnapshot.docs[0];
+          const data = docSnap.data();
           userData = {
             name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
             email: data.email || emailInput,
             accessLevel: data.accessLevel || 'Team Member',
-            empId: data.empId || data.id,
+            empId: data.empId || docSnap.id,
+            avatar: data.avatar || '',
             uid: user.id
           };
         }
@@ -201,7 +166,13 @@ export default function LoginPage() {
           ...userData,
           authProvider: 'supabase',
           issuedAt: Date.now(),
+          needsPasswordReset: passwordInput === 'P@ssw0rd',
+          rememberMe: rememberMe
         }));
+
+        if (!rememberMe) {
+          sessionStorage.setItem('projectflow_session_active', 'true');
+        }
 
       } else {
         if (!auth || !db) {
@@ -232,6 +203,7 @@ export default function LoginPage() {
           email: data.email || emailInput,
           accessLevel: data.accessLevel || 'Team Member',
           empId: data.empId || docSnap.id,
+          avatar: data.avatar || '',
           uid: user.uid
         };
 
@@ -240,7 +212,13 @@ export default function LoginPage() {
           ...userData,
           authProvider: 'firebase',
           issuedAt: Date.now(),
+          needsPasswordReset: passwordInput === 'P@ssw0rd',
+          rememberMe: rememberMe
         }));
+
+        if (!rememberMe) {
+          sessionStorage.setItem('projectflow_session_active', 'true');
+        }
       }
 
       toast({
@@ -386,6 +364,16 @@ export default function LoginPage() {
                   </Link>
                 </div>
                 <Input id="password" type="password" required />
+              </div>
+              <div className="flex items-center space-x-2 pt-1">
+                <Checkbox 
+                  id="remember-me" 
+                  checked={rememberMe} 
+                  onCheckedChange={(checked) => setRememberMe(!!checked)} 
+                />
+                <Label htmlFor="remember-me" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                  Remember me on this computer
+                </Label>
               </div>
             </>
           )}

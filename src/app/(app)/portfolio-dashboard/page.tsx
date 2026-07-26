@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { collection, query, where, getDocs } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -94,7 +94,7 @@ function ProjectItem({ project }: { project: Project }) {
                     <span className="text-xs font-semibold">{project.overallStatus}</span>
                 </div>
             </div>
-            {project.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2 italic">{project.description}</p>}
+            {(project.description || project.summary) && <p className="text-xs text-muted-foreground mt-1 line-clamp-2 italic">{project.description || project.summary}</p>}
             {project.statusComments && <p className="text-xs font-medium text-destructive mt-1 truncate">Status: {project.statusComments}</p>}
         </Link>
     );
@@ -201,11 +201,11 @@ export default function PortfolioDashboardPage() {
       try {
         const portfoliosQuery = query(collection(db, 'portfolios'), where('isDeleted', '!=', true));
         const portfoliosSnapshot = await getDocs(portfoliosQuery);
-        setPortfolios(portfoliosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Portfolio)));
+        setPortfolios(portfoliosSnapshot.docs.map((doc: any) => ({ ...doc.data(), id: doc.id } as Portfolio)));
 
         const projectsQuery = query(collection(db, 'projects'), where('status', '==', 'Active'));
         const projectsSnapshot = await getDocs(projectsQuery);
-        const activeProjects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+        const activeProjects = projectsSnapshot.docs.map((doc: any) => ({ ...doc.data(), id: doc.id } as Project));
         
         setAllActiveProjects(activeProjects);
 
@@ -215,16 +215,16 @@ export default function PortfolioDashboardPage() {
         for (const project of activeProjects) {
             // Fetch risks for the project
             const risksSnapshot = await getDocs(collection(db, 'projects', project.id, 'risks'));
-            risksSnapshot.forEach(doc => {
+            risksSnapshot.forEach((doc: any) => {
                 const risk = doc.data() as Risk;
                 if (getRiskPotential(risk.severity, risk.probability) === 'High') {
-                    fetchedRisks.push({ ...risk, id: doc.id, projectName: project.name, projectId: project.id });
+                    fetchedRisks.push({ ...risk, projectName: project.name, projectId: project.id, id: doc.id });
                 }
             });
 
             // Fetch issues for the project
             const issuesSnapshot = await getDocs(collection(db, 'projects', project.id, 'issues'));
-            issuesSnapshot.forEach(doc => {
+            issuesSnapshot.forEach((doc: any) => {
                 const data = doc.data();
                  const issue = {
                     ...data,
@@ -232,7 +232,7 @@ export default function PortfolioDashboardPage() {
                  } as Issue;
 
                  if (['Critical', 'High'].includes(issue.priority)) {
-                    fetchedIssues.push({ ...issue, id: doc.id, projectName: project.name, projectId: project.id });
+                    fetchedIssues.push({ ...issue, projectName: project.name, projectId: project.id, id: doc.id });
                 }
             });
         }
@@ -261,7 +261,7 @@ export default function PortfolioDashboardPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Portfolios</SelectItem>
-            {portfolios.map(p => (
+            {[...portfolios].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(p => (
                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
           </SelectContent>

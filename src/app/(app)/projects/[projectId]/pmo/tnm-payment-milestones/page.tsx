@@ -51,6 +51,17 @@ const milestoneSchema = z.object({
   status: z.enum(['TBD', 'In Progress', 'Milestone completed', 'Invoice raised', 'Payment Completed']),
   statusDate: z.string().optional().or(z.literal('')),
   attachments: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+}).superRefine((data, ctx) => {
+  if (data.statusDate) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (data.statusDate > todayStr) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Date of status change cannot be in the future.',
+        path: ['statusDate'],
+      });
+    }
+  }
 });
 
 const statuses: PaymentMilestoneStatus[] = ['TBD', 'In Progress', 'Milestone completed', 'Invoice raised', 'Payment Completed'];
@@ -334,12 +345,14 @@ export default function TnmPaymentMilestonesPage() {
                      ) : 'N/A'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(milestone)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeletingMilestone(milestone)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(milestone)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeletingMilestone(milestone)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -430,6 +443,7 @@ export default function TnmPaymentMilestonesPage() {
                       <FormControl>
                         <Input 
                           type="date" 
+                          max={new Date().toISOString().split('T')[0]}
                           {...field} 
                           className="bg-background/50 border-muted focus:border-primary/50 transition-colors" 
                         />

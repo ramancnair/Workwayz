@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query, where, getDocs, doc, updateDoc } from '@/lib/db-provider';
+import { db } from '@/lib/db-provider';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,14 +68,14 @@ export default function MyProjectsPage() {
       return;
     }
     const docRef = doc(db, 'employees', currentUser.empId);
-    const unsub = onSnapshot(docRef, (snapshot) => {
+    const unsub = onSnapshot(docRef, (snapshot: any) => {
       if (snapshot.exists()) {
-        setCurrentUserFromDb({ id: snapshot.id, ...snapshot.data() } as User);
+        setCurrentUserFromDb({ ...snapshot.data(), id: snapshot.id } as User);
       } else {
         setCurrentUserFromDb(null);
       }
       setIsLoadingUsers(false);
-    }, (error) => {
+    }, (error: any) => {
       console.error("Error listening to current user status:", error);
       setIsLoadingUsers(false);
     });
@@ -86,10 +86,10 @@ export default function MyProjectsPage() {
   useEffect(() => {
     if (!db) return;
     const q = query(collection(db, 'projects'), where('isDeleted', '!=', true));
-    const unsub = onSnapshot(q, (snapshot) => {
+    const unsub = onSnapshot(q, (snapshot: any) => {
       const projectsData = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Project))
-        .filter(p => !p.isArchived);
+        .map((doc: any) => ({ ...doc.data(), id: doc.id } as Project))
+        .filter((p: any) => !p.isArchived);
       setAllProjects(projectsData);
     });
     return () => unsub();
@@ -109,11 +109,16 @@ export default function MyProjectsPage() {
       const projectIds: string[] = [];
 
       for (const project of allProjects) {
+        if (project.projectManagerId === currentUser.empId) {
+          projectIds.push(project.id);
+          continue;
+        }
+
         try {
           const empRef = collection(db!, 'projects', project.id, 'employees');
           const empSnap = await getDocs(empRef);
 
-          const isInProject = empSnap.docs.some(doc => {
+          const isInProject = empSnap.docs.some((doc: any) => {
             const data = doc.data();
             return doc.id === currentUser.empId || data.empId === currentUser.empId;
           });
@@ -180,37 +185,42 @@ export default function MyProjectsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {myProjects.map((project) => (
-            <Link key={project.id} href={`/projects/${project.id}/development/dashboard`}>
-              <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base truncate">{project.name}</CardTitle>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                  </div>
-                  <CardDescription className="text-xs font-mono">{project.id}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    {project.status && (
-                      <Badge className={cn('text-xs', statusStyles[project.status])}>
-                        {project.status}
-                      </Badge>
+          {myProjects.map((project) => {
+            const projectUrl = (project.status === 'Initial Estimation' || project.status === 'Not Started')
+              ? `/projects/${project.id}/initial-estimation/specifications`
+              : `/projects/${project.id}/development/dashboard`;
+            return (
+              <Link key={project.id} href={projectUrl}>
+                <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base truncate">{project.name}</CardTitle>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                    </div>
+                    <CardDescription className="text-xs font-mono">{project.id}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      {project.status && (
+                        <Badge className={cn('text-xs', statusStyles[project.status])}>
+                          {project.status}
+                        </Badge>
+                      )}
+                      {project.overallStatus && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">Health</span>
+                          <div className={cn('h-3 w-3 rounded-full', ragColors[project.overallStatus])} />
+                        </div>
+                      )}
+                    </div>
+                    {project.summary && (
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{project.summary}</p>
                     )}
-                    {project.overallStatus && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-muted-foreground">Health</span>
-                        <div className={cn('h-3 w-3 rounded-full', ragColors[project.overallStatus])} />
-                      </div>
-                    )}
-                  </div>
-                  {project.summary && (
-                    <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{project.summary}</p>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

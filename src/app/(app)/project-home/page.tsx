@@ -6,8 +6,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch, updateDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch, updateDoc, Timestamp } from '@/lib/db-provider';
+import { db } from '@/lib/db-provider';
 import Link from 'next/link';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -76,21 +76,18 @@ const ragStatusStyles: Record<RagStatus, string> = {
 
 
 const portfolioSchema = z.object({
-  name: z.string().min(1, 'Portfolio name is required.'),
-  description: z.string().optional(),
+  name: z.string().min(1, 'Portfolio name is required.').max(60, 'Portfolio name cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Portfolio description cannot exceed 300 characters.').optional(),
 });
 
 const projectSchema = z.object({
-  name: z.string().min(1, 'Project name is required.'),
+  name: z.string().min(1, 'Project name is required.').max(60, 'Project name cannot exceed 60 characters.'),
   portfolioId: z.string().min(1, 'Portfolio is required.'),
   projectManagerId: z.string().optional(),
   pricingModel: z.enum(['Fixed Bid', 'T&M'] as const).optional(),
   status: z.enum(['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'] as const).optional(),
-  startDate: z.string().min(1, "Start date is required."),
-  endDate: z.string().min(1, "End date is required."),
-}).refine(data => new Date(data.endDate) >= new Date(data.startDate), {
-  message: 'End date must be after or on the same day as the start date.',
-  path: ['endDate'],
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 
 function HealthIndicator({ status, label }: { status?: RagStatus; label: string }) {
@@ -153,7 +150,7 @@ function ProjectDialogContent({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {portfolios.map((p) => (
+                    {[...portfolios].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
                       </SelectItem>
@@ -177,113 +174,117 @@ function ProjectDialogContent({
               </FormItem>
             )}
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="startDate" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Project Start Date</FormLabel>
-                <FormControl><Input type="date" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="endDate" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Project End Date</FormLabel>
-                <FormControl><Input type="date" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="projectManagerId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Manager</FormLabel>
-                  <FormControl>
-                    <Input
-                      list="pm-options"
-                      placeholder="Select a Project Manager..."
-                      value={pmInputText}
-                      onChange={(e) => {
-                        const inputText = e.target.value;
-                        setPmInputText(inputText);
+          {!editingProject && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="startDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Start Date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="endDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project End Date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="projectManagerId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Manager</FormLabel>
+                      <FormControl>
+                        <Input
+                          list="pm-options"
+                          placeholder="Select a Project Manager..."
+                          value={pmInputText}
+                          onChange={(e) => {
+                            const inputText = e.target.value;
+                            setPmInputText(inputText);
 
-                        const matchingOption = pmOptions.find(opt => opt.label === inputText);
-                        field.onChange(matchingOption ? matchingOption.value : undefined);
-                      }}
-                      onBlur={() => {
-                        const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
-                        if (!matchingOption) {
-                          setPmInputText('');
-                          field.onChange(undefined);
-                        }
-                      }}
-                    />
-                  </FormControl>
-                  <datalist id="pm-options">
-                    {pmOptions.map(option => (
-                      <option key={option.value} value={option.label} />
-                    ))}
-                  </datalist>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {projectStatuses.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="pricingModel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pricing Model</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {pricingModels.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                            const matchingOption = pmOptions.find(opt => opt.label === inputText);
+                            field.onChange(matchingOption ? matchingOption.value : undefined);
+                          }}
+                          onBlur={() => {
+                            const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
+                            if (!matchingOption) {
+                              setPmInputText('');
+                              field.onChange(undefined);
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <datalist id="pm-options">
+                        {pmOptions.map(option => (
+                          <option key={option.value} value={option.label} />
+                        ))}
+                      </datalist>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {projectStatuses.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="pricingModel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pricing Model</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {pricingModels.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </>
+          )}
           <DialogFooter>
             <Button type="submit">{editingProject ? 'Save Changes' : 'Create Project'}</Button>
           </DialogFooter>
@@ -357,16 +358,16 @@ export default function ProjectsDashboard() {
 
   useEffect(() => {
     if (!db) return;
-    const portfolioUnsubscribe = onSnapshot(query(collection(db, 'portfolios'), where('isDeleted', '!=', true)), (snapshot) => {
-      const portfoliosData = snapshot.docs.map((doc) => ({
+    const portfolioUnsubscribe = onSnapshot(query(collection(db, 'portfolios'), where('isDeleted', '!=', true)), (snapshot: any) => {
+      const portfoliosData = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...(doc.data() as Omit<Portfolio, 'id'>),
       }));
       setPortfolios(portfoliosData);
     });
 
-    const projectUnsubscribe = onSnapshot(query(collection(db, 'projects'), where('isDeleted', '!=', true)), (snapshot) => {
-      const projectsData = snapshot.docs.map((doc) => ({
+    const projectUnsubscribe = onSnapshot(query(collection(db, 'projects'), where('isDeleted', '!=', true)), (snapshot: any) => {
+      const projectsData = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...(doc.data() as Omit<Project, 'id'>),
       }));
@@ -374,8 +375,8 @@ export default function ProjectsDashboard() {
       setIsLoading(false);
     });
 
-    const usersUnsubscribe = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot) => {
-      const usersData = snapshot.docs.map((doc) => ({
+    const usersUnsubscribe = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot: any) => {
+      const usersData = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...(doc.data() as Omit<User, 'id'>),
       }));
@@ -430,11 +431,11 @@ export default function ProjectsDashboard() {
       const projectsSnapshot = await getDocs(collection(db, 'projects'));
 
       const projectsFromThisYear = projectsSnapshot.docs
-        .map((d) => d.id)
-        .filter((id) => id.startsWith(`P${currentYear}`));
+        .map((d: any) => d.id)
+        .filter((id: string) => id.startsWith(`P${currentYear}`));
 
       let currentMaxId = projectsFromThisYear.length > 0
-        ? Math.max(...projectsFromThisYear.map((id) => parseInt(id.substring(3), 10)))
+        ? Math.max(...projectsFromThisYear.map((id: string) => parseInt(id.substring(3), 10)))
         : 0;
 
       const numToGenerate = parseInt(autogenCount, 10);
@@ -495,6 +496,16 @@ export default function ProjectsDashboard() {
 
   const onPortfolioSubmit = async (values: z.infer<typeof portfolioSchema>) => {
     if (!db) return;
+    const isDuplicate = portfolios.some(
+      p => p.name.trim().toLowerCase() === values.name.trim().toLowerCase() && p.id !== editingPortfolio?.id
+    );
+    if (isDuplicate) {
+      portfolioForm.setError('name', {
+        type: 'manual',
+        message: 'A portfolio with this name already exists.',
+      });
+      return;
+    }
     try {
       if (editingPortfolio) {
         const portfolioRef = doc(db, 'portfolios', editingPortfolio.id);
@@ -503,8 +514,8 @@ export default function ProjectsDashboard() {
       } else {
         const portfoliosSnapshot = await getDocs(collection(db, 'portfolios'));
         const existingIds = portfoliosSnapshot.docs
-          .map(doc => parseInt(doc.id.replace('PF', ''), 10))
-          .filter(num => !isNaN(num));
+          .map((doc: any) => parseInt(doc.id.replace('PF', ''), 10))
+          .filter((num: number) => !isNaN(num));
         const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
         const portfolioId = `PF${nextId.toString().padStart(3, '0')}`;
 
@@ -551,33 +562,49 @@ export default function ProjectsDashboard() {
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
     if (!db) return;
     try {
-      const { projectManagerId, ...restValues } = values;
-      const dataToSave: Partial<Project> = {
-        ...restValues,
-        pricingModel: restValues.pricingModel as PricingModel | undefined,
-        status: restValues.status as ProjectStatus | undefined,
-        startDate: new Date(values.startDate).toISOString(),
-        endDate: new Date(values.endDate).toISOString(),
-      };
-
-      if (projectManagerId) {
-        dataToSave.projectManagerId = projectManagerId;
-      }
-
       if (editingProject) {
         const projectRef = doc(db, 'projects', editingProject.id);
-        await updateDoc(projectRef, dataToSave);
+        await updateDoc(projectRef, {
+          portfolioId: values.portfolioId,
+          name: values.name,
+        });
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
+        if (!values.startDate) {
+          form.setError('startDate', { type: 'manual', message: 'Start date is required.' });
+          return;
+        }
+        if (!values.endDate) {
+          form.setError('endDate', { type: 'manual', message: 'End date is required.' });
+          return;
+        }
+        if (new Date(values.endDate) < new Date(values.startDate)) {
+          form.setError('endDate', { type: 'manual', message: 'End date must be after or on the same day as the start date.' });
+          return;
+        }
+
+        const { projectManagerId, ...restValues } = values;
+        const dataToSave: Partial<Project> = {
+          ...restValues,
+          pricingModel: restValues.pricingModel as PricingModel | undefined,
+          status: restValues.status as ProjectStatus | undefined,
+          startDate: new Date(values.startDate).toISOString(),
+          endDate: new Date(values.endDate).toISOString(),
+        };
+
+        if (projectManagerId) {
+          dataToSave.projectManagerId = projectManagerId;
+        }
+
         const projectsSnapshot = await getDocs(collection(db, 'projects'));
         const currentYear = new Date().getFullYear().toString().slice(-2);
 
         const projectsFromThisYear = projectsSnapshot.docs
-          .map(doc => doc.id)
-          .filter(id => id.startsWith(`P${currentYear}`));
+          .map((doc: any) => doc.id)
+          .filter((id: string) => id.startsWith(`P${currentYear}`));
 
         const newIdNumber = projectsFromThisYear.length > 0
-          ? Math.max(...projectsFromThisYear.map(id => parseInt(id.substring(3), 10))) + 1
+          ? Math.max(...projectsFromThisYear.map((id: string) => parseInt(id.substring(3), 10))) + 1
           : 1;
 
         const projectId = `P${currentYear}${newIdNumber.toString().padStart(5, '0')}`;
@@ -792,7 +819,7 @@ export default function ProjectsDashboard() {
                 <Select value={autogenPortfolioId} onValueChange={setAutogenPortfolioId}>
                   <SelectTrigger><SelectValue placeholder="Select a mandatory Portfolio..." /></SelectTrigger>
                   <SelectContent>
-                    {portfolios.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    {[...portfolios].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -869,8 +896,8 @@ export default function ProjectsDashboard() {
                             <TableBody>
                               {portfolio.projects.map((project) => {
                                 const projectManager = users.find(u => u.id === project.projectManagerId);
-                                const projectUrl = project.status === 'Initial Estimation'
-                                  ? `/projects/${project.id}/initial-estimation/ballpark`
+                                const projectUrl = (project.status === 'Initial Estimation' || project.status === 'Not Started')
+                                  ? `/projects/${project.id}/initial-estimation/specifications`
                                   : `/projects/${project.id}/development/dashboard`;
                                 return (
                                   <TableRow key={project.id}>
@@ -959,22 +986,24 @@ export default function ProjectsDashboard() {
                                       </Link>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      {project.status === 'Completed' && (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => setArchivingProject(project)}>
-                                              <Archive className="h-4 w-4" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Archive Project</TooltipContent>
-                                        </Tooltip>
-                                      )}
-                                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
+                                      <div className="flex items-center justify-end gap-1">
+                                        {project.status === 'Completed' && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button variant="ghost" size="icon" onClick={() => setArchivingProject(project)}>
+                                                <Archive className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Archive Project</TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
                                     </TableCell>
                                   </TableRow>
                                 )
@@ -1048,22 +1077,24 @@ export default function ProjectsDashboard() {
                                       {project.archivedAt ? format(parseISO(project.archivedAt), 'MMM dd, yyyy') : 'N/A'}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button variant="ghost" size="icon" onClick={() => handleRestoreProject(project)}>
-                                            <RotateCcw className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Restore Project</TooltipContent>
-                                      </Tooltip>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Delete permanently</TooltipContent>
-                                      </Tooltip>
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => handleRestoreProject(project)}>
+                                              <RotateCcw className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Restore Project</TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)}>
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete permanently</TooltipContent>
+                                        </Tooltip>
+                                      </div>
                                     </TableCell>
                                   </TableRow>
                                 )

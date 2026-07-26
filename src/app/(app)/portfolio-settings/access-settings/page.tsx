@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { collection, doc, getDocs, setDoc } from '@/lib/db-provider';
 import { AccessLevel, AccessControlSetting } from '@/types';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,8 @@ const pageGroups = [
       'User List',
       'Utilization',
       'Holiday Calendar',
-      'Allocated Leaves',
+      'Leave Settings',
+      'Leave Tracker',
       'Billing',
       'Billing Rate',
       'Trash',
@@ -56,29 +57,33 @@ const pageGroups = [
       'Grooming',
       'Kanban Board',
       'Sub-Tasks',
+      'Defect Tracker',
       'Test Dashboard',
       'Test Backlog',
       'Test Plan',
-      'Bug List',
+      'Defects',
       'Project Status',
       'PM Dashboard',
       'Specifications',
-      'Ballpark (Initial Estimation)',
+      'Specifications (Initial Estimation)',
+      'Project Status (Initial Estimation)',
       'Project Releases',
       'Project Resources',
       'Worklog',
       'Resource Workload',
+      'Project Gantt',
       'RAID Dashboard',
       'Risks',
       'Assumptions',
       'Issues',
       'Dependencies',
       'Project Holiday Calendar',
-      'Leave Tracker',
       'Leave Calendar',
       'PMO Documents',
       'PMO FB Billing',
+      'PMO FB Payment Milestones',
       'PMO TnM Billing',
+      'PMO TnM Payment Milestones',
       'Business Continuity',
       'Board Settings',
       'Sprint Settings',
@@ -102,24 +107,24 @@ const appPages = pageGroups.flatMap(g => g.pages);
 // Seeded defaults mapping for each access level fallback (Page Access)
 const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, string[]> = {
   'Senior Management': [
-    'My Projects', 'Project Home', 'Portfolio Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Allocated Leaves', 'Billing', 'Billing Rate', 'Trash',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Bug List', 'Project Status', 'PM Dashboard', 'Specifications', 'Ballpark (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO TnM Billing', 'Business Continuity'
+    'My Projects', 'Project Home', 'Portfolio Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate', 'Trash',
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ],
   'Project Manager': [
-    'My Projects', 'Project Home', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Allocated Leaves', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Bug List', 'Project Status', 'PM Dashboard', 'Specifications', 'Ballpark (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO TnM Billing', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
+    'My Projects', 'Project Home', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
   ],
   'Lead': [
-    'My Projects', 'Project Home', 'User List', 'Holiday Calendar',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Bug List', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Tracker', 'Leave Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
+    'My Projects', 'Project Home', 'User List', 'Holiday Calendar', 'Leave Tracker',
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Plan', 'Defects', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
   ],
   'Team Member': [
-    'My Projects', 'Project Home',
-    'Development Dashboard', 'Kanban Board', 'Sub-Tasks', 'Test Dashboard', 'Test Backlog', 'Bug List', 'Project Status', 'Specifications', 'Project Resources', 'Worklog', 'RAID Dashboard', 'Project Holiday Calendar', 'Leave Tracker', 'PMO Documents'
+    'My Projects', 'Project Home', 'Leave Tracker',
+    'Development Dashboard', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Defects', 'Project Status', 'Specifications', 'Project Resources', 'Worklog', 'RAID Dashboard', 'Project Holiday Calendar', 'PMO Documents'
   ],
   'PMO': [
-    'My Projects', 'Project Home', 'User List', 'Utilization', 'Holiday Calendar', 'Billing', 'Billing Rate',
-    'Project Status', 'PM Dashboard', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'PMO Documents', 'PMO FB Billing', 'PMO TnM Billing', 'Business Continuity'
+    'My Projects', 'Project Home', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Tracker', 'Billing', 'Billing Rate',
+    'Project Status', 'PM Dashboard', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ]
 };
 
@@ -158,7 +163,7 @@ const defaultCrudSettings: Record<Exclude<AccessLevel, 'Administrator'>, Record<
 };
 
 export default function AccessSettingsPage() {
-    const [accessSettings, setAccessSettings] = useState<Record<AccessLevel, Record<string, boolean>>>({});
+    const [accessSettings, setAccessSettings] = useState<Record<AccessLevel, Record<string, boolean>>>({} as any);
     const [crudSettings, setCrudSettings] = useState<Record<AccessLevel, Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }>>>({} as any);
     const [isLoading, setIsLoading] = useState(true);
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
@@ -182,7 +187,7 @@ export default function AccessSettingsPage() {
             const fetchedSettings: Record<string, any> = {};
             const fetchedCrudSettings: Record<string, any> = {};
             
-            snapshot.forEach(doc => {
+            snapshot.forEach((doc: any) => {
                 fetchedSettings[doc.id] = doc.data().pageAccess;
                 fetchedCrudSettings[doc.id] = doc.data().crudAccess;
             });
@@ -193,8 +198,8 @@ export default function AccessSettingsPage() {
                 newSettings[level] = {};
                 for (const page of appPages) {
                     newSettings[level][page] = fetchedSettings[level]?.[page] ?? (
-                        level === 'Administrator' ||
-                        (level !== 'Administrator' && defaultAccessSettings[level]?.includes(page))
+                        (level as string) === 'Administrator' ||
+                        ((level as string) !== 'Administrator' && (defaultAccessSettings as any)[level]?.includes(page))
                     );
                 }
             }

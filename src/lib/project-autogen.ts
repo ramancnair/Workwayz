@@ -5,7 +5,7 @@
  * for a dummy project so that every dashboard is populated without manual data entry.
  */
 
-import type { Firestore } from 'firebase/firestore';
+import type { Firestore } from '@/lib/db-provider';
 import {
   collection,
   doc,
@@ -14,7 +14,7 @@ import {
   getDocs,
   query,
   where,
-} from 'firebase/firestore';
+} from '@/lib/db-provider';
 import type {
   User,
 } from '@/types';
@@ -129,7 +129,8 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const kanbanCols = ['To Do', 'In Progress', 'In QA', 'Done'];
   const kanbanColIds: Record<string, string> = {};
   kanbanCols.forEach((name, i) => {
-    const ref = doc(col('kanbanColumns'));
+    const docId = name.toLowerCase().replace(/\s+/g, '-');
+    const ref = doc(col('kanbanColumns'), docId);
     kanbanColIds[name] = ref.id;
     batch.set(ref, {
       name,

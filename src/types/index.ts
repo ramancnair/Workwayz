@@ -61,7 +61,7 @@ export type Story = {
   releaseId?: string;
   predecessorId?: string; // ID of the requirement type which should be completed before the item can start
   isDeleted?: boolean;
-  deletedAt?: string;
+  deletedAt?: string | null;
   parentStoryId?: string;
   relatedTestCaseId?: string; // For Bug
   attachments?: string;
@@ -127,6 +127,7 @@ export type TestCase = {
   storyId?: string;
   releaseId?: string;
   sprintId?: string;
+  assigneeId?: string;
   isDeleted?: boolean;
   deletedAt?: string;
   attachment?: string;
@@ -167,7 +168,7 @@ export type User = {
   availability?: number;
   leavePeriods?: LeavePeriod[];
   isDeleted?: boolean;
-  deletedAt?: string; // ISO String
+  deletedAt?: string | null; // ISO String
   isEnabled?: boolean; // undefined treated as true for backward compat
   capabilities?: string[];
   isBcpSupport?: boolean;
@@ -188,7 +189,7 @@ export type Risk = {
   residualRisk: string;
   contingencyPlan: string;
   isDeleted?: boolean;
-  deletedAt?: string;
+  deletedAt?: string | null;
 };
 
 export type AssumptionStatus = 'Active' | 'Validated' | 'Invalidated';
@@ -203,7 +204,7 @@ export type Assumption = {
   validationDate?: string; // ISO String
   ownerId?: string;
   isDeleted?: boolean;
-  deletedAt?: string;
+  deletedAt?: string | null;
 };
 
 export type IssueStatus = 'Open' | 'In Progress' | 'Resolved' | 'Closed';
@@ -219,7 +220,7 @@ export type Issue = {
   resolvedDate?: string; // ISO String
   assigneeId?: string;
   isDeleted?: boolean;
-  deletedAt?: string;
+  deletedAt?: string | null;
 };
 
 export type DependencyStatus = 'On Track' | 'At Risk' | 'Blocked';
@@ -235,7 +236,7 @@ export type Dependency = {
   status: DependencyStatus;
   ownerId?: string;
   isDeleted?: boolean;
-  deletedAt?: string;
+  deletedAt?: string | null;
 };
 
 export type KanbanColumn = {
@@ -348,6 +349,7 @@ export type Project = {
   isDeleted?: boolean;
   deletedAt?: string; // ISO String
   summary?: string;
+  description?: string;
   projectManagerId?: string;
   pricingModel?: PricingModel;
   status?: ProjectStatus;
@@ -412,6 +414,8 @@ export type ProjectDocument = {
   name: string;
   location: string;
   createdAt: string; // ISO String
+  isDeleted?: boolean;
+  deletedAt?: string;
 };
 
 export type PaymentMilestoneStatus = 'TBD' | 'In Progress' | 'Milestone completed' | 'Invoice raised' | 'Payment Completed';

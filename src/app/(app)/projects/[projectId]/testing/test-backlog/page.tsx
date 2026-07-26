@@ -58,9 +58,9 @@ import { DatePicker } from '@/components/ui/datepicker';
 
 
 const testCaseFormSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   type: z.enum(['Functional', 'Non-functional']),
-  description: z.string().min(1, 'Description is required.'),
+  description: z.string().min(1, 'Description is required.').max(300, 'Description cannot exceed 300 characters.'),
   expectedResult: z.string().min(1, 'Expected result is required.'),
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
@@ -143,10 +143,11 @@ export default function TestBacklogPage() {
         }))
       });
 
-      if (result.error) throw new Error(result.error);
+      const res = result as any;
+      if (res.error) throw new Error(res.error);
       
       let successCount = 0;
-      for (const tc of result.testCases) {
+      for (const tc of (res.testCases || [])) {
         const success = await addTestCase({
           ...tc,
           status: 'Not Run',
@@ -302,7 +303,7 @@ export default function TestBacklogPage() {
     if (!deletingTestCase) return;
     const success = await deleteTestCase(deletingTestCase.id);
     if (success) {
-      toast({ title: "Success", description: "Test case deleted." });
+      toast({ title: "Success", description: "Test case moved to trash." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not delete test case." });
     }
@@ -564,12 +565,14 @@ export default function TestBacklogPage() {
                           </TableCell>
                         )}
                         <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeletingTestCase(tc)}>
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeletingTestCase(tc)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                     </TableRow>
                 )
@@ -794,7 +797,7 @@ export default function TestBacklogPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the test case "{deletingTestCase?.title}".
+              This will move the test case "{deletingTestCase?.title}" to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -803,7 +806,7 @@ export default function TestBacklogPage() {
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Continue
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -227,9 +227,9 @@ export default function ProjectSynopsisPage() {
                                    <FormField control={infoForm.control} name="status" render={({ field }) => (
                                         <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{projectStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
                                    )}/>
-                                    <FormField control={infoForm.control} name="projectManagerId" render={({ field }) => (
-                                        <FormItem><FormLabel>Project Manager</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a PM"/></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Unassigned</SelectItem>{allUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
-                                    )}/>
+                                      <FormField control={infoForm.control} name="projectManagerId" render={({ field }) => (
+                                          <FormItem><FormLabel>Project Manager</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a PM"/></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Unassigned</SelectItem>{[...allUsers.filter(u => (!u.isDeleted && u.isEnabled !== false) || u.id === field.value)].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}{u.empId ? ` (${u.empId})` : ''}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
+                                      )}/>
                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                      <FormField control={infoForm.control} name="pricingModel" render={({ field }) => (

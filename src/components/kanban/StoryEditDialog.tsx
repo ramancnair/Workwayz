@@ -29,7 +29,7 @@ import { useProject } from '@/context/ProjectContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/datepicker';
-import { cn } from '@/lib/utils';
+import { cn, getSprintDisplayId } from '@/lib/utils';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Story, WorkItemType, StoryStatus, Priority, BugSeverity } from '@/types';
@@ -49,9 +49,9 @@ const priorityStyles: Record<Priority, string> = {
 
 const storyFormSchema = z.object({
   itemType: z.enum(workItemTypes as [string, ...string[]]),
-  title: z.string().min(1, 'Title is required.'),
-  status: z.enum(statusOptions as [string, ...string[]]).optional(),
-  description: z.string().optional(),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
+  status: z.string().optional(),
+  description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
   parentStoryId: z.string().optional(),
@@ -72,8 +72,8 @@ const storyFormSchema = z.object({
 });
 
 const subTaskFormSchema = z.object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
+    title: z.string().min(1, 'Title is required').max(60, 'Title cannot exceed 60 characters.'),
+    description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
@@ -170,17 +170,17 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
     label: `[${s.storyId}] ${s.title}`
-  })), [parentStories]);
+  })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })), [parentStories]);
 
   const testCaseOptions = useMemo(() => testCases.map(tc => ({
     value: tc.id,
     label: `[${tc.testCaseId}] ${tc.title}`,
-  })), [testCases]);
+  })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })), [testCases]);
 
   const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
     value: b.id,
     label: `[${b.storyId}] ${b.title}`,
-  })), [stories]);
+  })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })), [stories]);
 
 
   useEffect(() => {
@@ -246,7 +246,10 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        itemType: values.itemType as WorkItemType | undefined,
+        priority: values.priority as Priority | undefined,
+        severity: values.severity as BugSeverity | undefined,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
@@ -267,7 +270,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
     });
@@ -348,7 +351,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                             <FormItem><FormLabel>Impacted System</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{[...impactedSystems].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             <FormMessage/></FormItem>
                                         )}/>
@@ -359,7 +362,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -392,7 +395,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                             )}
                                             />
                                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                         )}/>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -419,8 +422,8 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="backlog">Backlog</SelectItem>
-                                                {sprints.map(sprint => (
-                                                    <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                                {[...sprints].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })).map(sprint => (
+                                                    <SelectItem key={sprint.id} value={sprint.id}>[{getSprintDisplayId(sprint)}] {sprint.title}</SelectItem>
                                                 ))}
                                                 </SelectContent>
                                             </Select>
@@ -434,7 +437,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {releases.map(release => (
+                                                {[...releases].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(release => (
                                                     <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
                                                 ))}
                                                 </SelectContent>
@@ -563,7 +566,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                               <FormItem>
                                 <FormLabel>Impacted Systems</FormLabel>
                                 <div className="grid grid-cols-2 gap-2 p-2 border rounded-md">
-                                  {impactedSystems.map((system) => (
+                                  {[...impactedSystems].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map((system) => (
                                     <FormField
                                       key={system.id}
                                       control={editStoryForm.control}
@@ -629,7 +632,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Task'].includes(selectedStory.itemType) ? (
+                        {['Requirement/Story', 'Task', 'Bug', 'Feature Change'].includes(selectedStory.itemType) ? (
                             <FormField
                             control={editStoryForm.control}
                             name="epicId"
@@ -644,7 +647,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                     </FormControl>
                                     <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {epics.map((epic) => (
+                                    {[...epics].sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })).map((epic) => (
                                         <SelectItem key={epic.id} value={epic.id}>
                                         {epic.title}
                                         </SelectItem>
@@ -671,7 +674,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                         </FormControl>
                                         <SelectContent>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users.map(emp => (
+                                        {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
                                             <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                                         ))}
                                         </SelectContent>
@@ -793,7 +796,9 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    {statusOptions.map((s) => (
+                                     {(selectedStory?.itemType === 'Bug' 
+                                       ? ['In Triage', 'Defect Backlog', 'In Progress', 'Retest', 'Closed']
+                                       : statusOptions).map((s) => (
                                     <SelectItem key={s} value={s}>
                                         {s}
                                     </SelectItem>
@@ -899,9 +904,9 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                         <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
                                         <SelectContent>
                                         <SelectItem value="backlog">Backlog</SelectItem>
-                                        {sprints.map(sprint => (
-                                            <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
-                                        ))}
+                                         {sprints.map(sprint => (
+                                             <SelectItem key={sprint.id} value={sprint.id}>[{getSprintDisplayId(sprint)}] {sprint.title}</SelectItem>
+                                         ))}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -938,7 +943,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                 <FormItem>
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="0" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
+                                    <Input type="number" placeholder="" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
                                 </FormControl>
                                 {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
                                 <FormMessage />
@@ -962,25 +967,40 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                 )}
                             />
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Created On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange as any} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Closed On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange as any} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
+                                 <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
+                                     <FormItem>
+                                         <FormLabel>Created On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 disabled
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                                 <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
+                                     <FormItem>
+                                         <FormLabel>Closed On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                             </div>
                             </>
                         )}
                       </div>

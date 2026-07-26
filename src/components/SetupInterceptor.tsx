@@ -27,21 +27,10 @@ export function SetupInterceptor() {
             }
           } else {
             // It is configured.
+            // Removed the auth check here because if the database is swapped, 
+            // the user might need to run the wizard again without being logged in.
             if (pathname.startsWith('/setup-wizard')) {
-              // Check if user is authenticated and is an Administrator
-              const userStr = localStorage.getItem('projectflow_user');
-              if (!userStr) {
-                router.push('/login');
-              } else {
-                try {
-                  const user = JSON.parse(userStr);
-                  if (user.accessLevel !== 'Administrator') {
-                    router.push('/project-home');
-                  }
-                } catch(e) {
-                  router.push('/login');
-                }
-              }
+                // Allow them to access the wizard
             }
           }
         }

@@ -32,7 +32,7 @@ import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown,
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getSprintDisplayId, generateNextSprintId } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -61,10 +61,10 @@ import { Label } from '@/components/ui/label';
 const sprintStatuses: SprintStatus[] = ['Yet to Start', 'Current', 'Completed', 'Cancelled'];
 
 const sprintSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
+  title: z.string().min(1, 'Title is required.').max(60, 'Sprint name cannot exceed 60 characters.'),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  status: z.enum(sprintStatuses).optional(),
+  status: z.enum(['Yet to Start', 'Current', 'Completed', 'Cancelled']).optional(),
 });
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -88,14 +88,14 @@ const priorityStyles: Record<Priority, string> = {
 
 
 const storyFormSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
-  description: z.string().optional(),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
   parentStoryId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
-  priority: z.enum(priorities).optional(),
+  priority: z.enum(['Critical', 'High', 'Medium', 'Low', 'Backburner']).optional(),
   foundInTestPlanId: z.string().optional(),
   relatedBugId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
@@ -106,12 +106,12 @@ const storyFormSchema = z.object({
 });
 
 const subTaskFormSchema = z.object({
-    title: z.string().min(1, 'Title is required.'),
-    description: z.string().optional(),
+    title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
+    description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
-    status: z.enum(statusOptions),
+    status: z.string(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
     sprintId: z.string().optional(),
@@ -129,7 +129,7 @@ const subTaskFormSchema = z.object({
 
 function StoryItemCard({ 
     story, 
-    epic,
+    epic, 
     assignee,
     subItems,
     parentStory,
@@ -142,7 +142,7 @@ function StoryItemCard({
     assignee?: User,
     subItems?: Story[],
     parentStory?: Story,
-    onMove: (storyId: string | null) => void,
+    onMove: (storyId: string, sprintId: string | null) => void,
     onEdit: () => void;
     onSubItemClick: (story: Story) => void;
 }) {
@@ -292,14 +292,14 @@ function StoryItemCard({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                     {!!story.sprintId && (
-                        <DropdownMenuItem onClick={() => onMove(null)}>
+                        <DropdownMenuItem onClick={() => onMove(story.id, null)}>
                         Backlog
                         </DropdownMenuItem>
                     )}
                     {sortedSprints
                         .filter((sprint) => sprint.id !== story.sprintId)
                         .map((sprint) => (
-                        <DropdownMenuItem key={sprint.id} onClick={() => onMove(sprint.id)}>
+                        <DropdownMenuItem key={sprint.id} onClick={() => onMove(story.id, sprint.id)}>
                             {sprint.title} {sprint.status === 'Current' && "(current)"}
                         </DropdownMenuItem>
                         ))}
@@ -406,9 +406,12 @@ function SprintColumn({
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                     <h3 className="text-lg font-semibold">{sprint.title}</h3>
-                     {sprint.status === 'Current' && <Badge>Current</Badge>}
+                <div className="flex flex-col">
+                     <span className="text-xs font-mono text-muted-foreground">{getSprintDisplayId(sprint)}</span>
+                     <div className="flex items-center gap-2">
+                       <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                       {sprint.status === 'Current' && <Badge>Current</Badge>}
+                     </div>
                 </div>
                 <div className="flex items-center gap-1">
                     {showNav && (
@@ -775,12 +778,32 @@ export default function GroomingPage() {
         }
     }, [watchedStartDate, projectSettings?.sprintDurationInWeeks, sprintForm]);
     
+    const nextSprintId = useMemo(() => generateNextSprintId(sprints), [sprints]);
+    
     const handleSprintSubmit = async (values: z.infer<typeof sprintSchema>) => {
+        const trimmedTitle = values.title.trim();
+        const isDuplicate = sprints.some(s => 
+            s.title.trim().toLowerCase() === trimmedTitle.toLowerCase() &&
+            (!editingSprint || s.id !== editingSprint.id)
+        );
+
+        if (isDuplicate) {
+            toast({
+                variant: 'destructive',
+                title: 'Duplicate Sprint Name',
+                description: `A sprint named "${trimmedTitle}" already exists. Duplicate sprint names are not allowed.`
+            });
+            return;
+        }
+
+        const sprintId = editingSprint ? getSprintDisplayId(editingSprint) : nextSprintId;
+
         const payload = {
-            title: values.title,
+            sprintId,
+            title: trimmedTitle,
             startDate: values.startDate ? new Date(values.startDate) : undefined,
             endDate: values.endDate ? new Date(values.endDate) : undefined,
-            status: values.status,
+            status: values.status as SprintStatus | undefined,
         };
         const success = editingSprint
             ? await updateSprint(editingSprint.id, payload)
@@ -800,7 +823,8 @@ export default function GroomingPage() {
         setIsEditStorySubmitting(true);
         const success = await updateStory(selectedStory.id, {
             ...values,
-            assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+            priority: values.priority as Priority | undefined,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         });
         if (success) {
             handleSetSelectedStory(null);
@@ -817,7 +841,7 @@ export default function GroomingPage() {
         
         const success = await updateStory(selectedStory.id, {
             ...values,
-            assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+            assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
             startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
             endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         });
@@ -970,7 +994,7 @@ export default function GroomingPage() {
                                             assignee={assignee}
                                             subItems={subItems}
                                             parentStory={parentStory}
-                                            onMove={(newSprintId) => moveStoryToSprint(story.id, newSprintId)}
+                                            onMove={moveStoryToSprint}
                                             onEdit={() => handleSetSelectedStory(story)}
                                             onSubItemClick={handleDrillDown}
                                         />
@@ -1015,6 +1039,16 @@ export default function GroomingPage() {
                 </DialogHeader>
                 <Form {...sprintForm}>
                     <form onSubmit={sprintForm.handleSubmit(handleSprintSubmit)} className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="sprint-id-display">Sprint ID</Label>
+                            <Input
+                                id="sprint-id-display"
+                                value={editingSprint ? getSprintDisplayId(editingSprint) : nextSprintId}
+                                readOnly
+                                disabled
+                                className="bg-muted text-muted-foreground font-mono cursor-not-allowed"
+                            />
+                        </div>
                         <FormField
                             control={sprintForm.control}
                             name="title"
@@ -1181,7 +1215,7 @@ export default function GroomingPage() {
                                         )}
                                         />
                                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                         )}/>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1400,7 +1434,7 @@ export default function GroomingPage() {
                                 )}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {['Requirement/Story', 'Task'].includes(selectedStory.itemType) ? (
+                            {['Requirement/Story', 'Task', 'Bug', 'Feature Change'].includes(selectedStory.itemType) ? (
                                 <FormField
                                 control={editStoryForm.control}
                                 name="epicId"
@@ -1615,7 +1649,7 @@ export default function GroomingPage() {
                                     <FormItem>
                                         <FormLabel>Effort (hours)</FormLabel>
                                         <FormControl>
-                                        <Input type="number" placeholder="0" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
+                                        <Input type="number" placeholder="" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
                                         </FormControl>
                                         {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
                                         <FormMessage />
@@ -1702,7 +1736,7 @@ export default function GroomingPage() {
                                                     )} />
                                                 </div>
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>

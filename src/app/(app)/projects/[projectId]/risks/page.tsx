@@ -130,15 +130,15 @@ export default function RisksPage() {
     }
     setIsAiGenSubmitting(true);
     try {
-      const result = await getAiRiskSuggestions({ projectSummary: project.summary });
+      const result = await getAiRiskSuggestions({ projectSummary: project.summary }) as any;
       if (result.error) {
         throw new Error(result.error);
       }
 
-      for (const risk of result.risks) {
+      for (const risk of (result.risks || [])) {
         await addRisk(risk);
       }
-      toast({ title: 'Success', description: `${result.risks.length} risks generated successfully.` });
+      toast({ title: 'Success', description: `${(result.risks || []).length} risks generated successfully.` });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message || 'Could not generate risks.' });
     } finally {
@@ -251,7 +251,7 @@ export default function RisksPage() {
                         aria-label="Select all"
                     />
                 </TableHead>
-                <TableHead>ID</TableHead>
+                <TableHead className="whitespace-nowrap">ID</TableHead>
                 <TableHead className="w-[30%]">Description</TableHead>
                 <TableHead>Severity</TableHead>
                 <TableHead>Probability</TableHead>
@@ -278,7 +278,7 @@ export default function RisksPage() {
                                 aria-label="Select row"
                             />
                         </TableCell>
-                        <TableCell className="font-medium">{risk.riskId}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">{risk.riskId}</TableCell>
                         <TableCell className="break-words">{risk.description}</TableCell>
                         <TableCell>{severityOptions.find(o => o.value === risk.severity)?.label}</TableCell>
                         <TableCell>{probabilityOptions.find(o => o.value === risk.probability)?.label}</TableCell>
@@ -287,12 +287,14 @@ export default function RisksPage() {
                         </TableCell>
                         <TableCell className="break-words">{risk.mitigationPlan}</TableCell>
                         <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(risk)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setDeletingRisk(risk)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(risk)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => setDeletingRisk(risk)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </TableCell>
                     </TableRow>
                 )

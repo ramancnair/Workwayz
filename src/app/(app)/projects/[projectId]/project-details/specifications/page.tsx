@@ -88,7 +88,7 @@ const systemSchema = z.object({
 
 const horizontalSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
-  weightage: z.coerce.number().min(0, 'Weightage must be positive.'),
+  weightage: z.coerce.number().min(0, 'Weightage must be positive.').max(100, 'Weightage cannot exceed 100%.'),
 });
 
 const systemCategories: ImpactedSystemCategory[] = ['Technology', 'Function'];
@@ -637,7 +637,7 @@ export default function EnvironmentsPage() {
              <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[30%]">Name</TableHead>
+                  <TableHead className="w-[30%]">System Name</TableHead>
                   <TableHead className="w-[30%]">Description</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Effort (man-days)</TableHead>
@@ -652,9 +652,28 @@ export default function EnvironmentsPage() {
                     <TableCell className="font-medium">{system.name}</TableCell>
                     <TableCell>{system.description}</TableCell>
                     <TableCell>{system.category}</TableCell>
-                    <TableCell>{system.estimate ?? 'N/A'}</TableCell>
                     <TableCell>
                       <Input
+                        key={`${system.id}-estimate-${system.estimate}`}
+                        type="number"
+                        step="any"
+                        defaultValue={system.estimate !== undefined ? system.estimate : ''}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        onBlur={(e) => {
+                            const newEstimate = parseFloat(e.target.value);
+                            if (!isNaN(newEstimate) && newEstimate !== system.estimate) {
+                                updateImpactedSystem(system.id, { estimate: newEstimate });
+                            } else if (e.target.value === '' && system.estimate !== undefined) {
+                                updateImpactedSystem(system.id, { estimate: undefined });
+                            }
+                        }}
+                        className="w-24"
+                        placeholder=""
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        key={`${system.id}-rate-${system.dailyBillingRate}`}
                         type="number"
                         defaultValue={system.dailyBillingRate || ''}
                         onWheel={(e) => e.currentTarget.blur()}
@@ -667,17 +686,19 @@ export default function EnvironmentsPage() {
                             }
                         }}
                         className="w-24"
-                        placeholder="0"
+                        placeholder=""
                       />
                     </TableCell>
                     <TableCell>${((system.estimate || 0) * (system.dailyBillingRate || 0)).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleSystemDialogOpen(system)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingSystem(system)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleSystemDialogOpen(system)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingSystem(system)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -698,7 +719,7 @@ export default function EnvironmentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Horizontals</CardTitle>
+              <CardTitle>Horizontal</CardTitle>
               <CardDescription>Manage horizontal capabilities for the project.</CardDescription>
             </div>
             <div className="flex gap-2">
@@ -712,12 +733,12 @@ export default function EnvironmentsPage() {
                          disabled={!project?.summary || isEditingSummary}
                       >
                         <Bot className="mr-2 h-4 w-4" />
-                        Horizontals Suggest
+                        Horizontal Suggest
                       </Button>
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>AI based horizontals suggestion</p>
+                    <p>AI based horizontal suggestion</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -750,12 +771,18 @@ export default function EnvironmentsPage() {
                       <TableCell>
                         <Input
                           type="number"
+                          min={0}
+                          max={100}
                           defaultValue={horizontal.weightage || ''}
                           onWheel={(e) => e.currentTarget.blur()}
                           onBlur={(e) => {
-                              const newWeightage = parseFloat(e.target.value);
-                              if (!isNaN(newWeightage) && newWeightage !== horizontal.weightage) {
-                                  updateHorizontal(horizontal.id, { weightage: newWeightage });
+                              let newWeightage = parseFloat(e.target.value);
+                              if (!isNaN(newWeightage)) {
+                                  newWeightage = Math.max(0, Math.min(100, newWeightage));
+                                  e.target.value = newWeightage.toString();
+                                  if (newWeightage !== horizontal.weightage) {
+                                      updateHorizontal(horizontal.id, { weightage: newWeightage });
+                                  }
                               }
                           }}
                           className="w-24"
@@ -781,12 +808,14 @@ export default function EnvironmentsPage() {
                       </TableCell>
                       <TableCell>${cost.toFixed(2)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleHorizontalDialogOpen(horizontal)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeletingHorizontal(horizontal)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleHorizontalDialogOpen(horizontal)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingHorizontal(horizontal)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -935,8 +964,8 @@ export default function EnvironmentsPage() {
                   name="estimate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Estimation (man-days)</FormLabel>
-                      <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormLabel>Effort (man-days)</FormLabel>
+                      <FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -948,7 +977,7 @@ export default function EnvironmentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Daily Billing Rate (USD)</FormLabel>
-                      <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -97,22 +97,22 @@ const priorityStyles: Record<Priority, string> = {
 
 
 const epicFormSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
-  description: z.string().optional(),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
 });
 
 const storyFormSchema = z.object({
-  itemType: z.enum(workItemTypes),
-  title: z.string().min(1, 'Title is required.'),
-  description: z.string().optional(),
+  itemType: z.enum(['Requirement/Story', 'Bug', 'Task', 'Feature Change', 'Sub Task']),
+  title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
   parentStoryId: z.string().optional(),
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
-  priority: z.enum(priorities).optional(),
-  severity: z.enum(severities).optional(),
+  priority: z.enum(['Critical', 'High', 'Medium', 'Low', 'Backburner']).optional(),
+  severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
   releaseId: z.string().optional(),
   foundInTestPlanId: z.string().optional(),
   relatedBugId: z.string().optional(),
@@ -126,12 +126,12 @@ const storyFormSchema = z.object({
 });
 
 const subTaskFormSchema = z.object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
+    title: z.string().min(1, 'Title is required').max(60, 'Title cannot exceed 60 characters.'),
+    description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
     impactedSystemId: z.string().optional(),
     estimatedHours: z.coerce.number().optional(),
     assigneeId: z.string().optional(),
-    status: z.enum(statusOptions),
+    status: z.string(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
     sprintId: z.string().optional(),
@@ -330,12 +330,12 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
 export default function BacklogPage() {
   const { 
     project,
-    epics, 
+    epics: rawEpics, 
     stories, 
-    sprints, 
-    employees: users, 
+    sprints: rawSprints, 
+    employees: rawUsers, 
     releasesAndMilestones,
-    impactedSystems,
+    impactedSystems: rawImpactedSystems,
     moveStoryToSprint, 
     moveStoryToEpic, 
     deleteStory, 
@@ -350,11 +350,17 @@ export default function BacklogPage() {
     weeklyOffDays,
     projectSettings,
     testCases,
-    testPlans,
+    testPlans: rawTestPlans,
     testDate,
     updateTestCase,
     deleteTestCase,
   } = useProject();
+
+  const epics = useMemo(() => rawEpics.filter(e => e && e.id && typeof e.id === 'string' && e.id.trim() !== ''), [rawEpics]);
+  const sprints = useMemo(() => rawSprints.filter(s => s && s.id && typeof s.id === 'string' && s.id.trim() !== ''), [rawSprints]);
+  const users = useMemo(() => rawUsers.filter(u => u && u.id && typeof u.id === 'string' && u.id.trim() !== ''), [rawUsers]);
+  const testPlans = useMemo(() => rawTestPlans.filter(tp => tp && tp.id && typeof tp.id === 'string' && tp.id.trim() !== ''), [rawTestPlans]);
+  const impactedSystems = useMemo(() => rawImpactedSystems.filter(s => s && s.id && typeof s.id === 'string' && s.id.trim() !== ''), [rawImpactedSystems]);
   
   const { toast } = useToast();
 
@@ -389,7 +395,7 @@ export default function BacklogPage() {
   const [addPredecessorText, setAddPredecessorText] = useState('');
   const [editPredecessorText, setEditPredecessorText] = useState('');
 
-  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
+  const releases = useMemo(() => releasesAndMilestones.filter(r => r && r.itemType === 'Release' && r.id && typeof r.id === 'string' && r.id.trim() !== ''), [releasesAndMilestones]);
 
   const calculateBusinessDays = useCallback((start: Date, end: Date): number => {
     if(!start || !end) return 0;
@@ -481,7 +487,7 @@ export default function BacklogPage() {
 
   const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
     value: b.id,
-    label: `[${b.storyId}] {b.title}`,
+    label: `[${b.storyId}] ${b.title}`,
   })), [stories]);
 
   const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && s.itemType !== 'Sub Task').map(s => ({
@@ -616,11 +622,12 @@ export default function BacklogPage() {
         impactedSystems: impactedSystems.map(s => ({ id: s.id, name: s.name })),
       });
   
-      if (result.error) {
-        throw new Error(result.error);
+      const res = result as any;
+      if (res.error) {
+        throw new Error(res.error);
       }
   
-      for (const story of result.stories) {
+      for (const story of (res.stories || [])) {
         const storyPayload: Omit<Story, 'id' | 'storyId'> = {
           title: story.title,
           description: story.description,
@@ -637,6 +644,7 @@ export default function BacklogPage() {
           for (const subTask of story.subTasks) {
             const subTaskPayload: Omit<Story, 'id' | 'storyId'> = {
               title: subTask.title,
+              description: '',
               itemType: 'Sub Task',
               status: 'To Do',
               parentStoryId: storyRef.id,
@@ -647,7 +655,7 @@ export default function BacklogPage() {
           }
         }
       }
-      toast({ title: 'Success', description: `${result.stories.length} stories and their sub-tasks generated.` });
+      toast({ title: 'Success', description: `${(res.stories || []).length} stories and their sub-tasks generated.` });
       setIsAiGenOpen(false);
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message || 'An unknown error occurred.' });
@@ -703,7 +711,7 @@ export default function BacklogPage() {
         const newStory: Omit<Story, 'id' | 'storyId'> = {
           title: values.title,
           description: values.description || '',
-          itemType: values.itemType,
+          itemType: values.itemType as WorkItemType,
           acceptanceCriteria: values.acceptanceCriteria,
           reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
           assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
@@ -712,8 +720,8 @@ export default function BacklogPage() {
           relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
           status: 'To Do',
           estimatedHours: values.estimatedHours,
-          priority: values.priority,
-          severity: values.severity,
+          priority: values.priority as Priority | undefined,
+          severity: values.severity as BugSeverity | undefined,
           sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
           releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
           foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
@@ -741,7 +749,10 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     setIsEditStorySubmitting(true);
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        itemType: values.itemType as WorkItemType | undefined,
+        priority: values.priority as Priority | undefined,
+        severity: values.severity as BugSeverity | undefined,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
@@ -762,7 +773,7 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     
     const success = await updateStory(selectedStory.id, {
         ...values,
-        assigneeId: values.assigneeId === 'unassigned' ? null : values.assigneeId,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
     });
@@ -819,7 +830,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   const handleBulkDelete = async () => {
     const success = await bulkDeleteStories(storiesToDelete);
     if(success) {
-      toast({ title: 'Success', description: `${storiesToDelete.length} stories moved to trash.` });
+      toast({ title: 'Success', description: `${storiesToDelete.length} ${storiesToDelete.length === 1 ? 'story' : 'stories'} moved to trash.` });
       setSelectedStories(prev => prev.filter(id => !storiesToDelete.includes(id)));
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not delete stories." });
@@ -845,7 +856,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
     const success = await bulkMoveStories(storiesToMove, epicId, releaseId);
     if(success) {
-      toast({ title: 'Success', description: `${storiesToMove.length} stories moved.` });
+      toast({ title: 'Success', description: `${storiesToMove.length} ${storiesToMove.length === 1 ? 'story' : 'stories'} moved successfully.` });
       setSelectedStories(prev => prev.filter(id => !storiesToMove.includes(id)));
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not move stories." });
@@ -1146,7 +1157,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Task'].includes(watchedItemType) ? (
+                        {['Requirement/Story', 'Task', 'Bug', 'Feature Change'].includes(watchedItemType) ? (
                             <FormField
                                 control={addStoryForm.control}
                                 name="epicId"
@@ -1408,7 +1419,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormItem>
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                                    <Input type="number" placeholder="" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -1432,24 +1443,39 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             />
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField control={addStoryForm.control} name="createdAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Created On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={addStoryForm.control} name="closedAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Closed On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
+                                     <FormItem>
+                                         <FormLabel>Created On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 disabled
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                                 <FormField control={addStoryForm.control} name="closedAt" render={({ field }) => (
+                                     <FormItem>
+                                         <FormLabel>Closed On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                             </div>
                             </>
                         )}
                     </div>
@@ -1627,7 +1653,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
       <Dialog open={storiesToMove.length > 0} onOpenChange={(isOpen) => !isOpen && setStoriesToMove([])}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Move {storiesToMove.length} Stories</DialogTitle>
+                <DialogTitle>Reassign Stories</DialogTitle>
                 <DialogDescription>
                     Select a new epic to move the selected stories to.
                 </DialogDescription>
@@ -1635,55 +1661,55 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
             <Form {...bulkMoveForm}>
                 <form onSubmit={bulkMoveForm.handleSubmit(handleBulkMove)} className="space-y-4">
                     <FormField
-                        control={bulkMoveForm.control}
-                        name="targetEpicId"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>New Epic</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select an epic" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="no_change">No Change</SelectItem>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {epics.map(epic => (
-                                            <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                         control={bulkMoveForm.control}
+                         name="targetEpicId"
+                         render={({ field }) => (
+                             <FormItem>
+                                 <FormLabel>Epic</FormLabel>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                     <FormControl>
+                                         <SelectTrigger>
+                                             <SelectValue placeholder="Select an epic" />
+                                         </SelectTrigger>
+                                     </FormControl>
+                                     <SelectContent>
+                                         <SelectItem value="no_change">No Change</SelectItem>
+                                         <SelectItem value="unassigned">Unassigned</SelectItem>
+                                         {epics.map(epic => (
+                                             <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                                         ))}
+                                     </SelectContent>
+                                 </Select>
+                                 <FormMessage />
+                             </FormItem>
+                         )}
+                     />
                     <FormField
-                        control={bulkMoveForm.control}
-                        name="targetReleaseId"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>New Release</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a release" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="no_change">No Change</SelectItem>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {releases.map(release => (
-                                            <SelectItem key={release.id} value={release.id}>{release.releaseId} - {release.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                         control={bulkMoveForm.control}
+                         name="targetReleaseId"
+                         render={({ field }) => (
+                             <FormItem>
+                                 <FormLabel>Release</FormLabel>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                     <FormControl>
+                                         <SelectTrigger>
+                                             <SelectValue placeholder="Select a release" />
+                                         </SelectTrigger>
+                                     </FormControl>
+                                     <SelectContent>
+                                         <SelectItem value="no_change">No Change</SelectItem>
+                                         <SelectItem value="unassigned">Unassigned</SelectItem>
+                                         {releases.map(release => (
+                                             <SelectItem key={release.id} value={release.id}>{release.releaseId} - {release.name}</SelectItem>
+                                         ))}
+                                     </SelectContent>
+                                 </Select>
+                                 <FormMessage />
+                             </FormItem>
+                         )}
+                     />
                     <DialogFooter>
-                        <Button type="submit">Move Stories</Button>
+                        <Button type="submit">Apply Changes</Button>
                     </DialogFooter>
                 </form>
             </Form>
@@ -1776,7 +1802,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                             )}
                                             />
                                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                         )}/>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2019,7 +2045,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Task'].includes(selectedStory.itemType) ? (
+                        {['Requirement/Story', 'Task', 'Bug', 'Feature Change'].includes(selectedStory.itemType) ? (
                             <FormField
                             control={editStoryForm.control}
                             name="epicId"
@@ -2304,7 +2330,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormItem>
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="0" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
+                                    <Input type="number" placeholder="" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
                                 </FormControl>
                                 {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
                                 <FormMessage />
@@ -2329,24 +2355,39 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             />
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField control={editStoryForm.control} name="createdAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Created On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Closed On</FormLabel>
-                                        <FormControl>
-                                            <DatePicker date={field.value} setDate={field.onChange} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
+                                     <FormItem>
+                                         <FormLabel>Created On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 disabled
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                                 <FormField control={editStoryForm.control} name="closedAt" render={({ field }) => (
+                                     <FormItem>
+                                         <FormLabel>Closed On</FormLabel>
+                                         <FormControl>
+                                             <Input 
+                                                 type="date" 
+                                                 value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                                                 onChange={(e) => {
+                                                     const val = e.target.value;
+                                                     field.onChange(val ? new Date(val) : undefined);
+                                                 }}
+                                             />
+                                         </FormControl>
+                                         <FormMessage />
+                                     </FormItem>
+                                 )} />
+                             </div>
                             </>
                         )}
                       </div>
@@ -2428,7 +2469,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                     )} />
                                                 </div>
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>

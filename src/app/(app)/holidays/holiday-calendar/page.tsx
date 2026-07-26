@@ -30,7 +30,7 @@ import { PlusCircle, Edit, Trash2, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Holiday, ProjectSettings } from '@/types';
 import { format } from 'date-fns';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/db-provider';
 import {
   collection,
   onSnapshot,
@@ -40,7 +40,7 @@ import {
   doc,
   setDoc,
   Timestamp,
-} from 'firebase/firestore';
+} from '@/lib/db-provider';
 import { aiHolidayGenerator } from '@/ai/flows/ai-holiday-generator';
 
 const holidayFormSchema = z.object({
@@ -64,7 +64,7 @@ const weekdays = [
   { id: 0, label: 'Sunday' },
 ];
 
-const defaultSettings: Omit<ProjectSettings, 'id'> = {
+const defaultSettings = {
   weeklyOffDays: [0, 6],
 };
 
@@ -82,8 +82,8 @@ export default function HolidayPage() {
     if (!db) return;
     
     // Listener for holidays
-    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
-        const holidaysData = snapshot.docs.map(doc => {
+    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot: any) => {
+        const holidaysData = snapshot.docs.map((doc: any) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -96,13 +96,13 @@ export default function HolidayPage() {
     
     // Listener for settings
     const settingsDocRef = doc(db, 'settings', 'main');
-    const unsubSettings = onSnapshot(settingsDocRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data() as ProjectSettings;
+    const unsubSettings = onSnapshot(settingsDocRef, (docSnap: any) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as ProjectSettings;
         setWeeklyOffDays(data.weeklyOffDays || defaultSettings.weeklyOffDays);
       } else {
         // Initialize settings if they don't exist
-        setDoc(settingsDocRef, defaultSettings).catch(e => console.error("Failed to set default settings", e));
+        setDoc(settingsDocRef, defaultSettings).catch((e: any) => console.error("Failed to set default settings", e));
       }
     });
 
@@ -285,12 +285,14 @@ export default function HolidayPage() {
                         <TableCell>{holiday.description}</TableCell>
                         <TableCell>{holiday.type || '-'}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => openHolidayDialog(holiday)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteHoliday(holiday.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openHolidayDialog(holiday)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteHoliday(holiday.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

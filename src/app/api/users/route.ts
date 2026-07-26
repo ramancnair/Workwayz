@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { email, accessLevel, firstName, lastName } = body;
+        const { email, accessLevel, firstName, lastName, password } = body;
         
         const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
         const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || 'firebase';
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
                 enabled: true,
                 credentials: [{
                     type: 'password',
-                    value: 'P@ssw0rd',
+                    value: password || 'P@ssw0rd',
                     temporary: false
                 }]
             };
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
                  // Assuming anon key for now (might not work depending on supabase settings, but matching original behavior)
                  const { error } = await supabase.auth.signUp({
                     email,
-                    password: 'P@ssw0rd',
+                    password: password || 'P@ssw0rd',
                  });
                  if (error && error.message !== 'User already registered') {
                      throw new Error(`Supabase Auth creation failed: ${error.message}`);
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
                 const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password: 'P@ssw0rd', returnSecureToken: false })
+                    body: JSON.stringify({ email, password: password || 'P@ssw0rd', returnSecureToken: false })
                 });
                 
                 if (!res.ok) {

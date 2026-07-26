@@ -15,6 +15,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   Bug: Bug,
   'Task': CheckSquare,
   'Feature Change': GitCommit,
+  'Sub Task': CheckSquare,
 };
 
 interface StoryCardProps {

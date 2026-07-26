@@ -5,7 +5,7 @@ import path from 'path';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { adminEmail, adminPassword, adminName, dbProvider, fbApiKey, fbProjectId, authProvider, kcUrl, kcRealm, kcClientId, kcAdminSecret } = body;
+        let { adminEmail, adminPassword, adminName, dbProvider, fbApiKey, fbProjectId, supaUrl, supaKey, authProvider, kcUrl, kcRealm, kcClientId, kcAdminSecret } = body;
 
         if (!adminEmail || !adminPassword) {
             return NextResponse.json({ success: false, error: 'Missing email or password' }, { status: 400 });
@@ -14,6 +14,8 @@ export async function POST(request: Request) {
         // Get unmasked firebase credentials
         let apiKey = (fbApiKey && !fbApiKey.includes('****')) ? fbApiKey : '';
         let projectId = (fbProjectId && !fbProjectId.includes('****')) ? fbProjectId : '';
+        let effectiveSupaUrl = supaUrl || '';
+        let effectiveSupaKey = supaKey || '';
         
         const profilesPath = path.join(process.cwd(), 'connections.json');
         if (fs.existsSync(profilesPath)) {
@@ -23,6 +25,14 @@ export async function POST(request: Request) {
                 if (activeDb && activeDb.provider === 'firebase') {
                     apiKey = activeDb.apiKey;
                     projectId = activeDb.projectId;
+                }
+            }
+            
+            if (conns.database) {
+                const activeDb = conns.database.find((p: any) => p.isActive);
+                if (activeDb && activeDb.provider === 'supabase') {
+                    effectiveSupaUrl = activeDb.supabaseUrl || supaUrl;
+                    effectiveSupaKey = activeDb.supabaseAnonKey || supaKey;
                 }
             }
         }
@@ -45,30 +55,16 @@ export async function POST(request: Request) {
             }
         }
 
-        if (!projectId) {
-            return NextResponse.json({ success: false, error: 'Firebase Project ID is missing. Please configure it in the Database step.' }, { status: 400 });
+        if (dbProvider !== 'supabase' && authProvider !== 'supabase') {
+            if (!projectId) {
+                return NextResponse.json({ success: false, error: 'Firebase Project ID is missing. Please configure it in the Database step.' }, { status: 400 });
+            }
+            if (!apiKey) {
+                return NextResponse.json({ success: false, error: 'Firebase API Key is missing. Please configure it in the Database step.' }, { status: 400 });
+            }
         }
-        if (!apiKey) {
-            return NextResponse.json({ success: false, error: 'Firebase API Key is missing. Please configure it in the Database step.' }, { status: 400 });
-        }
 
-        // Initialize Firebase on Server
-        const { initializeApp, deleteApp } = await import('firebase/app');
-        const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('firebase/auth');
-        const { getFirestore, doc, setDoc, getDocs, collection, query, where } = await import('firebase/firestore');
-
-        const tempConfig = {
-            apiKey,
-            projectId,
-            authDomain: `${projectId}.firebaseapp.com`,
-        };
-
-        const tempAppName = 'server-wizard-app-' + Date.now();
-        const tempApp = initializeApp(tempConfig, tempAppName);
-        const tempAuth = getAuth(tempApp);
-        const tempDb = getFirestore(tempApp);
-
-        // Create or Sign-in user in Auth
+        // Dynamic initialization based on DB provider
         let uid = '';
         let isNewUser = true;
         let empId = '';
@@ -76,151 +72,202 @@ export async function POST(request: Request) {
         let firstName = nameParts[0];
         let lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-        if (authProvider === 'keycloak') {
-            if (!kcUrl || !kcRealm || !kcAdminSecret || !kcClientId) {
-                return NextResponse.json({ success: false, error: 'Keycloak configuration missing' }, { status: 400 });
+        if (authProvider === 'supabase' || dbProvider === 'supabase') {
+            const { createClient } = await import('@supabase/supabase-js');
+            
+            const finalSupaUrl = effectiveSupaUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+            const finalSupaKey = effectiveSupaKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+            if (!finalSupaUrl) {
+                return NextResponse.json({ success: false, error: 'Supabase URL is missing.' }, { status: 400 });
             }
-            
-            // 1. Get Admin Token
-            const tokenParams = new URLSearchParams();
-            tokenParams.append('client_id', kcClientId);
-            tokenParams.append('client_secret', kcAdminSecret);
-            tokenParams.append('grant_type', 'client_credentials');
-            
-            const tokenRes = await fetch(`${kcUrl.replace(/\/$/, '')}/realms/${kcRealm}/protocol/openid-connect/token`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: tokenParams.toString()
-            });
-            
-            if (!tokenRes.ok) throw new Error('Failed to get Keycloak token');
-            const token = (await tokenRes.json()).access_token;
-            
-            // 2. Create User
-            const userPayload = {
-                username: adminEmail,
+
+            const supAdmin = createClient(finalSupaUrl, finalSupaKey);
+
+            // Supabase Auth
+            let authData, authError;
+            // Try admin.createUser first (requires service role key)
+            const adminRes = await supAdmin.auth.admin.createUser({
                 email: adminEmail,
-                firstName: firstName,
-                lastName: lastName,
-                enabled: true,
-                credentials: [{ type: 'password', value: adminPassword, temporary: false }]
-            };
-            
-            const createRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(userPayload)
+                password: adminPassword,
+                email_confirm: true
             });
-            
-            if (!createRes.ok && createRes.status !== 409) {
-                throw new Error('Failed to create Keycloak user: ' + await createRes.text());
-            }
-            if (createRes.status === 409) isNewUser = false;
-            
-            // 3. Lookup user to get ID and assign role
-            const lookupRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users?email=${encodeURIComponent(adminEmail)}&exact=true`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const users = await lookupRes.json();
-            if (users && users.length > 0) {
-                uid = users[0].id;
-                
-                // Assign Administrator role
-                let roleRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles/Administrator`, {
-                     headers: { 'Authorization': `Bearer ${token}` }
+            if (adminRes.error) {
+                // Fallback to regular signUp
+                const signUpRes = await supAdmin.auth.signUp({
+                    email: adminEmail,
+                    password: adminPassword,
                 });
-                
-                if (!roleRes.ok && roleRes.status === 404) {
-                     await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles`, {
-                         method: 'POST',
-                         headers: {
-                             'Authorization': `Bearer ${token}`,
-                             'Content-Type': 'application/json'
-                         },
-                         body: JSON.stringify({ name: 'Administrator' })
-                     });
-                     
-                     roleRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles/Administrator`, {
-                         headers: { 'Authorization': `Bearer ${token}` }
-                     });
-                }
-                
-                if (roleRes.ok) {
-                     const roleData = await roleRes.json();
-                     await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users/${uid}/role-mappings/realm`, {
-                         method: 'POST',
-                         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                         body: JSON.stringify([{ id: roleData.id, name: roleData.name }])
-                     });
-                }
+                authData = signUpRes.data;
+                authError = signUpRes.error;
             } else {
-                uid = adminEmail;
+                authData = adminRes.data;
+                authError = adminRes.error;
             }
-        } else {
-            // Firebase Auth
-            try {
-                const userCred = await createUserWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
-                uid = userCred.user.uid;
-            } catch (authError: any) {
-                if (authError.code === 'auth/email-already-in-use') {
-                    try {
-                        const userCred = await signInWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
-                        uid = userCred.user.uid;
-                        isNewUser = false;
-                    } catch (signInErr: any) {
-                        throw new Error("Admin email already exists, but the password provided is incorrect.");
-                    }
+
+
+            if (authError) {
+                if (authError.message.includes('already registered') || authError.status === 422) {
+                    const { data: signInData, error: signInError } = await supAdmin.auth.signInWithPassword({
+                        email: adminEmail,
+                        password: adminPassword,
+                    });
+                    if (signInError) throw new Error("Admin email already exists, but password provided is incorrect.");
+                    uid = signInData.user?.id || '';
+                    isNewUser = false;
                 } else {
                     throw authError;
                 }
+            } else {
+                uid = authData.user?.id || '';
             }
-        }
 
-        if (!isNewUser) {
-             const q = query(collection(tempDb, 'employees'), where('email', '==', adminEmail));
-             const qSnap = await getDocs(q);
-             if (!qSnap.empty) {
-                  const docSnap = qSnap.docs[0];
-                  const data = docSnap.data();
-                  empId = docSnap.id;
-                  firstName = data.firstName || firstName;
-                  lastName = data.lastName || lastName;
-                  
-                  if (data.accessLevel !== 'Administrator') {
-                      await setDoc(doc(tempDb, 'employees', docSnap.id), { accessLevel: 'Administrator' }, { merge: true });
-                  }
-             }
-        }
-
-        if (!empId) {
-            // Get next employee ID
-            const usersSnapshot = await getDocs(collection(tempDb, 'employees'));
-            let highestId = 0;
-            usersSnapshot.forEach(docSnap => {
-                const id = docSnap.id;
-                if (id.startsWith('E')) {
-                    const num = parseInt(id.substring(1));
-                    if (!isNaN(num) && num > highestId) highestId = num;
+            // Supabase DB (using the firebase_compat adapter approach, or native table if using native)
+            // Wait, earlier we created an `employees` table? No, we created `firebase_compat` table.
+            // But login/page.tsx queries `supabase.from('employees')`. We need to make sure the adapter is used, or write natively.
+            // Actually, we can just use our adapter to write to firebase_compat!
+            
+            // To make it simple, we'll write directly to `firebase_compat`
+            let existingEmp = null;
+            if (!isNewUser) {
+                const { data: existing } = await supAdmin.from('firebase_compat')
+                    .select('*')
+                    .eq('collection_name', 'employees')
+                    .eq('data->>email', adminEmail)
+                    .single();
+                if (existing) {
+                    existingEmp = existing;
+                    empId = existing.path.split('/').pop() || '';
+                    if (existing.data.accessLevel !== 'Administrator') {
+                        const updatedData = { ...existing.data, accessLevel: 'Administrator' };
+                        await supAdmin.from('firebase_compat').update({ data: updatedData }).eq('path', existing.path);
+                    }
                 }
-            });
-            empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+            }
 
-            // Write to Firestore
-            await setDoc(doc(tempDb, 'employees', empId), {
-                empId,
-                firstName,
-                lastName,
-                email: adminEmail,
-                phone: 'N/A',
-                experience: 0,
-                accessLevel: 'Administrator',
-                avatar: 'https://placehold.co/40x40.png',
-                isDeleted: false,
-                uid: uid
-            });
+            if (!empId) {
+                // Get highest ID
+                const { data: allEmps } = await supAdmin.from('firebase_compat').select('path').eq('collection_name', 'employees');
+                let highestId = 0;
+                if (allEmps) {
+                    allEmps.forEach((row: any) => {
+                        const id = row.path.split('/').pop() || '';
+                        if (id.startsWith('E')) {
+                            const num = parseInt(id.substring(1));
+                            if (!isNaN(num) && num > highestId) highestId = num;
+                        }
+                    });
+                }
+                empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+
+                await supAdmin.from('firebase_compat').insert({
+                    path: `employees/${empId}`,
+                    collection_name: 'employees',
+                    project_id: null,
+                    data: {
+                        empId,
+                        firstName,
+                        lastName,
+                        email: adminEmail,
+                        phone: 'N/A',
+                        experience: 0,
+                        accessLevel: 'Administrator',
+                        avatar: 'https://placehold.co/40x40.png',
+                        isDeleted: false,
+                        uid: uid
+                    }
+                });
+            }
+        } else {
+            // Firebase Initialize
+            const { initializeApp, deleteApp } = await import('firebase/app');
+            const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('firebase/auth');
+            const { getFirestore, doc, setDoc, getDocs, collection, query, where } = await import('firebase/firestore');
+
+            const tempConfig = { apiKey, projectId, authDomain: `${projectId}.firebaseapp.com` };
+            const tempApp = initializeApp(tempConfig, 'server-wizard-app-' + Date.now());
+            const tempAuth = getAuth(tempApp);
+            const tempDb = getFirestore(tempApp);
+
+            // Auth (Keycloak or Firebase)
+            if (authProvider === 'keycloak') {
+                // ... keycloak logic ...
+                if (!kcUrl || !kcRealm || !kcAdminSecret || !kcClientId) throw new Error('Keycloak config missing');
+                const tokenParams = new URLSearchParams();
+                tokenParams.append('client_id', kcClientId);
+                tokenParams.append('client_secret', kcAdminSecret);
+                tokenParams.append('grant_type', 'client_credentials');
+                const tokenRes = await fetch(`${kcUrl.replace(/\/$/, '')}/realms/${kcRealm}/protocol/openid-connect/token`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: tokenParams.toString()
+                });
+                if (!tokenRes.ok) throw new Error('Failed to get Keycloak token');
+                const token = (await tokenRes.json()).access_token;
+                
+                const userPayload = { username: adminEmail, email: adminEmail, firstName, lastName, enabled: true, credentials: [{ type: 'password', value: adminPassword, temporary: false }] };
+                const createRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users`, {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(userPayload)
+                });
+                if (!createRes.ok && createRes.status !== 409) throw new Error('Failed to create Keycloak user');
+                if (createRes.status === 409) isNewUser = false;
+                
+                const lookupRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users?email=${encodeURIComponent(adminEmail)}&exact=true`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const users = await lookupRes.json();
+                if (users && users.length > 0) {
+                    uid = users[0].id;
+                    let roleRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles/Administrator`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (!roleRes.ok && roleRes.status === 404) {
+                         await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Administrator' }) });
+                         roleRes = await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/roles/Administrator`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    }
+                    if (roleRes.ok) {
+                         const roleData = await roleRes.json();
+                         await fetch(`${kcUrl.replace(/\/$/, '')}/admin/realms/${kcRealm}/users/${uid}/role-mappings/realm`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify([{ id: roleData.id, name: roleData.name }]) });
+                    }
+                } else uid = adminEmail;
+            } else {
+                try {
+                    const userCred = await createUserWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
+                    uid = userCred.user.uid;
+                } catch (authError: any) {
+                    if (authError.code === 'auth/email-already-in-use') {
+                        try {
+                            const userCred = await signInWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
+                            uid = userCred.user.uid;
+                            isNewUser = false;
+                        } catch (signInErr) { throw new Error("Admin email exists, but password provided is incorrect."); }
+                    } else throw authError;
+                }
+            }
+
+            // Firestore DB
+            if (!isNewUser) {
+                 const q = query(collection(tempDb, 'employees'), where('email', '==', adminEmail));
+                 const qSnap = await getDocs(q);
+                 if (!qSnap.empty) {
+                      const docSnap = qSnap.docs[0];
+                      const data = docSnap.data();
+                      empId = docSnap.id;
+                      if (data.accessLevel !== 'Administrator') await setDoc(doc(tempDb, 'employees', docSnap.id), { accessLevel: 'Administrator' }, { merge: true });
+                 }
+            }
+
+            if (!empId) {
+                const usersSnapshot = await getDocs(collection(tempDb, 'employees'));
+                let highestId = 0;
+                usersSnapshot.forEach(docSnap => {
+                    if (docSnap.id.startsWith('E')) {
+                        const num = parseInt(docSnap.id.substring(1));
+                        if (!isNaN(num) && num > highestId) highestId = num;
+                    }
+                });
+                empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+                await setDoc(doc(tempDb, 'employees', empId), {
+                    empId, firstName, lastName, email: adminEmail, phone: 'N/A', experience: 0, accessLevel: 'Administrator', avatar: 'https://placehold.co/40x40.png', isDeleted: false, uid
+                });
+            }
+            await deleteApp(tempApp);
         }
 
-        await deleteApp(tempApp);
 
         return NextResponse.json({ 
             success: true, 

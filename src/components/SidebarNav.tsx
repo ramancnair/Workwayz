@@ -4,6 +4,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { usePermissions } from "@/hooks/use-permissions";
+import { getPageNameForRoute } from "@/lib/permissions";
 import {
   SidebarContent,
   SidebarHeader,
@@ -74,17 +76,22 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
   const { project, testDate, setTestDate } = useProject();
-  const [user, setUser] = useState({ name: '', email: '' });
+  const [user, setUser] = useState({ name: '', email: '', avatar: '' });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user from local storage");
+    const loadUser = () => {
+      const storedUser = localStorage.getItem('projectflow_user');
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Failed to parse user from local storage", e);
+        }
       }
-    }
+    };
+    loadUser();
+    window.addEventListener('user-profile-updated', loadUser);
+    return () => window.removeEventListener('user-profile-updated', loadUser);
   }, []);
 
   const handleLogout = async () => {
@@ -95,6 +102,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
       // Always clear local session first
       localStorage.removeItem('projectflow_user');
+      sessionStorage.removeItem('projectflow_session_active');
 
       if (sessionProvider === 'keycloak') {
         // Terminate the Keycloak SSO session server-side to prevent re-entry via session cookie
@@ -124,6 +132,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       console.error("Error logging out:", error);
       // Even on error, ensure local session is cleared and redirect
       localStorage.removeItem('projectflow_user');
+      sessionStorage.removeItem('projectflow_session_active');
       router.push('/');
     }
   };
@@ -153,6 +162,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Layers,
     },
     {
+      href: `${basePath}/development/development-tasks`,
+      label: "Sub-Tasks",
+      icon: Component,
+    },
+    {
       href: `${basePath}/development/grooming`,
       label: "Grooming",
       icon: ChevronsUpDown,
@@ -161,11 +175,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/development/kanban`,
       label: "Kanban Board",
       icon: KanbanSquare,
-    },
-    {
-      href: `${basePath}/development/development-tasks`,
-      label: "Sub-Tasks",
-      icon: Component,
     },
   ];
 
@@ -186,8 +195,13 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: FileText,
     },
     {
-      href: `${basePath}/testing/bug-list`,
-      label: "Bug List",
+      href: `${basePath}/testing/defects`,
+      label: "Defects",
+      icon: Bug,
+    },
+    {
+      href: `${basePath}/testing/defect-tracker`,
+      label: "Defect Tracker",
       icon: Bug,
     },
   ];
@@ -212,9 +226,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const initialEstimationMenuItems = [
     {
-      href: `${basePath}/initial-estimation/ballpark`,
-      label: "Ballpark",
+      href: `${basePath}/initial-estimation/specifications`,
+      label: "Specifications",
       icon: DollarSign,
+    },
+    {
+      href: `${basePath}/initial-estimation/project-status`,
+      label: "Project Status",
+      icon: ClipboardList,
     },
   ];
 
@@ -324,35 +343,37 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const settingsMenuItems = [
     {
-      href: `${basePath}/settings/board`,
+      href: `${basePath}/project-settings/board`,
       label: "Board Settings",
       icon: KanbanSquare,
     },
     {
-      href: `${basePath}/settings/sprint`,
+      href: `${basePath}/project-settings/sprint`,
       label: "Sprint Settings",
       icon: Settings,
     },
     {
-      href: `${basePath}/settings/effort`,
+      href: `${basePath}/project-settings/effort`,
       label: "Effort Settings",
       icon: Hourglass,
     }
   ];
 
-  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/bug-list', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
+  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/defect-tracker', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
-  const isSettingsPath = pathname.startsWith(`${basePath}/settings`);
+  const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = ['/pmo/documents', '/pmo/fb-payment-milestones', '/pmo/tnm-payment-milestones', '/pmo/business-continuity', '/pmo/fb-billing', '/pmo/tnm-billing'].some(p => pathname.startsWith(basePath + p));
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
 
 
-  const menuItems = isSettingsPath ? settingsMenuItems
+  const { hasAccess } = usePermissions();
+
+  const rawMenuItems = isSettingsPath ? settingsMenuItems
     : isTestingPath ? testMenuItems
       : isProjectPath ? projectMenuItems
         : isInitialEstimationPath ? initialEstimationMenuItems
@@ -363,6 +384,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
                   : isPmoPath ? pmoMenuItems
                     : isDevelopmentPath ? devMenuItems
                       : devMenuItems;
+
+  const menuItems = rawMenuItems.filter(item => {
+    const pageName = getPageNameForRoute(item.href);
+    return hasAccess(pageName || item.label);
+  });
 
   return (
     <>
@@ -429,28 +455,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
           </div>
         </div>
         <Separator className="my-2 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:my-0 bg-sidebar-border" />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <Link href={`${basePath}/trash`}>
-              <SidebarMenuButton tooltip="Project Trash" isActive={pathname.startsWith(`${basePath}/trash`)}>
-                <Trash2 />
-                <span>Project Trash</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <Link href={`${basePath}/settings`}>
-              <SidebarMenuButton tooltip="Project Settings" isActive={pathname.startsWith(`${basePath}/settings`)}>
-                <Settings />
-                <span>Project Settings</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">
               <Avatar className="h-8 w-8 shrink-0">
+                {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                 <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">

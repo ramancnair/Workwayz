@@ -8,9 +8,10 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PmSidebarNav } from '@/components/PmSidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 import { AuthGuard } from '@/components/AuthGuard';
-import { Settings } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Settings, Trash2 } from 'lucide-react';
+import { collection, query, where, getDocs } from '@/lib/db-provider';
+import { db } from '@/lib/db-provider';
+import { usePermissions } from '@/hooks/use-permissions';
 
 type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
@@ -24,6 +25,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const { open, setOpen } = useSidebarPersistedState();
 
   const [userAccessLevel, setUserAccessLevel] = useState<AccessLevel | null>(null);
+  const { hasAccess } = usePermissions();
   const [isEnabled, setIsEnabled] = useState<boolean | null>(null); // null = loading
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
       if (db && parsed.empId) {
         const empId = parsed.empId;
         const q = query(collection(db, 'employees'), where('empId', '==', empId));
-        getDocs(q).then((snapshot) => {
+        getDocs(q).then((snapshot: any) => {
           if (!snapshot.empty) {
             const data = snapshot.docs[0].data();
             // undefined isEnabled → treat as enabled (backward compat)
@@ -75,7 +77,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (pathname.startsWith('/billing-rate')) return 'billing';
     if (pathname.startsWith('/users')) return 'users';
     if (pathname.startsWith('/utilization')) return 'users';
-    if (pathname.startsWith('/trash')) return 'trash'; 
+    if (pathname.startsWith('/portfolio-trash') || pathname.startsWith('/trash')) return 'trash'; 
     if (pathname.startsWith('/holidays')) return 'holidays';
     if (pathname.startsWith('/portfolio-settings')) return 'portfolios';
     if (pathname.startsWith('/my-account')) return 'my-account';
@@ -98,7 +100,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     } else if (value === 'holidays') {
       router.push('/holidays/holiday-calendar');
     } else if (value === 'trash') {
-        router.push('/trash');
+        router.push('/portfolio-trash');
     } else if (value === 'portfolios') {
         router.push('/portfolio-settings');
     } else if (value === 'my-account') {
@@ -107,8 +109,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
   };
 
   const dynamicTab = useMemo(() => {
-    if (pathname.startsWith('/trash')) return { value: 'trash', label: 'Trash' };
-    if (pathname.startsWith('/portfolio-settings')) return { value: 'portfolios', label: 'Portfolio Settings' };
     if (pathname.startsWith('/my-account')) return { value: 'my-account', label: 'Profile & Account' };
     return null;
   }, [pathname]);
@@ -130,14 +130,38 @@ export default function AppLayout({ children }: PropsWithChildren) {
             <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4 shrink-0">
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                        <TabsTrigger value="my-projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">My Projects</TabsTrigger>
+                        {hasAccess('My Projects') && (
+                          <TabsTrigger value="my-projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">My Projects</TabsTrigger>
+                        )}
                         {!showOnlyMyProjects && canSeePortfolioTabs && (
                           <>
-                            <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
-                            <TabsTrigger value="quality" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Quality</TabsTrigger>
-                            <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
-                            <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
-                            <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                            {hasAccess('Project Home') && (
+                              <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
+                            )}
+                            {(hasAccess('Estimations') || hasAccess('Defects')) && (
+                              <TabsTrigger value="quality" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Quality</TabsTrigger>
+                            )}
+                            {hasAccess('Billing') && (
+                              <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
+                            )}
+                            {hasAccess('User List') && (
+                              <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
+                            )}
+                            {(hasAccess('Holiday Calendar') || hasAccess('Leave Settings') || hasAccess('Leave Tracker')) && (
+                              <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                            )}
+                            {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Archive')) && (
+                              <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+                                <Settings className="h-4 w-4" />
+                                <span>Portfolio Settings</span>
+                              </TabsTrigger>
+                            )}
+                            {hasAccess('Trash') && (
+                              <TabsTrigger value="trash" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
+                                <Trash2 className="h-4 w-4" />
+                                <span>Portfolio Trash</span>
+                              </TabsTrigger>
+                            )}
                           </>
                         )}
                         {dynamicTab && (

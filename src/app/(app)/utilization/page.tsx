@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, getDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/db-provider';
+import { collection, getDocs, query, where, getDoc, doc } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -32,7 +32,8 @@ import {
     Info,
     Briefcase,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -60,7 +61,7 @@ export default function UtilizationPage() {
         const fetchUsers = async () => {
             if (!db) return;
             const usersSnapshot = await getDocs(collection(db, 'employees'));
-            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            const usersList = usersSnapshot.docs.map((doc: any) => ({ ...doc.data(), id: doc.id } as User));
             setAllUsers(usersList);
         };
         fetchUsers();
@@ -84,7 +85,7 @@ export default function UtilizationPage() {
                     const employeeDocRef = doc(db, 'projects', projectDoc.id, 'employees', selectedUser.id);
                     const employeeDoc = await getDoc(employeeDocRef);
                     if (employeeDoc.exists()) {
-                        const project = { id: projectDoc.id, ...projectDoc.data() } as Project;
+                        const project = { ...projectDoc.data(), id: projectDoc.id } as Project;
                         const empData = employeeDoc.data();
 
                         // Fetch planned tasks
@@ -94,14 +95,14 @@ export default function UtilizationPage() {
                             where('assigneeId', '==', selectedUser.id)
                         );
                         const tasksSnapshot = await getDocs(tasksQuery);
-                        const planned = tasksSnapshot.docs.map(doc => {
+                        const planned = tasksSnapshot.docs.map((doc: any) => {
                             const task = doc.data() as Story;
                             return { 
                                 start: task.startDate ? new Date(task.startDate) : null, 
                                 end: task.endDate ? new Date(task.endDate) : null,
                                 name: task.title
                             };
-                        }).filter(t => t.start && t.end && !isNaN(t.start.getTime()) && !isNaN(t.end.getTime())) as Array<{ start: Date; end: Date; name: string; }>;
+                        }).filter((t: any) => t.start && t.end && !isNaN(t.start.getTime()) && !isNaN(t.end.getTime())) as Array<{ start: Date; end: Date; name: string; }>;
 
                         // Fetch actual worklogs
                         const worklogsQuery = query(
@@ -110,12 +111,12 @@ export default function UtilizationPage() {
                         );
                         const worklogsSnapshot = await getDocs(worklogsQuery);
                         const worklogDates = worklogsSnapshot.docs
-                            .map(doc => new Date(doc.id.split('-').slice(1).join('-')))
-                            .filter(d => !isNaN(d.getTime()));
+                            .map((doc: any) => new Date(doc.id.split('-').slice(1).join('-')))
+                            .filter((d: any) => !isNaN(d.getTime()));
                         
                         const actual: Array<{ start: Date; end: Date; name: string }> = [];
                         if (worklogDates.length > 0) {
-                            worklogDates.sort((a,b) => a.getTime() - b.getTime());
+                            worklogDates.sort((a: any, b: any) => a.getTime() - b.getTime());
                             let currentRange = { start: worklogDates[0], end: worklogDates[0], name: 'Work Logged' };
 
                             for(let i = 1; i < worklogDates.length; i++) {
@@ -323,32 +324,58 @@ export default function UtilizationPage() {
                 <CardContent className="p-4">
                     <div className="max-w-sm">
                         <label htmlFor="user-search" className="text-sm font-medium">Select a User</label>
-                        <Input
-                            id="user-search"
-                            list="user-options"
-                            placeholder="Search by name or employee ID..."
-                            value={userInput}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setUserInput(val);
-                                if (!val) {
-                                    setSelectedUser(null);
-                                } else {
-                                    const matchingOption = userOptions.find(opt => opt.label === val);
-                                    if (matchingOption) {
-                                        handleUserSelect(val);
+                        <div className="relative flex items-center mt-1">
+                            <Input
+                                id="user-search"
+                                list="user-options"
+                                placeholder="Search by name or employee ID..."
+                                value={userInput}
+                                onFocus={() => {
+                                    setUserInput('');
+                                }}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setUserInput(val);
+                                    if (!val) {
+                                        setSelectedUser(null);
+                                    } else {
+                                        const matchingOption = userOptions.find(opt => opt.label === val);
+                                        if (matchingOption) {
+                                            handleUserSelect(val);
+                                        }
                                     }
-                                }
-                            }}
-                            onBlur={(e) => {
-                                const val = e.target.value;
-                                if (!userOptions.some(opt => opt.label === val)) {
-                                    setSelectedUser(null);
-                                } else {
-                                    handleUserSelect(val);
-                                }
-                            }}
-                        />
+                                }}
+                                onBlur={(e) => {
+                                    const val = e.target.value;
+                                    setTimeout(() => {
+                                        const matchingOption = userOptions.find(opt => opt.label === val);
+                                        if (!matchingOption) {
+                                            if (selectedUser) {
+                                                const currentOpt = userOptions.find(opt => opt.value === selectedUser.id);
+                                                setUserInput(currentOpt ? currentOpt.label : '');
+                                            } else {
+                                                setUserInput('');
+                                            }
+                                        } else {
+                                            handleUserSelect(val);
+                                        }
+                                    }, 200);
+                                }}
+                                className="pr-8"
+                            />
+                            {selectedUser && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedUser(null);
+                                        setUserInput('');
+                                    }}
+                                    className="absolute right-2.5 text-muted-foreground hover:text-foreground p-1 rounded-sm focus:outline-none"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
                         <datalist id="user-options">
                             {userOptions.map(opt => <option key={opt.value} value={opt.label} />)}
                         </datalist>

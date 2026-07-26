@@ -64,7 +64,7 @@ export default function RaidDashboardPage() {
       acc[potential] = (acc[potential] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value, fill: riskConfig[name as keyof typeof riskConfig]?.color || '#8884d8' }));
+  ).map(([name, value]) => ({ name, value, fill: (riskConfig[name as keyof typeof riskConfig] as any)?.color || '#8884d8' }));
   const totalRisks = riskData.reduce((sum, item) => sum + item.value, 0);
   const highPotentialRisks = riskData.find(item => item.name === 'High')?.value || 0;
 
@@ -75,7 +75,7 @@ export default function RaidDashboardPage() {
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value, fill: assumptionConfig[name as keyof typeof assumptionConfig]?.color || '#8884d8' }));
+  ).map(([name, value]) => ({ name, value, fill: (assumptionConfig[name as keyof typeof assumptionConfig] as any)?.color || '#8884d8' }));
   const totalAssumptions = assumptionData.reduce((sum, item) => sum + item.value, 0);
   const activeAssumptions = assumptionData.find(item => item.name === 'Active')?.value || 0;
 
@@ -86,7 +86,7 @@ export default function RaidDashboardPage() {
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value, fill: issueConfig[name as keyof typeof issueConfig]?.color || '#8884d8' }));
+  ).map(([name, value]) => ({ name, value, fill: (issueConfig[name as keyof typeof issueConfig] as any)?.color || '#8884d8' }));
   const totalIssues = issueData.reduce((sum, item) => sum + item.value, 0);
   const openIssues = (issueData.find(item => item.name === 'Open')?.value || 0) + (issueData.find(item => item.name === 'In Progress')?.value || 0);
 
@@ -97,7 +97,7 @@ export default function RaidDashboardPage() {
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value, fill: dependencyConfig[name as keyof typeof dependencyConfig]?.color || '#8884d8' }));
+  ).map(([name, value]) => ({ name, value, fill: (dependencyConfig[name as keyof typeof dependencyConfig] as any)?.color || '#8884d8' }));
   const totalDependencies = dependencyData.reduce((sum, item) => sum + item.value, 0);
   const atRiskDependencies = (dependencyData.find(item => item.name === 'At Risk')?.value || 0) + (dependencyData.find(item => item.name === 'Blocked')?.value || 0);
 

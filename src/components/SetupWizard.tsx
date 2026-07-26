@@ -246,6 +246,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               dbProvider,
               fbProjectId,
               fbApiKey,
+              supaUrl,
+              supaKey,
               authProvider,
               kcUrl,
               kcRealm,
@@ -446,6 +448,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <SelectContent>
                       <SelectItem value="firebase">Firebase Auth</SelectItem>
                       <SelectItem value="keycloak">Keycloak</SelectItem>
+                      <SelectItem value="supabase">Supabase Auth</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -514,7 +517,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <div className="relative">
                       <Input
                         type={showAdminPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder=""
                         value={adminPassword}
                         onChange={e => setAdminPassword(e.target.value)}
                         autoComplete="new-password"
@@ -533,7 +536,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <div className="relative">
                       <Input
                         type={showAdminConfirmPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder=""
                         value={adminConfirmPassword}
                         onChange={e => setAdminConfirmPassword(e.target.value)}
                         autoComplete="new-password"

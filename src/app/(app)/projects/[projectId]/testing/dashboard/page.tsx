@@ -50,16 +50,24 @@ const bugStatusConfig = {
   bugs: {
     label: "Bugs",
   },
-  'To Do': {
-    label: "To Do",
+  'In Triage': {
+    label: "In Triage",
     color: '#a1a1aa',
+  },
+  'Defect Backlog': {
+    label: "Defect Backlog",
+    color: '#f97316',
   },
   'In Progress': {
     label: "In Progress",
     color: '#3b82f6',
   },
-  'Done': {
-    label: "Done",
+  'Retest': {
+    label: "Retest",
+    color: '#a855f7',
+  },
+  'Closed': {
+    label: "Closed",
     color: '#22c55e',
   },
 } satisfies ChartConfig;
@@ -131,7 +139,8 @@ const storyCoverageConfig = {
 } satisfies ChartConfig;
 
 export default function TestingDashboard() {
-  const { testCases, stories, testPlans, testPlanTestCases, subscribeToTestPlanTestCases } = useProject();
+  const { testCases, stories, testPlans: rawTestPlans, testPlanTestCases, subscribeToTestPlanTestCases } = useProject();
+  const testPlans = useMemo(() => rawTestPlans.filter(tp => tp && tp.id && typeof tp.id === 'string' && tp.id.trim() !== ''), [rawTestPlans]);
   const [selectedTestPlanId, setSelectedTestPlanId] = useState('all');
 
   // Subscribe to all test plan subcollections for dashboard metrics
@@ -175,14 +184,14 @@ export default function TestingDashboard() {
     // Bug Metrics
     const bugStatusData = Object.entries(
       relatedBugs.reduce((acc, bug) => {
-        const status = bug.status || 'To Do';
+        const status = bug.status || 'In Triage';
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>)
     ).map(([name, value]) => ({ name, value, fill: (bugStatusConfig[name as keyof typeof bugStatusConfig] as any)?.color || '#ccc' }));
 
     // Open Bugs by Severity
-    const openBugs = relatedBugs.filter(bug => bug.status === 'To Do' || bug.status === 'In Progress');
+    const openBugs = relatedBugs.filter(bug => bug.status !== 'Closed');
     const openBugsBySeverityData = Object.entries(
       openBugs.reduce((acc, bug) => {
         const severity = bug.severity || 'Medium';

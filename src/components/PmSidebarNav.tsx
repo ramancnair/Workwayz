@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { usePermissions } from "@/hooks/use-permissions";
 import { SetupWizard } from "@/components/SetupWizard";
 import { 
   SidebarContent,
@@ -63,18 +64,23 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
-  const [user, setUser] = useState({ name: '', email: '' });
+  const [user, setUser] = useState({ name: '', email: '', avatar: '' });
   const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user from local storage");
+    const loadUser = () => {
+      const storedUser = localStorage.getItem('projectflow_user');
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Failed to parse user from local storage", e);
+        }
       }
-    }
+    };
+    loadUser();
+    window.addEventListener('user-profile-updated', loadUser);
+    return () => window.removeEventListener('user-profile-updated', loadUser);
   }, []);
 
   const handleLogout = async () => {
@@ -83,6 +89,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
 
       localStorage.removeItem('projectflow_user');
+      sessionStorage.removeItem('projectflow_session_active');
 
       if (sessionProvider === 'keycloak') {
         const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
@@ -109,6 +116,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     } catch (error) {
       console.error("Error logging out:", error);
       localStorage.removeItem('projectflow_user');
+      sessionStorage.removeItem('projectflow_session_active');
       router.push('/');
     }
   };
@@ -188,9 +196,9 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'holidays'
     },
     {
-      id: 'allocated-leaves',
-      href: `/holidays/allocated`,
-      label: "Allocated Leaves",
+      id: 'leave-settings',
+      href: `/holidays/leave-settings`,
+      label: "Leave Settings",
       icon: ClipboardList,
       group: 'holidays'
     },
@@ -271,8 +279,11 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     }
   }
 
+  const { hasAccess } = usePermissions();
   const activeGroup = getGroupForTab(activeTab);
-  const menuItems = allMenuItems.filter(item => item.group === activeGroup);
+  const menuItems = allMenuItems
+    .filter(item => item.group === activeGroup)
+    .filter(item => hasAccess(item.label));
 
   return (
     <>
@@ -325,28 +336,11 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       </SidebarContent>
       <SidebarFooter className="p-2 transition-all duration-300">
         <Separator className="my-2 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:my-0 bg-sidebar-border" />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <Link href="/trash">
-              <SidebarMenuButton tooltip="Trash" isActive={pathname.startsWith(`/trash`)}>
-                <Trash2 />
-                <span>Trash</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <Link href="/portfolio-settings">
-              <SidebarMenuButton tooltip="Portfolio Settings" isActive={pathname.startsWith(`/portfolio-settings`)}>
-                <Settings />
-                <span>Portfolio Settings</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">
               <Avatar className="h-8 w-8 shrink-0">
+                  {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                   <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col ml-3 transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">
