@@ -9,9 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "test": "cucumber-js",
-    "test:skip-setup": "cucumber-js -p skipSetup"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -71,8 +69,6 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^13.2.0",
-    "@playwright/test": "^1.61.1",
     "@types/caseless": "^0.12.5",
     "@types/d3-color": "^3.1.3",
     "@types/d3-path": "^3.1.1",

@@ -1340,9 +1340,9 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
     if (!db || !projectId) return false;
     try {
       const parseDate = (dStr: any) => {
-          if (!dStr) return null;
+          if (!dStr) return undefined;
           const d = new Date(dStr);
-          return isNaN(d.getTime()) ? null : d.toISOString();
+          return isNaN(d.getTime()) ? undefined : d.toISOString();
       };
       const payload = { ...data };
       if (data.startDate !== undefined) payload.startDate = parseDate(data.startDate);
