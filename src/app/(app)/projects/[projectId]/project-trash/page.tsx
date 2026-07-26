@@ -27,10 +27,10 @@ import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
 import { differenceInDays, formatDistanceToNow, parseISO } from 'date-fns';
-import { BookOpen, Bug, CheckSquare, GitCommit, ClipboardCheck, ShieldAlert, NotebookText, AlertCircle, Link2 } from 'lucide-react';
+import { BookOpen, Bug, CheckSquare, GitCommit, ClipboardCheck, ShieldAlert, NotebookText, AlertCircle, Link2, FileText } from 'lucide-react';
 
-type TrashedItemType = 'Story' | 'Task' | 'Bug' | 'Feature Change' | 'Test Case' | 'Risk' | 'Assumption' | 'Issue' | 'Dependency' | 'Sub Task';
-type CollectionName = 'stories' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies';
+type TrashedItemType = 'Story' | 'Task' | 'Bug' | 'Feature Change' | 'Test Case' | 'Risk' | 'Assumption' | 'Issue' | 'Dependency' | 'Sub Task' | 'Document';
+type CollectionName = 'stories' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'documents';
 
 type TrashedItem = {
   id: string;
@@ -51,6 +51,7 @@ const itemTypeIcons: Partial<Record<TrashedItemType, React.ElementType>> = {
   'Assumption': NotebookText,
   'Issue': AlertCircle,
   'Dependency': Link2,
+  'Document': FileText,
 };
 
 export default function ProjectTrashPage() {
@@ -61,6 +62,7 @@ export default function ProjectTrashPage() {
     assumptions,
     issues,
     dependencies,
+    documents,
     restoreItem, 
     permanentlyDeleteItem 
   } = useProject();
@@ -129,9 +131,19 @@ export default function ProjectTrashPage() {
         collection: 'dependencies' as 'dependencies',
       }));
 
-    return [...deletedStories, ...deletedTestCases, ...deletedRisks, ...deletedAssumptions, ...deletedIssues, ...deletedDependencies]
+    const deletedDocuments = documents
+      .filter(d => d.isDeleted && d.deletedAt)
+      .map(d => ({
+        id: d.id,
+        name: d.name,
+        type: 'Document' as 'Document',
+        deletedAt: d.deletedAt!,
+        collection: 'documents' as 'documents',
+      }));
+
+    return [...deletedStories, ...deletedTestCases, ...deletedRisks, ...deletedAssumptions, ...deletedIssues, ...deletedDependencies, ...deletedDocuments]
       .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
-  }, [stories, testCases, risks, assumptions, issues, dependencies]);
+  }, [stories, testCases, risks, assumptions, issues, dependencies, documents]);
 
   const handleSelectAll = (checked: boolean) => {
     setSelectedItems(checked ? trashedItems : []);

@@ -416,6 +416,8 @@ export type ProjectDocument = {
   name: string;
   location: string;
   createdAt: string; // ISO String
+  isDeleted?: boolean;
+  deletedAt?: string;
 };
 
 export type PaymentMilestoneStatus = 'TBD' | 'In Progress' | 'Milestone completed' | 'Invoice raised' | 'Payment Completed';

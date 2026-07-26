@@ -137,8 +137,9 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
   '/pmo/business-continuity': ['environments', 'codeRepositories', 'employees'],
   '/pmo/fb-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts'],
   '/pmo/tnm-billing': ['employees', 'holidays', 'weeklyOffDays', 'fixedCosts', 'worklogs'],
-  '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
-  '/project-trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies'],
+  '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies', 'documents'],
+  '/project-trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies', 'documents'],
+};
 };
 
 
@@ -325,7 +326,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
             worklogs: ['date'],
             worklogSubmissions: ['weekStartDate', 'submittedAt'],
             holidays: ['date'],
-            documents: ['createdAt'],
+            documents: ['createdAt', 'deletedAt'],
             codeRepositories: ['expiryDate'],
           };
           if (dateFields[name]) {
@@ -2315,7 +2316,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   const deleteDocument = async (docId: string) => {
     if (!db || !projectId) return false;
     try {
-      await deleteDoc(doc(db, 'projects', projectId, 'documents', docId));
+      await updateDoc(doc(db, 'projects', projectId, 'documents', docId), { isDeleted: true, deletedAt: Timestamp.now() });
       return true;
     } catch (e) {
       console.error("Failed to delete document", e);
@@ -2485,7 +2486,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     assumptions: (pathname.endsWith('/trash') || pathname.endsWith('/project-trash')) ? assumptions : assumptions.filter(a => !a.isDeleted),
     issues: (pathname.endsWith('/trash') || pathname.endsWith('/project-trash')) ? issues : issues.filter(i => !i.isDeleted),
     dependencies: (pathname.endsWith('/trash') || pathname.endsWith('/project-trash')) ? dependencies : dependencies.filter(d => !d.isDeleted),
-    documents,
+    documents: (pathname.endsWith('/trash') || pathname.endsWith('/project-trash')) ? documents : documents.filter(d => !d.isDeleted),
     paymentMilestones,
     kanbanColumns,
     holidays,
