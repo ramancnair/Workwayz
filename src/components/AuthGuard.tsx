@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShieldAlert } from 'lucide-react';
-import { db, doc, onSnapshot } from '@/lib/db-provider';
-import { getPageNameForRoute, hasPagePermission } from '@/lib/permissions';
+import { auth } from '@/lib/firebase';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -244,30 +242,24 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         router.push('/login');
       }
     } else {
-      setIsAuthenticated(true);
-      
-      // Check if session user needs password reset
-      const userStr = localStorage.getItem('projectflow_user');
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          setSessionUser(user);
-          if (user.needsPasswordReset && !isPublicPath) {
-            setNeedsReset(true);
+      const activeProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
+      if (activeProvider === 'firebase' && auth) {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          if (user) {
+            setIsAuthenticated(true);
           } else {
-            setNeedsReset(false);
+            console.warn('[AuthGuard] Local session exists but Firebase user is null.');
+            localStorage.removeItem('projectflow_user');
+            setIsAuthenticated(false);
+            if (!isPublicPath) {
+              router.push('/login');
+            }
           }
-        } catch {
-          setNeedsReset(false);
-        }
+        });
+        return () => unsubscribe();
+      } else {
+        setIsAuthenticated(true);
       }
-    }
-  }, [router, pathname, isAuthenticated]);
-
-  useEffect(() => {
-    if (!sessionUser?.accessLevel || sessionUser.accessLevel === 'Administrator' || !db) {
-      setAccessChecked(true);
-      return;
     }
 
     setAccessChecked(false);

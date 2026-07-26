@@ -20,7 +20,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown, Search, ExternalLink } from 'lucide-react';
+import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown, Paperclip } from 'lucide-react';
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan, TestPlanTestCase } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -78,8 +78,7 @@ const testCaseFormSchema = z.object({
   status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
   assigneeId: z.string().optional(),
   executionDate: z.string().optional(),
-  effortHours: z.string().optional(),
-  attachments: z.string().optional(),
+  attachment: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -123,7 +122,9 @@ export default function TestPlanPage() {
   const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
   const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
   const [currentExecutionDay, setCurrentExecutionDay] = useState<Date | null>(null);
-
+  const [isAttachmentDialogOpen, setIsAttachmentDialogOpen] = useState(false);
+  const [tempAttachmentUrl, setTempAttachmentUrl] = useState('');
+  
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const testPlanForm = useForm<z.infer<typeof refinedTestPlanSchema>>({
@@ -217,17 +218,16 @@ export default function TestPlanPage() {
 
   useEffect(() => {
     if (isTestCaseDialogOpen && editingTestCase) {
-      testCaseForm.reset({
-        title: editingTestCase.title,
-        type: editingTestCase.type,
-        description: editingTestCase.description,
-        expectedResult: editingTestCase.expectedResult,
-        status: editingTestCase.status || 'Not Run',
-        assigneeId: editingTestCase.assigneeId || 'unassigned',
-        executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
-        effortHours: editingTestCase.effortHours !== undefined ? String(editingTestCase.effortHours) : '',
-        attachments: editingTestCase.attachments || '',
-      });
+        testCaseForm.reset({
+            title: editingTestCase.title,
+            type: editingTestCase.type,
+            description: editingTestCase.description,
+            expectedResult: editingTestCase.expectedResult,
+            status: editingTestCase.status || 'Not Run',
+            assigneeId: editingTestCase.assigneeId || 'unassigned',
+            executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
+            attachment: editingTestCase.attachment || '',
+        });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
 
@@ -260,8 +260,7 @@ export default function TestPlanPage() {
       status: values.status,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
-      effortHours: parsedEffort !== undefined && !isNaN(parsedEffort) ? Math.max(0, parsedEffort) : undefined,
-      attachments: values.attachments,
+      attachment: values.attachment || '',
     };
 
     const success = await updateTestPlanTestCase(selectedPlanId, editingTestCase.id, updateData);
@@ -822,8 +821,69 @@ export default function TestPlanPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                </div>
-                <FormField control={testCaseForm.control} name="description" render={({ field }) => (
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={testCaseForm.control} name="attachment" render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Test Case Attachment</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center gap-3">
+                            {field.value ? (
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={field.value}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center justify-center w-16 h-10 rounded-md border border-input bg-slate-200/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-foreground transition-colors cursor-pointer"
+                                  title="Open Attachment"
+                                >
+                                  <Paperclip className="h-5 w-5" />
+                                </a>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={field.value}>
+                                    {field.value}
+                                  </span>
+                                  <div className="flex gap-2 mt-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTempAttachmentUrl(field.value);
+                                        setIsAttachmentDialogOpen(true);
+                                      }}
+                                      className="text-[11px] text-blue-500 hover:underline font-medium"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => field.onChange('')}
+                                      className="text-[11px] text-red-500 hover:underline font-medium"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTempAttachmentUrl('');
+                                  setIsAttachmentDialogOpen(true);
+                                }}
+                                className="flex items-center justify-center w-16 h-10 rounded-md border border-input bg-slate-200/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-muted-foreground hover:text-foreground transition-colors"
+                                title="Add Attachment Link"
+                              >
+                                <Paperclip className="h-5 w-5" />
+                              </button>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                  )} />
+              </div>
+               <FormField control={testCaseForm.control} name="description" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description (Steps)</FormLabel>
                     <FormControl><Textarea placeholder="1. Navigate to login page..." {...field} rows={4} /></FormControl>
@@ -947,33 +1007,58 @@ export default function TestPlanPage() {
                   </FormItem>
                 )} />
               </div>
-              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
-                <Button type="submit">Save Changes</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            </div>
+            <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
+              <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+    
+    <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => { if (!isOpen) setDeletingPlan(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action will delete the test plan &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleDeletePlan}
+            className={cn(buttonVariants({ variant: 'destructive' }))}
+          >
+            Continue
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
-      <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => { if (!isOpen) setDeletingPlan(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will delete the test plan &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeletePlan}
-              className={cn(buttonVariants({ variant: 'destructive' }))}
-            >
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    <Dialog open={isAttachmentDialogOpen} onOpenChange={setIsAttachmentDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Attachment URL</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <Label htmlFor="attachment-url-plan">Attachment Link (URL)</Label>
+          <Input
+            id="attachment-url-plan"
+            placeholder="https://example.com/your-attachment-url"
+            value={tempAttachmentUrl}
+            onChange={(e) => setTempAttachmentUrl(e.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setIsAttachmentDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => {
+            testCaseForm.setValue('attachment', tempAttachmentUrl);
+            setIsAttachmentDialogOpen(false);
+          }}>Save Attachment</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>
   );
 }

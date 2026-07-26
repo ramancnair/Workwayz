@@ -114,8 +114,7 @@ export type TestPlanTestCase = {
   executionDate?: string;        // ISO string
   closeDate?: string;            // Auto-set when status = 'Passed'
   statusHistory?: StatusHistoryItem[];
-  effortHours?: number;          // Effort in hours for test execution
-  attachments?: string;          // Multiple URLs for screenshots & doc links
+  attachment?: string;
 };
 
 export type TestCase = {
@@ -130,9 +129,8 @@ export type TestCase = {
   sprintId?: string;
   assigneeId?: string;
   isDeleted?: boolean;
-  deletedAt?: string | null;
-  effortHours?: number;
-  attachments?: string;
+  deletedAt?: string;
+  attachment?: string;
 };
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';

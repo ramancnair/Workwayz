@@ -40,7 +40,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns, Paperclip } from 'lucide-react';
 import { type TestCase, type TestCaseStatus, type TestCaseType, type Story } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +65,7 @@ const testCaseFormSchema = z.object({
   storyId: z.string().optional(),
   releaseId: z.string().optional(),
   sprintId: z.string().optional(),
+  attachment: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -78,7 +79,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
 const testCaseTypes: TestCaseType[] = ['Functional', 'Non-functional'];
 
-type ColumnId = 'testCaseId' | 'title' | 'type' | 'storyId' | 'sprintId' | 'releaseId';
+type ColumnId = 'testCaseId' | 'title' | 'type' | 'storyId' | 'sprintId' | 'releaseId' | 'attachment';
 
 const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }> = {
     testCaseId: { label: 'ID', defaultVisible: true },
@@ -87,6 +88,7 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     storyId: { label: 'Related Story', defaultVisible: false },
     sprintId: { label: 'Sprint', defaultVisible: true },
     releaseId: { label: 'Release', defaultVisible: true },
+    attachment: { label: 'Attachment', defaultVisible: true },
 };
 
 
@@ -102,6 +104,8 @@ export default function TestBacklogPage() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
   const [bulkAssignValues, setBulkAssignValues] = useState<{sprintId: string, releaseId: string}>({ sprintId: 'no-change', releaseId: 'no-change' });
+  const [isAttachmentDialogOpen, setIsAttachmentDialogOpen] = useState(false);
+  const [tempAttachmentUrl, setTempAttachmentUrl] = useState('');
 
 
   const [filters, setFilters] = useState({
@@ -272,6 +276,7 @@ export default function TestBacklogPage() {
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
+            attachment: editingTestCase.attachment || '',
           });
         } else {
           setRelatedStoryInputText('');
@@ -283,6 +288,7 @@ export default function TestBacklogPage() {
             storyId: '',
             releaseId: 'unassigned',
             sprintId: 'backlog',
+            attachment: '',
           });
         }
     }
@@ -361,6 +367,7 @@ export default function TestBacklogPage() {
         storyId: values.storyId === '' ? undefined : values.storyId,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
         sprintId: values.sprintId === 'backlog' ? undefined : values.sprintId,
+        attachment: values.attachment || '',
     };
 
     let success = false;
@@ -502,6 +509,7 @@ export default function TestBacklogPage() {
                 {columnVisibility.storyId && <SortableHeader columnId="storyId">Story</SortableHeader>}
                 {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
                 {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
+                {columnVisibility.attachment && <SortableHeader columnId="attachment">Attachment</SortableHeader>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -533,6 +541,29 @@ export default function TestBacklogPage() {
                         </TableCell>}
                         {columnVisibility.sprintId && <TableCell>{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>}
                         {columnVisibility.releaseId && <TableCell>{release?.releaseId || 'N/A'}</TableCell>}
+                        {columnVisibility.attachment && (
+                          <TableCell>
+                            {tc.attachment ? (
+                              <a
+                                href={tc.attachment}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 hover:underline flex items-center gap-1 text-sm font-medium"
+                              >
+                                <Paperclip className="h-4 w-4" />
+                                View Attachment
+                              </a>
+                            ) : (
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto text-sm text-muted-foreground"
+                                onClick={() => handleDialogOpen(tc)}
+                              >
+                                Add URL
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
@@ -581,6 +612,65 @@ export default function TestBacklogPage() {
                                       {testCaseTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
                                   </SelectContent>
                               </Select>
+                              <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="attachment" render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                              <FormLabel>Test Case Attachment</FormLabel>
+                              <FormControl>
+                                <div className="flex items-center gap-3">
+                                  {field.value ? (
+                                    <div className="flex items-center gap-2">
+                                      <a
+                                        href={field.value}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center w-16 h-10 rounded-md border border-input bg-slate-200/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-foreground transition-colors cursor-pointer"
+                                        title="Open Attachment"
+                                      >
+                                        <Paperclip className="h-5 w-5" />
+                                      </a>
+                                      <div className="flex flex-col">
+                                        <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={field.value}>
+                                          {field.value}
+                                        </span>
+                                        <div className="flex gap-2 mt-0.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setTempAttachmentUrl(field.value);
+                                              setIsAttachmentDialogOpen(true);
+                                            }}
+                                            className="text-[11px] text-blue-500 hover:underline font-medium"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => field.onChange('')}
+                                            className="text-[11px] text-red-500 hover:underline font-medium"
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTempAttachmentUrl('');
+                                        setIsAttachmentDialogOpen(true);
+                                      }}
+                                      className="flex items-center justify-center w-16 h-10 rounded-md border border-input bg-slate-200/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-muted-foreground hover:text-foreground transition-colors"
+                                      title="Add Attachment Link"
+                                    >
+                                      <Paperclip className="h-5 w-5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                         )} />
@@ -796,6 +886,30 @@ export default function TestBacklogPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isAttachmentDialogOpen} onOpenChange={setIsAttachmentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Attachment URL</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Label htmlFor="attachment-url">Attachment Link (URL)</Label>
+            <Input
+              id="attachment-url"
+              placeholder="https://example.com/your-attachment-url"
+              value={tempAttachmentUrl}
+              onChange={(e) => setTempAttachmentUrl(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsAttachmentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => {
+              form.setValue('attachment', tempAttachmentUrl);
+              setIsAttachmentDialogOpen(false);
+            }}>Save Attachment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

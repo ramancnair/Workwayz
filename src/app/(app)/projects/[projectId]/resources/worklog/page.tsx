@@ -260,6 +260,9 @@ export default function WorklogPage() {
   }, [selectedEmployee, selectedDate, worklogs, workItemOptions]);
 
   const handleAddItem = () => {
+    const hasBlankRow = logItems.some((item) => !item.itemId);
+    if (hasBlankRow) return;
+
     const newId = uuidv4();
     setLogItems([
       ...logItems,
