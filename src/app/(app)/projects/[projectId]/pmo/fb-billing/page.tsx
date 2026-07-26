@@ -72,13 +72,17 @@ export default function ResourceBillingPage() {
   const [editCostValue, setEditCostValue] = useState('');
 
   const handleRateChange = (userId: string, field: 'billedRate' | 'costRate', value: string) => {
+    let val = value;
+    if (val.length > 1 && /^0[0-9]/.test(val)) {
+      val = val.replace(/^0+/, '');
+    }
     const regex = /^(0|[1-9]\d*)?(\.\d{0,2})?$/;
-    if (!regex.test(value)) return;
+    if (!regex.test(val)) return;
     setEditingRates(prev => ({
       ...prev,
       [userId]: {
         ...prev[userId],
-        [field]: value,
+        [field]: val,
       }
     }));
   };
@@ -323,7 +327,7 @@ export default function ResourceBillingPage() {
                       <TableCell>
                         <Input
                           type="text"
-                          placeholder="0.00"
+                          placeholder=""
                           value={editingRates[user.id]?.billedRate ?? (user.billedRate !== undefined ? user.billedRate.toString() : '')}
                           onChange={(e) => handleRateChange(user.id, 'billedRate', e.target.value)}
                           onKeyDown={(e) => {
@@ -347,7 +351,7 @@ export default function ResourceBillingPage() {
                       <TableCell>
                          <Input
                           type="text"
-                          placeholder="0.00"
+                          placeholder=""
                           value={editingRates[user.id]?.costRate ?? (user.costRate !== undefined ? user.costRate.toString() : '')}
                           onChange={(e) => handleRateChange(user.id, 'costRate', e.target.value)}
                           onKeyDown={(e) => {
@@ -447,10 +451,14 @@ export default function ResourceBillingPage() {
                     <Input
                       id="cost"
                       type="text"
-                      placeholder="0"
+                      inputMode="decimal"
+                      placeholder=""
                       value={newCostValue}
                       onChange={(e) => {
-                        const val = e.target.value;
+                        let val = e.target.value;
+                        if (val.length > 1 && /^0[0-9]/.test(val)) {
+                          val = val.replace(/^0+/, '');
+                        }
                         if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
                           setNewCostValue(val);
                         }
@@ -502,10 +510,14 @@ export default function ResourceBillingPage() {
                     <Input
                       id="edit-cost"
                       type="text"
-                      placeholder="0"
+                      inputMode="decimal"
+                      placeholder=""
                       value={editCostValue}
                       onChange={(e) => {
-                        const val = e.target.value;
+                        let val = e.target.value;
+                        if (val.length > 1 && /^0[0-9]/.test(val)) {
+                          val = val.replace(/^0+/, '');
+                        }
                         if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
                           setEditCostValue(val);
                         }

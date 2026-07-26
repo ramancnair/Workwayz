@@ -1215,7 +1215,7 @@ export default function GroomingPage() {
                                         )}
                                         />
                                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                         )}/>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1649,7 +1649,7 @@ export default function GroomingPage() {
                                     <FormItem>
                                         <FormLabel>Effort (hours)</FormLabel>
                                         <FormControl>
-                                        <Input type="number" placeholder="0" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
+                                        <Input type="number" placeholder="" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
                                         </FormControl>
                                         {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
                                         <FormMessage />
@@ -1736,7 +1736,7 @@ export default function GroomingPage() {
                                                     )} />
                                                 </div>
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>

@@ -739,7 +739,7 @@ export default function DevelopmentTasksPage() {
                             <FormItem>
                               <FormLabel>Effort (hours)</FormLabel>
                               <FormControl>
-                                <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                                <Input type="number" placeholder="" {...field} value={field.value ?? ''} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

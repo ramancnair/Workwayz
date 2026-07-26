@@ -668,7 +668,7 @@ export default function EnvironmentsPage() {
                             }
                         }}
                         className="w-24"
-                        placeholder="0"
+                        placeholder=""
                       />
                     </TableCell>
                     <TableCell>
@@ -686,7 +686,7 @@ export default function EnvironmentsPage() {
                             }
                         }}
                         className="w-24"
-                        placeholder="0"
+                        placeholder=""
                       />
                     </TableCell>
                     <TableCell>${((system.estimate || 0) * (system.dailyBillingRate || 0)).toFixed(2)}</TableCell>
@@ -965,7 +965,7 @@ export default function EnvironmentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Effort (man-days)</FormLabel>
-                      <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -977,7 +977,7 @@ export default function EnvironmentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Daily Billing Rate (USD)</FormLabel>
-                      <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

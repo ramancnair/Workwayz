@@ -517,7 +517,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <div className="relative">
                       <Input
                         type={showAdminPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder=""
                         value={adminPassword}
                         onChange={e => setAdminPassword(e.target.value)}
                         autoComplete="new-password"
@@ -536,7 +536,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <div className="relative">
                       <Input
                         type={showAdminConfirmPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder=""
                         value={adminConfirmPassword}
                         onChange={e => setAdminConfirmPassword(e.target.value)}
                         autoComplete="new-password"

@@ -503,7 +503,7 @@ export default function UsersPage() {
                                     <FormItem>
                                         <FormLabel>{level}</FormLabel>
                                         <FormControl>
-                                        <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                                        <Input type="number" placeholder="" {...field} value={field.value ?? ''} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -794,7 +794,7 @@ export default function UsersPage() {
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder="0"
+                            placeholder=""
                             className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-l-none shadow-none h-full bg-transparent px-3"
                             {...field}
                             value={field.value ?? ''}

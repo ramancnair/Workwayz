@@ -520,7 +520,7 @@ export default function BillingPage() {
                           <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
                           <Input
                             type="number"
-                            placeholder="0.00"
+                            placeholder=""
                             value={projectValueInput}
                             onChange={(e) => setProjectValueInput(e.target.value)}
                             className="pl-8 bg-background/50 border-muted focus-visible:ring-1"
@@ -579,7 +579,7 @@ export default function BillingPage() {
                         <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
                         <Input
                           type="number"
-                          placeholder="0.00"
+                          placeholder=""
                           value={monthlyBilledInput}
                           onChange={(e) => setMonthlyBilledInput(e.target.value)}
                           className="pl-8 bg-background/50 border-muted"
