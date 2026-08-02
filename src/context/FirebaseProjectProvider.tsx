@@ -140,7 +140,6 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
   '/trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies', 'documents'],
   '/project-trash': ['stories', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies', 'documents'],
 };
-};
 
 
 export function FirebaseProjectProvider({ children, projectId }: PropsWithChildren<{ projectId: string }>) {
