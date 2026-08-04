@@ -47,3 +47,5 @@ firestore-debug.log
 # local configuration profiles
 connections.json
 
+# testing sandbox
+ai-testing-sandbox/
