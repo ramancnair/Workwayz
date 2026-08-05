@@ -1900,30 +1900,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                  <FormField
-                      control={editStoryForm.control}
-                      name="itemType"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled>
-                          <FormControl>
-                              <SelectTrigger>
-                              <SelectValue placeholder="Select a requirement type" />
-                              </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              {workItemTypes.map(itemType => (
-                              <SelectItem key={itemType} value={itemType}>
-                                  {itemType}
-                              </SelectItem>
-                              ))}
-                          </SelectContent>
-                          </Select>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
+
                    <FormField
                     control={editStoryForm.control}
                     name="title"

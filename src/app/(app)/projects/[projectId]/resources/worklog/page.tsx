@@ -260,6 +260,14 @@ export default function WorklogPage() {
   }, [selectedEmployee, selectedDate, worklogs, workItemOptions]);
 
   const handleAddItem = () => {
+    if (currentTotalHours >= 24) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: 'Total logged effort for a single day cannot exceed 24 hours.',
+      });
+      return;
+    }
     const hasBlankRow = logItems.some((item) => !item.itemId);
     if (hasBlankRow) return;
 
@@ -292,7 +300,20 @@ export default function WorklogPage() {
     if (field === 'hours') {
       let num = parseFloat(value);
       if (isNaN(num)) num = 0;
-      finalValue = Math.max(0, Math.min(24, num));
+      const otherHours = logItems
+        .filter((item) => item.id !== id)
+        .reduce((sum, item) => sum + (Number(item.hours) || 0), 0);
+      const maxAllowed = Math.max(0, 24 - otherHours);
+      if (num > maxAllowed) {
+        toast({
+          variant: 'destructive',
+          title: 'Validation Error',
+          description: `Total logged effort for a single day cannot exceed 24 hours (Current other items: ${otherHours.toFixed(1)}h, max allowed for this item: ${maxAllowed.toFixed(1)}h).`,
+        });
+        finalValue = maxAllowed;
+      } else {
+        finalValue = Math.max(0, Math.min(24, num));
+      }
     }
     setLogItems(
       logItems.map((item) => (item.id === id ? { ...item, [field]: finalValue } : item))
@@ -589,7 +610,7 @@ export default function WorklogPage() {
                   ))}
                 </datalist>
                 <div className="flex justify-between items-center pt-4 border-t mt-4">
-                  <Button variant="outline" onClick={handleAddItem} disabled={isSaving}>
+                  <Button variant="outline" onClick={handleAddItem} disabled={isSaving || currentTotalHours >= 24}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                   </Button>
                   <div className="text-right">
