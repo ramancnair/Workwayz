@@ -300,7 +300,6 @@ export default function IssuesPage() {
                     </FormItem>
                   )} />
                 </div>
-<<<<<<< HEAD
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="assigneeId" render={({ field }) => (
@@ -310,7 +309,7 @@ export default function IssuesPage() {
                         <FormControl><SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="unassigned">Unassigned</SelectItem>
-                          {users.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
+                          {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -325,32 +324,6 @@ export default function IssuesPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-=======
-                
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="assigneeId" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Assignee</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="resolvedDate" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Resolved Date</FormLabel>
-                            <FormControl>
-                                <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
->>>>>>> 7fdef9f (Bugs 1 and Enhancement)
                 </div>
               </div>
               <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
