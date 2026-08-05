@@ -2,6 +2,7 @@
 'use client';
 
 import { usePathname, useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { type PropsWithChildren, use, useMemo, useEffect } from "react";
 import { ProjectProvider, useProject } from "@/context/ProjectContext";
@@ -134,57 +135,80 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                 {(hasAccess('Specifications (Initial Estimation)') || hasAccess('Project Status (Initial Estimation)')) && (
                   <TabsTrigger 
                     value="initial-estimation" 
+                    asChild
                     className={cn(
                       "data-[state=active]:bg-background data-[state=active]:text-foreground",
                       showInitialTabsOnly && !dynamicTab && "pointer-events-none cursor-default"
                     )}
                   >
-                    Initial Estimation
+                    <Link href={`${basePath}/initial-estimation/specifications`}>Initial Estimation</Link>
                   </TabsTrigger>
                 )}
                 {!showInitialTabsOnly && (
                   <>
                     {(hasAccess('Project Status') || hasAccess('PM Dashboard') || hasAccess('Specifications')) && (
-                      <TabsTrigger value="project" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Project Details</TabsTrigger>
+                      <TabsTrigger value="project" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/project-details/project-status`}>Project Details</Link>
+                      </TabsTrigger>
                     )}
                     {(hasAccess('Project Resources') || hasAccess('Worklog') || hasAccess('Resource Workload') || hasAccess('Project Gantt')) && (
-                      <TabsTrigger value="resources" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Resources</TabsTrigger>
+                      <TabsTrigger value="resources" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/resources/project-resources`}>Resources</Link>
+                      </TabsTrigger>
                     )}
                     {hasAccess('Project Releases') && (
-                      <TabsTrigger value="releases" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Releases</TabsTrigger>
+                      <TabsTrigger value="releases" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/releases/project-releases`}>Releases</Link>
+                      </TabsTrigger>
                     )}
                     {(hasAccess('Development Dashboard') || hasAccess('Product Backlog') || hasAccess('Grooming') || hasAccess('Kanban Board') || hasAccess('Sub-Tasks') || hasAccess('Defect Tracker')) && (
-                      <TabsTrigger value="development" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Development</TabsTrigger>
+                      <TabsTrigger value="development" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/development/dashboard`}>Development</Link>
+                      </TabsTrigger>
                     )}
                     {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Plan') || hasAccess('Defects')) && (
-                      <TabsTrigger value="testing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Testing</TabsTrigger>
+                      <TabsTrigger value="testing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/testing/dashboard`}>Testing</Link>
+                      </TabsTrigger>
                     )}
                     {(hasAccess('RAID Dashboard') || hasAccess('Risks') || hasAccess('Assumptions') || hasAccess('Issues') || hasAccess('Dependencies')) && (
-                      <TabsTrigger value="governance" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Governance</TabsTrigger>
+                      <TabsTrigger value="governance" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/raid-dashboard`}>Governance</Link>
+                      </TabsTrigger>
                     )}
                     {(hasAccess('Project Holiday Calendar') || hasAccess('Leave Calendar')) && (
-                      <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                      <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/holidays`}>Holidays</Link>
+                      </TabsTrigger>
                     )}
                     {(hasAccess('PMO Documents') || hasAccess('PMO FB Billing') || hasAccess('PMO FB Payment Milestones') || hasAccess('PMO TnM Billing') || hasAccess('PMO TnM Payment Milestones') || hasAccess('Business Continuity')) && (
-                      <TabsTrigger value="pmo" className="data-[state=active]:bg-background data-[state=active]:text-foreground">PMO</TabsTrigger>
+                      <TabsTrigger value="pmo" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/pmo/documents`}>PMO</Link>
+                      </TabsTrigger>
                     )}
                     {(hasAccess('Board Settings') || hasAccess('Sprint Settings') || hasAccess('Effort Settings')) && (
-                      <TabsTrigger value="settings" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
-                        <Settings className="h-4 w-4" />
-                        <span>Project Settings</span>
+                      <TabsTrigger value="settings" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/project-settings/board`} className="flex items-center gap-1.5">
+                          <Settings className="h-4 w-4" />
+                          <span>Project Settings</span>
+                        </Link>
                       </TabsTrigger>
                     )}
                     {hasAccess('Project Trash') && (
-                      <TabsTrigger value="trash" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
-                        <Trash2 className="h-4 w-4" />
-                        <span>Project Trash</span>
+                      <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={`${basePath}/project-trash`} className="flex items-center gap-1.5">
+                          <Trash2 className="h-4 w-4" />
+                          <span>Project Trash</span>
+                        </Link>
                       </TabsTrigger>
                     )}
                   </>
                 )}
                 {dynamicTab && (
-                  <TabsTrigger value={dynamicTab.value} className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                    {dynamicTab.label}
+                  <TabsTrigger value={dynamicTab.value} asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                    <Link href={dynamicTab.value === 'my-account' ? '/my-account' : '#'}>
+                      {dynamicTab.label}
+                    </Link>
                   </TabsTrigger>
                 )}
               </TabsList>

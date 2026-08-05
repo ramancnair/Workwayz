@@ -58,9 +58,10 @@ function validateSession(): boolean {
     return false;
   }
 
-  // 4. Remember me check — if rememberMe is false, we require projectflow_session_active in sessionStorage
+  // 4. Remember me check — if rememberMe is false, we require projectflow_session_active cookie
   const rememberMe = session.rememberMe !== false;
-  if (!rememberMe && typeof window !== 'undefined' && !sessionStorage.getItem('projectflow_session_active')) {
+  const hasSessionCookie = typeof document !== 'undefined' && document.cookie.split(';').some(c => c.trim().startsWith('projectflow_session_active='));
+  if (!rememberMe && typeof window !== 'undefined' && !hasSessionCookie) {
     console.warn('[AuthGuard] Session rejected: rememberMe is false and browser session has ended.');
     localStorage.removeItem('projectflow_user');
     return false;

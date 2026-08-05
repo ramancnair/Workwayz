@@ -2,12 +2,14 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { type PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PmSidebarNav } from '@/components/PmSidebarNav';
 import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 import { AuthGuard } from '@/components/AuthGuard';
+import { SessionManager } from '@/components/SessionManager';
 import { Settings, Trash2 } from 'lucide-react';
 import { collection, query, where, getDocs } from '@/lib/db-provider';
 import { db } from '@/lib/db-provider';
@@ -121,6 +123,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   return (
     <AuthGuard>
+      <SessionManager />
       <SidebarProvider open={open} onOpenChange={setOpen}>
         <Sidebar collapsible="icon">
           <PmSidebarNav activeTab={activeTab as any} />
@@ -131,42 +134,60 @@ export default function AppLayout({ children }: PropsWithChildren) {
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         {hasAccess('My Projects') && (
-                          <TabsTrigger value="my-projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">My Projects</TabsTrigger>
+                          <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                            <Link href="/my-projects">My Projects</Link>
+                          </TabsTrigger>
                         )}
                         {!showOnlyMyProjects && canSeePortfolioTabs && (
                           <>
                             {hasAccess('Project Home') && (
-                              <TabsTrigger value="projects" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Projects</TabsTrigger>
+                              <TabsTrigger value="projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                                <Link href="/project-home">Projects</Link>
+                              </TabsTrigger>
                             )}
                             {(hasAccess('Estimations') || hasAccess('Defects')) && (
-                              <TabsTrigger value="quality" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Quality</TabsTrigger>
+                              <TabsTrigger value="quality" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                                <Link href="/quality/estimations">Quality</Link>
+                              </TabsTrigger>
                             )}
                             {hasAccess('Billing') && (
-                              <TabsTrigger value="billing" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Billing</TabsTrigger>
+                              <TabsTrigger value="billing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                                <Link href="/billing">Billing</Link>
+                              </TabsTrigger>
                             )}
                             {hasAccess('User List') && (
-                              <TabsTrigger value="users" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Users</TabsTrigger>
+                              <TabsTrigger value="users" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                                <Link href="/users">Users</Link>
+                              </TabsTrigger>
                             )}
                             {(hasAccess('Holiday Calendar') || hasAccess('Leave Settings') || hasAccess('Leave Tracker')) && (
-                              <TabsTrigger value="holidays" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Holidays</TabsTrigger>
+                              <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                                <Link href="/holidays/holiday-calendar">Holidays</Link>
+                              </TabsTrigger>
                             )}
                             {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Archive')) && (
-                              <TabsTrigger value="portfolios" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
-                                <Settings className="h-4 w-4" />
-                                <span>Portfolio Settings</span>
+                              <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                                <Link href="/portfolio-settings" className="flex items-center gap-1.5">
+                                  <Settings className="h-4 w-4" />
+                                  <span>Portfolio Settings</span>
+                                </Link>
                               </TabsTrigger>
                             )}
                             {hasAccess('Trash') && (
-                              <TabsTrigger value="trash" className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center gap-1.5">
-                                <Trash2 className="h-4 w-4" />
-                                <span>Portfolio Trash</span>
+                              <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                                <Link href="/portfolio-trash" className="flex items-center gap-1.5">
+                                  <Trash2 className="h-4 w-4" />
+                                  <span>Portfolio Trash</span>
+                                </Link>
                               </TabsTrigger>
                             )}
                           </>
                         )}
                         {dynamicTab && (
-                          <TabsTrigger value={dynamicTab.value} className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                            {dynamicTab.label}
+                          <TabsTrigger value={dynamicTab.value} asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                            <Link href={dynamicTab.value === 'my-account' ? '/my-account' : '#'}>
+                              {dynamicTab.label}
+                            </Link>
                           </TabsTrigger>
                         )}
                     </TabsList>

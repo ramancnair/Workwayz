@@ -89,7 +89,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
 
       localStorage.removeItem('projectflow_user');
-      sessionStorage.removeItem('projectflow_session_active');
+      document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
       if (sessionProvider === 'keycloak') {
         const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
@@ -116,7 +116,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     } catch (error) {
       console.error("Error logging out:", error);
       localStorage.removeItem('projectflow_user');
-      sessionStorage.removeItem('projectflow_session_active');
+      document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       router.push('/');
     }
   };
@@ -320,15 +320,16 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
                   <span>{item.label}</span>
                 </SidebarMenuButton>
               ) : (
-                <Link href={item.href}>
-                  <SidebarMenuButton
-                    isActive={pathname.startsWith(item.href)}
-                    tooltip={item.label}
-                  >
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith(item.href)}
+                  tooltip={item.label}
+                >
+                  <Link href={item.href}>
                     <item.icon />
                     <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
+                  </Link>
+                </SidebarMenuButton>
               )}
             </SidebarMenuItem>
           ))}

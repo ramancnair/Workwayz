@@ -171,7 +171,7 @@ export default function LoginPage() {
         }));
 
         if (!rememberMe) {
-          sessionStorage.setItem('projectflow_session_active', 'true');
+          document.cookie = "projectflow_session_active=true; path=/";
         }
 
       } else {
@@ -217,7 +217,7 @@ export default function LoginPage() {
         }));
 
         if (!rememberMe) {
-          sessionStorage.setItem('projectflow_session_active', 'true');
+          document.cookie = "projectflow_session_active=true; path=/";
         }
       }
 

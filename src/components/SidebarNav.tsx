@@ -102,7 +102,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
       // Always clear local session first
       localStorage.removeItem('projectflow_user');
-      sessionStorage.removeItem('projectflow_session_active');
+      document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
       if (sessionProvider === 'keycloak') {
         // Terminate the Keycloak SSO session server-side to prevent re-entry via session cookie
@@ -132,7 +132,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       console.error("Error logging out:", error);
       // Even on error, ensure local session is cleared and redirect
       localStorage.removeItem('projectflow_user');
-      sessionStorage.removeItem('projectflow_session_active');
+      document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       router.push('/');
     }
   };
@@ -414,14 +414,12 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       <div className="p-2 transition-all duration-300">
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link href="/my-projects">
-              <SidebarMenuButton
-                tooltip="My Projects"
-              >
+            <SidebarMenuButton asChild tooltip="My Projects">
+              <Link href="/my-projects">
                 <Home />
                 <span>My Projects</span>
-              </SidebarMenuButton>
-            </Link>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </div>
@@ -429,19 +427,20 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
-                <SidebarMenuButton
-                  isActive={
-                    item.href.endsWith('/holidays')
-                      ? pathname === item.href
-                      : pathname.startsWith(item.href)
-                  }
-                  tooltip={item.label}
-                >
+              <SidebarMenuButton
+                asChild
+                isActive={
+                  item.href.endsWith('/holidays')
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href)
+                }
+                tooltip={item.label}
+              >
+                <Link href={item.href}>
                   <item.icon />
                   <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
