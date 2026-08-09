@@ -175,7 +175,7 @@ export default function AssumptionsPage() {
     const assumptionData = {
       ...values,
       ownerId: values.ownerId === 'unassigned' ? undefined : values.ownerId,
-      validationDate: values.validationDate ? new Date(values.validationDate) : undefined,
+      validationDate: values.validationDate ? new Date(values.validationDate).toISOString() : undefined,
     };
 
     const success = editingAssumption

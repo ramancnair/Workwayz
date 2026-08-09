@@ -31,15 +31,24 @@ import { useToast } from '@/hooks/use-toast';
 import { type Environment, type CodeRepository } from '@/types';
 import { format, parseISO } from 'date-fns';
 
+const ensureHttp = (val: unknown) => {
+  if (typeof val !== 'string' || val.trim() === '') return val;
+  const trimmed = val.trim();
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+};
+
 const environmentFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
-  url: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  url: z.preprocess(ensureHttp, z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal(''))),
   renewalDate: z.string().optional(),
 });
 
 const repositoryFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
-  url: z.string().url({ message: 'Please enter a valid URL.' }),
+  url: z.preprocess(ensureHttp, z.string().url({ message: 'Please enter a valid URL.' })),
   expiryDate: z.string().optional(),
 });
 
@@ -323,7 +332,7 @@ export default function BusinessContinuityPage() {
                   <FormItem>
                     <FormLabel>URL</FormLabel>
                     <FormControl>
-                      <Input type="url" placeholder="https://staging.example.com" {...field} />
+                      <Input type="text" placeholder="https://staging.example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -377,7 +386,7 @@ export default function BusinessContinuityPage() {
                   <FormItem>
                     <FormLabel>URL</FormLabel>
                     <FormControl>
-                      <Input type="url" placeholder="https://github.com/user/repo" {...field} />
+                      <Input type="text" placeholder="https://github.com/user/repo" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

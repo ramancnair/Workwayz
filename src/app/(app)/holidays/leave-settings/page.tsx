@@ -222,7 +222,7 @@ export default function AllocatedLeavesPage() {
           <CardHeader>
             <CardTitle>Global Leave Quota Settings</CardTitle>
             <CardDescription>
-              Configure annual paid leave allowances and carry-over parameters.
+              Configure annual paid leave allowances and carry-forward parameters.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -245,16 +245,16 @@ export default function AllocatedLeavesPage() {
                 onCheckedChange={(checked) => setAllowCarryOver(checked)}
               />
               <div className="space-y-1 leading-none">
-                <Label htmlFor="allow-carry-over">Allow Carry-Over Leaves</Label>
+                <Label htmlFor="allow-carry-over">Allow Carry-Forward Leaves</Label>
                 <p className="text-xs text-muted-foreground">
-                  Enable carrying over remaining paid leaves to next year.
+                  Enable carrying forward remaining paid leaves to next year.
                 </p>
               </div>
             </div>
 
             {allowCarryOver && (
               <div className="space-y-2 pt-2">
-                <Label htmlFor="carry-over-limit">Carry-Over Days Limit</Label>
+                <Label htmlFor="carry-over-limit">Carry-Forward Days Limit</Label>
                 <Input
                   id="carry-over-limit"
                   type="number"
@@ -281,7 +281,7 @@ export default function AllocatedLeavesPage() {
           <div>
             <CardTitle>Resource Leave Accounts</CardTitle>
             <CardDescription>
-              Summary of carry-over leaves, allocated annual quotas, and current balances for the year {currentYear}.
+              Summary of carry-forward leaves, allocated annual quotas, and current balances for the year {currentYear}.
             </CardDescription>
           </div>
           <div className="flex items-center w-full md:w-80 relative">
@@ -302,7 +302,7 @@ export default function AllocatedLeavesPage() {
                   <TableHead className="w-[12%]">User ID</TableHead>
                   <TableHead className="w-[30%]">Resource</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="text-center">Carried Over ({prevYear})</TableHead>
+                  <TableHead className="text-center">Carried Forward ({prevYear})</TableHead>
                   <TableHead className="text-center">Annual Quota</TableHead>
                   <TableHead className="text-center">Total Available</TableHead>
                   <TableHead className="text-center">Paid Taken ({currentYear})</TableHead>
@@ -326,14 +326,14 @@ export default function AllocatedLeavesPage() {
                       <TableCell className="text-sm">{res.role || 'N/A'}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5">
-                          + {res.carriedOver} days
+                          + {res.carriedOver}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center font-medium">{res.allocated} days</TableCell>
-                      <TableCell className="text-center font-semibold text-foreground">{res.totalAvailable} days</TableCell>
-                      <TableCell className="text-center text-muted-foreground">{res.taken} days</TableCell>
+                      <TableCell className="text-center font-medium">{res.allocated}</TableCell>
+                      <TableCell className="text-center font-semibold text-foreground">{res.totalAvailable}</TableCell>
+                      <TableCell className="text-center text-muted-foreground">{res.taken}</TableCell>
                       <TableCell className="text-right pr-6 font-bold text-sm text-primary">
-                        {res.remaining} days
+                        {res.remaining}
                       </TableCell>
                     </TableRow>
                   ))

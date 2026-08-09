@@ -1547,7 +1547,7 @@ export default function KanbanPage() {
                                 {selectedStory.sprintId !== null && (
                                 <DropdownMenuItem onClick={() => {
                                     if (!selectedStory) return;
-                                    moveStoryToSprint(selectedStory.id, null);
+                                    moveStoryToSprint?.(selectedStory.id, null);
                                     handleSetSelectedStory(null);
                                 }}>
                                     Backlog
@@ -1560,7 +1560,7 @@ export default function KanbanPage() {
                                     key={sprint.id}
                                     onClick={() => {
                                         if (!selectedStory) return;
-                                        moveStoryToSprint(selectedStory.id, sprint.id);
+                                        moveStoryToSprint?.(selectedStory.id, sprint.id);
                                         handleSetSelectedStory(null);
                                     }}
                                     >

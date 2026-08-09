@@ -638,7 +638,7 @@ export default function BacklogPage() {
           estimatedHours: story.estimatedHours,
           impactedSystemIds: story.impactedSystemIds,
         };
-        const storyRef = await addStory(storyPayload, 'ST');
+        const storyRef = await addStory(storyPayload, 'ST') as any;
   
         if (storyRef && story.subTasks) {
           for (const subTask of story.subTasks) {
@@ -647,7 +647,7 @@ export default function BacklogPage() {
               description: '',
               itemType: 'Sub Task',
               status: 'To Do',
-              parentStoryId: storyRef.id,
+              parentStoryId: storyRef.id || storyRef,
               estimatedHours: subTask.estimatedHours,
               impactedSystemId: subTask.impactedSystemId,
             };

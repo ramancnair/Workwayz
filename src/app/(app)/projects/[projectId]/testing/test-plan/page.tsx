@@ -251,7 +251,7 @@ export default function TestPlanPage() {
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     if (!editingTestCase || !selectedPlanId) return;
 
-    const parsedEffort = values.effortHours ? parseFloat(values.effortHours) : undefined;
+    const parsedEffort = (values as any).effortHours ? parseFloat((values as any).effortHours) : undefined;
 
     const updateData: Partial<TestPlanTestCase> = {
       title: values.title,
@@ -665,7 +665,7 @@ export default function TestPlanPage() {
                           </TableCell>
                           <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
                           <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{tc.effortHours !== undefined ? `${tc.effortHours} hrs` : '-'}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{(tc as any).effortHours !== undefined ? `${(tc as any).effortHours} hrs` : '-'}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -848,7 +848,7 @@ export default function TestPlanPage() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setTempAttachmentUrl(field.value);
+                                        setTempAttachmentUrl(field.value || '');
                                         setIsAttachmentDialogOpen(true);
                                       }}
                                       className="text-[11px] text-blue-500 hover:underline font-medium"
@@ -949,7 +949,7 @@ export default function TestPlanPage() {
                     />
                     <p className="text-[11px] text-muted-foreground">Auto-set when status is &quot;Passed&quot;</p>
                   </FormItem>
-                  <FormField control={testCaseForm.control} name="effortHours" render={({ field }) => (
+                  <FormField control={testCaseForm.control} name={"effortHours" as any} render={({ field }) => (
                     <FormItem>
                       <FormLabel>Effort (Hours)</FormLabel>
                       <FormControl>
@@ -973,7 +973,7 @@ export default function TestPlanPage() {
                   )} />
                 </div>
 
-                <FormField control={testCaseForm.control} name="attachments" render={({ field }) => (
+                <FormField control={testCaseForm.control} name="attachment" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Screenshot & Document Links (URLs)</FormLabel>
                     <FormControl>

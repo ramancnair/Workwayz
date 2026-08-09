@@ -639,7 +639,7 @@ export default function TestBacklogPage() {
                                           <button
                                             type="button"
                                             onClick={() => {
-                                              setTempAttachmentUrl(field.value);
+                                              setTempAttachmentUrl(field.value || '');
                                               setIsAttachmentDialogOpen(true);
                                             }}
                                             className="text-[11px] text-blue-500 hover:underline font-medium"

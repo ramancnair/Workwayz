@@ -357,7 +357,7 @@ export default function DefectTrackerPage() {
                         bug={bug}
                         assignee={assignee}
                         columns={BUG_COLUMNS}
-                        onStatusChange={(newStatus) => moveStoryStatus(bug.id, newStatus as StoryStatus)}
+                        onStatusChange={(newStatus) => moveStoryStatus?.(bug.id, newStatus as StoryStatus)}
                         onEdit={() => handleOpenEdit(bug)}
                       />
                     );
