@@ -1,16 +1,15 @@
 
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SetupInterceptor } from "@/components/SetupInterceptor";
+import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 
 export const metadata: Metadata = {
   title: 'ProjectFlow',
   description: 'Manage your projects with ease and clarity.',
 };
-
-import { ThemeProvider } from "@/components/theme-provider";
-import { SetupInterceptor } from "@/components/SetupInterceptor";
-import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 
 export default function RootLayout({
   children,

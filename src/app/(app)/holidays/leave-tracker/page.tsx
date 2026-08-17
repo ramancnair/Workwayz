@@ -514,14 +514,14 @@ export default function LeaveTrackerPage() {
                         <div className="bg-muted/40 hover:bg-muted/60 transition-colors rounded-xl p-4 border border-border/40">
                           <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Paid Leave Taken</p>
                           <p className="text-3xl font-extrabold text-foreground mt-2">
-                            {leaveQuotaStats.activeYearPaidTaken} <span className="text-xs font-medium text-muted-foreground">days</span>
+                            {leaveQuotaStats.activeYearPaidTaken}<span className="text-sm font-semibold text-muted-foreground ml-0.5">d</span>
                           </p>
                           <p className="text-[10px] text-muted-foreground mt-1">Globally logged in {leaveQuotaStats.activeYear}</p>
                         </div>
                         <div className="bg-destructive/5 hover:bg-destructive/10 transition-colors rounded-xl p-4 border border-destructive/10">
                           <p className="text-xs font-bold text-destructive/80 uppercase tracking-wider">Loss of Pay (LOP)</p>
                           <p className="text-3xl font-extrabold text-destructive mt-2">
-                            {leaveQuotaStats.activeYearLopTaken} <span className="text-xs font-medium text-muted-foreground">days</span>
+                            {leaveQuotaStats.activeYearLopTaken}<span className="text-sm font-semibold text-muted-foreground ml-0.5">d</span>
                           </p>
                           <p className="text-[10px] text-destructive/70 mt-1">Globally logged in {leaveQuotaStats.activeYear}</p>
                         </div>
