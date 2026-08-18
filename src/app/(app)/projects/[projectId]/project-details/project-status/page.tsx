@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Edit, Circle } from 'lucide-react';
+import { Edit, Circle, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -89,7 +89,16 @@ export default function ProjectSynopsisPage() {
     const { project, isLoading, allUsers, updateProject } = useProject();
     const [isHealthDialogOpen, setIsHealthDialogOpen] = useState(false);
     const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
+    const [pmInputText, setPmInputText] = useState('');
     const { toast } = useToast();
+
+    const pmOptions = useMemo(() => allUsers
+        .filter(u => (!u.isDeleted && u.isEnabled !== false) && !!u.empId && u.empId.trim() !== '')
+        .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
+        .map(user => ({
+            value: user.id,
+            label: `${user.firstName} ${user.lastName} (${user.empId.trim()})`
+        })), [allUsers]);
 
     const healthForm = useForm<z.infer<typeof statusUpdateSchema>>({
         resolver: zodResolver(statusUpdateSchema),
@@ -111,7 +120,7 @@ export default function ProjectSynopsisPage() {
         }
     }, [project, healthForm, isHealthDialogOpen]);
     
-      useEffect(() => {
+    useEffect(() => {
         if (project && isInfoDialogOpen) {
             infoForm.reset({
                 status: project.status,
@@ -120,8 +129,20 @@ export default function ProjectSynopsisPage() {
                 startDate: project.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : '',
                 endDate: project.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
             });
+            if (project.projectManagerId && project.projectManagerId !== 'unassigned') {
+                const pm = allUsers.find(u => u.id === project.projectManagerId);
+                if (pm && pm.empId) {
+                    setPmInputText(`${pm.firstName} ${pm.lastName} (${pm.empId.trim()})`);
+                } else if (pm) {
+                    setPmInputText(`${pm.firstName} ${pm.lastName}`);
+                } else {
+                    setPmInputText('');
+                }
+            } else {
+                setPmInputText('');
+            }
         }
-    }, [project, infoForm, isInfoDialogOpen]);
+    }, [project, infoForm, isInfoDialogOpen, allUsers]);
 
     const projectManager = project?.projectManagerId
         ? allUsers.find(e => e.id === project.projectManagerId)
@@ -227,9 +248,57 @@ export default function ProjectSynopsisPage() {
                                    <FormField control={infoForm.control} name="status" render={({ field }) => (
                                         <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{projectStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
                                    )}/>
-                                      <FormField control={infoForm.control} name="projectManagerId" render={({ field }) => (
-                                          <FormItem><FormLabel>Project Manager</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a PM"/></SelectTrigger></FormControl><SelectContent><SelectItem value="unassigned">Unassigned</SelectItem>{[...allUsers.filter(u => (!u.isDeleted && u.isEnabled !== false) || u.id === field.value)].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}{u.empId ? ` (${u.empId})` : ''}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
-                                      )}/>
+                                   <FormField
+                                       control={infoForm.control}
+                                       name="projectManagerId"
+                                       render={({ field }) => (
+                                           <FormItem>
+                                                <FormLabel>Project Manager</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                                        <Input
+                                                            list="pm-options-status"
+                                                            placeholder="Select a Project Manager..."
+                                                            className="pl-9"
+                                                            value={pmInputText}
+                                                            onChange={(e) => {
+                                                                const inputText = e.target.value;
+                                                                setPmInputText(inputText);
+
+                                                                const matchingOption = pmOptions.find(opt => opt.label.toLowerCase() === inputText.toLowerCase() || opt.value === inputText);
+                                                                field.onChange(matchingOption ? matchingOption.value : (inputText.trim() === '' ? 'unassigned' : inputText));
+                                                            }}
+                                                            onBlur={() => {
+                                                                const matchingOption = pmOptions.find(opt => opt.label.toLowerCase() === pmInputText.toLowerCase());
+                                                                if (matchingOption) {
+                                                                    setPmInputText(matchingOption.label);
+                                                                    field.onChange(matchingOption.value);
+                                                                } else if (!pmInputText.trim() || pmInputText.toLowerCase() === 'unassigned') {
+                                                                    setPmInputText('');
+                                                                    field.onChange('unassigned');
+                                                                } else {
+                                                                    const currentSelected = pmOptions.find(opt => opt.value === field.value);
+                                                                    if (currentSelected) {
+                                                                        setPmInputText(currentSelected.label);
+                                                                    } else {
+                                                                        setPmInputText('');
+                                                                        field.onChange('unassigned');
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </FormControl>
+                                               <datalist id="pm-options-status">
+                                                   {pmOptions.map(option => (
+                                                       <option key={option.value} value={option.label} />
+                                                   ))}
+                                               </datalist>
+                                               <FormMessage/>
+                                           </FormItem>
+                                       )}
+                                   />
                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                      <FormField control={infoForm.control} name="pricingModel" render={({ field }) => (

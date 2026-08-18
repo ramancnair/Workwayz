@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle, ChevronRight } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle, ChevronRight, Search } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -1197,8 +1197,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     </FormControl>
                                     <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {users.map(emp => (
-                                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                    {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
                                     ))}
                                     </SelectContent>
                                 </Select>
@@ -1221,8 +1221,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     </FormControl>
                                     <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {users.map(emp => (
-                                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                    {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
                                     ))}
                                     </SelectContent>
                                 </Select>
@@ -1336,24 +1336,28 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     <FormItem>
                                       <FormLabel>Related / Original Bug</FormLabel>
                                       <FormControl>
-                                        <Input
-                                          list="bug-options-add"
-                                          placeholder="Search for a bug..."
-                                          value={relatedBugInputText}
-                                          onChange={(e) => {
-                                            const text = e.target.value;
-                                            setRelatedBugInputText(text);
-                                            const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                            field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                                          }}
-                                          onBlur={() => {
-                                            const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
-                                            if (!matchingOption) {
-                                              setRelatedBugInputText('');
-                                              field.onChange('unassigned');
-                                            }
-                                          }}
-                                        />
+                                        <div className="relative">
+                                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                          <Input
+                                            list="bug-options-add"
+                                            placeholder="Search for a bug..."
+                                            className="pl-9"
+                                            value={relatedBugInputText}
+                                            onChange={(e) => {
+                                              const text = e.target.value;
+                                              setRelatedBugInputText(text);
+                                              const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                              field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                            }}
+                                            onBlur={() => {
+                                              const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                              if (!matchingOption) {
+                                                setRelatedBugInputText('');
+                                                field.onChange('unassigned');
+                                              }
+                                            }}
+                                          />
+                                        </div>
                                       </FormControl>
                                       <datalist id="bug-options-add">
                                         {relatedBugOptions.map(opt => <option key={opt.value} value={opt.label} />)}
@@ -2064,8 +2068,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                         </FormControl>
                                         <SelectContent>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {users.map(emp => (
-                                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                        {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
                                         ))}
                                         </SelectContent>
                                     </Select>
@@ -2088,9 +2092,9 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 </FormControl>
                                 <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {users.map((emp) => (
+                                    {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map((emp) => (
                                     <SelectItem key={emp.id} value={emp.id}>
-                                        {emp.firstName} {emp.lastName}
+                                        {emp.firstName} {emp.lastName} ({emp.empId.trim()})
                                     </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -2205,24 +2209,28 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormItem>
                                   <FormLabel>Related / Original Bug</FormLabel>
                                   <FormControl>
-                                    <Input
-                                      list="bug-options-edit"
-                                      placeholder="Search for a bug..."
-                                      value={relatedBugInputText}
-                                      onChange={(e) => {
-                                        const text = e.target.value;
-                                        setRelatedBugInputText(text);
-                                        const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                        field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                                      }}
-                                      onBlur={() => {
-                                        const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
-                                        if (!matchingOption) {
-                                          setRelatedBugInputText('');
-                                          field.onChange('unassigned');
-                                        }
-                                      }}
-                                    />
+                                    <div className="relative">
+                                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                      <Input
+                                        list="bug-options-edit"
+                                        placeholder="Search for a bug..."
+                                        className="pl-9"
+                                        value={relatedBugInputText}
+                                        onChange={(e) => {
+                                          const text = e.target.value;
+                                          setRelatedBugInputText(text);
+                                          const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                          field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                        }}
+                                        onBlur={() => {
+                                          const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                          if (!matchingOption) {
+                                            setRelatedBugInputText('');
+                                            field.onChange('unassigned');
+                                          }
+                                        }}
+                                      />
+                                    </div>
                                   </FormControl>
                                   <datalist id="bug-options-edit">
                                     {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}

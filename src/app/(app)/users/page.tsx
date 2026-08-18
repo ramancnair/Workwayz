@@ -40,7 +40,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot, ShieldCheck, ShieldOff, Clock, UserCheck } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot, ShieldCheck, ShieldOff, Clock, UserCheck, Search } from 'lucide-react';
 import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -583,12 +583,15 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4 space-y-4">
             <div className="flex items-center gap-4 flex-wrap">
-                <Input
-                    placeholder="Filter by name, ID, or email..."
-                    value={filters.search}
-                    onChange={(e) => handleFilterChange('search', e.target.value)}
-                    className="max-w-sm"
-                />
+                <div className="relative max-w-sm w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                        placeholder="Filter by name, ID, or email..."
+                        value={filters.search}
+                        onChange={(e) => handleFilterChange('search', e.target.value)}
+                        className="pl-9 w-full"
+                    />
+                </div>
                 <Select value={filters.accessLevel} onValueChange={(v) => handleFilterChange('accessLevel', v)}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Filter by access level..." />

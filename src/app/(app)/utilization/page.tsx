@@ -33,7 +33,8 @@ import {
     Briefcase,
     ChevronLeft,
     ChevronRight,
-    X
+    X,
+    Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -67,10 +68,13 @@ export default function UtilizationPage() {
         fetchUsers();
     }, []);
 
-    const userOptions = useMemo(() => allUsers.map(user => ({
-        value: user.id,
-        label: `${user.firstName} ${user.lastName} (${user.empId})`
-    })), [allUsers]);
+    const userOptions = useMemo(() => allUsers
+        .filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '')
+        .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
+        .map(user => ({
+            value: user.id,
+            label: `${user.firstName} ${user.lastName} (${user.empId.trim()})`
+        })), [allUsers]);
 
     useEffect(() => {
         const fetchTimelineData = async () => {
@@ -175,11 +179,18 @@ export default function UtilizationPage() {
         }
     }, [selectedUser]);
     
-    const handleUserSelect = (label: string) => {
-        const user = allUsers.find(u => `${u.firstName} ${u.lastName} (${u.empId})` === label);
+    const handleUserSelect = (labelOrId: string) => {
+        const user = allUsers.find(u => 
+            (u.empId && `${u.firstName} ${u.lastName} (${u.empId.trim()})`.toLowerCase() === labelOrId.toLowerCase()) || 
+            u.id === labelOrId
+        );
         setSelectedUser(user || null);
-        setUserInput(label);
-    }
+        if (user && user.empId) {
+            setUserInput(`${user.firstName} ${user.lastName} (${user.empId.trim()})`);
+        } else if (user) {
+            setUserInput(`${user.firstName} ${user.lastName}`);
+        }
+    };
 
     const handlePrevMonth = () => {
         setCurrentCalendarMonth(prev => subMonths(prev, 1));
@@ -325,6 +336,7 @@ export default function UtilizationPage() {
                     <div className="max-w-sm">
                         <label htmlFor="user-search" className="text-sm font-medium">Select a User</label>
                         <div className="relative flex items-center mt-1">
+                            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
                                 id="user-search"
                                 list="user-options"
@@ -339,16 +351,16 @@ export default function UtilizationPage() {
                                     if (!val) {
                                         setSelectedUser(null);
                                     } else {
-                                        const matchingOption = userOptions.find(opt => opt.label === val);
+                                        const matchingOption = userOptions.find(opt => opt.label.toLowerCase() === val.toLowerCase() || opt.value === val);
                                         if (matchingOption) {
-                                            handleUserSelect(val);
+                                            handleUserSelect(matchingOption.label);
                                         }
                                     }
                                 }}
                                 onBlur={(e) => {
                                     const val = e.target.value;
                                     setTimeout(() => {
-                                        const matchingOption = userOptions.find(opt => opt.label === val);
+                                        const matchingOption = userOptions.find(opt => opt.label.toLowerCase() === val.toLowerCase());
                                         if (!matchingOption) {
                                             if (selectedUser) {
                                                 const currentOpt = userOptions.find(opt => opt.value === selectedUser.id);
@@ -357,11 +369,11 @@ export default function UtilizationPage() {
                                                 setUserInput('');
                                             }
                                         } else {
-                                            handleUserSelect(val);
+                                            handleUserSelect(matchingOption.label);
                                         }
                                     }, 200);
                                 }}
-                                className="pr-8"
+                                className="pl-9 pr-8"
                             />
                             {selectedUser && (
                                 <button

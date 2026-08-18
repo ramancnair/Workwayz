@@ -40,7 +40,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns, Paperclip } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns, Paperclip, Search } from 'lucide-react';
 import { type TestCase, type TestCaseStatus, type TestCaseType, type Story } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -694,29 +694,33 @@ export default function TestBacklogPage() {
                             <FormItem>
                               <FormLabel>Related Story (Optional)</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                      list="story-options-tc" 
-                                      placeholder="Select a story..." 
-                                      value={relatedStoryInputText}
-                                      onChange={(e) => {
-                                          const inputText = e.target.value;
-                                          setRelatedStoryInputText(inputText);
-                                          
-                                          const matchingOption = storyOptions.find(opt => opt.label === inputText);
-                                          if (matchingOption) {
-                                              field.onChange(matchingOption.value);
-                                          } else {
-                                              field.onChange('');
-                                          }
-                                      }}
-                                      onBlur={() => {
-                                          const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
-                                          if (!matchingOption) {
-                                              setRelatedStoryInputText('');
-                                              field.onChange('');
-                                          }
-                                      }}
-                                  />
+                                  <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                    <Input 
+                                        list="story-options-tc" 
+                                        placeholder="Select a story..." 
+                                        className="pl-9"
+                                        value={relatedStoryInputText}
+                                        onChange={(e) => {
+                                            const inputText = e.target.value;
+                                            setRelatedStoryInputText(inputText);
+                                            
+                                            const matchingOption = storyOptions.find(opt => opt.label === inputText);
+                                            if (matchingOption) {
+                                                field.onChange(matchingOption.value);
+                                            } else {
+                                                field.onChange('');
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            const matchingOption = storyOptions.find(opt => opt.label === relatedStoryInputText);
+                                            if (!matchingOption) {
+                                                setRelatedStoryInputText('');
+                                                field.onChange('');
+                                            }
+                                        }}
+                                    />
+                                  </div>
                                 </FormControl>
                                 <datalist id="story-options-tc">
                                   {storyOptions.map(option => (

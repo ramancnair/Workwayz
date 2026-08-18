@@ -39,6 +39,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bot,
+  Search,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -442,11 +443,14 @@ export default function WorklogPage() {
                   <SelectValue placeholder="Select an employee" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(isAdmin ? employees : (currentEmployee ? [currentEmployee] : employees)).map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.firstName} {emp.lastName}
-                    </SelectItem>
-                  ))}
+                  {(isAdmin ? employees : (currentEmployee ? [currentEmployee] : employees))
+                    .filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '')
+                    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
+                    .map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName} ({emp.empId.trim()})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -551,14 +555,18 @@ export default function WorklogPage() {
                       {index === 0 && (
                         <label className="text-sm font-medium">Work Item</label>
                       )}
-                      <Input
-                        list="work-item-options"
-                        placeholder="Search work item..."
-                        value={workItemInputValues[item.id] || ''}
-                        onChange={(e) => handleWorkItemInputChange(item.id, e.target.value)}
-                        onBlur={handleAutoSave}
-                        disabled={isSaving}
-                      />
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          list="work-item-options"
+                          placeholder="Search work item..."
+                          className="pl-9"
+                          value={workItemInputValues[item.id] || ''}
+                          onChange={(e) => handleWorkItemInputChange(item.id, e.target.value)}
+                          onBlur={handleAutoSave}
+                          disabled={isSaving}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-1">
                       {index === 0 && (

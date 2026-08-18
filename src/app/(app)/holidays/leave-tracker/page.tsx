@@ -477,7 +477,7 @@ export default function LeaveTrackerPage() {
                             <p className="text-lg font-bold text-foreground mt-0.5">{leaveQuotaStats.allocated}d</p>
                           </div>
                           <div className="border-x border-border/80">
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Carry-Over</p>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Carry Forward</p>
                             <p className="text-lg font-bold text-emerald-600 mt-0.5">+{leaveQuotaStats.carriedOver}d</p>
                           </div>
                           <div>

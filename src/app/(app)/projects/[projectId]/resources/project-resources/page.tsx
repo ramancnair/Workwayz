@@ -39,7 +39,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check, ChevronsUpDown, Info } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check, ChevronsUpDown, Info, Search } from 'lucide-react';
 import { type User, type UserRole, type Story, type ImpactedSystem, type Project, type Horizontal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -196,11 +196,13 @@ function ResourceDialog({
     setEditingUser(null);
   };
 
-  const availableUsers = allUsers.filter(emp => !emp.isDeleted && emp.isEnabled !== false && !projectUsers.some(pe => pe.id === emp.id));
-  const availableUserOptions = availableUsers.map(emp => ({
-    value: emp.id,
-    label: `${emp.firstName} ${emp.lastName} (${emp.empId})`
-  }));
+  const availableUsers = allUsers.filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '' && !projectUsers.some(pe => pe.id === emp.id));
+  const availableUserOptions = availableUsers
+    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
+    .map(emp => ({
+      value: emp.id,
+      label: `${emp.firstName} ${emp.lastName} (${emp.empId.trim()})`
+    }));
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setEditingUser(null); }}>
@@ -217,28 +219,43 @@ function ResourceDialog({
                 <FormItem>
                   <FormLabel>User</FormLabel>
                   <FormControl>
-                    <Input
-                      list="user-options"
-                      placeholder="Search for a user..."
-                      value={userInputText}
-                      readOnly={!!editingUser}
-                      onChange={(e) => {
-                        if (editingUser) return;
-                        const inputText = e.target.value;
-                        setUserInputText(inputText);
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        list="user-options"
+                        placeholder="Search for a user..."
+                        className="pl-9"
+                        value={userInputText}
+                        readOnly={!!editingUser}
+                        onChange={(e) => {
+                          if (editingUser) return;
+                          const inputText = e.target.value;
+                          setUserInputText(inputText);
 
-                        const matchingOption = availableUserOptions.find(opt => opt.label === inputText);
-                        field.onChange(matchingOption ? matchingOption.value : '');
-                      }}
-                      onBlur={(e) => {
-                        if (editingUser) return;
-                        const matchingOption = availableUserOptions.find(opt => opt.label === e.target.value);
-                        if (!matchingOption) {
-                          setUserInputText('');
-                          field.onChange('');
-                        }
-                      }}
-                    />
+                          const matchingOption = availableUserOptions.find(opt => opt.label.toLowerCase() === inputText.toLowerCase() || opt.value === inputText);
+                          field.onChange(matchingOption ? matchingOption.value : '');
+                        }}
+                        onBlur={(e) => {
+                          if (editingUser) return;
+                          const matchingOption = availableUserOptions.find(opt => opt.label.toLowerCase() === e.target.value.toLowerCase());
+                          if (matchingOption) {
+                            setUserInputText(matchingOption.label);
+                            field.onChange(matchingOption.value);
+                          } else if (!e.target.value.trim()) {
+                            setUserInputText('');
+                            field.onChange('');
+                          } else {
+                            const currentSelected = availableUserOptions.find(opt => opt.value === field.value);
+                            if (currentSelected) {
+                              setUserInputText(currentSelected.label);
+                            } else {
+                              setUserInputText('');
+                              field.onChange('');
+                            }
+                          }
+                        }}
+                      />
+                    </div>
                   </FormControl>
                   <datalist id="user-options">
                     {availableUserOptions.map(emp => (

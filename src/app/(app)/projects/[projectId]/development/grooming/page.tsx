@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle, CheckCircle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle, CheckCircle, Search } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase } from '@/types';
@@ -962,9 +962,9 @@ export default function GroomingPage() {
                             <SelectContent>
                                 <SelectItem value="all">All Assignees</SelectItem>
                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {employees.map(user => (
+                                {[...employees].filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(user => (
                                 <SelectItem key={user.id} value={user.id}>
-                                    {user.firstName} {user.lastName}
+                                    {user.firstName} {user.lastName} ({user.empId.trim()})
                                 </SelectItem>
                                 ))}
                             </SelectContent>
@@ -1543,24 +1543,28 @@ export default function GroomingPage() {
                                       <FormItem>
                                         <FormLabel>Related / Original Bug</FormLabel>
                                         <FormControl>
-                                          <Input
-                                            list="bug-options-grooming"
-                                            placeholder="Search for a bug..."
-                                            value={relatedBugInputText}
-                                            onChange={(e) => {
-                                              const text = e.target.value;
-                                              setRelatedBugInputText(text);
-                                              const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                              field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                                            }}
-                                            onBlur={() => {
-                                              const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
-                                              if (!matchingOption) {
-                                                setRelatedBugInputText('');
-                                                field.onChange('unassigned');
-                                              }
-                                            }}
-                                          />
+                                          <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                            <Input
+                                              list="bug-options-grooming"
+                                              placeholder="Search for a bug..."
+                                              className="pl-9"
+                                              value={relatedBugInputText}
+                                              onChange={(e) => {
+                                                const text = e.target.value;
+                                                setRelatedBugInputText(text);
+                                                const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                                field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                              }}
+                                              onBlur={() => {
+                                                const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                                if (!matchingOption) {
+                                                  setRelatedBugInputText('');
+                                                  field.onChange('unassigned');
+                                                }
+                                              }}
+                                            />
+                                          </div>
                                         </FormControl>
                                         <datalist id="bug-options-grooming">
                                           {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}

@@ -617,7 +617,7 @@ export default function DefectTrackerPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
+                            {[...users].filter(u => !u.isDeleted && u.isEnabled !== false && !!u.empId && u.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.empId.trim()})</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -639,7 +639,7 @@ export default function DefectTrackerPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
+                            {[...users].filter(u => !u.isDeleted && u.isEnabled !== false && !!u.empId && u.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.empId.trim()})</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />

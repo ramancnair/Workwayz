@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority, BugSeverity, TestCase } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle } from 'lucide-react';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle, Search } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -841,7 +841,7 @@ export default function KanbanPage() {
                                             <FormItem><FormLabel>Impacted System</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a system"/></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}</SelectContent>
+                                                    <SelectContent><SelectItem value="unassigned">None</SelectItem>{impactedSystems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             <FormMessage/></FormItem>
                                         )}/>
@@ -852,7 +852,7 @@ export default function KanbanPage() {
                                             <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {[...kanbanFilteredUsersForSubTasks].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {[...kanbanFilteredUsersForSubTasks].filter(e => !e.isDeleted && e.isEnabled !== false && !!e.empId && e.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.empId.trim()})</SelectItem>)}
                                             </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -1273,24 +1273,28 @@ export default function KanbanPage() {
                                           <FormItem>
                                             <FormLabel>Related / Original Bug</FormLabel>
                                             <FormControl>
-                                              <Input
-                                                list="bug-options-kanban"
-                                                placeholder="Search for a bug..."
-                                                value={relatedBugInputText}
-                                                onChange={(e) => {
-                                                  const text = e.target.value;
-                                                  setRelatedBugInputText(text);
-                                                  const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                                  field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                                                }}
-                                                onBlur={() => {
-                                                  const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
-                                                  if (!matchingOption) {
-                                                    setRelatedBugInputText('');
-                                                    field.onChange('unassigned');
-                                                  }
-                                                }}
-                                              />
+                                              <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                                <Input
+                                                  list="bug-options-kanban"
+                                                  placeholder="Search for a bug..."
+                                                  className="pl-9"
+                                                  value={relatedBugInputText}
+                                                  onChange={(e) => {
+                                                    const text = e.target.value;
+                                                    setRelatedBugInputText(text);
+                                                    const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                                    field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                                  }}
+                                                  onBlur={() => {
+                                                    const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                                    if (!matchingOption) {
+                                                      setRelatedBugInputText('');
+                                                      field.onChange('unassigned');
+                                                    }
+                                                  }}
+                                                />
+                                              </div>
                                             </FormControl>
                                             <datalist id="bug-options-kanban">
                                               {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}

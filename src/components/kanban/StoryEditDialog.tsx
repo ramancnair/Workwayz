@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Circle, BookOpen, Bug, CheckSquare, GitCommit } from 'lucide-react';
+import { Circle, BookOpen, Bug, CheckSquare, GitCommit, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -362,7 +362,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                                                {[...users].filter(e => !e.isDeleted && e.isEnabled !== false && !!e.empId && e.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.empId.trim()})</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage/>
@@ -651,8 +651,8 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                         </FormControl>
                                         <SelectContent>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {[...users].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
-                                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                        {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
                                         ))}
                                         </SelectContent>
                                     </Select>
@@ -675,11 +675,11 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                 </FormControl>
                                 <SelectContent>
                                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {users.map((emp) => (
-                                    <SelectItem key={emp.id} value={emp.id}>
-                                        {emp.firstName} {emp.lastName}
-                                    </SelectItem>
-                                    ))}
+                                    {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map((emp) => (
+                                     <SelectItem key={emp.id} value={emp.id}>
+                                         {emp.firstName} {emp.lastName} ({emp.empId.trim()})
+                                     </SelectItem>
+                                     ))}
                                 </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -818,24 +818,28 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                 <FormItem>
                                   <FormLabel>Related / Original Bug</FormLabel>
                                   <FormControl>
-                                    <Input
-                                      list="bug-options-edit"
-                                      placeholder="Search for a bug..."
-                                      value={relatedBugInputText}
-                                      onChange={(e) => {
-                                        const text = e.target.value;
-                                        setRelatedBugInputText(text);
-                                        const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                        field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                                      }}
-                                      onBlur={() => {
-                                        const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
-                                        if (!matchingOption) {
-                                          setRelatedBugInputText('');
-                                          field.onChange('unassigned');
-                                        }
-                                      }}
-                                    />
+                                    <div className="relative">
+                                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                      <Input
+                                        list="bug-options-edit"
+                                        placeholder="Search for a bug..."
+                                        className="pl-9"
+                                        value={relatedBugInputText}
+                                        onChange={(e) => {
+                                          const text = e.target.value;
+                                          setRelatedBugInputText(text);
+                                          const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                          field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                        }}
+                                        onBlur={() => {
+                                          const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                          if (!matchingOption) {
+                                            setRelatedBugInputText('');
+                                            field.onChange('unassigned');
+                                          }
+                                        }}
+                                      />
+                                    </div>
                                   </FormControl>
                                   <datalist id="bug-options-edit">
                                     {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}

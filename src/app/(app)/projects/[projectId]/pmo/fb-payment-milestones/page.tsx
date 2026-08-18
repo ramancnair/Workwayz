@@ -245,25 +245,43 @@ export default function BillingPage() {
     return sorted;
   }, [paymentMilestones, sorting]);
 
-  const { realisedAmount, remainingAmount } = useMemo(() => {
-    if (!paymentMilestones) return { realisedAmount: 0, remainingAmount: 0 };
+  const { realisedAmount, remainingAmount, realisedPercentage, remainingPercentage } = useMemo(() => {
+    if (!paymentMilestones) return { realisedAmount: 0, remainingAmount: 0, realisedPercentage: 0, remainingPercentage: 0 };
     
     let realised = 0;
     let remaining = 0;
+    let realisedPct = 0;
+    let remainingPct = 0;
 
     paymentMilestones.forEach(m => {
       const amount = project?.pricingModel === 'Fixed Bid'
         ? ((m.billingPercentage / 100) * effectiveContractValue)
         : (m.amount || 0);
 
+      const pct = m.billingPercentage || 0;
+
       if (m.status === 'Payment Completed') {
         realised += amount;
+        realisedPct += pct;
       } else {
         remaining += amount;
+        remainingPct += pct;
       }
     });
 
-    return { realisedAmount: realised, remainingAmount: remaining };
+    const computedRealisedPct = effectiveContractValue > 0
+      ? (realised / effectiveContractValue) * 100
+      : realisedPct;
+    const computedRemainingPct = effectiveContractValue > 0
+      ? (remaining / effectiveContractValue) * 100
+      : remainingPct;
+
+    return { 
+      realisedAmount: realised, 
+      remainingAmount: remaining,
+      realisedPercentage: computedRealisedPct,
+      remainingPercentage: computedRemainingPct,
+    };
   }, [paymentMilestones, project, effectiveContractValue]);
 
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
@@ -628,8 +646,11 @@ export default function BillingPage() {
                   </div>
                   <div className="space-y-0.5">
                     <span className="text-xs font-semibold uppercase tracking-wider text-emerald-500/70">Total Realised</span>
-                    <div className="text-xl font-extrabold text-emerald-400 tracking-tight">
-                      ${realisedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <div className="text-xl font-extrabold text-emerald-400 tracking-tight flex items-baseline gap-1.5 flex-wrap">
+                      <span>${realisedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-sm font-semibold text-emerald-500/80">
+                        ({realisedPercentage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -641,8 +662,11 @@ export default function BillingPage() {
                   </div>
                   <div className="space-y-0.5">
                     <span className="text-xs font-semibold uppercase tracking-wider text-blue-500/70">Remaining Amount</span>
-                    <div className="text-xl font-extrabold text-blue-400 tracking-tight">
-                      ${remainingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <div className="text-xl font-extrabold text-blue-400 tracking-tight flex items-baseline gap-1.5 flex-wrap">
+                      <span>${remainingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-sm font-semibold text-blue-500/80">
+                        ({remainingPercentage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%)
+                      </span>
                     </div>
                   </div>
                 </div>

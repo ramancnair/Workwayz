@@ -39,7 +39,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns, Filter, UserCog } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Columns, Filter, UserCog, Search } from 'lucide-react';
 import { type Story, type StoryStatus, type Epic, Release, User, ImpactedSystem, Sprint } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -464,12 +464,15 @@ export default function DevelopmentTasksPage() {
       <Card>
         <CardContent className="p-4">
             <div className="flex items-center gap-4 flex-wrap">
-                <Input 
-                    placeholder="Filter by ID, title, or description..."
-                    value={filters.search?.[0] || ''}
-                    onChange={(e) => setFilters(prev => ({...prev, search: e.target.value ? [e.target.value] : []}))}
-                    className="max-w-sm"
-                />
+                <div className="relative max-w-sm w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input 
+                        placeholder="Filter by ID, title, or description..."
+                        value={filters.search?.[0] || ''}
+                        onChange={(e) => setFilters(prev => ({...prev, search: e.target.value ? [e.target.value] : []}))}
+                        className="pl-9 w-full"
+                    />
+                </div>
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline">
@@ -682,8 +685,8 @@ export default function DevelopmentTasksPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {filteredEmployeesForSubTasks.map(emp => (
-                              <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                            {[...filteredEmployeesForSubTasks].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -879,10 +882,10 @@ export default function DevelopmentTasksPage() {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {bulkAssignFilteredEmployees.map(emp => (
-                                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
-                                        ))}
+                                         <SelectItem value="unassigned">Unassigned</SelectItem>
+                                         {[...bulkAssignFilteredEmployees].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                             <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
+                                         ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

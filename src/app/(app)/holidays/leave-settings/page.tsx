@@ -302,7 +302,7 @@ export default function AllocatedLeavesPage() {
                   <TableHead className="w-[12%]">User ID</TableHead>
                   <TableHead className="w-[30%]">Resource</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="text-center">Carried Forward ({prevYear})</TableHead>
+                  <TableHead className="text-center">Carry Forward ({prevYear})</TableHead>
                   <TableHead className="text-center">Annual Quota</TableHead>
                   <TableHead className="text-center">Total Available</TableHead>
                   <TableHead className="text-center">Paid Taken ({currentYear})</TableHead>

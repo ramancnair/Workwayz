@@ -472,8 +472,8 @@ export default function DefectsPage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {employees.map(emp => (
-                                <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                              {[...employees].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -493,8 +493,8 @@ export default function DefectsPage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {employees.map(emp => (
-                                <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                              {[...employees].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -511,24 +511,28 @@ export default function DefectsPage() {
                           <FormItem>
                             <FormLabel>Related Test Case</FormLabel>
                             <FormControl>
-                              <Input
-                                list="testcase-options"
-                                placeholder="Search for a test case..."
-                                value={testCaseInputText}
-                                onChange={(e) => {
-                                  const text = e.target.value;
-                                  setTestCaseInputText(text);
-                                  const matchingOption = testCaseOptions.find(opt => opt.label === text);
-                                  field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                                }}
-                                onBlur={() => {
-                                  const matchingOption = testCaseOptions.find(opt => opt.label === testCaseInputText);
-                                  if (!matchingOption) {
-                                    setTestCaseInputText('');
-                                    field.onChange('unassigned');
-                                  }
-                                }}
-                              />
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                <Input
+                                  list="testcase-options"
+                                  placeholder="Search for a test case..."
+                                  className="pl-9"
+                                  value={testCaseInputText}
+                                  onChange={(e) => {
+                                    const text = e.target.value;
+                                    setTestCaseInputText(text);
+                                    const matchingOption = testCaseOptions.find(opt => opt.label === text);
+                                    field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                  }}
+                                  onBlur={() => {
+                                    const matchingOption = testCaseOptions.find(opt => opt.label === testCaseInputText);
+                                    if (!matchingOption) {
+                                      setTestCaseInputText('');
+                                      field.onChange('unassigned');
+                                    }
+                                  }}
+                                />
+                              </div>
                             </FormControl>
                             <datalist id="testcase-options">
                               {testCaseOptions.map(opt => <option key={opt.value} value={opt.label} />)}
@@ -590,24 +594,28 @@ export default function DefectsPage() {
                           <FormItem>
                             <FormLabel>Related / Original Defect</FormLabel>
                             <FormControl>
-                              <Input
-                                list="bug-options"
-                                placeholder="Search for a defect..."
-                                value={relatedBugInputText}
-                                onChange={(e) => {
-                                  const text = e.target.value;
-                                  setRelatedBugInputText(text);
-                                  const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                  field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                                }}
-                                onBlur={() => {
-                                  const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
-                                  if (!matchingOption) {
-                                    setRelatedBugInputText('');
-                                    field.onChange('unassigned');
-                                  }
-                                }}
-                              />
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                <Input
+                                  list="bug-options"
+                                  placeholder="Search for a defect..."
+                                  className="pl-9"
+                                  value={relatedBugInputText}
+                                  onChange={(e) => {
+                                    const text = e.target.value;
+                                    setRelatedBugInputText(text);
+                                    const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                    field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                  }}
+                                  onBlur={() => {
+                                    const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                    if (!matchingOption) {
+                                      setRelatedBugInputText('');
+                                      field.onChange('unassigned');
+                                    }
+                                  }}
+                                />
+                              </div>
                             </FormControl>
                             <datalist id="bug-options">
                               {relatedBugOptions.filter(opt => opt.value !== editingBug?.id).map(opt => <option key={opt.value} value={opt.label} />)}

@@ -42,7 +42,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, ChevronDown, Archive, RotateCcw, Bot } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, ChevronDown, Archive, RotateCcw, Bot, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
@@ -114,16 +114,23 @@ function ProjectDialogContent({
 }) {
   const [pmInputText, setPmInputText] = useState('');
 
-  const pmOptions = useMemo(() => users.map(user => ({
-    value: user.id,
-    label: `${user.firstName} ${user.lastName} (${user.empId})`
-  })), [users]);
+  const pmOptions = useMemo(() => users
+    .filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '')
+    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
+    .map(user => ({
+      value: user.id,
+      label: `${user.firstName} ${user.lastName} (${user.empId.trim()})`
+    })), [users]);
 
   useEffect(() => {
     if (editingProject && editingProject.projectManagerId) {
       const pm = users.find(u => u.id === editingProject.projectManagerId);
-      if (pm) {
-        setPmInputText(`${pm.firstName} ${pm.lastName} (${pm.empId})`);
+      if (pm && pm.empId) {
+        setPmInputText(`${pm.firstName} ${pm.lastName} (${pm.empId.trim()})`);
+      } else if (pm) {
+        setPmInputText(`${pm.firstName} ${pm.lastName}`);
+      } else {
+        setPmInputText('');
       }
     } else {
       setPmInputText('');
@@ -174,117 +181,128 @@ function ProjectDialogContent({
               </FormItem>
             )}
           />
-          {!editingProject && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="startDate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="endDate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="projectManagerId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Manager</FormLabel>
-                      <FormControl>
-                        <Input
-                          list="pm-options"
-                          placeholder="Select a Project Manager..."
-                          value={pmInputText}
-                          onChange={(e) => {
-                            const inputText = e.target.value;
-                            setPmInputText(inputText);
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField control={form.control} name="startDate" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project Start Date</FormLabel>
+                <FormControl><Input type="date" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="endDate" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project End Date</FormLabel>
+                <FormControl><Input type="date" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="projectManagerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Manager</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        list="pm-options"
+                        placeholder="Select a Project Manager..."
+                        className="pl-9"
+                        value={pmInputText}
+                        onChange={(e) => {
+                          const inputText = e.target.value;
+                          setPmInputText(inputText);
 
-                            const matchingOption = pmOptions.find(opt => opt.label === inputText);
-                            field.onChange(matchingOption ? matchingOption.value : undefined);
-                          }}
-                          onBlur={() => {
-                            const matchingOption = pmOptions.find(opt => opt.label === pmInputText);
-                            if (!matchingOption) {
+                          const matchingOption = pmOptions.find(opt => opt.label.toLowerCase() === inputText.toLowerCase() || opt.value === inputText);
+                          field.onChange(matchingOption ? matchingOption.value : undefined);
+                        }}
+                        onBlur={() => {
+                          const matchingOption = pmOptions.find(opt => opt.label.toLowerCase() === pmInputText.toLowerCase());
+                          if (matchingOption) {
+                            setPmInputText(matchingOption.label);
+                            field.onChange(matchingOption.value);
+                          } else if (!pmInputText.trim() || pmInputText.toLowerCase() === 'unassigned') {
+                            setPmInputText('');
+                            field.onChange(undefined);
+                          } else {
+                            const currentSelected = pmOptions.find(opt => opt.value === field.value);
+                            if (currentSelected) {
+                              setPmInputText(currentSelected.label);
+                            } else {
                               setPmInputText('');
                               field.onChange(undefined);
                             }
-                          }}
-                        />
-                      </FormControl>
-                      <datalist id="pm-options">
-                        {pmOptions.map(option => (
-                          <option key={option.value} value={option.label} />
-                        ))}
-                      </datalist>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {projectStatuses.map((p) => (
-                            <SelectItem key={p} value={p}>
-                              {p}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="pricingModel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pricing Model</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {pricingModels.map((p) => (
-                            <SelectItem key={p} value={p}>
-                              {p}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </>
-          )}
+                          }
+                        }}
+                      />
+                    </div>
+                  </FormControl>
+                  <datalist id="pm-options">
+                    {pmOptions.map(option => (
+                      <option key={option.value} value={option.label} />
+                    ))}
+                  </datalist>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {projectStatuses.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="pricingModel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pricing Model</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {pricingModels.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <DialogFooter>
             <Button type="submit">{editingProject ? 'Save Changes' : 'Create Project'}</Button>
           </DialogFooter>
@@ -395,6 +413,7 @@ export default function ProjectsDashboard() {
       if (editingProject) {
         form.reset({
           ...editingProject,
+          pricingModel: editingProject.pricingModel || 'T&M',
           projectManagerId: editingProject.projectManagerId || '',
           status: editingProject.status || 'Initial Estimation',
           startDate: editingProject.startDate ? format(parseISO(editingProject.startDate), 'yyyy-MM-dd') : '',
@@ -427,18 +446,17 @@ export default function ProjectsDashboard() {
 
     setIsGenerating(true);
     try {
-      const currentYear = new Date().getFullYear().toString().slice(-2);
+      const numToGenerate = parseInt(autogenCount, 10) || 5;
       const projectsSnapshot = await getDocs(collection(db, 'projects'));
+      const currentYear = new Date().getFullYear().toString().slice(-2);
 
       const projectsFromThisYear = projectsSnapshot.docs
-        .map((d: any) => d.id)
+        .map((doc: any) => doc.id)
         .filter((id: string) => id.startsWith(`P${currentYear}`));
 
       let currentMaxId = projectsFromThisYear.length > 0
         ? Math.max(...projectsFromThisYear.map((id: string) => parseInt(id.substring(3), 10)))
         : 0;
-
-      const numToGenerate = parseInt(autogenCount, 10);
 
       for (let i = 0; i < numToGenerate; i++) {
         currentMaxId++;
@@ -562,27 +580,33 @@ export default function ProjectsDashboard() {
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
     if (!db) return;
     try {
+      if (!values.startDate) {
+        form.setError('startDate', { type: 'manual', message: 'Start date is required.' });
+        return;
+      }
+      if (!values.endDate) {
+        form.setError('endDate', { type: 'manual', message: 'End date is required.' });
+        return;
+      }
+      if (new Date(values.endDate) < new Date(values.startDate)) {
+        form.setError('endDate', { type: 'manual', message: 'End date must be after or on the same day as the start date.' });
+        return;
+      }
+
       if (editingProject) {
         const projectRef = doc(db, 'projects', editingProject.id);
-        await updateDoc(projectRef, {
+        const updateData: any = {
           portfolioId: values.portfolioId,
           name: values.name,
-        });
+          pricingModel: values.pricingModel as PricingModel | undefined,
+          status: values.status as ProjectStatus | undefined,
+          startDate: new Date(values.startDate).toISOString(),
+          endDate: new Date(values.endDate).toISOString(),
+          projectManagerId: values.projectManagerId || null,
+        };
+        await updateDoc(projectRef, updateData);
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
-        if (!values.startDate) {
-          form.setError('startDate', { type: 'manual', message: 'Start date is required.' });
-          return;
-        }
-        if (!values.endDate) {
-          form.setError('endDate', { type: 'manual', message: 'End date is required.' });
-          return;
-        }
-        if (new Date(values.endDate) < new Date(values.startDate)) {
-          form.setError('endDate', { type: 'manual', message: 'End date must be after or on the same day as the start date.' });
-          return;
-        }
-
         const { projectManagerId, ...restValues } = values;
         const dataToSave: Partial<Project> = {
           ...restValues,
