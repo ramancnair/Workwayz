@@ -333,7 +333,7 @@ export default function DefectsPage() {
               <SortableHeader columnId="title">Title</SortableHeader>
               <SortableHeader columnId="status">Status</SortableHeader>
               <SortableHeader columnId="severity">Severity</SortableHeader>
-              <SortableHeader columnId="foundInTestPlanId">Test Plan</SortableHeader>
+              <SortableHeader columnId="foundInTestPlanId">Test Cycle</SortableHeader>
               <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
             </TableRow>
           </TableHeader>
@@ -569,11 +569,11 @@ export default function DefectsPage() {
                         name="foundInTestPlanId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Found In Test Plan</FormLabel>
+                            <FormLabel>Found In Test Cycle</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select a Test Plan" />
+                                  <SelectValue placeholder="Select a Test Cycle" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>

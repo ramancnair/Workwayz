@@ -445,13 +445,13 @@ export default function DefectTrackerPage() {
 
             {/* Filter 3: Associated Test Plan */}
             <div className="grid gap-1.5">
-              <Label htmlFor="bug-testplan-filter" className="text-xs">Test Plan</Label>
+              <Label htmlFor="bug-testplan-filter" className="text-xs">Test Cycle</Label>
               <Select value={selectedTestPlanId} onValueChange={setSelectedTestPlanId}>
                 <SelectTrigger id="bug-testplan-filter" className="w-[180px]">
-                  <SelectValue placeholder="Filter by test plan" />
+                  <SelectValue placeholder="Filter by test cycle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Test Plans</SelectItem>
+                  <SelectItem value="all">All Test Cycles</SelectItem>
                   <SelectItem value="backlog">Backlog / Unassigned</SelectItem>
                   {filteredTestPlans.map(tp => (
                     <SelectItem key={tp.id} value={tp.id}>

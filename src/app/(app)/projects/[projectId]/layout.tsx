@@ -166,7 +166,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                         <Link href={`${basePath}/development/dashboard`}>Development</Link>
                       </TabsTrigger>
                     )}
-                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Plan') || hasAccess('Defects')) && (
+                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Cycle') || hasAccess('Test Plan') || hasAccess('Defects')) && (
                       <TabsTrigger value="testing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={`${basePath}/testing/dashboard`}>Testing</Link>
                       </TabsTrigger>

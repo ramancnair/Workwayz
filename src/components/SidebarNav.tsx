@@ -191,7 +191,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
     {
       href: `${basePath}/testing/test-plan`,
-      label: "Test Plan",
+      label: "Test Cycle",
       icon: FileText,
     },
     {

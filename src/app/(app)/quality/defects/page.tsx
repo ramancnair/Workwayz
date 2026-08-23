@@ -309,7 +309,7 @@ export default function QualityDefectsPage() {
             <div>
               <CardTitle>Defect Containment & Leakage Metrics</CardTitle>
               <CardDescription className="text-xs">
-                Defects are classified by looking up their active execution test plans (SIT, UAT, Production). Production defects are leakages.
+                Defects are classified by looking up their active execution test cycles (SIT, UAT, Production). Production defects are leakages.
               </CardDescription>
             </div>
             <div className="relative w-full md:w-[300px]">
@@ -327,7 +327,7 @@ export default function QualityDefectsPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
               <Clock className="h-8 w-8 text-primary animate-spin" />
-              <span className="text-sm font-medium">Aggregating defects and active test plan logs...</span>
+              <span className="text-sm font-medium">Aggregating defects and active test cycle logs...</span>
             </div>
           ) : filteredMetrics.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">

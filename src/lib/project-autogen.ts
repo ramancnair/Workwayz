@@ -575,11 +575,11 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
 
   const tpRefs: { id: string; name: string; start: Date; end: Date; ref: ReturnType<typeof doc> }[] = [];
 
-  // SIT Plan
+  // SIT Cycle
   const sitTpRef = doc(col('testPlans'));
   batch.set(sitTpRef, {
-    testPlanId: 'TP-SIT',
-    name: 'SIT Execution Plan',
+    testPlanId: 'TC-SIT',
+    name: 'SIT Execution Cycle',
     planType: 'Release',
     environmentId: envData.find(e => e.name === 'SIT')?.id,
     startDate: Timestamp.fromDate(testingStart),
@@ -587,11 +587,11 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   });
   tpRefs.push({ id: sitTpRef.id, name: 'SIT', start: testingStart, end: sitEnd, ref: sitTpRef });
 
-  // UAT Plan
+  // UAT Cycle
   const uatTpRef = doc(col('testPlans'));
   batch.set(uatTpRef, {
-    testPlanId: 'TP-UAT',
-    name: 'UAT Sign-off Plan',
+    testPlanId: 'TC-UAT',
+    name: 'UAT Sign-off Cycle',
     planType: 'Release',
     environmentId: envData.find(e => e.name === 'UAT')?.id,
     startDate: Timestamp.fromDate(uatStart),
@@ -599,11 +599,11 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   });
   tpRefs.push({ id: uatTpRef.id, name: 'UAT', start: uatStart, end: uatEnd, ref: uatTpRef });
 
-  // Prod Plan
+  // Prod Cycle
   const prodTpRef = doc(col('testPlans'));
   batch.set(prodTpRef, {
-    testPlanId: 'TP-PROD',
-    name: 'Production Sanity Plan',
+    testPlanId: 'TC-PROD',
+    name: 'Production Sanity Cycle',
     planType: 'Release',
     environmentId: envData.find(e => e.name === 'Prod')?.id,
     startDate: Timestamp.fromDate(prodStart),

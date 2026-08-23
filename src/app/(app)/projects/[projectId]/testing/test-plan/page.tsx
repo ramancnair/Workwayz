@@ -21,11 +21,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronLeft, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown, Paperclip, Search, ExternalLink } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown, Search, ArrowRight } from 'lucide-react';
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan, TestPlanTestCase } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import { format, eachDayOfInterval, parseISO, addDays, subDays, isSameDay } from 'date-fns';
+import { format, eachDayOfInterval, parseISO, isSameDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -45,7 +45,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const testPlanSchemaBase = z.object({
-  name: z.string().min(1, 'Plan name is required.').max(60, 'Plan name cannot exceed 60 characters.'),
+  name: z.string().min(1, 'Cycle name is required.').max(60, 'Cycle name cannot exceed 60 characters.'),
   planType: z.enum(['Sprint', 'Release']),
   sprintId: z.string().optional(),
   releaseId: z.string().optional(),
@@ -79,7 +79,6 @@ const testCaseFormSchema = z.object({
   status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
   assigneeId: z.string().optional(),
   executionDate: z.string().optional(),
-  attachment: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -122,9 +121,7 @@ export default function TestPlanPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
   const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
-  const [currentExecutionDay, setCurrentExecutionDay] = useState<Date | null>(null);
-  const [isAttachmentDialogOpen, setIsAttachmentDialogOpen] = useState(false);
-  const [tempAttachmentUrl, setTempAttachmentUrl] = useState('');
+  const [openDays, setOpenDays] = useState<Record<string, boolean>>({});
   
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
@@ -142,7 +139,6 @@ export default function TestPlanPage() {
   const watchedReleaseId = useWatch({ control: testPlanForm.control, name: 'releaseId' });
 
   const [backlogSorting, setBacklogSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
-  const [planSorting, setPlanSorting] = useState<{ id: string; desc: boolean | null } | null>(null);
   const [backlogSearchQuery, setBacklogSearchQuery] = useState('');
   const [backlogSprintFilter, setBacklogSprintFilter] = useState<string>('all');
 
@@ -186,14 +182,6 @@ export default function TestPlanPage() {
   }, [selectedPlanId, subscribeToTestPlanTestCases]);
 
   useEffect(() => {
-    if (selectedPlan && selectedPlan.startDate) {
-      setCurrentExecutionDay(parseISO(selectedPlan.startDate));
-    } else {
-      setCurrentExecutionDay(null);
-    }
-  }, [selectedPlan]);
-
-  useEffect(() => {
     if (isPlanDialogOpen && editingPlan) {
       testPlanForm.reset({
         name: editingPlan.name,
@@ -227,7 +215,6 @@ export default function TestPlanPage() {
             status: editingTestCase.status || 'Not Run',
             assigneeId: editingTestCase.assigneeId || 'unassigned',
             executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
-            attachment: editingTestCase.attachment || '',
         });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
@@ -239,12 +226,12 @@ export default function TestPlanPage() {
       : await addTestPlan(values);
 
     if (success) {
-      toast({ title: 'Success', description: `Test plan ${editingPlan ? 'updated' : 'created'}.` });
+      toast({ title: 'Success', description: `Test cycle ${editingPlan ? 'updated' : 'created'}.` });
       setIsPlanDialogOpen(false);
       setEditingPlan(null);
       testPlanForm.reset();
     } else {
-      toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingPlan ? 'update' : 'create'} test plan.` });
+      toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingPlan ? 'update' : 'create'} test cycle.` });
     }
   };
 
@@ -261,7 +248,6 @@ export default function TestPlanPage() {
       status: values.status,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
-      attachment: values.attachment || '',
     };
 
     const success = await updateTestPlanTestCase(selectedPlanId, editingTestCase.id, updateData);
@@ -277,84 +263,98 @@ export default function TestPlanPage() {
     if (!deletingPlan) return;
     const success = await deleteTestPlan(deletingPlan.id);
     if (success) {
-      toast({ title: "Success", description: "Test plan deleted." });
+      toast({ title: "Success", description: "Test cycle deleted." });
       setSelectedPlanId(null);
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not delete test plan." })
+      toast({ variant: "destructive", title: "Error", description: "Could not delete test cycle." })
     }
     setDeletingPlan(null);
   };
 
-  const handleBulkMoveToTP = async () => {
-    if (selectedBacklogTCs.length === 0 || !currentExecutionDay || !selectedPlan) return;
-
-    const existingOrigIds = new Set(planTestCases.map(ptc => ptc.originalTestCaseId));
-    const toAdd = selectedBacklogTCs.filter(tcId => !existingOrigIds.has(tcId));
-    const alreadyInPlan = selectedBacklogTCs.filter(tcId => existingOrigIds.has(tcId));
-
-    if (toAdd.length === 0) {
-      if (alreadyInPlan.length === 1) {
-        toast({
-          title: 'Info',
-          description: 'TC already exists in the plan.',
-        });
-      } else {
-        toast({
-          title: 'Info',
-          description: 'Selected test cases already exist in the plan.',
-        });
-      }
-      setSelectedBacklogTCs([]);
-      return;
-    }
-
-    const success = await addTestCasesToPlan(
-      selectedPlan.id,
-      toAdd,
-      currentExecutionDay.toISOString()
-    );
-
-    if (success) {
-      if (alreadyInPlan.length > 0) {
-        toast({
-          title: 'Success',
-          description: `${toAdd.length} test case${toAdd.length > 1 ? 's' : ''} added to plan. (${alreadyInPlan.length} already existed)`,
-        });
-      } else {
-        toast({
-          title: 'Success',
-          description: `${toAdd.length} test case${toAdd.length > 1 ? 's' : ''} added to plan.`,
-        });
-      }
-      setSelectedBacklogTCs([]);
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not add test cases to plan.' });
-    }
-  };
-
-  const handleBulkMoveToBacklog = async () => {
-    if (selectedScheduledTCs.length === 0 || !selectedPlan) return;
-
-    const success = await removeTestCasesFromPlan(selectedPlan.id, selectedScheduledTCs);
-    if (success) {
-      toast({ title: 'Success', description: `${selectedScheduledTCs.length} test cases removed from plan.` });
-      setSelectedScheduledTCs([]);
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not remove test cases from plan.' });
-    }
-  };
-
-  // Get test cases for current plan from subcollection
+  // Get test cases for current cycle from subcollection
   const planTestCases = useMemo(() => {
     if (!selectedPlanId) return [];
     return testPlanTestCases[selectedPlanId] || [];
   }, [selectedPlanId, testPlanTestCases]);
 
-  const { tcsForCurrentDay, backlog } = useMemo(() => {
-    const dateStr = currentExecutionDay ? format(currentExecutionDay, 'yyyy-MM-dd') : null;
+  const existingOrigIds = useMemo(() => {
+    return new Set(planTestCases.map(ptc => ptc.originalTestCaseId).filter(Boolean));
+  }, [planTestCases]);
 
-    // Backlog: all non-deleted test cases from the backlog
-    let backlogTCs = testCases.filter(tc => !tc.isDeleted);
+  const planDays = useMemo(() => {
+    if (!selectedPlan?.startDate || !selectedPlan.endDate) return [];
+    try {
+      const start = parseISO(selectedPlan.startDate);
+      const end = parseISO(selectedPlan.endDate);
+      if (start > end) return [start];
+      return eachDayOfInterval({ start, end });
+    } catch (e) {
+      return [];
+    }
+  }, [selectedPlan]);
+
+  // Keep all days open by default when a cycle or dates change
+  useEffect(() => {
+    if (selectedPlan) {
+      const initial: Record<string, boolean> = {};
+      planDays.forEach(d => {
+        initial[format(d, 'yyyy-MM-dd')] = true;
+      });
+      initial['unscheduled'] = true;
+      setOpenDays(initial);
+    }
+  }, [selectedPlan?.id, planDays.length]);
+
+  const toggleDay = (key: string) => {
+    setOpenDays(prev => ({
+      ...prev,
+      [key]: prev[key] === undefined ? false : !prev[key]
+    }));
+  };
+
+  const isAnyCollapsed = useMemo(() => {
+    if (planDays.length === 0) return false;
+    return planDays.some(d => openDays[format(d, 'yyyy-MM-dd')] === false);
+  }, [planDays, openDays]);
+
+  const toggleAllDays = (expand: boolean) => {
+    const next: Record<string, boolean> = {};
+    planDays.forEach(d => {
+      next[format(d, 'yyyy-MM-dd')] = expand;
+    });
+    next['unscheduled'] = expand;
+    setOpenDays(next);
+  };
+
+  const groupedPlanTestCases = useMemo(() => {
+    if (!selectedPlan) return { dayMap: {}, unscheduled: [] };
+
+    const dayMap: Record<string, TestPlanTestCase[]> = {};
+    planDays.forEach(d => {
+      dayMap[format(d, 'yyyy-MM-dd')] = [];
+    });
+
+    const unscheduled: TestPlanTestCase[] = [];
+
+    planTestCases.forEach(tc => {
+      if (tc.executionDate) {
+        try {
+          const dStr = format(parseISO(tc.executionDate), 'yyyy-MM-dd');
+          if (dayMap[dStr]) {
+            dayMap[dStr].push(tc);
+            return;
+          }
+        } catch (e) {}
+      }
+      unscheduled.push(tc);
+    });
+
+    return { dayMap, unscheduled };
+  }, [selectedPlan, planDays, planTestCases]);
+
+  const backlog = useMemo(() => {
+    // Backlog: all non-deleted test cases not already in this test cycle
+    let backlogTCs = testCases.filter(tc => !tc.isDeleted && !existingOrigIds.has(tc.id));
 
     // Apply Search Query Filter (ID or Title)
     if (backlogSearchQuery.trim()) {
@@ -372,14 +372,6 @@ export default function TestPlanPage() {
       } else {
         backlogTCs = backlogTCs.filter(tc => tc.sprintId === backlogSprintFilter);
       }
-    }
-
-    // Day TCs: filter plan copies by execution date
-    let dayTCs: TestPlanTestCase[] = [];
-    if (selectedPlan) {
-      dayTCs = planTestCases.filter(tc => {
-        return tc.executionDate && format(parseISO(tc.executionDate), 'yyyy-MM-dd') === dateStr;
-      });
     }
 
     const sortFn = (sortObj: { id: string; desc: boolean | null } | null) => (a: any, b: any) => {
@@ -418,45 +410,50 @@ export default function TestPlanPage() {
       backlogTCs = [...backlogTCs].sort(sortFn(backlogSorting));
     }
 
-    if (planSorting && planSorting.desc !== null) {
-      dayTCs = [...dayTCs].sort(sortFn(planSorting));
-    }
+    return backlogTCs;
+  }, [testCases, existingOrigIds, backlogSorting, backlogSearchQuery, backlogSprintFilter, sprints]);
 
-    return { tcsForCurrentDay: dayTCs, backlog: backlogTCs };
-  }, [selectedPlan, testCases, planTestCases, currentExecutionDay, backlogSorting, planSorting, backlogSearchQuery, backlogSprintFilter, sprints]);
+  const handleMoveToDay = async (targetDay: Date | null) => {
+    if (selectedBacklogTCs.length === 0 || !selectedPlan) return;
 
+    const toAdd = selectedBacklogTCs;
+    const dateIso = targetDay ? targetDay.toISOString() : undefined;
 
-  const planDays = useMemo(() => {
-    if (!selectedPlan?.startDate || !selectedPlan.endDate) return [];
-    return eachDayOfInterval({ start: parseISO(selectedPlan.startDate), end: parseISO(selectedPlan.endDate) });
-  }, [selectedPlan]);
+    const success = await addTestCasesToPlan(
+      selectedPlan.id,
+      toAdd,
+      dateIso
+    );
 
-
-  const handleDayChange = (direction: 'next' | 'prev') => {
-    if (!currentExecutionDay || !selectedPlan || planDays.length === 0) return;
-    const currentIndex = planDays.findIndex(day => isSameDay(day, currentExecutionDay));
-    if (direction === 'next') {
-      const nextIndex = Math.min(planDays.length - 1, currentIndex + 1);
-      setCurrentExecutionDay(planDays[nextIndex]);
+    if (success) {
+      toast({
+        title: 'Success',
+        description: `${toAdd.length} test case${toAdd.length > 1 ? 's' : ''} moved to ${targetDay ? format(targetDay, 'EEE, MMM d') : 'Cycle'}.`,
+      });
+      setSelectedBacklogTCs([]);
+      if (targetDay) {
+        const key = format(targetDay, 'yyyy-MM-dd');
+        setOpenDays(prev => ({ ...prev, [key]: true }));
+      }
     } else {
-      const prevIndex = Math.max(0, currentIndex - 1);
-      setCurrentExecutionDay(planDays[prevIndex]);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not add test cases to cycle.' });
+    }
+  };
+
+  const handleBulkMoveToBacklog = async () => {
+    if (selectedScheduledTCs.length === 0 || !selectedPlan) return;
+
+    const success = await removeTestCasesFromPlan(selectedPlan.id, selectedScheduledTCs);
+    if (success) {
+      toast({ title: 'Success', description: `${selectedScheduledTCs.length} test case${selectedScheduledTCs.length > 1 ? 's' : ''} removed from cycle.` });
+      setSelectedScheduledTCs([]);
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not remove test cases from cycle.' });
     }
   };
 
   const handleBacklogSort = (columnId: string) => {
     setBacklogSorting(current => {
-      if (current?.id === columnId) {
-        if (current.desc === false) return { id: columnId, desc: true };
-        if (current.desc === true) return { id: columnId, desc: null };
-        return null;
-      }
-      return { id: columnId, desc: false };
-    });
-  };
-
-  const handlePlanSort = (columnId: string) => {
-    setPlanSorting(current => {
       if (current?.id === columnId) {
         if (current.desc === false) return { id: columnId, desc: true };
         if (current.desc === true) return { id: columnId, desc: null };
@@ -497,10 +494,10 @@ export default function TestPlanPage() {
 
   return (
     <div className="flex flex-col h-full space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Test Plan" description="Create and manage test execution plans.">
+      <PageHeader title="Test Cycle" description="Create and manage test execution cycles.">
         <Select onValueChange={setSelectedPlanId} value={selectedPlanId || ''}>
           <SelectTrigger className="w-[280px]">
-            <SelectValue placeholder="Select a Test Plan" />
+            <SelectValue placeholder="Select a Test Cycle" />
           </SelectTrigger>
           <SelectContent>
             {testPlans?.map(plan => (
@@ -509,22 +506,20 @@ export default function TestPlanPage() {
           </SelectContent>
         </Select>
         <Button onClick={() => { setEditingPlan(null); setIsPlanDialogOpen(true); }}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Create Test Plan
+          <PlusCircle className="mr-2 h-4 w-4" /> Create Test Cycle
         </Button>
       </PageHeader>
 
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
         {/* Left Column: Backlog */}
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center justify-between">
             <h3 className="font-bold text-lg whitespace-nowrap">Test Case Backlog ({backlog.length})</h3>
-            <Button
-              size="sm"
-              onClick={handleBulkMoveToTP}
-              disabled={selectedBacklogTCs.length === 0 || !currentExecutionDay}
-            >
-              Move to TP
-            </Button>
+            {selectedBacklogTCs.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {selectedBacklogTCs.length} selected
+              </Badge>
+            )}
           </div>
 
           {/* Filters for Backlog */}
@@ -561,11 +556,11 @@ export default function TestPlanPage() {
           </div>
 
           <div className="border rounded-lg flex-1 flex flex-col min-h-0">
-            <div className="overflow-y-auto">
+            <div className="overflow-y-auto flex-1">
               <Table>
-                <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur z-10">
                   <TableRow>
-                    <TableHead>
+                    <TableHead className="w-10">
                       <Checkbox
                         onCheckedChange={(checked) => setSelectedBacklogTCs(checked ? backlog.map(tc => tc.id) : [])}
                         checked={backlog.length > 0 && selectedBacklogTCs.length === backlog.length}
@@ -577,106 +572,320 @@ export default function TestPlanPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {backlog.map(tc => {
-                    const sprint = sprints.find(s => s.id === tc.sprintId);
-                    return (
-                      <TableRow key={tc.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedBacklogTCs.includes(tc.id)}
-                            onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                          />
-                        </TableCell>
-                        <TableCell className="py-1">
-                          <Badge variant="secondary">{tc.testCaseId}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
-                        <TableCell>{sprint?.title || 'Backlog'}</TableCell>
-                      </TableRow>
-                    )
-                  })}
+                  {backlog.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-8">
+                        {testCases.filter(tc => !tc.isDeleted).length > 0 && existingOrigIds.size > 0
+                          ? 'All test cases have been added to this test cycle.'
+                          : 'No test cases found.'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    backlog.map(tc => {
+                      const sprint = sprints.find(s => s.id === tc.sprintId);
+                      return (
+                        <TableRow key={tc.id} className="hover:bg-muted/30">
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedBacklogTCs.includes(tc.id)}
+                              onCheckedChange={(checked) => setSelectedBacklogTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
+                            />
+                          </TableCell>
+                          <TableCell className="py-1">
+                            <Badge variant="secondary">{tc.testCaseId}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm truncate max-w-[200px]" title={tc.title}>{tc.title}</TableCell>
+                          <TableCell>{sprint?.title || 'Backlog'}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Execution Plan */}
-        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-4">
+        {/* Right Column: Execution Cycle Days */}
+        <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-3 shrink-0">
+            <div className="flex items-center gap-2">
               {selectedPlan ? (
                 <>
                   <h3 className="font-bold text-lg">{selectedPlan.name} ({selectedPlan.testPlanId})</h3>
-                  <Button variant="ghost" size="icon" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => { setDeletingPlan(selectedPlan); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {planTestCases.length} {planTestCases.length === 1 ? 'case' : 'cases'}
+                  </Badge>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingPlan(selectedPlan); setIsPlanDialogOpen(true); }}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setDeletingPlan(selectedPlan); }}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </>
               ) : (
-                <h3 className="font-bold text-lg">Execution Plan</h3>
+                <h3 className="font-bold text-lg">Test Cycle</h3>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleBulkMoveToBacklog} disabled={selectedScheduledTCs.length === 0}>
-                Remove
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => handleDayChange('prev')} disabled={!selectedPlan}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => handleDayChange('next')} disabled={!selectedPlan}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              {selectedPlan && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkMoveToBacklog}
+                    disabled={selectedScheduledTCs.length === 0}
+                    className="text-xs h-8"
+                  >
+                    Remove {selectedScheduledTCs.length > 0 && `(${selectedScheduledTCs.length})`}
+                  </Button>
+                  {planDays.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleAllDays(isAnyCollapsed)}
+                      className="text-xs text-muted-foreground hover:text-foreground h-8 px-2"
+                    >
+                      {isAnyCollapsed ? 'Expand All' : 'Collapse All'}
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
           </div>
+
           {selectedPlan ? (
-            <div className="border rounded-lg flex-1 flex flex-col min-h-0">
-              <div className="p-2 border-b bg-background flex justify-between items-center">
-                <h4 className="font-semibold">{currentExecutionDay ? format(currentExecutionDay, 'EEE, MMM d') : 'No Date Selected'}</h4>
-              </div>
-              <div className="overflow-y-auto flex-1">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <Checkbox
-                          onCheckedChange={(checked) => setSelectedScheduledTCs(checked ? tcsForCurrentDay.map(tc => tc.id) : [])}
-                          checked={tcsForCurrentDay.length > 0 && selectedScheduledTCs.length === tcsForCurrentDay.length}
-                        />
-                      </TableHead>
-                      <SortableHeader columnId="testCaseId" sortState={planSorting} onSort={handlePlanSort}>ID</SortableHeader>
-                      <SortableHeader columnId="title" sortState={planSorting} onSort={handlePlanSort}>Title</SortableHeader>
-                      <SortableHeader columnId="status" sortState={planSorting} onSort={handlePlanSort}>Status</SortableHeader>
-                      <SortableHeader columnId="effortHours" sortState={planSorting} onSort={handlePlanSort}>Effort (h)</SortableHeader>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tcsForCurrentDay.map(tc => {
-                      return (
-                        <TableRow key={tc.id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedScheduledTCs.includes(tc.id)}
-                              onCheckedChange={(checked) => setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))}
-                            />
-                          </TableCell>
-                          <TableCell className="py-1">
-                            <button onClick={() => handleTestCaseDialogOpen(tc)} className="text-left font-medium text-primary hover:underline">
-                              <Badge variant="secondary">{tc.testCaseId}</Badge>
-                            </button>
-                          </TableCell>
-                          <TableCell className="text-sm truncate max-w-[200px]">{tc.title}</TableCell>
-                          <TableCell><Badge className={cn(statusStyles[tc.status])}>{tc.status}</Badge></TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{(tc as any).effortHours !== undefined ? `${(tc as any).effortHours} hrs` : '-'}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 min-h-0">
+              {planDays.length === 0 && groupedPlanTestCases.unscheduled.length === 0 && (
+                <div className="border rounded-lg p-6 text-center text-muted-foreground bg-background/50">
+                  <p className="text-sm">No start/end date configured for this test cycle.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Edit the cycle to set start and end dates.</p>
+                </div>
+              )}
+
+              {planDays.map((day, idx) => {
+                const dayKey = format(day, 'yyyy-MM-dd');
+                const dayTCs = groupedPlanTestCases.dayMap[dayKey] || [];
+                const isOpen = openDays[dayKey] !== false;
+                const allDaySelected = dayTCs.length > 0 && dayTCs.every(tc => selectedScheduledTCs.includes(tc.id));
+                const someDaySelected = dayTCs.some(tc => selectedScheduledTCs.includes(tc.id)) && !allDaySelected;
+
+                return (
+                  <div key={dayKey} className="border rounded-lg overflow-hidden bg-card/60 shadow-sm">
+                    {/* Collapsible Subheading Bar */}
+                    <div
+                      className="px-4 py-2.5 bg-muted/40 hover:bg-muted/60 transition-colors flex items-center justify-between cursor-pointer select-none border-b border-border/50"
+                      onClick={() => toggleDay(dayKey)}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", !isOpen && "-rotate-90")} />
+                        <span className="font-semibold text-sm">
+                          Day {idx + 1} — {format(day, 'EEE, MMM d, yyyy')}
+                        </span>
+                        <Badge variant="secondary" className="text-xs px-2 py-0.5 font-normal">
+                          {dayTCs.length} {dayTCs.length === 1 ? 'test case' : 'test cases'}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={selectedBacklogTCs.length > 0 ? "default" : "secondary"}
+                          className={cn(
+                            "h-7 text-xs gap-1.5 font-medium transition-all",
+                            selectedBacklogTCs.length > 0
+                              ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                              : "opacity-60 cursor-not-allowed"
+                          )}
+                          disabled={selectedBacklogTCs.length === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveToDay(day);
+                          }}
+                        >
+                          <ArrowRight className="h-3.5 w-3.5" />
+                          Move Here {selectedBacklogTCs.length > 0 && `(${selectedBacklogTCs.length})`}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Collapsible Table Content */}
+                    {isOpen && (
+                      <div className="p-0">
+                        {dayTCs.length === 0 ? (
+                          <div className="py-4 px-4 text-center text-xs text-muted-foreground bg-background/30">
+                            No test cases scheduled for this day. Select test cases from the backlog and click "Move Here".
+                          </div>
+                        ) : (
+                          <Table>
+                            <TableHeader className="bg-muted/20 text-xs">
+                              <TableRow>
+                                <TableHead className="w-10">
+                                  <Checkbox
+                                    checked={allDaySelected ? true : (someDaySelected ? 'indeterminate' : false)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedScheduledTCs(prev => Array.from(new Set([...prev, ...dayTCs.map(tc => tc.id)])));
+                                      } else {
+                                        const dayIds = new Set(dayTCs.map(tc => tc.id));
+                                        setSelectedScheduledTCs(prev => prev.filter(id => !dayIds.has(id)));
+                                      }
+                                    }}
+                                  />
+                                </TableHead>
+                                <TableHead className="w-20">ID</TableHead>
+                                <TableHead>Title</TableHead>
+                                <TableHead className="w-24">Status</TableHead>
+                                <TableHead className="w-20 text-right">Effort (h)</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {dayTCs.map(tc => (
+                                <TableRow key={tc.id} className="hover:bg-muted/30">
+                                  <TableCell>
+                                    <Checkbox
+                                      checked={selectedScheduledTCs.includes(tc.id)}
+                                      onCheckedChange={(checked) =>
+                                        setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell className="py-1">
+                                    <button
+                                      onClick={() => handleTestCaseDialogOpen(tc)}
+                                      className="text-left font-medium text-primary hover:underline"
+                                    >
+                                      <Badge variant="secondary">{tc.testCaseId}</Badge>
+                                    </button>
+                                  </TableCell>
+                                  <TableCell className="text-xs truncate max-w-[200px]" title={tc.title}>
+                                    {tc.title}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={cn("text-[11px] px-1.5 py-0", statusStyles[tc.status])}>
+                                      {tc.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground text-right">
+                                    {(tc as any).effortHours !== undefined ? `${(tc as any).effortHours}h` : '-'}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Unscheduled / Other section if any */}
+              {groupedPlanTestCases.unscheduled.length > 0 && (
+                <div className="border rounded-lg overflow-hidden bg-card/60 shadow-sm">
+                  <div
+                    className="px-4 py-2.5 bg-muted/40 hover:bg-muted/60 transition-colors flex items-center justify-between cursor-pointer select-none border-b border-border/50"
+                    onClick={() => toggleDay('unscheduled')}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", openDays['unscheduled'] === false && "-rotate-90")} />
+                      <span className="font-semibold text-sm">Unscheduled / Other</span>
+                      <Badge variant="secondary" className="text-xs px-2 py-0.5 font-normal">
+                        {groupedPlanTestCases.unscheduled.length} test cases
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant={selectedBacklogTCs.length > 0 ? "default" : "secondary"}
+                        className={cn(
+                          "h-7 text-xs gap-1.5 font-medium transition-all",
+                          selectedBacklogTCs.length > 0
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                            : "opacity-60 cursor-not-allowed"
+                        )}
+                        disabled={selectedBacklogTCs.length === 0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveToDay(null);
+                        }}
+                      >
+                        <ArrowRight className="h-3.5 w-3.5" />
+                        Move Here {selectedBacklogTCs.length > 0 && `(${selectedBacklogTCs.length})`}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {openDays['unscheduled'] !== false && (
+                    <div className="p-0">
+                      <Table>
+                        <TableHeader className="bg-muted/20 text-xs">
+                          <TableRow>
+                            <TableHead className="w-10">
+                              <Checkbox
+                                checked={
+                                  groupedPlanTestCases.unscheduled.length > 0 &&
+                                  groupedPlanTestCases.unscheduled.every(tc => selectedScheduledTCs.includes(tc.id))
+                                }
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedScheduledTCs(prev => Array.from(new Set([...prev, ...groupedPlanTestCases.unscheduled.map(tc => tc.id)])));
+                                  } else {
+                                    const unIds = new Set(groupedPlanTestCases.unscheduled.map(tc => tc.id));
+                                    setSelectedScheduledTCs(prev => prev.filter(id => !unIds.has(id)));
+                                  }
+                                }}
+                              />
+                            </TableHead>
+                            <TableHead className="w-20">ID</TableHead>
+                            <TableHead>Title</TableHead>
+                            <TableHead className="w-24">Status</TableHead>
+                            <TableHead className="w-20 text-right">Effort (h)</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {groupedPlanTestCases.unscheduled.map(tc => (
+                            <TableRow key={tc.id} className="hover:bg-muted/30">
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedScheduledTCs.includes(tc.id)}
+                                  onCheckedChange={(checked) =>
+                                    setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))
+                                  }
+                                />
+                              </TableCell>
+                              <TableCell className="py-1">
+                                <button
+                                  onClick={() => handleTestCaseDialogOpen(tc)}
+                                  className="text-left font-medium text-primary hover:underline"
+                                >
+                                  <Badge variant="secondary">{tc.testCaseId}</Badge>
+                                </button>
+                              </TableCell>
+                              <TableCell className="text-xs truncate max-w-[200px]" title={tc.title}>
+                                {tc.title}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={cn("text-[11px] px-1.5 py-0", statusStyles[tc.status])}>
+                                  {tc.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground text-right">
+                                {(tc as any).effortHours !== undefined ? `${(tc as any).effortHours}h` : '-'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="border rounded-lg flex-1 flex flex-col items-center justify-center text-muted-foreground">
-              <p>No test plan selected.</p>
-              <p className="text-sm">Please select a plan from the dropdown or create a new one.</p>
+            <div className="border rounded-lg flex-1 flex flex-col items-center justify-center text-muted-foreground p-6">
+              <p>No test cycle selected.</p>
+              <p className="text-sm">Please select a cycle from the dropdown or create a new one.</p>
             </div>
           )}
         </div>
@@ -685,25 +894,20 @@ export default function TestPlanPage() {
       <Dialog open={isPlanDialogOpen} onOpenChange={(open) => { setIsPlanDialogOpen(open); if (!open) setEditingPlan(null); }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingPlan ? 'Edit Test Plan' : 'Create New Test Plan'}</DialogTitle>
+            <DialogTitle>{editingPlan ? 'Edit Test Cycle' : 'Create New Test Cycle'}</DialogTitle>
           </DialogHeader>
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList>
-              <TabsTrigger value="details">Details</TabsTrigger>
-            </TabsList>
-            <TabsContent value="details">
-              <Form {...testPlanForm}>
-                <form onSubmit={testPlanForm.handleSubmit(onTestPlanSubmit)} className="space-y-4 pt-4">
+          <Form {...testPlanForm}>
+            <form onSubmit={testPlanForm.handleSubmit(onTestPlanSubmit)} className="space-y-4 pt-2">
                   <FormField control={testPlanForm.control} name="name" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Plan Name</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormLabel>Cycle Name</FormLabel>
+                      <FormControl><Input placeholder="e.g., SIT Execution Cycle" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={testPlanForm.control} name="planType" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Plan Type</FormLabel>
+                      <FormLabel>Cycle Type</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
@@ -771,21 +975,19 @@ export default function TestPlanPage() {
                     )} />
                   </div>
                   <DialogFooter>
-                    <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Plan'}</Button>
+                    <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Cycle'}</Button>
                   </DialogFooter>
                 </form>
               </Form>
-            </TabsContent>
-          </Tabs>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Test Case (Plan Copy) Dialog */}
+      {/* Edit Test Case (Cycle Copy) Dialog */}
       <Dialog open={isTestCaseDialogOpen} onOpenChange={setIsTestCaseDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
           <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>Edit Test Case — {selectedPlan?.name}</DialogTitle>
-            <DialogDescription>Editing the test case copy within this test plan. Changes here do not affect the original backlog test case.</DialogDescription>
+            <DialogDescription>Editing the test case copy within this test cycle. Changes here do not affect the original backlog test case.</DialogDescription>
           </DialogHeader>
           <Form {...testCaseForm}>
             <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -821,67 +1023,6 @@ export default function TestPlanPage() {
                       </Select>
                       <FormMessage />
                     </FormItem>
-                  )} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={testCaseForm.control} name="attachment" render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Test Case Attachment</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center gap-3">
-                            {field.value ? (
-                              <div className="flex items-center gap-2">
-                                <a
-                                  href={field.value}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center justify-center w-16 h-10 rounded-md border border-input bg-slate-200/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-foreground transition-colors cursor-pointer"
-                                  title="Open Attachment"
-                                >
-                                  <Paperclip className="h-5 w-5" />
-                                </a>
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={field.value}>
-                                    {field.value}
-                                  </span>
-                                  <div className="flex gap-2 mt-0.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setTempAttachmentUrl(field.value || '');
-                                        setIsAttachmentDialogOpen(true);
-                                      }}
-                                      className="text-[11px] text-blue-500 hover:underline font-medium"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => field.onChange('')}
-                                      className="text-[11px] text-red-500 hover:underline font-medium"
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTempAttachmentUrl('');
-                                  setIsAttachmentDialogOpen(true);
-                                }}
-                                className="flex items-center justify-center w-16 h-10 rounded-md border border-input bg-slate-200/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-muted-foreground hover:text-foreground transition-colors"
-                                title="Add Attachment Link"
-                              >
-                                <Paperclip className="h-5 w-5" />
-                              </button>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
                   )} />
               </div>
                <FormField control={testCaseForm.control} name="description" render={({ field }) => (
@@ -972,41 +1113,6 @@ export default function TestPlanPage() {
                     </FormItem>
                   )} />
                 </div>
-
-                <FormField control={testCaseForm.control} name="attachment" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Screenshot & Document Links (URLs)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Paste URLs here (one URL per line or separated by commas)&#10;https://example.com/screenshot.png&#10;https://drive.google.com/doc..."
-                        {...field}
-                        rows={3}
-                      />
-                    </FormControl>
-                    <p className="text-xs text-muted-foreground">Enter links to screenshots, logs, or document evidence.</p>
-                    {field.value && (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {field.value
-                          .split(/[\n,\s]+/)
-                          .map(url => url.trim())
-                          .filter(url => url.startsWith('http://') || url.startsWith('https://'))
-                          .map((url, idx) => (
-                            <a
-                              key={idx}
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary hover:underline px-2 py-1 rounded border border-primary/20"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              <span>Link {idx + 1}</span>
-                            </a>
-                          ))}
-                      </div>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )} />
               </div>
             <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
               <Button type="submit">Save Changes</Button>
@@ -1021,7 +1127,7 @@ export default function TestPlanPage() {
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action will delete the test plan &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
+            This action will delete the test cycle &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -1035,30 +1141,6 @@ export default function TestPlanPage() {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-
-    <Dialog open={isAttachmentDialogOpen} onOpenChange={setIsAttachmentDialogOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Attachment URL</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <Label htmlFor="attachment-url-plan">Attachment Link (URL)</Label>
-          <Input
-            id="attachment-url-plan"
-            placeholder="https://example.com/your-attachment-url"
-            value={tempAttachmentUrl}
-            onChange={(e) => setTempAttachmentUrl(e.target.value)}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setIsAttachmentDialogOpen(false)}>Cancel</Button>
-          <Button onClick={() => {
-            testCaseForm.setValue('attachment', tempAttachmentUrl);
-            setIsAttachmentDialogOpen(false);
-          }}>Save Attachment</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   </div>
   );
 }

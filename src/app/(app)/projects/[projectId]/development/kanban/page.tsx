@@ -827,11 +827,11 @@ export default function KanbanPage() {
                             <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
                         )}/>
                         <Tabs defaultValue="details" className="w-full">
-                            <TabsList>
-                                <TabsTrigger value="details">Details</TabsTrigger>
-                                <TabsTrigger value="logs">Logs</TabsTrigger>
+                            <TabsList variant="folder">
+                                <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
+                                <TabsTrigger variant="folder" value="logs">Logs</TabsTrigger>
                             </TabsList>
-                            <TabsContent value="details" className="pt-4">
+                            <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                                 <div className="space-y-4">
                                     <FormField control={subTaskForm.control} name="description" render={({field}) => (
                                         <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
@@ -981,38 +981,38 @@ export default function KanbanPage() {
                           )}
                       />
                       <Tabs defaultValue="details" className="w-full">
-                          <TabsList>
-                              <TabsTrigger value="details">Details</TabsTrigger>
+                          <TabsList variant="folder">
+                              <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
                               {!['Task', 'Bug'].includes(selectedStory.itemType) && (
                                 <>
-                                  <TabsTrigger value="subTasks">
+                                  <TabsTrigger variant="folder" value="subTasks">
                                       Sub-Tasks
-                                      <Badge variant="secondary" className="ml-2">
+                                      <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
                                           {selectedStorySubItems.subTasks.length}
                                       </Badge>
                                   </TabsTrigger>
-                                  <TabsTrigger value="bugs">
+                                  <TabsTrigger variant="folder" value="bugs">
                                       Bugs
-                                      <Badge variant="secondary" className="ml-2">
+                                      <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
                                           {selectedStorySubItems.bugs.length}
                                       </Badge>
                                   </TabsTrigger>
-                                  <TabsTrigger value="testCases">
+                                  <TabsTrigger variant="folder" value="testCases">
                                       Test Cases
-                                      <Badge variant="secondary" className="ml-2">
+                                      <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
                                           {selectedStoryTestCases.length}
                                       </Badge>
                                   </TabsTrigger>
                                 </>
                               )}
-                               <TabsTrigger value="logs">
+                               <TabsTrigger variant="folder" value="logs">
                                     Logs
-                                    <Badge variant="secondary" className="ml-2">
+                                    <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
                                         {selectedStorySubItems.logs.length}
                                     </Badge>
                                 </TabsTrigger>
                           </TabsList>
-                          <TabsContent value="details" className="pt-4">
+                          <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                               <div className="space-y-4">
                                   {['Requirement/Story', 'Feature Change', 'Task', 'Bug'].includes(selectedStory.itemType) && (
                                     <FormField
@@ -1224,11 +1224,11 @@ export default function KanbanPage() {
                                         name="foundInTestPlanId"
                                         render={({ field }) => (
                                           <FormItem>
-                                            <FormLabel>Found In Test Plan</FormLabel>
+                                            <FormLabel>Found In Test Cycle</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
                                               <FormControl>
                                                 <SelectTrigger>
-                                                  <SelectValue placeholder="Select a Test Plan" />
+                                                  <SelectValue placeholder="Select a Test Cycle" />
                                                 </SelectTrigger>
                                               </FormControl>
                                               <SelectContent>

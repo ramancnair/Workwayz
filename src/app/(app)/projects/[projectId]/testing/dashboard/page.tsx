@@ -346,10 +346,10 @@ export default function TestingDashboard() {
             <div className="flex items-center gap-2">
               <Select value={selectedTestPlanId} onValueChange={setSelectedTestPlanId}>
                 <SelectTrigger className="w-[250px] h-8">
-                  <SelectValue placeholder="Select a Test Plan" />
+                  <SelectValue placeholder="Select a Test Cycle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Test Plans</SelectItem>
+                  <SelectItem value="all">All Test Cycles</SelectItem>
                   {testPlans.map(tp => <SelectItem key={tp.id} value={tp.id}>[{tp.testPlanId}] {tp.name}</SelectItem>)}
                 </SelectContent>
               </Select>
