@@ -117,6 +117,7 @@ export type TestPlanTestCase = {
   closeDate?: string;            // Auto-set when status = 'Passed'
   statusHistory?: StatusHistoryItem[];
   effortHours?: number;
+  actualEffortHours?: number;
   attachment?: string;
 };
 

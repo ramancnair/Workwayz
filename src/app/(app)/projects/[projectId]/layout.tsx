@@ -56,8 +56,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   }, [project, isLoading, basePath, pathname]);
 
   const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
-  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/defect-tracker', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
-  const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
+  const isTestingPath = pathname.startsWith(`${basePath}/testing`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
@@ -166,7 +165,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                         <Link href={`${basePath}/development/dashboard`}>Development</Link>
                       </TabsTrigger>
                     )}
-                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Cycle') || hasAccess('Test Plan') || hasAccess('Defects')) && (
+                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Cycle') || hasAccess('Test Plan') || hasAccess('Test Execution') || hasAccess('Defects')) && (
                       <TabsTrigger value="testing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={`${basePath}/testing/dashboard`}>Testing</Link>
                       </TabsTrigger>

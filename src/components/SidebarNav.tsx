@@ -50,6 +50,7 @@ import {
   Package,
   Home,
   FileText,
+  PlayCircle,
   Server,
   ChevronsUpDown,
   ListTree,
@@ -193,6 +194,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/testing/test-plan`,
       label: "Test Cycle",
       icon: FileText,
+    },
+    {
+      href: `${basePath}/testing/test-execution`,
+      label: "Test Execution",
+      icon: PlayCircle,
     },
     {
       href: `${basePath}/testing/defects`,
@@ -359,7 +365,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     }
   ];
 
-  const isTestingPath = ['/testing/dashboard', '/testing/test-backlog', '/testing/defects', '/testing/defect-tracker', '/testing/test-plan'].some(p => pathname.startsWith(basePath + p));
+  const isTestingPath = pathname.startsWith(`${basePath}/testing`);
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
