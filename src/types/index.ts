@@ -101,7 +101,9 @@ export type TestPlan = {
 export type TestPlanTestCase = {
   id: string;                    // Firestore doc ID (within the plan subcollection)
   originalTestCaseId: string;    // Reference back to the backlog TestCase
-  testCaseId: string;            // Human-readable ID (e.g. "TC-5", copied from original)
+  testCaseId: string;            // Unique ID relating to cycle (e.g. "TP-SIT-TC-5")
+  testPlanId?: string;           // Parent Test Cycle ID
+  testPlanName?: string;         // Parent Test Cycle Name
   title: string;
   type: TestCaseType;
   description: string;
@@ -114,6 +116,7 @@ export type TestPlanTestCase = {
   executionDate?: string;        // ISO string
   closeDate?: string;            // Auto-set when status = 'Passed'
   statusHistory?: StatusHistoryItem[];
+  effortHours?: number;
   attachment?: string;
 };
 

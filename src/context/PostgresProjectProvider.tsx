@@ -1390,16 +1390,24 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       const batch = writeBatch(db);
       const existingPlanTCs = testPlanTestCases[planId] || [];
       const existingOrigIds = new Set(existingPlanTCs.map(tc => tc.originalTestCaseId));
+      const plan = testPlans.find(p => p.id === planId);
+      const planPrefix = plan?.testPlanId || 'TP';
 
       for (const tcId of testCaseIds) {
         if (existingOrigIds.has(tcId)) continue; // Already in plan
         const originalTC = testCases.find(tc => tc.id === tcId);
         if (!originalTC) continue;
 
+        const uniqueTestCaseId = originalTC.testCaseId.startsWith(planPrefix)
+          ? originalTC.testCaseId
+          : `${planPrefix}-${originalTC.testCaseId}`;
+
         const newRef = doc(collection(db, 'projects', projectId, 'testPlans', planId, 'testCases'));
         const copy: Omit<TestPlanTestCase, 'id'> = {
           originalTestCaseId: originalTC.id,
-          testCaseId: originalTC.testCaseId,
+          testCaseId: uniqueTestCaseId,
+          testPlanId: planId,
+          testPlanName: plan?.name,
           title: originalTC.title,
           type: originalTC.type,
           description: originalTC.description,

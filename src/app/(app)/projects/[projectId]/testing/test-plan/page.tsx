@@ -79,6 +79,7 @@ const testCaseFormSchema = z.object({
   status: z.enum(['Passed', 'Failed', 'Blocked', 'Not Run', 'Skipped']),
   assigneeId: z.string().optional(),
   executionDate: z.string().optional(),
+  effortHours: z.string().optional(),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -215,6 +216,7 @@ export default function TestPlanPage() {
             status: editingTestCase.status || 'Not Run',
             assigneeId: editingTestCase.assigneeId || 'unassigned',
             executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
+            effortHours: editingTestCase.effortHours !== undefined && editingTestCase.effortHours !== null ? String(editingTestCase.effortHours) : '',
         });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
@@ -238,7 +240,9 @@ export default function TestPlanPage() {
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     if (!editingTestCase || !selectedPlanId) return;
 
-    const parsedEffort = (values as any).effortHours ? parseFloat((values as any).effortHours) : undefined;
+    const parsedEffort = values.effortHours && values.effortHours.trim() !== ''
+      ? parseFloat(values.effortHours)
+      : undefined;
 
     const updateData: Partial<TestPlanTestCase> = {
       title: values.title,
@@ -248,6 +252,7 @@ export default function TestPlanPage() {
       status: values.status,
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
+      effortHours: parsedEffort !== undefined && !isNaN(parsedEffort) ? parsedEffort : undefined,
     };
 
     const success = await updateTestPlanTestCase(selectedPlanId, editingTestCase.id, updateData);
@@ -733,44 +738,56 @@ export default function TestPlanPage() {
                                     }}
                                   />
                                 </TableHead>
-                                <TableHead className="w-20">ID</TableHead>
+                                <TableHead className="w-24">ID</TableHead>
                                 <TableHead>Title</TableHead>
                                 <TableHead className="w-24">Status</TableHead>
                                 <TableHead className="w-20 text-right">Effort (h)</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {dayTCs.map(tc => (
-                                <TableRow key={tc.id} className="hover:bg-muted/30">
-                                  <TableCell>
-                                    <Checkbox
-                                      checked={selectedScheduledTCs.includes(tc.id)}
-                                      onCheckedChange={(checked) =>
-                                        setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))
-                                      }
-                                    />
-                                  </TableCell>
-                                  <TableCell className="py-1">
-                                    <button
-                                      onClick={() => handleTestCaseDialogOpen(tc)}
-                                      className="text-left font-medium text-primary hover:underline"
-                                    >
-                                      <Badge variant="secondary">{tc.testCaseId}</Badge>
-                                    </button>
-                                  </TableCell>
-                                  <TableCell className="text-xs truncate max-w-[200px]" title={tc.title}>
-                                    {tc.title}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge className={cn("text-[11px] px-1.5 py-0", statusStyles[tc.status])}>
-                                      {tc.status}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-xs text-muted-foreground text-right">
-                                    {(tc as any).effortHours !== undefined ? `${(tc as any).effortHours}h` : '-'}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
+                              {dayTCs.map(tc => {
+                                const displayTestCaseId = tc.testCaseId.startsWith(selectedPlan?.testPlanId || '')
+                                  ? tc.testCaseId
+                                  : `${selectedPlan?.testPlanId || 'TP'}-${tc.testCaseId}`;
+
+                                return (
+                                  <TableRow key={tc.id} className="hover:bg-muted/30">
+                                    <TableCell>
+                                      <Checkbox
+                                        checked={selectedScheduledTCs.includes(tc.id)}
+                                        onCheckedChange={(checked) =>
+                                          setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))
+                                        }
+                                      />
+                                    </TableCell>
+                                    <TableCell className="py-1.5 whitespace-nowrap">
+                                      <button
+                                        onClick={() => handleTestCaseDialogOpen(tc)}
+                                        className="text-left font-medium text-primary hover:underline inline-flex items-center"
+                                      >
+                                        <Badge variant="secondary" className="whitespace-nowrap font-medium">{displayTestCaseId}</Badge>
+                                      </button>
+                                    </TableCell>
+                                    <TableCell className="py-1.5">
+                                      <button
+                                        onClick={() => handleTestCaseDialogOpen(tc)}
+                                        className="text-left text-xs truncate max-w-[240px] font-normal hover:underline hover:text-primary transition-colors block"
+                                        title={tc.title}
+                                      >
+                                        {tc.title}
+                                      </button>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge className={cn("text-[11px] px-1.5 py-0 whitespace-nowrap", statusStyles[tc.status])}>
+                                        {tc.status}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                                      {(tc as any).effortHours !== undefined ? `${(tc as any).effortHours}h` : '-'}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
                             </TableBody>
                           </Table>
                         )}
@@ -837,44 +854,56 @@ export default function TestPlanPage() {
                                 }}
                               />
                             </TableHead>
-                            <TableHead className="w-20">ID</TableHead>
+                            <TableHead className="w-24">ID</TableHead>
                             <TableHead>Title</TableHead>
                             <TableHead className="w-24">Status</TableHead>
                             <TableHead className="w-20 text-right">Effort (h)</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {groupedPlanTestCases.unscheduled.map(tc => (
-                            <TableRow key={tc.id} className="hover:bg-muted/30">
-                              <TableCell>
-                                <Checkbox
-                                  checked={selectedScheduledTCs.includes(tc.id)}
-                                  onCheckedChange={(checked) =>
-                                    setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell className="py-1">
-                                <button
-                                  onClick={() => handleTestCaseDialogOpen(tc)}
-                                  className="text-left font-medium text-primary hover:underline"
-                                >
-                                  <Badge variant="secondary">{tc.testCaseId}</Badge>
-                                </button>
-                              </TableCell>
-                              <TableCell className="text-xs truncate max-w-[200px]" title={tc.title}>
-                                {tc.title}
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={cn("text-[11px] px-1.5 py-0", statusStyles[tc.status])}>
-                                  {tc.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground text-right">
-                                {(tc as any).effortHours !== undefined ? `${(tc as any).effortHours}h` : '-'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {groupedPlanTestCases.unscheduled.map(tc => {
+                            const displayTestCaseId = tc.testCaseId.startsWith(selectedPlan?.testPlanId || '')
+                              ? tc.testCaseId
+                              : `${selectedPlan?.testPlanId || 'TP'}-${tc.testCaseId}`;
+
+                            return (
+                              <TableRow key={tc.id} className="hover:bg-muted/30">
+                                <TableCell>
+                                  <Checkbox
+                                    checked={selectedScheduledTCs.includes(tc.id)}
+                                    onCheckedChange={(checked) =>
+                                      setSelectedScheduledTCs(prev => checked ? [...prev, tc.id] : prev.filter(id => id !== tc.id))
+                                    }
+                                  />
+                                </TableCell>
+                                <TableCell className="py-1.5 whitespace-nowrap">
+                                  <button
+                                    onClick={() => handleTestCaseDialogOpen(tc)}
+                                    className="text-left font-medium text-primary hover:underline inline-flex items-center"
+                                  >
+                                    <Badge variant="secondary" className="whitespace-nowrap font-medium">{displayTestCaseId}</Badge>
+                                  </button>
+                                </TableCell>
+                                <TableCell className="py-1.5">
+                                  <button
+                                    onClick={() => handleTestCaseDialogOpen(tc)}
+                                    className="text-left text-xs truncate max-w-[240px] font-normal hover:underline hover:text-primary transition-colors block"
+                                    title={tc.title}
+                                  >
+                                    {tc.title}
+                                  </button>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={cn("text-[11px] px-1.5 py-0 whitespace-nowrap", statusStyles[tc.status])}>
+                                    {tc.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                                  {(tc as any).effortHours !== undefined ? `${(tc as any).effortHours}h` : '-'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
@@ -992,6 +1021,37 @@ export default function TestPlanPage() {
           <Form {...testCaseForm}>
             <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+                {/* Parent Test Cycle & ID Information */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-lg border bg-muted/40 text-xs">
+                  <div>
+                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Parent Test Cycle</Label>
+                    <div className="flex items-center gap-1.5 mt-1 font-medium text-foreground truncate">
+                      <Badge variant="outline" className="font-mono text-[11px] px-1.5 py-0 bg-background">{selectedPlan?.testPlanId}</Badge>
+                      <span className="truncate" title={selectedPlan?.name}>{selectedPlan?.name}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cycle Test Case ID</Label>
+                    <div className="mt-1">
+                      <Badge variant="secondary" className="font-mono text-xs px-2 py-0.5">
+                        {editingTestCase
+                          ? (editingTestCase.testCaseId.startsWith(selectedPlan?.testPlanId || '')
+                              ? editingTestCase.testCaseId
+                              : `${selectedPlan?.testPlanId || 'TP'}-${editingTestCase.testCaseId}`)
+                          : '—'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Backlog Reference</Label>
+                    <div className="mt-1">
+                      <Badge variant="outline" className="font-mono text-xs px-2 py-0.5 text-muted-foreground bg-background">
+                        {testCases.find(tc => tc.id === editingTestCase?.originalTestCaseId)?.testCaseId || 'Original TC'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
                 <FormField control={testCaseForm.control} name="title" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Title</FormLabel>
@@ -1090,7 +1150,7 @@ export default function TestPlanPage() {
                     />
                     <p className="text-[11px] text-muted-foreground">Auto-set when status is &quot;Passed&quot;</p>
                   </FormItem>
-                  <FormField control={testCaseForm.control} name={"effortHours" as any} render={({ field }) => (
+                  <FormField control={testCaseForm.control} name="effortHours" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Effort (Hours)</FormLabel>
                       <FormControl>
