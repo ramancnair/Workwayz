@@ -42,16 +42,13 @@ export interface ProjectContextType {
   updateProject: (data: Partial<Omit<Project, 'id'>>) => Promise<boolean>;
 
   // Story actions
-  addStory: (story: Omit<Story, 'id' | 'storyId'>) => Promise<boolean>;
+  addStory: (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string) => Promise<{ id: string; storyId: string } | null>;
   updateStory: (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>) => Promise<boolean>;
   deleteStory: (storyId: string) => Promise<boolean>;
-  autoGenerateStories: (count: number) => Promise<boolean>;
-  bulkUpdateStorySprints: (sprintId: string | null, storyIds: string[]) => Promise<boolean>;
-  bulkUpdateStoryEpics: (epicId: string | null, storyIds: string[]) => Promise<boolean>;
-  bulkUpdateStoryReleases: (releaseId: string | null, storyIds: string[]) => Promise<boolean>;
-  bulkUpdateSubTaskAssignees: (assigneeId: string | null) => Promise<boolean>;
-  bulkUpdateSubTaskSprints: (sprintId: string) => Promise<boolean>;
-  bulkUpdateSubTaskEpics: (epicId: string) => Promise<boolean>;
+  autoGenerateStories: (counts: Record<WorkItemType, number>) => Promise<boolean>;
+  moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<boolean>;
+  moveStoryStatus: (storyId: string, newStatus: StoryStatus) => Promise<boolean>;
+  moveStoryToEpic: (storyId: string, epicId: string | null) => Promise<boolean>;
   bulkUpdateSubTaskReleases: (releaseId: string) => Promise<boolean>;
   bulkDeleteStories: (storyIds: string[]) => Promise<boolean>;
   bulkMoveStories: (storyIds: string[], targetEpicId?: string | null, targetReleaseId?: string | null) => Promise<boolean>;
@@ -95,8 +92,8 @@ export interface ProjectContextType {
   autoGenerateRisks: (count: number) => Promise<boolean>;
 
   // Assumption actions
-  addAssumption: (assumption: Omit<Assumption, 'id' | 'assumptionId'>) => Promise<boolean>;
-  updateAssumption: (assumptionId: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId'>>) => Promise<boolean>;
+  addAssumption: (assumption: Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date | string }) => Promise<boolean>;
+  updateAssumption: (assumptionId: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date | string }>) => Promise<boolean>;
   deleteAssumption: (assumptionId: string) => Promise<boolean>;
   autoGenerateAssumptions: (count: number) => Promise<boolean>;
 

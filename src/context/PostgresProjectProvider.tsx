@@ -1576,13 +1576,17 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
   };
   
   // Assumption Actions
-  const addAssumption = async (assumption: Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date }): Promise<boolean> => {
+  const addAssumption = async (assumption: Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date | string }): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const snapshot = await getDocs(collection(db, 'projects', projectId, 'assumptions'));
       const newId = `A-${snapshot.size + 1}`;
       const payload: any = { ...assumption, assumptionId: newId, isDeleted: false, deletedAt: null };
-      if (assumption.validationDate) payload.validationDate = Timestamp.fromDate(assumption.validationDate);
+      if (assumption.validationDate) {
+        payload.validationDate = typeof assumption.validationDate === 'string'
+          ? Timestamp.fromDate(new Date(assumption.validationDate))
+          : Timestamp.fromDate(assumption.validationDate);
+      }
       await addDoc(collection(db, 'projects', projectId, 'assumptions'), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
@@ -1591,12 +1595,16 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
     }
   };
 
-  const updateAssumption = async (id: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId'| 'validationDate'> & { validationDate?: Date }>): Promise<boolean> => {
+  const updateAssumption = async (id: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId'| 'validationDate'> & { validationDate?: Date | string }>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const { validationDate, ...rest } = data;
       const payload: any = { ...rest };
-      if (data.hasOwnProperty('validationDate')) payload.validationDate = validationDate ? Timestamp.fromDate(validationDate) : null;
+      if (data.hasOwnProperty('validationDate')) {
+        payload.validationDate = validationDate
+          ? (typeof validationDate === 'string' ? Timestamp.fromDate(new Date(validationDate)) : Timestamp.fromDate(validationDate))
+          : null;
+      }
       await updateDoc(doc(db, 'projects', projectId, 'assumptions', id), sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {

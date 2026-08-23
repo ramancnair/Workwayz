@@ -71,8 +71,8 @@ export interface DatabaseAdapter {
     autoGenerateRisks(projectId: string, count: number): Promise<boolean>;
 
     // Assumption actions
-    addAssumption(projectId: string, assumption: Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date }): Promise<boolean>;
-    updateAssumption(projectId: string, assumptionId: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date }>): Promise<boolean>;
+    addAssumption(projectId: string, assumption: Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date | string }): Promise<boolean>;
+    updateAssumption(projectId: string, assumptionId: string, data: Partial<Omit<Assumption, 'id' | 'assumptionId' | 'validationDate'> & { validationDate?: Date | string }>): Promise<boolean>;
     deleteAssumption(projectId: string, assumptionId: string): Promise<boolean>;
     autoGenerateAssumptions(projectId: string, count: number): Promise<boolean>;
 
