@@ -91,6 +91,8 @@ export default function MyProjectsPage() {
         .map((doc: any) => ({ ...doc.data(), id: doc.id } as Project))
         .filter((p: any) => !p.isArchived);
       setAllProjects(projectsData);
+    }, (err: any) => {
+      console.warn('[MyProjects] Projects listener error:', err);
     });
     return () => unsub();
   }, []);

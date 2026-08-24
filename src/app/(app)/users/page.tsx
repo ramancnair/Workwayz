@@ -175,6 +175,8 @@ export default function UsersPage() {
             } as User;
         });
         setUsers(usersData);
+    }, (err: any) => {
+        console.warn('[Users] Employees listener error:', err);
     });
     return () => unsubscribe();
   }, []);

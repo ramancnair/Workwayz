@@ -92,6 +92,8 @@ export default function HolidayPage() {
             } as Holiday
         });
         setHolidays(holidaysData);
+    }, (err: any) => {
+        console.warn('[HolidayCalendar] Holidays listener error:', err);
     });
     
     // Listener for settings
@@ -104,6 +106,8 @@ export default function HolidayPage() {
         // Initialize settings if they don't exist
         setDoc(settingsDocRef, defaultSettings).catch((e: any) => console.error("Failed to set default settings", e));
       }
+    }, (err: any) => {
+      console.warn('[HolidayCalendar] Settings listener error:', err);
     });
 
     return () => {

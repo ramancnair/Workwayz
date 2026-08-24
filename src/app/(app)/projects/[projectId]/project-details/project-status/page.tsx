@@ -323,130 +323,132 @@ export default function ProjectSynopsisPage() {
                     </DialogContent>
                 </Dialog>
 
-                <Dialog open={isHealthDialogOpen} onOpenChange={setIsHealthDialogOpen}>
-                    <Card>
-                        <CardHeader className="flex flex-row justify-between items-start">
-                            <div>
-                                <CardTitle>Project Health</CardTitle>
-                            </div>
-                             <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                            </DialogTrigger>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <h4 className="font-medium">Overall Health</h4>
-                                <div className="flex items-center gap-4">
-                                     <Circle className={cn('h-8 w-8 shrink-0', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} fill="currentColor" />
-                                    <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
+                {project.status !== 'Not Started' && (
+                    <Dialog open={isHealthDialogOpen} onOpenChange={setIsHealthDialogOpen}>
+                        <Card>
+                            <CardHeader className="flex flex-row justify-between items-start">
+                                <div>
+                                    <CardTitle>Project Health</CardTitle>
                                 </div>
-                            </div>
-                            <div className="space-y-4">
-                               <h4 className="font-medium">Health Indicators</h4>
-                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                   <RagStatusIndicator status={project.scopeStatus} label="Scope" />
-                                   <RagStatusIndicator status={project.costStatus} label="Cost" />
-                                   <RagStatusIndicator status={project.timeStatus} label="Time" />
-                               </div>
-                            </div>
-                            {project.statusHistory && project.statusHistory.length > 0 && (
-                                <div className="col-span-1 md:col-span-2 mt-4 pt-4 border-t">
-                                    <Accordion type="single" collapsible className="w-full">
-                                        <AccordionItem value="history" className="border-none">
-                                            <AccordionTrigger className="py-2 text-sm hover:no-underline">View Status History</AccordionTrigger>
-                                            <AccordionContent>
-                                                <div className="overflow-x-auto">
-                                                    <Table>
-                                                        <TableHeader>
-                                                            <TableRow>
-                                                                <TableHead>Date</TableHead>
-                                                                <TableHead>Overall</TableHead>
-                                                                <TableHead>Scope</TableHead>
-                                                                <TableHead>Cost</TableHead>
-                                                                <TableHead>Time</TableHead>
-                                                                <TableHead>Comments</TableHead>
-                                                            </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {[...project.statusHistory].reverse().map((historyItem, idx) => (
-                                                                <TableRow key={idx}>
-                                                                    <TableCell className="whitespace-nowrap">{format(parseISO(historyItem.date), 'MMM dd, yyyy HH:mm')}</TableCell>
-                                                                    <TableCell>
-                                                                        {historyItem.overallStatus ? <RagStatusIndicator status={historyItem.overallStatus} label={historyItem.overallStatus} /> : 'N/A'}
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        {historyItem.scopeStatus ? <RagStatusIndicator status={historyItem.scopeStatus} label={historyItem.scopeStatus} /> : 'N/A'}
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        {historyItem.costStatus ? <RagStatusIndicator status={historyItem.costStatus} label={historyItem.costStatus} /> : 'N/A'}
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        {historyItem.timeStatus ? <RagStatusIndicator status={historyItem.timeStatus} label={historyItem.timeStatus} /> : 'N/A'}
-                                                                    </TableCell>
-                                                                    <TableCell className="max-w-[200px] truncate" title={historyItem.statusComments}>
-                                                                        {historyItem.statusComments || 'No comments'}
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    </Accordion>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                    <DialogContent className="sm:max-w-3xl">
-                        <DialogHeader>
-                            <DialogTitle>Edit Project Health</DialogTitle>
-                        </DialogHeader>
-                        <Form {...healthForm}>
-                            <form onSubmit={healthForm.handleSubmit(onHealthSubmit)} className="space-y-4">
-                                <Card className="pt-4 border-none shadow-none">
-                                  <CardContent className="space-y-4 p-0">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <FormField control={healthForm.control} name="overallStatus" render={({ field }) => (
-                                          <FormItem>
-                                              <FormLabel>Overall Health</FormLabel>
-                                              <Select onValueChange={field.onChange} value={field.value}>
-                                                  <FormControl><SelectTrigger><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
-                                                  <SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                                              </Select>
-                                          </FormItem>
-                                      )}/>
-                                       <FormField control={healthForm.control} name="statusComments" render={({ field }) => (
-                                          <FormItem>
-                                              <FormLabel>Status Comments</FormLabel>
-                                              <FormControl><Textarea placeholder="Add comments about the current status..." {...field} value={field.value ?? ''}/></FormControl>
-                                          </FormItem>
-                                      )}/>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <FormField control={healthForm.control} name="scopeStatus" render={({ field }) => (
-                                          <FormItem><FormLabel>Scope</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                        )}/>
-                                        <FormField control={healthForm.control} name="costStatus" render={({ field }) => (
-                                          <FormItem><FormLabel>Cost</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                        )}/>
-                                        <FormField control={healthForm.control} name="timeStatus" render={({ field }) => (
-                                          <FormItem><FormLabel>Time</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                        )}/>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                                <DialogFooter>
-                                    <Button type="submit" disabled={healthForm.formState.isSubmitting}>
-                                        {healthForm.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <Edit className="h-4 w-4" />
                                     </Button>
-                                </DialogFooter>
-                            </form>
-                        </Form>
-                    </DialogContent>
-                </Dialog>
+                                </DialogTrigger>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <h4 className="font-medium">Overall Health</h4>
+                                    <div className="flex items-center gap-4">
+                                        <Circle className={cn('h-8 w-8 shrink-0', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} fill="currentColor" />
+                                        <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <h4 className="font-medium">Health Indicators</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <RagStatusIndicator status={project.scopeStatus} label="Scope" />
+                                        <RagStatusIndicator status={project.costStatus} label="Cost" />
+                                        <RagStatusIndicator status={project.timeStatus} label="Time" />
+                                    </div>
+                                </div>
+                                {project.statusHistory && project.statusHistory.length > 0 && (
+                                    <div className="col-span-1 md:col-span-2 mt-4 pt-4 border-t">
+                                        <Accordion type="single" collapsible className="w-full">
+                                            <AccordionItem value="history" className="border-none">
+                                                <AccordionTrigger className="py-2 text-sm hover:no-underline">View Status History</AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="overflow-x-auto">
+                                                        <Table>
+                                                            <TableHeader>
+                                                                <TableRow>
+                                                                    <TableHead>Date</TableHead>
+                                                                    <TableHead>Overall</TableHead>
+                                                                    <TableHead>Scope</TableHead>
+                                                                    <TableHead>Cost</TableHead>
+                                                                    <TableHead>Time</TableHead>
+                                                                    <TableHead>Comments</TableHead>
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                {[...project.statusHistory].reverse().map((historyItem, idx) => (
+                                                                    <TableRow key={idx}>
+                                                                        <TableCell className="whitespace-nowrap">{format(parseISO(historyItem.date), 'MMM dd, yyyy HH:mm')}</TableCell>
+                                                                        <TableCell>
+                                                                            {historyItem.overallStatus ? <RagStatusIndicator status={historyItem.overallStatus} label={historyItem.overallStatus} /> : 'N/A'}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            {historyItem.scopeStatus ? <RagStatusIndicator status={historyItem.scopeStatus} label={historyItem.scopeStatus} /> : 'N/A'}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            {historyItem.costStatus ? <RagStatusIndicator status={historyItem.costStatus} label={historyItem.costStatus} /> : 'N/A'}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            {historyItem.timeStatus ? <RagStatusIndicator status={historyItem.timeStatus} label={historyItem.timeStatus} /> : 'N/A'}
+                                                                        </TableCell>
+                                                                        <TableCell className="max-w-[200px] truncate" title={historyItem.statusComments}>
+                                                                            {historyItem.statusComments || 'No comments'}
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <DialogContent className="sm:max-w-3xl">
+                            <DialogHeader>
+                                <DialogTitle>Edit Project Health</DialogTitle>
+                            </DialogHeader>
+                            <Form {...healthForm}>
+                                <form onSubmit={healthForm.handleSubmit(onHealthSubmit)} className="space-y-4">
+                                    <Card className="pt-4 border-none shadow-none">
+                                        <CardContent className="space-y-4 p-0">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <FormField control={healthForm.control} name="overallStatus" render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Overall Health</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl><SelectTrigger><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
+                                                            <SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                                        </Select>
+                                                    </FormItem>
+                                                )}/>
+                                                <FormField control={healthForm.control} name="statusComments" render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Status Comments</FormLabel>
+                                                        <FormControl><Textarea placeholder="Add comments about the current status..." {...field} value={field.value ?? ''}/></FormControl>
+                                                    </FormItem>
+                                                )}/>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <FormField control={healthForm.control} name="scopeStatus" render={({ field }) => (
+                                                    <FormItem><FormLabel>Scope</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                                )}/>
+                                                <FormField control={healthForm.control} name="costStatus" render={({ field }) => (
+                                                    <FormItem><FormLabel>Cost</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                                )}/>
+                                                <FormField control={healthForm.control} name="timeStatus" render={({ field }) => (
+                                                    <FormItem><FormLabel>Time</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                                )}/>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                    <DialogFooter>
+                                        <Button type="submit" disabled={healthForm.formState.isSubmitting}>
+                                            {healthForm.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
         </div>
     );

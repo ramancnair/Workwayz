@@ -382,6 +382,8 @@ export default function ProjectsDashboard() {
         ...(doc.data() as Omit<Portfolio, 'id'>),
       }));
       setPortfolios(portfoliosData);
+    }, (err: any) => {
+      console.warn('[ProjectHome] Portfolios listener error:', err);
     });
 
     const projectUnsubscribe = onSnapshot(query(collection(db, 'projects'), where('isDeleted', '!=', true)), (snapshot: any) => {
@@ -391,6 +393,9 @@ export default function ProjectsDashboard() {
       }));
       setProjects(projectsData);
       setIsLoading(false);
+    }, (err: any) => {
+      console.warn('[ProjectHome] Projects listener error:', err);
+      setIsLoading(false);
     });
 
     const usersUnsubscribe = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot: any) => {
@@ -399,6 +404,8 @@ export default function ProjectsDashboard() {
         ...(doc.data() as Omit<User, 'id'>),
       }));
       setUsers(usersData);
+    }, (err: any) => {
+      console.warn('[ProjectHome] Users listener error:', err);
     });
 
     return () => {

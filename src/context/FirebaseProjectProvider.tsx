@@ -383,6 +383,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     const globalSettingsDocRef = doc(db, 'settings', 'main');
     const unsubGlobalSettings = onSnapshot(globalSettingsDocRef, (doc: any) => {
       setGlobalSettings(doc.exists() ? doc.data() as ProjectSettings : null);
+    }, (err: any) => {
+      console.warn('[FirebaseProjectProvider] Global settings listener error:', err);
     });
 
     const unsubGlobalHolidays = onSnapshot(collection(db, 'holidays'), (snapshot: any) => {
@@ -395,6 +397,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         } as Holiday
       });
       setGlobalHolidays(holidaysData);
+    }, (err: any) => {
+      console.warn('[FirebaseProjectProvider] Global holidays listener error:', err);
     });
 
     const unsubAllUsers = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot: any) => {
@@ -411,6 +415,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         return { ...data, id: docSnap.id } as User;
       });
       setAllUsers(usersData);
+    }, (err: any) => {
+      console.warn('[FirebaseProjectProvider] All users listener error:', err);
     });
 
     Promise.all(initialFetchPromises).then(() => {

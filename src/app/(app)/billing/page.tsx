@@ -212,6 +212,9 @@ export default function BillingPage() {
       } finally {
         setIsLoading(false);
       }
+    }, (err: any) => {
+      console.warn('[Billing] Projects listener error:', err);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();

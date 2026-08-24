@@ -62,6 +62,8 @@ export default function AllocatedLeavesPage() {
             } as Holiday
         });
         setHolidays(holidaysData);
+    }, (err: any) => {
+        console.warn('[LeaveSettings] Holidays listener error:', err);
     });
     
     // Listener for settings
@@ -82,6 +84,8 @@ export default function AllocatedLeavesPage() {
           carryOverLimit: 10,
         }).catch((e: any) => console.error("Failed to set default settings", e));
       }
+    }, (err: any) => {
+      console.warn('[LeaveSettings] Settings listener error:', err);
     });
 
     // Listener for global employees list
@@ -97,6 +101,9 @@ export default function AllocatedLeavesPage() {
           } as User;
         });
         setEmployees(employeesData);
+      },
+      (err: any) => {
+        console.warn('[LeaveSettings] Employees listener error:', err);
       }
     );
 

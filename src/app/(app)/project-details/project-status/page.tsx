@@ -164,35 +164,37 @@ export default function ProjectSynopsisPage() {
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader className="flex flex-row justify-between items-start">
-                            <div>
-                                <CardTitle>Project Health</CardTitle>
-                            </div>
-                             <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                            </DialogTrigger>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <h4 className="font-medium">Overall Health</h4>
-                                <div className="flex items-center gap-4">
-                                     <Circle className={cn('h-8 w-8', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} />
-                                    <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
+                    {project.status !== 'Not Started' && (
+                        <Card>
+                            <CardHeader className="flex flex-row justify-between items-start">
+                                <div>
+                                    <CardTitle>Project Health</CardTitle>
                                 </div>
-                            </div>
-                            <div className="space-y-4">
-                               <h4 className="font-medium">Health Indicators</h4>
-                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                   <RagStatusIndicator status={project.scopeStatus} label="Scope" />
-                                   <RagStatusIndicator status={project.costStatus} label="Cost" />
-                                   <RagStatusIndicator status={project.timeStatus} label="Time" />
-                               </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                </DialogTrigger>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <h4 className="font-medium">Overall Health</h4>
+                                    <div className="flex items-center gap-4">
+                                        <Circle className={cn('h-8 w-8', project.overallStatus ? ragStatusStyles[project.overallStatus] : 'text-gray-300')} />
+                                        <p className="text-muted-foreground flex-1">{project.statusComments || 'No comments provided.'}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <h4 className="font-medium">Health Indicators</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <RagStatusIndicator status={project.scopeStatus} label="Scope" />
+                                        <RagStatusIndicator status={project.costStatus} label="Cost" />
+                                        <RagStatusIndicator status={project.timeStatus} label="Time" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
                 
                 <DialogContent className="sm:max-w-3xl">

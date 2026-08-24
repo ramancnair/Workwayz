@@ -186,6 +186,9 @@ export default function QualityEstimationsPage() {
 
       setMetrics(metricsMap);
       setIsLoading(false);
+    }, (err: any) => {
+      console.warn('[QualityEstimations] Projects listener error:', err);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();

@@ -103,6 +103,9 @@ export default function ArchiveSettingsPage() {
         });
       }
       setIsLoading(false);
+    }, (err: any) => {
+      console.warn('[ArchiveSettings] Settings listener error:', err);
+      setIsLoading(false);
     });
 
     return () => unsub();

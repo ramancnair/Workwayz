@@ -87,12 +87,16 @@ export default function LeaveTrackerPage() {
         });
         setWeeklyOffDays(data.weeklyOffDays ?? [0, 6]);
       }
+    }, (err: any) => {
+      console.warn('[LeaveTracker] Settings listener error:', err);
     });
 
     // Fetch Employees
     const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot: any) => {
       const emps = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() }) as User);
       setAllUsers(emps);
+    }, (err: any) => {
+      console.warn('[LeaveTracker] Employees listener error:', err);
     });
 
     // Fetch Holidays
@@ -106,6 +110,8 @@ export default function LeaveTrackerPage() {
         } as Holiday;
       });
       setHolidays(hols);
+    }, (err: any) => {
+      console.warn('[LeaveTracker] Holidays listener error:', err);
     });
 
     return () => {
