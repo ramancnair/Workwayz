@@ -57,6 +57,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
   const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
   const isTestingPath = pathname.startsWith(`${basePath}/testing`);
+  const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
   const isResourcesPath = pathname.startsWith(`${basePath}/resources`);

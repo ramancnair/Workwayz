@@ -221,6 +221,10 @@ export default function LoginPage() {
         }
       }
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('user-profile-updated'));
+      }
+
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",

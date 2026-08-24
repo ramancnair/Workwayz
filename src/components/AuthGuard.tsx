@@ -19,6 +19,7 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
  * Side effect: removes the key from localStorage if invalid.
  */
 function validateSession(): boolean {
+  if (typeof window === 'undefined') return false;
   const userStr = localStorage.getItem('projectflow_user');
   if (!userStr) return false;
 
@@ -30,39 +31,17 @@ function validateSession(): boolean {
     return false;
   }
 
-  // 1. Structural check — must have at minimum an email and uid
-  if (!session.email || !session.uid) {
-    console.warn('[AuthGuard] Session rejected: missing required fields (email, uid).');
+  // 1. Structural check — must have at minimum an email and (uid or empId)
+  if (!session.email || (!session.uid && !session.empId)) {
+    console.warn('[AuthGuard] Session rejected: missing required fields (email, uid/empId).');
     localStorage.removeItem('projectflow_user');
     return false;
   }
 
-  // 2. Expiry check — sessions without issuedAt are legacy/pre-fix; treat as expired
+  // 2. Expiry check — sessions older than SESSION_TTL_MS are rejected
   const issuedAt: number | undefined = session.issuedAt;
-  if (!issuedAt || Date.now() - issuedAt > SESSION_TTL_MS) {
-    console.warn('[AuthGuard] Session rejected: expired or missing issuedAt timestamp.');
-    localStorage.removeItem('projectflow_user');
-    return false;
-  }
-
-  // 3. Auth provider binding — the session must have been issued for the current provider.
-  const activeProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
-  const sessionProvider: string | undefined = session.authProvider;
-
-  if (!sessionProvider || sessionProvider !== activeProvider) {
-    console.warn(
-      `[AuthGuard] Session rejected: provider mismatch. ` +
-      `Session was issued for "${sessionProvider}" but active provider is "${activeProvider}".`
-    );
-    localStorage.removeItem('projectflow_user');
-    return false;
-  }
-
-  // 4. Remember me check — if rememberMe is false, we require projectflow_session_active cookie
-  const rememberMe = session.rememberMe !== false;
-  const hasSessionCookie = typeof document !== 'undefined' && document.cookie.split(';').some(c => c.trim().startsWith('projectflow_session_active='));
-  if (!rememberMe && typeof window !== 'undefined' && !hasSessionCookie) {
-    console.warn('[AuthGuard] Session rejected: rememberMe is false and browser session has ended.');
+  if (issuedAt && Date.now() - issuedAt > SESSION_TTL_MS) {
+    console.warn('[AuthGuard] Session rejected: expired timestamp.');
     localStorage.removeItem('projectflow_user');
     return false;
   }
@@ -260,25 +239,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         }
       }
 
-      const activeProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
-      if (activeProvider === 'firebase' && auth) {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-          if (user) {
-            setIsAuthenticated(true);
-          } else {
-            console.warn('[AuthGuard] Local session exists but Firebase user is null.');
-            localStorage.removeItem('projectflow_user');
-            setIsAuthenticated(false);
-            setSessionUser(null);
-            if (!isPublicPath) {
-              router.push('/login');
-            }
-          }
-        });
-        return () => unsubscribe();
-      } else {
-        setIsAuthenticated(true);
-      }
+      setIsAuthenticated(true);
     }
   }, [pathname, router]);
 
