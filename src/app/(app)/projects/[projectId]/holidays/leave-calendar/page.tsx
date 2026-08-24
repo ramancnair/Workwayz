@@ -259,30 +259,30 @@ export default function LeaveCalendarPage() {
           <div className="grid gap-4 md:grid-cols-4">
             <Card className="bg-gradient-to-br from-card to-background border-primary/10 shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paid Leaves</CardTitle>
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paid Leaves (Days)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-primary">{aggregateMetrics.totalPaid} days</div>
+                <div className="text-3xl font-bold text-primary">{aggregateMetrics.totalPaid}d</div>
                 <p className="text-xs text-muted-foreground mt-1">Total business days taken in {selectedYear}</p>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-card to-background border-destructive/10 shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Loss of Pay (LOP)</CardTitle>
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Loss of Pay (LOP) (Days)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-destructive">{aggregateMetrics.totalLop} days</div>
+                <div className="text-3xl font-bold text-destructive">{aggregateMetrics.totalLop}d</div>
                 <p className="text-xs text-muted-foreground mt-1">Total unpaid business days in {selectedYear}</p>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-card to-background border-muted shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Combined Leaves</CardTitle>
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Combined Leaves (Days)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{aggregateMetrics.totalCombined} days</div>
+                <div className="text-3xl font-bold">{aggregateMetrics.totalCombined}d</div>
                 <p className="text-xs text-muted-foreground mt-1">Sum of paid and unpaid days in {selectedYear}</p>
               </CardContent>
             </Card>
@@ -323,11 +323,11 @@ export default function LeaveCalendarPage() {
                   <TableHeader className="bg-muted/40">
                     <TableRow>
                       <TableHead className="w-[15%]">User ID</TableHead>
-                      <TableHead className="w-[35%]">Resource Name</TableHead>
-                      <TableHead className="w-[20%]">Role</TableHead>
-                      <TableHead className="w-[15%]">Paid Leaves</TableHead>
-                      <TableHead className="w-[15%]">Loss of Pay (LOP)</TableHead>
-                      <TableHead className="text-right font-semibold pr-6">Total Days</TableHead>
+                      <TableHead className="w-[30%]">Resource Name</TableHead>
+                      <TableHead className="w-[15%]">Role</TableHead>
+                      <TableHead className="w-[15%]">Paid Leaves (Days)</TableHead>
+                      <TableHead className="w-[15%]">Loss of Pay (Days)</TableHead>
+                      <TableHead className="text-right font-semibold pr-6 w-[10%]">Total (Days)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -347,16 +347,16 @@ export default function LeaveCalendarPage() {
                           <TableCell className="text-sm">{res.role || 'N/A'}</TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-primary/10 text-primary border-none hover:bg-primary/15 font-semibold text-xs px-2 py-0.5">
-                              {res.paidDays} days
+                              {res.paidDays}d
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="destructive" className="bg-destructive/10 text-destructive border-none hover:bg-destructive/15 font-semibold text-xs px-2 py-0.5">
-                              {res.lopDays} days
+                              {res.lopDays}d
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right pr-6 font-bold text-sm text-foreground">
-                            {res.totalDays}
+                            {res.totalDays}d
                           </TableCell>
                         </TableRow>
                       ))
