@@ -939,9 +939,9 @@ export default function GroomingPage() {
                     title="Grooming Board"
                     description="Plan your sprints by organizing the backlog."
                 >
-                    <div className="flex items-center gap-2">
-                        <div className="grid gap-2">
-                            <Label htmlFor="view-by-filter">View</Label>
+                    <div className="flex flex-wrap items-end gap-3">
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="view-by-filter" className="text-xs font-medium text-muted-foreground">View</Label>
                             <Select value={viewBy} onValueChange={(v) => setViewBy(v as any)}>
                                 <SelectTrigger id="view-by-filter" className="w-[180px]">
                                     <SelectValue />
@@ -953,28 +953,28 @@ export default function GroomingPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="assignee-filter">Assignee</Label>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="assignee-filter" className="text-xs font-medium text-muted-foreground">Assignee</Label>
                             <Select value={selectedAssigneeId} onValueChange={setSelectedAssigneeId}>
-                            <SelectTrigger id="assignee-filter" className="w-[200px]">
-                                <SelectValue placeholder="Filter by assignee" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Assignees</SelectItem>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {[...employees].filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(user => (
-                                <SelectItem key={user.id} value={user.id}>
-                                    {user.firstName} {user.lastName} ({user.empId.trim()})
-                                </SelectItem>
-                                ))}
-                            </SelectContent>
+                                <SelectTrigger id="assignee-filter" className="w-[200px]">
+                                    <SelectValue placeholder="Filter by assignee" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Assignees</SelectItem>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {[...employees].filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(user => (
+                                    <SelectItem key={user.id} value={user.id}>
+                                        {user.firstName} {user.lastName} ({user.empId.trim()})
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
                             </Select>
                         </div>
+                        <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Create Sprint
+                        </Button>
                     </div>
-                    <Button onClick={() => { setEditingSprint(null); setIsSprintDialogOpen(true); }}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Create Sprint
-                    </Button>
                 </PageHeader>
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
                     {/* Backlog Column */}
