@@ -161,6 +161,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'billing',
     },
     {
+      id: 'billing-rate',
+      href: '/billing-rate',
+      label: 'Billing Rate',
+      icon: DollarSign,
+      group: 'billing',
+    },
+    {
       id: 'quality-estimations',
       href: '/quality/estimations',
       label: 'Estimations',
@@ -255,6 +262,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       icon: Archive,
       group: 'portfolio'
     },
+    {
+      id: 'trash',
+      href: '/portfolio-trash',
+      label: 'Portfolio Trash',
+      icon: Trash2,
+      group: 'trash'
+    },
   ];
 
   const getGroupForTab = (tab: PmSidebarNavProps['activeTab']) => {
@@ -262,8 +276,9 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       case 'my-projects':
         return 'my-projects';
       case 'portfolios':
-      case 'trash':
         return 'portfolio';
+      case 'trash':
+        return 'trash';
       case 'projects':
         return 'projects';
       case 'billing':

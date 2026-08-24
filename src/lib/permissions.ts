@@ -108,6 +108,8 @@ export function hasPagePermission(
 
   const targetPages = pageName === 'Test Cycle' || pageName === 'Test Plan' 
     ? ['Test Cycle', 'Test Plan'] 
+    : (pageName === 'Portfolio Trash' || pageName === 'Trash')
+    ? ['Portfolio Trash', 'Trash']
     : [pageName];
 
   if (customPageAccess) {

@@ -138,9 +138,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
                             <Link href="/my-projects">My Projects</Link>
                           </TabsTrigger>
                         )}
-                        {!showOnlyMyProjects && canSeePortfolioTabs && (
+                        {!showOnlyMyProjects && (
                           <>
-                            {hasAccess('Project Home') && (
+                            {(hasAccess('Project Home') || hasAccess('Portfolio Dashboard')) && (
                               <TabsTrigger value="projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                                 <Link href="/project-home">Projects</Link>
                               </TabsTrigger>
@@ -150,12 +150,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 <Link href="/quality/estimations">Quality</Link>
                               </TabsTrigger>
                             )}
-                            {hasAccess('Billing') && (
+                            {(hasAccess('Billing') || hasAccess('Billing Rate')) && (
                               <TabsTrigger value="billing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                                 <Link href="/billing">Billing</Link>
                               </TabsTrigger>
                             )}
-                            {hasAccess('User List') && (
+                            {(hasAccess('User List') || hasAccess('Utilization')) && (
                               <TabsTrigger value="users" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                                 <Link href="/users">Users</Link>
                               </TabsTrigger>
@@ -165,7 +165,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 <Link href="/holidays/holiday-calendar">Holidays</Link>
                               </TabsTrigger>
                             )}
-                            {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Archive')) && (
+                            {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive')) && (
                               <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                                 <Link href="/portfolio-settings" className="flex items-center gap-1.5">
                                   <Settings className="h-4 w-4" />
@@ -173,7 +173,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 </Link>
                               </TabsTrigger>
                             )}
-                            {hasAccess('Trash') && (
+                            {(hasAccess('Portfolio Trash') || hasAccess('Trash')) && (
                               <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                                 <Link href="/portfolio-trash" className="flex items-center gap-1.5">
                                   <Trash2 className="h-4 w-4" />
