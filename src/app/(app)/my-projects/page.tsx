@@ -208,7 +208,7 @@ export default function MyProjectsPage() {
                           {project.status}
                         </Badge>
                       )}
-                      {project.overallStatus && (
+                      {project.overallStatus && project.status !== 'Not Started' && project.status !== 'Initial Estimation' && (
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs text-muted-foreground">Health</span>
                           <div className={cn('h-3 w-3 rounded-full', ragColors[project.overallStatus])} />

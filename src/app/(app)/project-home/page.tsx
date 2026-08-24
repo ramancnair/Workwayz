@@ -611,6 +611,13 @@ export default function ProjectsDashboard() {
           endDate: new Date(values.endDate).toISOString(),
           projectManagerId: values.projectManagerId || null,
         };
+        if (values.status === 'Not Started' || values.status === 'Initial Estimation') {
+          updateData.overallStatus = null;
+          updateData.scopeStatus = null;
+          updateData.costStatus = null;
+          updateData.timeStatus = null;
+          updateData.statusComments = '';
+        }
         await updateDoc(projectRef, updateData);
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
@@ -948,57 +955,61 @@ export default function ProjectsDashboard() {
                                       </Link>
                                     </TableCell>
                                     <TableCell>
-                                      <Popover>
-                                        <PopoverTrigger asChild>
-                                          <div className="flex items-center gap-2 cursor-pointer">
-                                            <div className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
-                                              </TooltipTrigger>
-                                              {project.statusComments && (
-                                                <TooltipContent>
-                                                  <p>{project.statusComments}</p>
-                                                </TooltipContent>
-                                              )}
-                                            </Tooltip>
-                                            <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 ml-auto" />
-                                          </div>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-96">
-                                          <div className="space-y-4">
-                                            <div className="flex gap-4 border-b pb-2">
-                                              <HealthIndicator status={project.scopeStatus} label="Scope" />
-                                              <HealthIndicator status={project.costStatus} label="Cost" />
-                                              <HealthIndicator status={project.timeStatus} label="Time" />
+                                      {project.status === 'Not Started' || project.status === 'Initial Estimation' || !project.overallStatus ? (
+                                        <span className="text-xs text-muted-foreground font-medium pl-1">—</span>
+                                      ) : (
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <div className="flex items-center gap-2 cursor-pointer">
+                                              <div className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
+                                                </TooltipTrigger>
+                                                {project.statusComments && (
+                                                  <TooltipContent>
+                                                    <p>{project.statusComments}</p>
+                                                  </TooltipContent>
+                                                )}
+                                              </Tooltip>
+                                              <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 ml-auto" />
                                             </div>
-                                            {project.statusHistory && project.statusHistory.length > 0 && (
-                                              <Accordion type="single" collapsible className="w-full">
-                                                <AccordionItem value="history" className="border-none">
-                                                  <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">Status History</AccordionTrigger>
-                                                  <AccordionContent>
-                                                    <div className="max-h-60 overflow-y-auto pr-2 space-y-3">
-                                                      {[...project.statusHistory].reverse().map((historyItem, idx) => (
-                                                        <div key={idx} className="text-sm p-3 bg-muted/50 rounded-md border">
-                                                          <div className="flex justify-between items-center mb-2 text-muted-foreground border-b pb-2">
-                                                            <span>{format(parseISO(historyItem.date), 'MMM dd, yyyy HH:mm')}</span>
-                                                            {historyItem.overallStatus && <HealthIndicator status={historyItem.overallStatus} label={historyItem.overallStatus} />}
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-96">
+                                            <div className="space-y-4">
+                                              <div className="flex gap-4 border-b pb-2">
+                                                <HealthIndicator status={project.scopeStatus} label="Scope" />
+                                                <HealthIndicator status={project.costStatus} label="Cost" />
+                                                <HealthIndicator status={project.timeStatus} label="Time" />
+                                              </div>
+                                              {project.statusHistory && project.statusHistory.length > 0 && (
+                                                <Accordion type="single" collapsible className="w-full">
+                                                  <AccordionItem value="history" className="border-none">
+                                                    <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">Status History</AccordionTrigger>
+                                                    <AccordionContent>
+                                                      <div className="max-h-60 overflow-y-auto pr-2 space-y-3">
+                                                        {[...project.statusHistory].reverse().map((historyItem, idx) => (
+                                                          <div key={idx} className="text-sm p-3 bg-muted/50 rounded-md border">
+                                                            <div className="flex justify-between items-center mb-2 text-muted-foreground border-b pb-2">
+                                                              <span>{format(parseISO(historyItem.date), 'MMM dd, yyyy HH:mm')}</span>
+                                                              {historyItem.overallStatus && <HealthIndicator status={historyItem.overallStatus} label={historyItem.overallStatus} />}
+                                                            </div>
+                                                            {historyItem.statusComments ? (
+                                                              <p className="mt-1">{historyItem.statusComments}</p>
+                                                            ) : (
+                                                              <p className="mt-1 text-muted-foreground italic">No comments</p>
+                                                            )}
                                                           </div>
-                                                          {historyItem.statusComments ? (
-                                                            <p className="mt-1">{historyItem.statusComments}</p>
-                                                          ) : (
-                                                            <p className="mt-1 text-muted-foreground italic">No comments</p>
-                                                          )}
-                                                        </div>
-                                                      ))}
-                                                    </div>
-                                                  </AccordionContent>
-                                                </AccordionItem>
-                                              </Accordion>
-                                            )}
-                                          </div>
-                                        </PopoverContent>
-                                      </Popover>
+                                                        ))}
+                                                      </div>
+                                                    </AccordionContent>
+                                                  </AccordionItem>
+                                                </Accordion>
+                                              )}
+                                            </div>
+                                          </PopoverContent>
+                                        </Popover>
+                                      )}
                                     </TableCell>
                                     <TableCell>
                                       <Link href={projectUrl} className="block w-full h-full">
