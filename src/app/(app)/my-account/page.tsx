@@ -7,15 +7,31 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Mail, User, Upload, Trash2 } from 'lucide-react';
+import { Mail, User, Upload, Trash2, Save, Shield } from 'lucide-react';
 import { db, doc, updateDoc, collection, getDocs, query, where } from '@/lib/db-provider';
 import { useToast } from '@/hooks/use-toast';
 
 export default function MyAccountPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [user, setUser] = useState({ name: '', email: '', id: '', role: '', empId: '', avatar: '', authProvider: '' });
+  const [user, setUser] = useState<{
+    name: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    id: string;
+    role?: string;
+    accessLevel?: string;
+    empId: string;
+    avatar: string;
+    authProvider: string;
+    needsPasswordReset?: boolean;
+  }>({ name: '', email: '', id: '', role: '', accessLevel: '', empId: '', avatar: '', authProvider: '' });
+  
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   
   // Password change states
   const [newPassword, setNewPassword] = useState('');
@@ -101,22 +117,48 @@ export default function MyAccountPage() {
         const parsed = JSON.parse(storedUser);
         setUser(parsed);
         
-        // Fetch fresh details and avatar directly from database
-        if (parsed.empId) {
-          const q = query(collection(db, 'employees'), where('empId', '==', parsed.empId));
+        // Split name into first and last name if not explicitly set
+        const parts = (parsed.name || '').trim().split(' ');
+        const initialFirst = parsed.firstName || parts[0] || '';
+        const initialLast = parsed.lastName || parts.slice(1).join(' ') || '';
+        setFirstName(initialFirst);
+        setLastName(initialLast);
+
+        // Fetch fresh details and avatar directly from database by email or empId
+        if (db && (parsed.email || parsed.empId)) {
+          const q = parsed.email
+            ? query(collection(db, 'employees'), where('email', '==', parsed.email))
+            : query(collection(db, 'employees'), where('empId', '==', parsed.empId));
+
           getDocs(q).then((snapshot: any) => {
             if (!snapshot.empty) {
-              const data = snapshot.docs[0].data();
+              const docSnap = snapshot.docs[0];
+              const data = docSnap.data();
+              const fName = data.firstName || initialFirst;
+              const lName = data.lastName || initialLast;
+              const fullName = `${fName} ${lName}`.trim() || parsed.name;
+
+              setFirstName(fName);
+              setLastName(lName);
+
               const updated = {
                 ...parsed,
+                empId: data.empId || docSnap.id || parsed.empId,
+                firstName: fName,
+                lastName: lName,
+                name: fullName,
+                email: data.email || parsed.email,
+                accessLevel: data.accessLevel || parsed.accessLevel,
+                role: data.role || parsed.role,
                 avatar: data.avatar || '',
-                name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || parsed.name,
               };
               localStorage.setItem('projectflow_user', JSON.stringify(updated));
               setUser(updated);
               // Dispatch event to keep sidebars synchronized
               window.dispatchEvent(new Event('user-profile-updated'));
             }
+          }).catch(err => {
+            console.error("Failed fetching employee profile:", err);
           });
         }
       } catch (e) {
@@ -135,8 +177,93 @@ export default function MyAccountPage() {
       .slice(0, 2);
   };
 
+  const handleSaveProfile = async () => {
+    if (!firstName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "First name is required.",
+      });
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const trimmedFirst = firstName.trim();
+      const trimmedLast = lastName.trim();
+      const fullName = `${trimmedFirst} ${trimmedLast}`.trim();
+
+      // 1. Locate employee document by email or empId
+      let targetDocId = user.empId;
+      if (db) {
+        if (user.email) {
+          const q = query(collection(db, 'employees'), where('email', '==', user.email));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            targetDocId = snapshot.docs[0].id;
+          }
+        }
+
+        if (targetDocId) {
+          const globalEmpRef = doc(db, 'employees', targetDocId);
+          await updateDoc(globalEmpRef, {
+            firstName: trimmedFirst,
+            lastName: trimmedLast,
+          });
+
+          // Also update all allocated projects copies
+          try {
+            const projectsSnapshot = await getDocs(collection(db, 'projects'));
+            for (const proj of projectsSnapshot.docs) {
+              const projEmpRef = doc(db, 'projects', proj.id, 'employees', targetDocId);
+              try {
+                await updateDoc(projEmpRef, {
+                  firstName: trimmedFirst,
+                  lastName: trimmedLast,
+                });
+              } catch (err) {
+                // Ignore if employee is not part of this project
+              }
+            }
+          } catch (err) {
+            console.error("Failed to update project-level employee names:", err);
+          }
+        }
+      }
+
+      // 2. Update local state and localStorage
+      const updatedUser = {
+        ...user,
+        empId: targetDocId || user.empId,
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
+        name: fullName,
+      };
+
+      localStorage.setItem('projectflow_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+
+      // 3. Dispatch synchronization event to trigger sidebar reload
+      window.dispatchEvent(new Event('user-profile-updated'));
+
+      toast({
+        title: "Profile Updated",
+        description: "Your name has been updated successfully.",
+      });
+    } catch (error: any) {
+      console.error("Error updating profile name:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not save your name changes. Please try again.",
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const handleAvatarChange = async (base64String: string) => {
-    if (!user.empId) {
+    if (!user.empId && !user.email) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -147,23 +274,36 @@ export default function MyAccountPage() {
     
     setIsUpdating(true);
     try {
-      // 1. Update global employee doc
-      const globalEmpRef = doc(db, 'employees', user.empId);
-      await updateDoc(globalEmpRef, { avatar: base64String });
-
-      // 2. Update all allocated projects copies
-      try {
-        const projectsSnapshot = await getDocs(collection(db, 'projects'));
-        for (const proj of projectsSnapshot.docs) {
-          const projEmpRef = doc(db, 'projects', proj.id, 'employees', user.empId);
-          try {
-            await updateDoc(projEmpRef, { avatar: base64String });
-          } catch (err) {
-            // Ignore if employee is not part of this project (safe behavior)
+      let targetDocId = user.empId;
+      if (db) {
+        if (user.email) {
+          const q = query(collection(db, 'employees'), where('email', '==', user.email));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            targetDocId = snapshot.docs[0].id;
           }
         }
-      } catch (err) {
-        console.error("Failed to update project-level employee avatars:", err);
+
+        if (targetDocId) {
+          // 1. Update global employee doc
+          const globalEmpRef = doc(db, 'employees', targetDocId);
+          await updateDoc(globalEmpRef, { avatar: base64String });
+
+          // 2. Update all allocated projects copies
+          try {
+            const projectsSnapshot = await getDocs(collection(db, 'projects'));
+            for (const proj of projectsSnapshot.docs) {
+              const projEmpRef = doc(db, 'projects', proj.id, 'employees', targetDocId);
+              try {
+                await updateDoc(projEmpRef, { avatar: base64String });
+              } catch (err) {
+                // Ignore if employee is not part of this project
+              }
+            }
+          } catch (err) {
+            console.error("Failed to update project-level employee avatars:", err);
+          }
+        }
       }
 
       // 3. Update localStorage and local state
@@ -229,7 +369,7 @@ export default function MyAccountPage() {
         <CardHeader>
           <CardTitle>Profile Details</CardTitle>
           <CardDescription>
-            Your personal information as recorded during account creation.
+            Manage your personal profile information.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -240,10 +380,10 @@ export default function MyAccountPage() {
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
                 <h3 className="text-xl font-semibold leading-tight">{user.name || 'User'}</h3>
-                <p className="text-sm text-muted-foreground">{user.role || 'Member'}</p>
+                <p className="text-sm font-medium text-primary mt-0.5">{user.accessLevel || user.role || 'Team Member'}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button 
@@ -280,24 +420,58 @@ export default function MyAccountPage() {
           
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="firstName">First Name</Label>
               <div className="relative">
                 <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input id="name" value={user.name} disabled className="pl-9" />
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First Name"
+                  className="pl-9"
+                />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <div className="relative">
+                <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last Name"
+                  className="pl-9"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input id="email" value={user.email} disabled className="pl-9" />
+                <Input id="email" value={user.email} disabled className="pl-9 bg-muted/40 cursor-not-allowed text-muted-foreground" />
               </div>
+              <p className="text-xs text-muted-foreground">Unique identifier used for account login.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="accessLevel">Access Level</Label>
+              <div className="relative">
+                <Shield className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input id="accessLevel" value={user.accessLevel || user.role || 'Team Member'} disabled className="pl-9 bg-muted/40 cursor-not-allowed text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">Assigned role controlling page and project access.</p>
             </div>
           </div>
-          <div className="pt-4 border-t">
-              <p className="text-sm text-muted-foreground">Profile information is currently read-only. Contact an administrator to make changes.</p>
-          </div>
         </CardContent>
+        <CardFooter className="border-t px-6 py-4 flex justify-end">
+          <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="gap-1.5">
+            <Save className="h-4 w-4 mr-1" />
+            {isSavingProfile ? 'Saving...' : 'Save Profile'}
+          </Button>
+        </CardFooter>
       </Card>
 
       <Card className="mt-6">

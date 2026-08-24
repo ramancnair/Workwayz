@@ -77,7 +77,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
   const { project, testDate, setTestDate } = useProject();
-  const [user, setUser] = useState({ name: '', email: '', avatar: '' });
+  const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string }>({ name: '', email: '', avatar: '' });
 
   useEffect(() => {
     const loadUser = () => {
@@ -462,14 +462,15 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         <Separator className="my-2 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:my-0 bg-sidebar-border" />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex items-center mt-4 h-10 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1 -mx-1 transition-colors">
+            <div className="flex items-center mt-2 h-12 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1.5 -mx-1 transition-colors">
               <Avatar className="h-8 w-8 shrink-0">
                 {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                 <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
               </Avatar>
-              <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0">
+              <div className="flex flex-col ml-3 transition-all duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0 leading-tight">
                 <span className="font-semibold text-sm text-sidebar-foreground truncate">{user.name || 'User'}</span>
-                <span className="text-xs text-sidebar-foreground/70 truncate">{user.email || ''}</span>
+                <span className="text-[11px] font-medium text-primary truncate">{user.accessLevel || user.role || 'Team Member'}</span>
+                <span className="text-[11px] text-muted-foreground truncate">{user.email || ''}</span>
               </div>
             </div>
           </DropdownMenuTrigger>
