@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { db, doc, onSnapshot } from '@/lib/db-provider';
 import { ShieldAlert } from 'lucide-react';
-import { getPageNameForRoute, hasPagePermission } from '@/lib/permissions';
+import { getPageNameForRoute, hasPagePermission, getPermittedFallbackRoute } from '@/lib/permissions';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -271,6 +271,17 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [sessionUser?.accessLevel]);
 
   const isPublicPath = pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname === '/setup-wizard';
+  const requiredPageName = getPageNameForRoute(pathname);
+  const isPermissionAllowed = !requiredPageName || hasPagePermission(sessionUser?.accessLevel, requiredPageName, customPageAccess);
+
+  useEffect(() => {
+    if (isAuthenticated && !isPublicPath && accessChecked && !isPermissionAllowed) {
+      const fallback = getPermittedFallbackRoute(pathname, sessionUser?.accessLevel, customPageAccess);
+      if (fallback && fallback !== pathname) {
+        router.replace(fallback);
+      }
+    }
+  }, [isAuthenticated, isPublicPath, accessChecked, isPermissionAllowed, pathname, sessionUser?.accessLevel, customPageAccess, router]);
 
   if (isAuthenticated === null || (isAuthenticated && !isPublicPath && !accessChecked && sessionUser?.accessLevel !== 'Administrator')) {
     return (
@@ -288,10 +299,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return <ResetPasswordScreen user={sessionUser} onComplete={() => setNeedsReset(false)} />;
   }
 
-  const requiredPageName = getPageNameForRoute(pathname);
-  const isPermissionAllowed = !requiredPageName || hasPagePermission(sessionUser?.accessLevel, requiredPageName, customPageAccess);
-
   if (isAuthenticated && !isPublicPath && accessChecked && !isPermissionAllowed) {
+    const fallback = getPermittedFallbackRoute(pathname, sessionUser?.accessLevel, customPageAccess);
+    if (fallback && fallback !== pathname) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center bg-background">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      );
+    }
     return <AccessDeniedScreen pageName={requiredPageName || 'Requested'} onGoHome={() => router.push('/my-projects')} />;
   }
 

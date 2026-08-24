@@ -86,27 +86,51 @@ export default function AppLayout({ children }: PropsWithChildren) {
     return 'my-projects';
   };
 
+  const getDefaultRouteForTab = (tabKey: string) => {
+    switch (tabKey) {
+      case 'my-projects':
+        return '/my-projects';
+      case 'projects':
+        if (hasAccess('Project Home')) return '/project-home';
+        if (hasAccess('Portfolio Dashboard')) return '/portfolio-dashboard';
+        return '/project-home';
+      case 'quality':
+        if (hasAccess('Estimations')) return '/quality/estimations';
+        if (hasAccess('Defects')) return '/quality/defects';
+        return '/quality/estimations';
+      case 'billing':
+        if (hasAccess('Billing')) return '/billing';
+        if (hasAccess('Billing Rate')) return '/billing-rate';
+        return '/billing';
+      case 'users':
+        if (hasAccess('User List')) return '/users';
+        if (hasAccess('Utilization')) return '/utilization';
+        return '/users';
+      case 'holidays':
+        if (hasAccess('Holiday Calendar')) return '/holidays/holiday-calendar';
+        if (hasAccess('Leave Settings')) return '/holidays/leave-settings';
+        if (hasAccess('Leave Tracker')) return '/holidays/leave-tracker';
+        return '/holidays/holiday-calendar';
+      case 'portfolios':
+        if (hasAccess('Access Settings')) return '/portfolio-settings/access-settings';
+        if (hasAccess('Database')) return '/portfolio-settings/database';
+        if (hasAccess('Authentication')) return '/portfolio-settings/authentication';
+        if (hasAccess('AI Config')) return '/portfolio-settings/ai-config';
+        if (hasAccess('Archive')) return '/portfolio-settings/archive';
+        return '/portfolio-settings';
+      case 'trash':
+        return '/portfolio-trash';
+      case 'my-account':
+        return '/my-account';
+      default:
+        return '/my-projects';
+    }
+  };
+
   const onTabChange = (value: string) => {
-    if (value === 'my-projects') {
-      router.push('/my-projects');
-    } else if (value === 'projects') {
-      router.push('/project-home');
-    } else if (value === 'quality') {
-      router.push('/quality/estimations');
-    } else if (value === 'portfolio-dashboard') {
-        router.push('/portfolio-dashboard');
-    } else if (value === 'billing') {
-      router.push('/billing');
-    } else if (value === 'users') {
-      router.push('/users');
-    } else if (value === 'holidays') {
-      router.push('/holidays/holiday-calendar');
-    } else if (value === 'trash') {
-        router.push('/portfolio-trash');
-    } else if (value === 'portfolios') {
-        router.push('/portfolio-settings');
-    } else if (value === 'my-account') {
-        router.push('/my-account');
+    const route = getDefaultRouteForTab(value);
+    if (route) {
+      router.push(route);
     }
   };
 
@@ -135,39 +159,39 @@ export default function AppLayout({ children }: PropsWithChildren) {
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         {hasAccess('My Projects') && (
                           <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                            <Link href="/my-projects">My Projects</Link>
+                            <Link href={getDefaultRouteForTab('my-projects')}>My Projects</Link>
                           </TabsTrigger>
                         )}
                         {!showOnlyMyProjects && (
                           <>
                             {(hasAccess('Project Home') || hasAccess('Portfolio Dashboard')) && (
                               <TabsTrigger value="projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href="/project-home">Projects</Link>
+                                <Link href={getDefaultRouteForTab('projects')}>Projects</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Estimations') || hasAccess('Defects')) && (
                               <TabsTrigger value="quality" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href="/quality/estimations">Quality</Link>
+                                <Link href={getDefaultRouteForTab('quality')}>Quality</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Billing') || hasAccess('Billing Rate')) && (
                               <TabsTrigger value="billing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href="/billing">Billing</Link>
+                                <Link href={getDefaultRouteForTab('billing')}>Billing</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('User List') || hasAccess('Utilization')) && (
                               <TabsTrigger value="users" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href="/users">Users</Link>
+                                <Link href={getDefaultRouteForTab('users')}>Users</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Holiday Calendar') || hasAccess('Leave Settings') || hasAccess('Leave Tracker')) && (
                               <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href="/holidays/holiday-calendar">Holidays</Link>
+                                <Link href={getDefaultRouteForTab('holidays')}>Holidays</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive')) && (
                               <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href="/portfolio-settings" className="flex items-center gap-1.5">
+                                <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center gap-1.5">
                                   <Settings className="h-4 w-4" />
                                   <span>Portfolio Settings</span>
                                 </Link>
@@ -175,7 +199,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                             )}
                             {(hasAccess('Portfolio Trash') || hasAccess('Trash')) && (
                               <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href="/portfolio-trash" className="flex items-center gap-1.5">
+                                <Link href={getDefaultRouteForTab('trash')} className="flex items-center gap-1.5">
                                   <Trash2 className="h-4 w-4" />
                                   <span>Portfolio Trash</span>
                                 </Link>

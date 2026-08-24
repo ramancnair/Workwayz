@@ -83,31 +83,90 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     return ''; // No active tab for settings
   };
 
+  const getDefaultRouteForTab = (tabKey: string) => {
+    switch (tabKey) {
+      case 'initial-estimation':
+        if (hasAccess('Specifications (Initial Estimation)')) return `${basePath}/initial-estimation/specifications`;
+        if (hasAccess('Project Status (Initial Estimation)')) return `${basePath}/initial-estimation/project-status`;
+        return `${basePath}/initial-estimation/specifications`;
+
+      case 'project':
+        if (hasAccess('Project Status')) return `${basePath}/project-details/project-status`;
+        if (hasAccess('PM Dashboard')) return `${basePath}/project-details/pm-dashboard`;
+        if (hasAccess('Specifications')) return `${basePath}/project-details/specifications`;
+        return `${basePath}/project-details/project-status`;
+
+      case 'resources':
+        if (hasAccess('Project Resources')) return `${basePath}/resources/project-resources`;
+        if (hasAccess('Worklog')) return `${basePath}/resources/worklog`;
+        if (hasAccess('Resource Workload')) return `${basePath}/resources/resource-workload`;
+        if (hasAccess('Project Gantt')) return `${basePath}/resources/project-gantt`;
+        return `${basePath}/resources/project-resources`;
+
+      case 'releases':
+        return `${basePath}/releases/project-releases`;
+
+      case 'development':
+        if (hasAccess('Development Dashboard')) return `${basePath}/development/dashboard`;
+        if (hasAccess('Product Backlog')) return `${basePath}/development/backlog`;
+        if (hasAccess('Grooming')) return `${basePath}/development/grooming`;
+        if (hasAccess('Kanban Board')) return `${basePath}/development/kanban`;
+        if (hasAccess('Sub-Tasks')) return `${basePath}/development/development-tasks`;
+        if (hasAccess('Defect Tracker')) return `${basePath}/development/defect-tracker`;
+        return `${basePath}/development/dashboard`;
+
+      case 'testing':
+        if (hasAccess('Test Dashboard')) return `${basePath}/testing/dashboard`;
+        if (hasAccess('Test Backlog')) return `${basePath}/testing/test-backlog`;
+        if (hasAccess('Test Cycle') || hasAccess('Test Plan')) return `${basePath}/testing/test-plan`;
+        if (hasAccess('Test Execution')) return `${basePath}/testing/test-execution`;
+        if (hasAccess('Defects')) return `${basePath}/testing/defects`;
+        if (hasAccess('Defect Tracker')) return `${basePath}/testing/defect-tracker`;
+        return `${basePath}/testing/dashboard`;
+
+      case 'governance':
+        if (hasAccess('RAID Dashboard')) return `${basePath}/raid-dashboard`;
+        if (hasAccess('Risks')) return `${basePath}/risks`;
+        if (hasAccess('Assumptions')) return `${basePath}/assumptions`;
+        if (hasAccess('Issues')) return `${basePath}/issues`;
+        if (hasAccess('Dependencies')) return `${basePath}/dependencies`;
+        return `${basePath}/raid-dashboard`;
+
+      case 'holidays':
+        if (hasAccess('Project Holiday Calendar')) return `${basePath}/holidays`;
+        if (hasAccess('Leave Calendar')) return `${basePath}/holidays/leave-calendar`;
+        return `${basePath}/holidays`;
+
+      case 'pmo':
+        if (hasAccess('PMO Documents')) return `${basePath}/pmo/documents`;
+        if (project?.pricingModel !== 'T&M' && hasAccess('PMO FB Billing')) return `${basePath}/pmo/fb-billing`;
+        if (project?.pricingModel !== 'T&M' && hasAccess('PMO FB Payment Milestones')) return `${basePath}/pmo/fb-payment-milestones`;
+        if (project?.pricingModel !== 'Fixed Bid' && hasAccess('PMO TnM Billing')) return `${basePath}/pmo/tnm-billing`;
+        if (project?.pricingModel !== 'Fixed Bid' && hasAccess('PMO TnM Payment Milestones')) return `${basePath}/pmo/tnm-payment-milestones`;
+        if (hasAccess('Business Continuity')) return `${basePath}/pmo/business-continuity`;
+        return `${basePath}/pmo/documents`;
+
+      case 'settings':
+        if (hasAccess('Board Settings')) return `${basePath}/project-settings/board`;
+        if (hasAccess('Sprint Settings')) return `${basePath}/project-settings/sprint`;
+        if (hasAccess('Effort Settings')) return `${basePath}/project-settings/effort`;
+        return `${basePath}/project-settings/board`;
+
+      case 'trash':
+        return `${basePath}/project-trash`;
+
+      case 'my-account':
+        return '/my-account';
+
+      default:
+        return basePath;
+    }
+  };
+
   const onTabChange = (value: string) => {
-    if (value === 'development') {
-      router.push(`${basePath}/development/dashboard`);
-    } else if (value === 'testing') {
-      router.push(`${basePath}/testing/dashboard`);
-    } else if (value === 'project') {
-      router.push(`${basePath}/project-details/project-status`);
-    } else if (value === 'initial-estimation') {
-      router.push(`${basePath}/initial-estimation/specifications`);
-    } else if (value === 'releases') {
-      router.push(`${basePath}/releases/project-releases`);
-    } else if (value === 'resources') {
-      router.push(`${basePath}/resources/project-resources`);
-    } else if (value === 'governance') {
-      router.push(`${basePath}/raid-dashboard`);
-    } else if (value === 'holidays') {
-      router.push(`${basePath}/holidays`);
-    } else if (value === 'pmo') {
-      router.push(`${basePath}/pmo/documents`);
-    } else if (value === 'settings') {
-      router.push(`${basePath}/project-settings/board`);
-    } else if (value === 'trash') {
-      router.push(`${basePath}/project-trash`);
-    } else if (value === 'my-account') {
-      router.push('/my-account');
+    const route = getDefaultRouteForTab(value);
+    if (route) {
+      router.push(route);
     }
   };
 
@@ -141,54 +200,54 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                       showInitialTabsOnly && !dynamicTab && "pointer-events-none cursor-default"
                     )}
                   >
-                    <Link href={`${basePath}/initial-estimation/specifications`}>Initial Estimation</Link>
+                    <Link href={getDefaultRouteForTab('initial-estimation')}>Initial Estimation</Link>
                   </TabsTrigger>
                 )}
                 {!showInitialTabsOnly && (
                   <>
                     {(hasAccess('Project Status') || hasAccess('PM Dashboard') || hasAccess('Specifications')) && (
                       <TabsTrigger value="project" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/project-details/project-status`}>Project Details</Link>
+                        <Link href={getDefaultRouteForTab('project')}>Project Details</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('Project Resources') || hasAccess('Worklog') || hasAccess('Resource Workload') || hasAccess('Project Gantt')) && (
                       <TabsTrigger value="resources" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/resources/project-resources`}>Resources</Link>
+                        <Link href={getDefaultRouteForTab('resources')}>Resources</Link>
                       </TabsTrigger>
                     )}
                     {hasAccess('Project Releases') && (
                       <TabsTrigger value="releases" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/releases/project-releases`}>Releases</Link>
+                        <Link href={getDefaultRouteForTab('releases')}>Releases</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('Development Dashboard') || hasAccess('Product Backlog') || hasAccess('Grooming') || hasAccess('Kanban Board') || hasAccess('Sub-Tasks') || hasAccess('Defect Tracker')) && (
                       <TabsTrigger value="development" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/development/dashboard`}>Development</Link>
+                        <Link href={getDefaultRouteForTab('development')}>Development</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Cycle') || hasAccess('Test Plan') || hasAccess('Test Execution') || hasAccess('Defects')) && (
                       <TabsTrigger value="testing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/testing/dashboard`}>Testing</Link>
+                        <Link href={getDefaultRouteForTab('testing')}>Testing</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('RAID Dashboard') || hasAccess('Risks') || hasAccess('Assumptions') || hasAccess('Issues') || hasAccess('Dependencies')) && (
                       <TabsTrigger value="governance" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/raid-dashboard`}>Governance</Link>
+                        <Link href={getDefaultRouteForTab('governance')}>Governance</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('Project Holiday Calendar') || hasAccess('Leave Calendar')) && (
                       <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/holidays`}>Holidays</Link>
+                        <Link href={getDefaultRouteForTab('holidays')}>Holidays</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('PMO Documents') || hasAccess('PMO FB Billing') || hasAccess('PMO FB Payment Milestones') || hasAccess('PMO TnM Billing') || hasAccess('PMO TnM Payment Milestones') || hasAccess('Business Continuity')) && (
                       <TabsTrigger value="pmo" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/pmo/documents`}>PMO</Link>
+                        <Link href={getDefaultRouteForTab('pmo')}>PMO</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('Board Settings') || hasAccess('Sprint Settings') || hasAccess('Effort Settings')) && (
                       <TabsTrigger value="settings" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/project-settings/board`} className="flex items-center gap-1.5">
+                        <Link href={getDefaultRouteForTab('settings')} className="flex items-center gap-1.5">
                           <Settings className="h-4 w-4" />
                           <span>Project Settings</span>
                         </Link>
@@ -196,7 +255,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                     )}
                     {hasAccess('Project Trash') && (
                       <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={`${basePath}/project-trash`} className="flex items-center gap-1.5">
+                        <Link href={getDefaultRouteForTab('trash')} className="flex items-center gap-1.5">
                           <Trash2 className="h-4 w-4" />
                           <span>Project Trash</span>
                         </Link>

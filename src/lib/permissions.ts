@@ -127,3 +127,225 @@ export function hasPagePermission(
 
   return false;
 }
+
+export function getPermittedFallbackRoute(
+  pathname: string,
+  role: string | null | undefined,
+  customPageAccess?: Record<string, boolean> | null
+): string | null {
+  if (!pathname || role === 'Administrator') return null;
+
+  // Project workspace check
+  const projectMatch = pathname.match(/^\/projects\/([^\/]+)/);
+  if (projectMatch) {
+    const projectId = projectMatch[1];
+    const basePath = `/projects/${projectId}`;
+
+    // 1. Sibling candidate groups within the active project module
+    const projectModuleGroups: Array<{ prefix: string; candidates: Array<{ name: string; path: string }> }> = [
+      {
+        prefix: `${basePath}/pmo`,
+        candidates: [
+          { name: 'PMO Documents', path: `${basePath}/pmo/documents` },
+          { name: 'PMO FB Billing', path: `${basePath}/pmo/fb-billing` },
+          { name: 'PMO FB Payment Milestones', path: `${basePath}/pmo/fb-payment-milestones` },
+          { name: 'PMO TnM Billing', path: `${basePath}/pmo/tnm-billing` },
+          { name: 'PMO TnM Payment Milestones', path: `${basePath}/pmo/tnm-payment-milestones` },
+          { name: 'Business Continuity', path: `${basePath}/pmo/business-continuity` },
+        ],
+      },
+      {
+        prefix: `${basePath}/development`,
+        candidates: [
+          { name: 'Development Dashboard', path: `${basePath}/development/dashboard` },
+          { name: 'Product Backlog', path: `${basePath}/development/backlog` },
+          { name: 'Grooming', path: `${basePath}/development/grooming` },
+          { name: 'Kanban Board', path: `${basePath}/development/kanban` },
+          { name: 'Sub-Tasks', path: `${basePath}/development/development-tasks` },
+          { name: 'Defect Tracker', path: `${basePath}/development/defect-tracker` },
+        ],
+      },
+      {
+        prefix: `${basePath}/testing`,
+        candidates: [
+          { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
+          { name: 'Test Backlog', path: `${basePath}/testing/test-backlog` },
+          { name: 'Test Cycle', path: `${basePath}/testing/test-plan` },
+          { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
+          { name: 'Defects', path: `${basePath}/testing/defects` },
+          { name: 'Defect Tracker', path: `${basePath}/testing/defect-tracker` },
+        ],
+      },
+      {
+        prefix: `${basePath}/project-details`,
+        candidates: [
+          { name: 'Project Status', path: `${basePath}/project-details/project-status` },
+          { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+          { name: 'Specifications', path: `${basePath}/project-details/specifications` },
+        ],
+      },
+      {
+        prefix: `${basePath}/initial-estimation`,
+        candidates: [
+          { name: 'Specifications (Initial Estimation)', path: `${basePath}/initial-estimation/specifications` },
+          { name: 'Project Status (Initial Estimation)', path: `${basePath}/initial-estimation/project-status` },
+        ],
+      },
+      {
+        prefix: `${basePath}/resources`,
+        candidates: [
+          { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
+          { name: 'Worklog', path: `${basePath}/resources/worklog` },
+          { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
+          { name: 'Project Gantt', path: `${basePath}/resources/project-gantt` },
+        ],
+      },
+      {
+        prefix: `${basePath}/releases`,
+        candidates: [
+          { name: 'Project Releases', path: `${basePath}/releases/project-releases` },
+        ],
+      },
+      {
+        prefix: `${basePath}/holidays`,
+        candidates: [
+          { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
+          { name: 'Leave Calendar', path: `${basePath}/holidays/leave-calendar` },
+        ],
+      },
+      {
+        prefix: `${basePath}/project-settings`,
+        candidates: [
+          { name: 'Board Settings', path: `${basePath}/project-settings/board` },
+          { name: 'Sprint Settings', path: `${basePath}/project-settings/sprint` },
+          { name: 'Effort Settings', path: `${basePath}/project-settings/effort` },
+        ],
+      },
+    ];
+
+    // Governance prefixes
+    const isGov = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
+    if (isGov) {
+      const govCandidates = [
+        { name: 'RAID Dashboard', path: `${basePath}/raid-dashboard` },
+        { name: 'Risks', path: `${basePath}/risks` },
+        { name: 'Assumptions', path: `${basePath}/assumptions` },
+        { name: 'Issues', path: `${basePath}/issues` },
+        { name: 'Dependencies', path: `${basePath}/dependencies` },
+      ];
+      for (const c of govCandidates) {
+        if (hasPagePermission(role, c.name, customPageAccess)) {
+          return c.path;
+        }
+      }
+    }
+
+    // Match module group
+    const matchingModule = projectModuleGroups.find(g => pathname.startsWith(g.prefix));
+    if (matchingModule) {
+      for (const candidate of matchingModule.candidates) {
+        if (hasPagePermission(role, candidate.name, customPageAccess)) {
+          return candidate.path;
+        }
+      }
+    }
+
+    // If no sibling in the same module is permitted, search across all project modules for a permitted landing page
+    const allProjectCandidates = [
+      { name: 'Development Dashboard', path: `${basePath}/development/dashboard` },
+      { name: 'Project Status', path: `${basePath}/project-details/project-status` },
+      { name: 'Kanban Board', path: `${basePath}/development/kanban` },
+      { name: 'Specifications', path: `${basePath}/project-details/specifications` },
+      { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
+      { name: 'RAID Dashboard', path: `${basePath}/raid-dashboard` },
+      { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
+      { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
+      { name: 'Business Continuity', path: `${basePath}/pmo/business-continuity` },
+      { name: 'PMO Documents', path: `${basePath}/pmo/documents` },
+      { name: 'Project Releases', path: `${basePath}/releases/project-releases` },
+    ];
+
+    for (const c of allProjectCandidates) {
+      if (hasPagePermission(role, c.name, customPageAccess)) {
+        return c.path;
+      }
+    }
+
+    return '/my-projects';
+  }
+
+  // 2. Portfolio-level checks
+  const portfolioGroups: Array<{ prefix: string; candidates: Array<{ name: string; path: string }> }> = [
+    {
+      prefix: '/quality',
+      candidates: [
+        { name: 'Estimations', path: '/quality/estimations' },
+        { name: 'Defects', path: '/quality/defects' },
+      ],
+    },
+    {
+      prefix: '/billing',
+      candidates: [
+        { name: 'Billing', path: '/billing' },
+        { name: 'Billing Rate', path: '/billing-rate' },
+      ],
+    },
+    {
+      prefix: '/users',
+      candidates: [
+        { name: 'User List', path: '/users' },
+        { name: 'Utilization', path: '/utilization' },
+      ],
+    },
+    {
+      prefix: '/utilization',
+      candidates: [
+        { name: 'User List', path: '/users' },
+        { name: 'Utilization', path: '/utilization' },
+      ],
+    },
+    {
+      prefix: '/holidays',
+      candidates: [
+        { name: 'Holiday Calendar', path: '/holidays/holiday-calendar' },
+        { name: 'Leave Settings', path: '/holidays/leave-settings' },
+        { name: 'Leave Tracker', path: '/holidays/leave-tracker' },
+      ],
+    },
+    {
+      prefix: '/portfolio-settings',
+      candidates: [
+        { name: 'Access Settings', path: '/portfolio-settings/access-settings' },
+        { name: 'Database', path: '/portfolio-settings/database' },
+        { name: 'Authentication', path: '/portfolio-settings/authentication' },
+        { name: 'AI Config', path: '/portfolio-settings/ai-config' },
+        { name: 'Archive', path: '/portfolio-settings/archive' },
+      ],
+    },
+    {
+      prefix: '/project-home',
+      candidates: [
+        { name: 'Project Home', path: '/project-home' },
+        { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
+      ],
+    },
+    {
+      prefix: '/portfolio-dashboard',
+      candidates: [
+        { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
+        { name: 'Project Home', path: '/project-home' },
+      ],
+    },
+  ];
+
+  const matchingPort = portfolioGroups.find(g => pathname.startsWith(g.prefix));
+  if (matchingPort) {
+    for (const c of matchingPort.candidates) {
+      if (hasPagePermission(role, c.name, customPageAccess)) {
+        return c.path;
+      }
+    }
+  }
+
+  return '/my-projects';
+}
