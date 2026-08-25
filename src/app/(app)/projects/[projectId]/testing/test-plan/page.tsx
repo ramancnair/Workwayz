@@ -499,7 +499,7 @@ export default function TestPlanPage() {
 
   return (
     <div className="flex flex-col h-full space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Test Cycle" description="Create and manage test execution cycles.">
+      <PageHeader title="Test Cycles" description="Create and manage test execution cycles.">
         <Select onValueChange={setSelectedPlanId} value={selectedPlanId || ''}>
           <SelectTrigger className="w-[280px]">
             <SelectValue placeholder="Select a Test Cycle" />

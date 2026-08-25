@@ -394,7 +394,7 @@ export default function TestBacklogPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Test Backlog" description="Manage and track all test cases for the project.">
+        <PageHeader title="Test Backlogs" description="Manage and track all test cases for the project.">
            <Dialog open={isAiGenOpen} onOpenChange={setIsAiGenOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline">

@@ -404,7 +404,7 @@ export default function TestExecutionPage() {
     <div className="flex flex-col h-full space-y-4 p-4 md:p-8 pt-6">
       {/* Top Header & Selectors */}
       <PageHeader
-        title="Test Execution"
+        title="Test Executions"
         description="Execute manual test cases and track testing effort in real time."
       >
         <div className="flex flex-wrap items-center gap-3">

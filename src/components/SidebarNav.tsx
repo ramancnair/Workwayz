@@ -187,17 +187,17 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
     {
       href: `${basePath}/testing/test-backlog`,
-      label: "Test Backlog",
+      label: "Test Backlogs",
       icon: ClipboardCheck,
     },
     {
       href: `${basePath}/testing/test-plan`,
-      label: "Test Cycle",
+      label: "Test Cycles",
       icon: FileText,
     },
     {
       href: `${basePath}/testing/test-execution`,
-      label: "Test Execution",
+      label: "Test Executions",
       icon: PlayCircle,
     },
     {

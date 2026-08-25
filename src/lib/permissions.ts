@@ -169,8 +169,11 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/testing`,
         candidates: [
           { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
+          { name: 'Test Backlogs', path: `${basePath}/testing/test-backlog` },
           { name: 'Test Backlog', path: `${basePath}/testing/test-backlog` },
+          { name: 'Test Cycles', path: `${basePath}/testing/test-plan` },
           { name: 'Test Cycle', path: `${basePath}/testing/test-plan` },
+          { name: 'Test Executions', path: `${basePath}/testing/test-execution` },
           { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
           { name: 'Defects', path: `${basePath}/testing/defects` },
           { name: 'Defect Tracker', path: `${basePath}/testing/defect-tracker` },
