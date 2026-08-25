@@ -511,7 +511,7 @@ export default function TestPlanPage() {
           </SelectContent>
         </Select>
         <Button onClick={() => { setEditingPlan(null); setIsPlanDialogOpen(true); }}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Create Test Cycle
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Test Cycle
         </Button>
       </PageHeader>
 
@@ -923,7 +923,7 @@ export default function TestPlanPage() {
       <Dialog open={isPlanDialogOpen} onOpenChange={(open) => { setIsPlanDialogOpen(open); if (!open) setEditingPlan(null); }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingPlan ? 'Edit Test Cycle' : 'Create New Test Cycle'}</DialogTitle>
+            <DialogTitle>{editingPlan ? 'Edit Test Cycle' : 'Add Test Cycle'}</DialogTitle>
           </DialogHeader>
           <Form {...testPlanForm}>
             <form onSubmit={testPlanForm.handleSubmit(onTestPlanSubmit)} className="space-y-4 pt-2">
