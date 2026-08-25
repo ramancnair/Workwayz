@@ -746,6 +746,461 @@ export async function executeClientUpdateSpecifications(params: {
   };
 }
 
+// 13. Client Execute: Update Sprint
+export async function executeClientUpdateSprint(params: {
+  projectId: string;
+  sprintId: string;
+  status?: 'Yet to Start' | 'Current' | 'Completed' | 'Cancelled';
+  startDate?: string;
+  endDate?: string;
+  title?: string;
+}) {
+  const { projectId, sprintId, ...updates } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const sprintRef = doc(projectDocRef, 'sprints', sprintId);
+
+  // Check if updating by ID or document ID
+  let targetRef = sprintRef;
+  const snapshot = await getDocs(collection(projectDocRef, 'sprints'));
+  const match = snapshot.docs.find((d: any) => d.id === sprintId || d.data().title === sprintId);
+  if (match) targetRef = match.ref;
+
+  const payload: any = sanitizeData({ ...updates, updatedAt: new Date().toISOString() });
+  if (updates.status === 'Current') {
+    payload.isCurrent = true;
+  }
+  await updateDoc(targetRef, payload);
+
+  return {
+    success: true,
+    id: targetRef.id,
+    sprintId,
+    status: updates.status,
+    projectId,
+    url: `/projects/${projectId}/development/backlog`,
+  };
+}
+
+// 14. Client Execute: Assign Story to Sprint
+export async function executeClientAssignStoryToSprint(params: {
+  projectId: string;
+  storyId: string;
+  sprintId: string | null;
+}) {
+  const { projectId, storyId, sprintId } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const snapshot = await getDocs(collection(projectDocRef, 'stories'));
+  const match = snapshot.docs.find((d: any) => d.id === storyId || d.data().storyId === storyId);
+
+  if (!match) throw new Error(`Story ${storyId} not found in project ${projectId}`);
+
+  await updateDoc(match.ref, sanitizeData({ sprintId, updatedAt: new Date().toISOString() }));
+
+  return {
+    success: true,
+    id: match.id,
+    storyId: match.data().storyId || storyId,
+    sprintId,
+    projectId,
+    url: `/projects/${projectId}/development/backlog`,
+  };
+}
+
+// 15. Client Execute: Create Test Plan / Cycle
+export async function executeClientCreateTestPlan(params: {
+  projectId: string;
+  name: string;
+  planType: 'Sprint' | 'Release';
+  startDate?: string;
+  endDate?: string;
+  environmentId?: string;
+  sprintId?: string;
+  releaseId?: string;
+}) {
+  const { projectId, name, planType, startDate, endDate, environmentId, sprintId, releaseId } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const snapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+  const newIdNumber = snapshot.size > 0
+    ? Math.max(0, ...snapshot.docs
+      .map((d: any) => d.data().testPlanId)
+      .filter((id: string | undefined) => id && typeof id === 'string')
+      .map((id: string) => parseInt(id.replace('TP-', ''), 10) || 0)
+    ) + 1
+    : 1;
+
+  const testPlanId = `TP-${newIdNumber}`;
+  const payload = sanitizeData({
+    testPlanId,
+    name,
+    planType,
+    startDate: startDate || new Date().toISOString(),
+    endDate: endDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    environmentId: environmentId || 'Dev',
+    sprintId,
+    releaseId,
+    createdAt: new Date().toISOString(),
+  });
+
+  const docRef = await addDoc(collection(projectDocRef, 'testPlans'), payload);
+
+  return {
+    success: true,
+    id: docRef.id,
+    testPlanId,
+    name,
+    planType,
+    projectId,
+    url: `/projects/${projectId}/testing/test-cycle`,
+  };
+}
+
+// 16. Client Execute: Create Release or Milestone
+export async function executeClientCreateRelease(params: {
+  projectId: string;
+  name: string;
+  description?: string;
+  itemType: 'Release' | 'Stage' | 'Milestone';
+  startDate?: string;
+  endDate?: string;
+  milestoneDate?: string;
+}) {
+  const { projectId, name, description = '', itemType, startDate, endDate, milestoneDate } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const snapshot = await getDocs(collection(projectDocRef, 'releases'));
+
+  const prefixMap: Record<string, string> = {
+    Release: 'REL',
+    Stage: 'S',
+    Milestone: 'M',
+  };
+  const prefix = prefixMap[itemType] || 'REL';
+  const existingCount = snapshot.docs.filter((d: any) => d.data().itemType === itemType).length;
+  const releaseId = `${prefix}-${existingCount + 1}`;
+
+  const payload = sanitizeData({
+    releaseId,
+    name,
+    description,
+    itemType,
+    startDate: startDate || new Date().toISOString(),
+    endDate: endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    milestoneDate: milestoneDate || endDate,
+    createdAt: new Date().toISOString(),
+  });
+
+  const docRef = await addDoc(collection(projectDocRef, 'releases'), payload);
+
+  return {
+    success: true,
+    id: docRef.id,
+    releaseId,
+    name,
+    itemType,
+    projectId,
+    url: `/projects/${projectId}/releases`,
+  };
+}
+
+// 17. Client Execute: Create Payment Milestone
+export async function executeClientCreatePaymentMilestone(params: {
+  projectId: string;
+  name: string;
+  billingPercentage: number;
+  amount: number;
+  status?: 'TBD' | 'In Progress' | 'Milestone completed' | 'Invoice raised' | 'Payment Completed';
+}) {
+  const { projectId, name, billingPercentage, amount, status = 'TBD' } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const snapshot = await getDocs(collection(projectDocRef, 'paymentMilestones'));
+
+  const newIdNumber = snapshot.size > 0
+    ? Math.max(0, ...snapshot.docs
+      .map((d: any) => d.data().milestoneId)
+      .filter((id: string | undefined) => id && typeof id === 'string')
+      .map((id: string) => parseInt(id.replace('PM-', ''), 10) || 0)
+    ) + 1
+    : 1;
+
+  const milestoneId = `PM-${newIdNumber}`;
+  const payload = sanitizeData({
+    milestoneId,
+    name,
+    billingPercentage: Number(billingPercentage) || 0,
+    amount: Number(amount) || 0,
+    status,
+    createdAt: new Date().toISOString(),
+  });
+
+  const docRef = await addDoc(collection(projectDocRef, 'paymentMilestones'), payload);
+
+  return {
+    success: true,
+    id: docRef.id,
+    milestoneId,
+    name,
+    amount,
+    status,
+    projectId,
+    url: `/projects/${projectId}/pmo/fb-payment-milestones`,
+  };
+}
+
+// 18. Client Execute: Assign Project Resource
+export async function executeClientAssignProjectResource(params: {
+  projectId: string;
+  userId?: string;
+  name?: string;
+  role: 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';
+  onboardingDate?: string;
+  offloadingDate?: string;
+  billedRate?: number;
+  costRate?: number;
+}) {
+  const { projectId, userId, name, role, onboardingDate, offloadingDate, billedRate = 0, costRate = 0 } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+
+  // Find user from all users or create placeholder
+  let empId = userId;
+  let firstName = name || 'Resource';
+  let lastName = '';
+  let email = '';
+
+  if (userId) {
+    const allUsersSnapshot = await getDocs(collection(db, 'employees'));
+    const found = allUsersSnapshot.docs.find((d: any) => d.id === userId || d.data().empId === userId || `${d.data().firstName} ${d.data().lastName}`.toLowerCase().includes(userId.toLowerCase()));
+    if (found) {
+      const uData = found.data();
+      empId = found.id;
+      firstName = uData.firstName || firstName;
+      lastName = uData.lastName || '';
+      email = uData.email || '';
+    }
+  }
+
+  const safeEmpId = empId || `EMP-${Date.now()}`;
+  const payload = sanitizeData({
+    id: safeEmpId,
+    empId: safeEmpId,
+    firstName,
+    lastName,
+    email,
+    role,
+    onboardingDate: onboardingDate || new Date().toISOString(),
+    offloadingDate: offloadingDate || null,
+    billedRate: Number(billedRate) || 0,
+    costRate: Number(costRate) || 0,
+    createdAt: new Date().toISOString(),
+  });
+
+  await setDoc(doc(projectDocRef, 'employees', safeEmpId), payload);
+
+  return {
+    success: true,
+    id: safeEmpId,
+    name: `${firstName} ${lastName}`.trim(),
+    role,
+    projectId,
+    url: `/projects/${projectId}/resources/project-resources`,
+  };
+}
+
+// 19. Client Execute: Log Work (Timesheet)
+export async function executeClientLogWork(params: {
+  projectId: string;
+  employeeId?: string;
+  date?: string;
+  itemId: string;
+  hours: number;
+  itemType?: 'WorkItem' | 'Meeting' | 'Other';
+  description?: string;
+}) {
+  const { projectId, employeeId = 'emp1', date = new Date().toISOString().split('T')[0], itemId, hours, itemType = 'WorkItem', description } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const worklogDocId = `${employeeId}-${date}`;
+  const worklogRef = doc(projectDocRef, 'worklogs', worklogDocId);
+
+  const newLogItem = {
+    itemId,
+    itemType,
+    hours: Number(hours) || 0,
+    description: description || '',
+  };
+
+  const existingDoc = await getDocs(collection(projectDocRef, 'worklogs'));
+  const found = existingDoc.docs.find((d: any) => d.id === worklogDocId);
+
+  if (found) {
+    const data = found.data();
+    const items = data.items || [];
+    items.push(newLogItem);
+    const totalHours = items.reduce((acc: number, cur: any) => acc + (cur.hours || 0), 0);
+    await updateDoc(worklogRef, sanitizeData({ items, totalHours, updatedAt: new Date().toISOString() }));
+  } else {
+    await setDoc(worklogRef, sanitizeData({
+      id: worklogDocId,
+      employeeId,
+      date,
+      items: [newLogItem],
+      totalHours: Number(hours) || 0,
+      createdAt: new Date().toISOString(),
+    }));
+  }
+
+  return {
+    success: true,
+    id: worklogDocId,
+    hours,
+    itemId,
+    date,
+    projectId,
+    url: `/projects/${projectId}/resources/worklog`,
+  };
+}
+
+// 20. Client Execute: Add Environment
+export async function executeClientAddEnvironment(params: {
+  projectId: string;
+  name: string;
+  order?: number;
+  url?: string;
+}) {
+  const { projectId, name, order = 0, url = '' } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const payload = sanitizeData({
+    name,
+    order: Number(order) || 0,
+    url,
+    createdAt: new Date().toISOString(),
+  });
+
+  const docRef = await addDoc(collection(projectDocRef, 'environments'), payload);
+
+  return {
+    success: true,
+    id: docRef.id,
+    name,
+    url,
+    projectId,
+    urlPath: `/projects/${projectId}/project-settings`,
+  };
+}
+
+// 21. Client Execute: Add Code Repository
+export async function executeClientAddCodeRepository(params: {
+  projectId: string;
+  name: string;
+  url: string;
+}) {
+  const { projectId, name, url } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const payload = sanitizeData({
+    name,
+    url,
+    createdAt: new Date().toISOString(),
+  });
+
+  const docRef = await addDoc(collection(projectDocRef, 'codeRepositories'), payload);
+
+  return {
+    success: true,
+    id: docRef.id,
+    name,
+    url,
+    projectId,
+    urlPath: `/projects/${projectId}/pmo/business-continuity`,
+  };
+}
+
+// 22. Client Execute: Add Fixed Cost
+export async function executeClientAddFixedCost(params: {
+  projectId: string;
+  name: string;
+  cost: number;
+  type?: 'One time' | 'Monthly';
+}) {
+  const { projectId, name, cost, type = 'One time' } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const payload = sanitizeData({
+    name,
+    cost: Number(cost) || 0,
+    type,
+    createdAt: new Date().toISOString(),
+  });
+
+  const docRef = await addDoc(collection(projectDocRef, 'fixedCosts'), payload);
+
+  return {
+    success: true,
+    id: docRef.id,
+    name,
+    cost,
+    type,
+    projectId,
+    url: `/projects/${projectId}/pmo/fb-billing`,
+  };
+}
+
+// 23. Client Execute: Update RAID Item
+export async function executeClientUpdateRaidItem(params: {
+  projectId: string;
+  raidType: 'risk' | 'assumption' | 'issue' | 'dependency';
+  itemId: string;
+  status?: string;
+  priority?: 'Low' | 'Medium' | 'High' | 'Critical';
+  mitigationPlan?: string;
+  residualRisk?: string;
+}) {
+  const { projectId, raidType, itemId, ...updates } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const collectionNameMap: Record<string, string> = {
+    risk: 'risks',
+    assumption: 'assumptions',
+    issue: 'issues',
+    dependency: 'dependencies',
+  };
+  const collName = collectionNameMap[raidType] || 'issues';
+  const idField = `${raidType}Id`;
+
+  const snapshot = await getDocs(collection(projectDocRef, collName));
+  const match = snapshot.docs.find((d: any) => d.id === itemId || d.data()[idField] === itemId);
+
+  if (!match) throw new Error(`${raidType} ${itemId} not found`);
+
+  await updateDoc(match.ref, sanitizeData({ ...updates, updatedAt: new Date().toISOString() }));
+
+  return {
+    success: true,
+    id: match.id,
+    itemId: match.data()[idField] || itemId,
+    raidType,
+    status: updates.status,
+    projectId,
+    url: `/projects/${projectId}/raid-dashboard`,
+  };
+}
+
 // Master Dispatcher for client-side tool execution
 export async function executeHermesActionOnClient(action: any) {
   const toolName = action.toolName;
@@ -765,10 +1220,18 @@ export async function executeHermesActionOnClient(action: any) {
         return await executeClientCreateEpic(params);
       case 'createSprint':
         return await executeClientCreateSprint(params);
+      case 'updateSprint':
+        return await executeClientUpdateSprint(params);
+      case 'assignStoryToSprint':
+        return await executeClientAssignStoryToSprint(params);
       case 'createTestCase':
         return await executeClientCreateTestCase(params);
+      case 'createTestPlan':
+        return await executeClientCreateTestPlan(params);
       case 'createRaidItem':
         return await executeClientCreateRaidItem(params);
+      case 'updateRaidItem':
+        return await executeClientUpdateRaidItem(params);
       case 'updateProjectDetails':
       case 'updateProjectSummary':
         return await executeClientUpdateProjectDetails(params);
@@ -778,6 +1241,20 @@ export async function executeHermesActionOnClient(action: any) {
         return await executeClientAddHorizontal(params);
       case 'updateProjectSpecifications':
         return await executeClientUpdateSpecifications(params);
+      case 'createRelease':
+        return await executeClientCreateRelease(params);
+      case 'createPaymentMilestone':
+        return await executeClientCreatePaymentMilestone(params);
+      case 'assignProjectResource':
+        return await executeClientAssignProjectResource(params);
+      case 'logWork':
+        return await executeClientLogWork(params);
+      case 'addEnvironment':
+        return await executeClientAddEnvironment(params);
+      case 'addCodeRepository':
+        return await executeClientAddCodeRepository(params);
+      case 'addFixedCost':
+        return await executeClientAddFixedCost(params);
       default:
         console.warn(`Unknown client action tool: ${toolName}`);
         return action;

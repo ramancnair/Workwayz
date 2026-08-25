@@ -610,6 +610,399 @@ export const updateProjectSpecificationsTool = ai.defineTool(
   }
 );
 
+// 16. Tool: Update Sprint
+export const updateSprintTool = ai.defineTool(
+  {
+    name: 'updateSprint',
+    description: 'Updates a sprint status (Yet to Start, Current, Completed, Cancelled), dates, or title.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      sprintId: z.string().describe('The Sprint ID or title (e.g. "Sprint 1").'),
+      status: z.enum(['Yet to Start', 'Current', 'Completed', 'Cancelled']).optional().describe('New sprint status.'),
+      startDate: z.string().optional().describe('Start date (YYYY-MM-DD).'),
+      endDate: z.string().optional().describe('End date (YYYY-MM-DD).'),
+      title: z.string().optional().describe('Updated sprint title.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      sprintId: z.string(),
+      status: z.string().optional(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      sprintId: input.sprintId,
+      status: input.status,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/development/backlog`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 17. Tool: Assign Story to Sprint
+export const assignStoryToSprintTool = ai.defineTool(
+  {
+    name: 'assignStoryToSprint',
+    description: 'Assigns a user story, bug, or task to a sprint, or moves it to the backlog (null sprint).',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      storyId: z.string().describe('The Story ID or Bug ID (e.g. "ST-1", "BUG-2").'),
+      sprintId: z.string().nullable().describe('The Sprint ID/doc ID to assign to, or null for Backlog.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      storyId: z.string(),
+      sprintId: z.string().nullable(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      storyId: input.storyId,
+      sprintId: input.sprintId,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/development/backlog`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 18. Tool: Create Test Plan / Cycle
+export const createTestPlanTool = ai.defineTool(
+  {
+    name: 'createTestPlan',
+    description: 'Creates a QA Test Plan / Test Cycle (e.g. Sprint Test Cycle or Release Test Cycle on Dev/SIT/UAT/Prod).',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      name: z.string().describe('Name of the test plan (e.g. "Sprint 1 Regression", "SIT Cycle 1").'),
+      planType: z.enum(['Sprint', 'Release']).describe('Type: Sprint or Release.'),
+      startDate: z.string().optional().describe('Start date (YYYY-MM-DD).'),
+      endDate: z.string().optional().describe('End date (YYYY-MM-DD).'),
+      environmentId: z.string().optional().describe('Target environment (Dev, SIT, UAT, Production).'),
+      sprintId: z.string().optional().describe('Associated sprint ID.'),
+      releaseId: z.string().optional().describe('Associated release ID.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      testPlanId: z.string().optional(),
+      name: z.string(),
+      planType: z.string(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      name: input.name,
+      planType: input.planType,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/testing/test-cycle`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 19. Tool: Update RAID Item
+export const updateRaidItemTool = ai.defineTool(
+  {
+    name: 'updateRaidItem',
+    description: 'Updates a risk, assumption, issue, or dependency (e.g. close issue, update mitigation plan, change status).',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      raidType: z.enum(['risk', 'assumption', 'issue', 'dependency']).describe('Type of RAID entity.'),
+      itemId: z.string().describe('ID of the item (e.g. "RSK-1", "ISS-2", "DEP-1", "ASM-1").'),
+      status: z.string().optional().describe('New status (e.g. "Closed", "Resolved", "Validated", "Blocked").'),
+      priority: z.enum(['Low', 'Medium', 'High', 'Critical']).optional().describe('Priority for issue.'),
+      mitigationPlan: z.string().optional().describe('Updated mitigation plan for risk.'),
+      residualRisk: z.string().optional().describe('Residual risk note.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      itemId: z.string(),
+      raidType: z.string(),
+      status: z.string().optional(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      itemId: input.itemId,
+      raidType: input.raidType,
+      status: input.status,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/raid-dashboard`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 20. Tool: Create Release or Milestone
+export const createReleaseTool = ai.defineTool(
+  {
+    name: 'createRelease',
+    description: 'Creates a project Release, Stage, or Milestone with target delivery dates.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      name: z.string().describe('Name of the release (e.g. "v1.0 MVP Launch", "Phase 1 Beta").'),
+      description: z.string().optional().describe('Scope and release notes.'),
+      itemType: z.enum(['Release', 'Stage', 'Milestone']).describe('Type: Release, Stage, or Milestone.'),
+      startDate: z.string().optional().describe('Start date (YYYY-MM-DD).'),
+      endDate: z.string().optional().describe('Target completion date (YYYY-MM-DD).'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      releaseId: z.string().optional(),
+      name: z.string(),
+      itemType: z.string(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      name: input.name,
+      itemType: input.itemType,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/releases`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 21. Tool: Create Payment Milestone
+export const createPaymentMilestoneTool = ai.defineTool(
+  {
+    name: 'createPaymentMilestone',
+    description: 'Creates a contract billing payment milestone with percentage, dollar amount, and status.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      name: z.string().describe('Milestone name (e.g. "Sign-off & Initial Deposit", "UAT Completion Milestone").'),
+      billingPercentage: z.number().describe('Billing percentage (e.g. 25 for 25%).'),
+      amount: z.number().describe('Billing dollar amount (e.g. 50000).'),
+      status: z.enum(['TBD', 'In Progress', 'Milestone completed', 'Invoice raised', 'Payment Completed']).default('TBD'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      milestoneId: z.string().optional(),
+      name: z.string(),
+      amount: z.number(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      name: input.name,
+      amount: input.amount,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/pmo/fb-payment-milestones`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 22. Tool: Assign Project Resource
+export const assignProjectResourceTool = ai.defineTool(
+  {
+    name: 'assignProjectResource',
+    description: 'Assigns a team member / engineer to a project with role, onboarding dates, and billing rates.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      userId: z.string().optional().describe('User ID or email/employee name.'),
+      name: z.string().optional().describe('Full name of the resource.'),
+      role: z.enum(['Developer', 'Tester', 'Architect', 'BA', 'PM', 'Program Director']).describe('Project role.'),
+      onboardingDate: z.string().optional().describe('Onboarding date (YYYY-MM-DD).'),
+      offloadingDate: z.string().optional().describe('Offloading date (YYYY-MM-DD).'),
+      billedRate: z.number().optional().describe('Daily billed rate in USD.'),
+      costRate: z.number().optional().describe('Daily cost rate in USD.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      name: z.string(),
+      role: z.string(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      name: input.name || input.userId || 'Team Member',
+      role: input.role,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/resources/project-resources`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 23. Tool: Log Timesheet Work
+export const logWorkTool = ai.defineTool(
+  {
+    name: 'logWork',
+    description: 'Logs hours worked on a project against a story or task for timesheets.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      employeeId: z.string().optional().describe('Employee ID or email. Defaults to logged-in user.'),
+      itemId: z.string().describe('Story ID, Bug ID, Task ID, or "meeting".'),
+      hours: z.number().describe('Number of hours worked (e.g. 4 or 7.5).'),
+      date: z.string().optional().describe('Work date (YYYY-MM-DD). Defaults to today.'),
+      description: z.string().optional().describe('Worklog notes or activity description.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      hours: z.number(),
+      itemId: z.string(),
+      date: z.string().optional(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      hours: input.hours,
+      itemId: input.itemId,
+      date: input.date,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/resources/worklog`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 24. Tool: Add Project Environment
+export const addEnvironmentTool = ai.defineTool(
+  {
+    name: 'addEnvironment',
+    description: 'Adds a project deployment environment (e.g. "Dev", "SIT", "UAT", "Staging", "Production").',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      name: z.string().describe('Environment name.'),
+      order: z.number().optional().describe('Display order sequence.'),
+      url: z.string().optional().describe('Environment URL endpoint.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      name: z.string(),
+      projectId: z.string(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      name: input.name,
+      projectId: input.projectId,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 25. Tool: Add Code Repository
+export const addCodeRepositoryTool = ai.defineTool(
+  {
+    name: 'addCodeRepository',
+    description: 'Links a GitHub/GitLab/Bitbucket repository to the project.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      name: z.string().describe('Repository name or label (e.g. "Backend API", "Mobile App Repo").'),
+      url: z.string().describe('Repository URL (e.g. "https://github.com/org/repo").'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      name: z.string(),
+      url: z.string(),
+      projectId: z.string(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      name: input.name,
+      url: input.url,
+      projectId: input.projectId,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
+// 26. Tool: Add Fixed Cost
+export const addFixedCostTool = ai.defineTool(
+  {
+    name: 'addFixedCost',
+    description: 'Adds a non-labor fixed cost (e.g. software licenses, cloud servers, travel expenses) to project financials.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      name: z.string().describe('Cost item name (e.g. "AWS Cloud Hosting", "Figma Enterprise License").'),
+      cost: z.number().describe('Dollar cost amount.'),
+      type: z.enum(['One time', 'Monthly']).default('One time').describe('Billing frequency.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      name: z.string(),
+      cost: z.number(),
+      type: z.string().optional(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    return {
+      success: true,
+      name: input.name,
+      cost: input.cost,
+      type: input.type,
+      projectId: input.projectId,
+      url: `/projects/${input.projectId}/pmo/fb-billing`,
+      needsClientExecution: true,
+      params: input,
+    };
+  }
+);
+
 export const allHermesTools = [
   createPortfolioTool,
   listPortfoliosTool,
@@ -622,8 +1015,19 @@ export const allHermesTools = [
   updateProjectSpecificationsTool,
   createEpicTool,
   createSprintTool,
+  updateSprintTool,
+  assignStoryToSprintTool,
   createTestCaseTool,
+  createTestPlanTool,
   createRaidItemTool,
+  updateRaidItemTool,
+  createReleaseTool,
+  createPaymentMilestoneTool,
+  assignProjectResourceTool,
+  logWorkTool,
+  addEnvironmentTool,
+  addCodeRepositoryTool,
+  addFixedCostTool,
   queryProjectDataContextTool,
   listProjectsTool,
 ];

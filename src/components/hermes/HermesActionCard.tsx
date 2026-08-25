@@ -17,6 +17,13 @@ import {
   ArrowUpRight,
   Sparkles,
   Layers,
+  Calendar,
+  DollarSign,
+  UserCheck,
+  Clock,
+  Server,
+  GitBranch,
+  CreditCard,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,14 +49,17 @@ export function HermesActionCard({ action, onNavigate }: HermesActionCardProps) 
       case 'Feature Change':
         return <GitCommit className="w-4 h-4 text-amber-500" />;
       case 'createSprint':
+      case 'updateSprint':
         return <Rocket className="w-4 h-4 text-purple-500" />;
       case 'createEpic':
+      case 'assignStoryToSprint':
         return <Layers className="w-4 h-4 text-indigo-500" />;
       case 'createPortfolio':
         return <FolderKanban className="w-4 h-4 text-violet-500" />;
       case 'createProject':
         return <FolderKanban className="w-4 h-4 text-cyan-600" />;
       case 'createTestCase':
+      case 'createTestPlan':
         return <FileCheck className="w-4 h-4 text-teal-500" />;
       case 'risk':
         return <ShieldAlert className="w-4 h-4 text-orange-500" />;
@@ -65,6 +75,20 @@ export function HermesActionCard({ action, onNavigate }: HermesActionCardProps) 
         return <Layers className="w-4 h-4 text-cyan-500" />;
       case 'addHorizontal':
         return <GitCommit className="w-4 h-4 text-purple-500" />;
+      case 'createRelease':
+        return <Calendar className="w-4 h-4 text-pink-500" />;
+      case 'createPaymentMilestone':
+        return <DollarSign className="w-4 h-4 text-emerald-600" />;
+      case 'assignProjectResource':
+        return <UserCheck className="w-4 h-4 text-blue-600" />;
+      case 'logWork':
+        return <Clock className="w-4 h-4 text-amber-600" />;
+      case 'addEnvironment':
+        return <Server className="w-4 h-4 text-slate-500" />;
+      case 'addCodeRepository':
+        return <GitBranch className="w-4 h-4 text-violet-600" />;
+      case 'addFixedCost':
+        return <CreditCard className="w-4 h-4 text-orange-600" />;
       default:
         return <Sparkles className="w-4 h-4 text-primary" />;
     }
@@ -93,6 +117,9 @@ export function HermesActionCard({ action, onNavigate }: HermesActionCardProps) 
     if (action.toolName === 'updateWorkItem') {
       return `Updated ${action.itemType || 'Work Item'}`;
     }
+    if (action.toolName === 'assignStoryToSprint') {
+      return 'Assigned to Sprint';
+    }
     if (action.toolName === 'createPortfolio') {
       return 'Created Portfolio';
     }
@@ -114,14 +141,44 @@ export function HermesActionCard({ action, onNavigate }: HermesActionCardProps) 
     if (action.toolName === 'createSprint') {
       return 'Created Sprint';
     }
+    if (action.toolName === 'updateSprint') {
+      return 'Updated Sprint';
+    }
     if (action.toolName === 'createEpic') {
       return 'Created Epic';
     }
     if (action.toolName === 'createTestCase') {
       return 'Created Test Case';
     }
+    if (action.toolName === 'createTestPlan') {
+      return 'Created Test Cycle';
+    }
     if (action.toolName === 'createRaidItem') {
       return `Logged ${action.raidType?.toUpperCase() || 'RAID Item'}`;
+    }
+    if (action.toolName === 'updateRaidItem') {
+      return `Updated ${action.raidType?.toUpperCase() || 'RAID Item'}`;
+    }
+    if (action.toolName === 'createRelease') {
+      return `Created ${action.itemType || 'Release'}`;
+    }
+    if (action.toolName === 'createPaymentMilestone') {
+      return 'Created Payment Milestone';
+    }
+    if (action.toolName === 'assignProjectResource') {
+      return 'Assigned Resource';
+    }
+    if (action.toolName === 'logWork') {
+      return 'Logged Timesheet Hours';
+    }
+    if (action.toolName === 'addEnvironment') {
+      return 'Added Environment';
+    }
+    if (action.toolName === 'addCodeRepository') {
+      return 'Linked Code Repository';
+    }
+    if (action.toolName === 'addFixedCost') {
+      return 'Added Fixed Cost';
     }
     return 'Action Executed';
   };
