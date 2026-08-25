@@ -31,11 +31,27 @@ export function getActiveAiConfig() {
     }
   }
 
-  if (!configuredModel) {
-    if (provider === 'google') configuredModel = 'gemini-2.5-flash';
-    else if (provider === 'lmstudio') configuredModel = 'meta/muse-glimmer';
-    else if (provider === 'openai') configuredModel = 'gpt-4o';
-    else if (provider === 'ollama') configuredModel = 'llama3';
+  // Provider-aware model sanitization and validation
+  if (provider === 'google') {
+    if (!configuredModel || configuredModel === 'local-model' || !configuredModel.startsWith('gemini-')) {
+      configuredModel = 'gemini-2.5-flash';
+    }
+  } else if (provider === 'openai') {
+    if (!configuredModel || configuredModel === 'local-model' || configuredModel.startsWith('gemini-')) {
+      configuredModel = 'gpt-4o';
+    }
+  } else if (provider === 'anthropic') {
+    if (!configuredModel || !configuredModel.startsWith('claude-')) {
+      configuredModel = 'claude-3-5-sonnet';
+    }
+  } else if (provider === 'lmstudio') {
+    if (!configuredModel || configuredModel.startsWith('gemini-')) {
+      configuredModel = 'meta/muse-glimmer';
+    }
+  } else if (provider === 'ollama') {
+    if (!configuredModel || configuredModel.startsWith('gemini-') || configuredModel === 'local-model') {
+      configuredModel = 'llama3';
+    }
   }
 
   return { provider, apiKey, localBaseUrl, model: configuredModel };

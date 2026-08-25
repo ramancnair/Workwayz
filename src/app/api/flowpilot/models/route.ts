@@ -3,6 +3,63 @@ import fs from 'fs';
 import path from 'path';
 import { getActiveAiDetails } from '@/ai/flows/flowpilot-agent';
 
+// Cache for live models with 5-minute TTL
+let geminiModelCache: { timestamp: number; models: string[] } | null = null;
+
+async function getLiveGeminiModels(apiKey?: string): Promise<string[]> {
+  if (!apiKey) {
+    return ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'];
+  }
+
+  const now = Date.now();
+  if (geminiModelCache && now - geminiModelCache.timestamp < 5 * 60 * 1000) {
+    return geminiModelCache.models;
+  }
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.models && Array.isArray(data.models)) {
+        const filtered = data.models
+          .filter((m: any) => {
+            const hasGenerate = m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent');
+            const name = (m.name || '').toLowerCase();
+            const isExcluded =
+              name.includes('tts') ||
+              name.includes('robotics') ||
+              name.includes('clip') ||
+              name.includes('embedding') ||
+              name.includes('banana') ||
+              name.includes('preview-customtools');
+            return hasGenerate && !isExcluded;
+          })
+          .map((m: any) => m.name.replace('models/', ''));
+
+        // Sort models: latest/popular first
+        const sorted = filtered.sort((a: string, b: string) => {
+          if (a.includes('3.7') && !b.includes('3.7')) return -1;
+          if (!a.includes('3.7') && b.includes('3.7')) return 1;
+          if (a.includes('2.5-flash') && !b.includes('2.5-flash')) return -1;
+          if (!a.includes('2.5-flash') && b.includes('2.5-flash')) return 1;
+          if (a.includes('2.5-pro') && !b.includes('2.5-pro')) return -1;
+          if (!a.includes('2.5-pro') && b.includes('2.5-pro')) return 1;
+          return a.localeCompare(b);
+        });
+
+        geminiModelCache = { timestamp: now, models: sorted };
+        return sorted;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch live models from Google API, using cached/fallback:', err);
+  }
+
+  return geminiModelCache?.models || ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'];
+}
+
 export async function GET() {
   try {
     const activeDetails = await getActiveAiDetails();
@@ -28,7 +85,18 @@ export async function GET() {
       isLmStudioRunning = false;
     }
 
-    const geminiModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
+    // Resolve Gemini API key
+    let geminiApiKey = process.env.GEMINI_API_KEY;
+    try {
+      const connsPath = path.join(process.cwd(), 'connections.json');
+      if (fs.existsSync(connsPath)) {
+        const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
+        const googleConfig = conns.ai?.find((p: any) => p.provider === 'google');
+        if (googleConfig?.apiKey) geminiApiKey = googleConfig.apiKey;
+      }
+    } catch (e) {}
+
+    const geminiModels = await getLiveGeminiModels(geminiApiKey);
 
     return NextResponse.json({
       active: activeDetails,
@@ -80,6 +148,17 @@ export async function POST(request: Request) {
       fs.writeFileSync(connsPath, JSON.stringify(conns, null, 2), 'utf8');
     }
 
+    // Also update .env.local if present
+    try {
+      const envPath = path.join(process.cwd(), '.env.local');
+      if (fs.existsSync(envPath)) {
+        let envContent = fs.readFileSync(envPath, 'utf8');
+        envContent = envContent.replace(/NEXT_PUBLIC_AI_PROVIDER=.*/g, `NEXT_PUBLIC_AI_PROVIDER="${provider}"`);
+        envContent = envContent.replace(/AI_DEFAULT_MODEL=.*/g, `AI_DEFAULT_MODEL="${model}"`);
+        fs.writeFileSync(envPath, envContent, 'utf8');
+      }
+    } catch (e) {}
+
     const updated = await getActiveAiDetails();
     return NextResponse.json({ success: true, active: updated });
   } catch (error: any) {
@@ -87,4 +166,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

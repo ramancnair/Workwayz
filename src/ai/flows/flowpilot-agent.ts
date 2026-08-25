@@ -1,6 +1,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { allFlowPilotTools } from './flowpilot-tools';
+import { allFlowPilotTools, toolExecutionStore } from './flowpilot-tools';
 
 export const FlowPilotMessageSchema = z.object({
   role: z.enum(['user', 'model', 'system']),
@@ -12,6 +12,7 @@ export const FlowPilotAgentInputSchema = z.object({
   messages: z.array(FlowPilotMessageSchema),
   currentProjectId: z.string().optional(),
   currentProjectName: z.string().optional(),
+  activeProjectSnapshot: z.any().optional(),
   currentUser: z
     .object({
       empId: z.string().optional(),
@@ -124,12 +125,27 @@ export async function getActiveAiDetails(): Promise<AiDetails> {
     }
   }
 
-  if (!model) {
-    if (p === 'google') model = 'gemini-2.5-flash';
-    else if (p === 'openai') model = 'gpt-4o';
-    else if (p === 'anthropic') model = 'claude-3-5-sonnet';
-    else if (p === 'lmstudio') model = 'local-model';
-    else if (p === 'ollama') model = 'llama3';
+  // Provider-aware model sanitization and validation
+  if (p === 'google') {
+    if (!model || model === 'local-model' || !model.startsWith('gemini-')) {
+      model = 'gemini-2.5-flash';
+    }
+  } else if (p === 'openai') {
+    if (!model || model === 'local-model' || model.startsWith('gemini-')) {
+      model = 'gpt-4o';
+    }
+  } else if (p === 'anthropic') {
+    if (!model || !model.startsWith('claude-')) {
+      model = 'claude-3-5-sonnet';
+    }
+  } else if (p === 'lmstudio') {
+    if (!model || model.startsWith('gemini-')) {
+      model = 'meta/muse-glimmer';
+    }
+  } else if (p === 'ollama') {
+    if (!model || model.startsWith('gemini-') || model === 'local-model') {
+      model = 'llama3';
+    }
   }
 
   const cleanModelName = model.replace(/^googleai\//, '').replace(/^openai\//, '').replace(/^lmstudio\//, '').replace(/^ollama\//, '');
@@ -137,7 +153,7 @@ export async function getActiveAiDetails(): Promise<AiDetails> {
   let displayName = `${cleanModelName}`;
   if (p === 'lmstudio') displayName = `LM Studio: ${cleanModelName}`;
   else if (p === 'ollama') displayName = `Ollama: ${cleanModelName}`;
-  else if (p === 'google') displayName = `Google: ${cleanModelName}`;
+  else if (p === 'google') displayName = `Gemini: ${cleanModelName}`;
   else if (p === 'openai') displayName = `OpenAI: ${cleanModelName}`;
   else if (p === 'anthropic') displayName = `Anthropic: ${cleanModelName}`;
 
@@ -150,8 +166,27 @@ export async function getActiveAiDetails(): Promise<AiDetails> {
 }
 
 export async function runFlowPilotAgent(input: FlowPilotAgentInput): Promise<FlowPilotAgentOutput> {
-  const { messages, currentProjectId, currentProjectName, currentUser } = input;
+  const { messages, currentProjectId, currentProjectName, currentUser, activeProjectSnapshot } = input;
   const aiDetails = await getActiveAiDetails();
+
+  let liveSnapshotContext = '';
+  if (activeProjectSnapshot) {
+    const s = activeProjectSnapshot;
+    liveSnapshotContext = `
+=== LIVE PROJECT DATA (AUTHENTICATED SNAPSHOT) ===
+- Project ID: "${s.id}" | Name: "${s.name}" | Status: "${s.status}"
+- Executive Summary: ${s.summary || 'None set yet'}
+- Project Description: ${s.description || 'None set yet'}
+- Impacted Systems (${s.impactedSystems?.length || 0}):
+${s.impactedSystems && s.impactedSystems.length > 0 ? s.impactedSystems.map((sys: any) => `  * [${sys.category || 'Technology'}] "${sys.name}": ${sys.description || 'No description'} (Estimate: ${sys.estimate || 0} man-days, Rate: $${sys.dailyBillingRate || 0})`).join('\n') : '  None'}
+- Horizontals (${s.horizontals?.length || 0}):
+${s.horizontals && s.horizontals.length > 0 ? s.horizontals.map((h: any) => `  * "${h.name}": ${h.weightage || 0}% weightage (Rate: $${h.dailyBillingRate || 0})`).join('\n') : '  None'}
+- Existing Work Items / Stories (${s.stories?.length || 0}):
+${s.stories && s.stories.length > 0 ? s.stories.map((st: any) => `  * ${st.storyId || st.id}: "${st.title}" (${st.itemType || 'Story'}, Status: ${st.status || 'To Do'}, Priority: ${st.priority || 'Medium'})`).join('\n') : '  None'}
+- Sprints: ${s.sprints && s.sprints.length > 0 ? s.sprints.map((sp: any) => `${sp.title} (${sp.status})`).join(', ') : 'None'}
+- Epics: ${s.epics && s.epics.length > 0 ? s.epics.map((ep: any) => ep.title).join(', ') : 'None'}
+`;
+  }
 
   const systemInstruction = `You are FlowPilot, the autonomous AI Project Management Copilot built natively inside ProjectFlow.
 You assist engineering leads, project managers, QA testers, PMO directors, and team members with seamless management of software projects.
@@ -207,6 +242,7 @@ You assist engineering leads, project managers, QA testers, PMO directors, and t
 - Current Project ID: ${currentProjectId ? `"${currentProjectId}"` : 'None (Global Workspace Scope)'}
 - Current Project Name: ${currentProjectName ? `"${currentProjectName}"` : 'None'}
 - Current User: ${currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : 'User'} (${currentUser?.accessLevel || 'Team Member'})
+${liveSnapshotContext}
 
 === STRICT OPERATING RULES & GUIDELINES ===
 1. **MANDATORY TOOL INVOCATION**:
@@ -261,10 +297,32 @@ You assist engineering leads, project managers, QA testers, PMO directors, and t
       generateOptions.messages = historyMessages;
     }
 
-    const response = await ai.generate(generateOptions);
+    let response: any;
 
-    // Inspect tool responses from generation if available
-    if (response.messages) {
+    response = await toolExecutionStore.run(executedActions, async () => {
+      try {
+        return await ai.generate(generateOptions);
+      } catch (genErr: any) {
+        const errMsg = (genErr.message || '').toLowerCase();
+        const isOverloadedOr503 =
+          errMsg.includes('503') ||
+          errMsg.includes('unavailable') ||
+          errMsg.includes('high demand') ||
+          errMsg.includes('overloaded') ||
+          errMsg.includes('resource exhausted');
+
+        if (isOverloadedOr503 && aiDetails.provider === 'google' && genkitModel !== 'googleai/gemini-2.5-flash') {
+          console.warn(`Model ${genkitModel} is busy (${genErr.message}). Retrying with gemini-2.5-flash fallback...`);
+          generateOptions.model = 'googleai/gemini-2.5-flash';
+          return await ai.generate(generateOptions);
+        } else {
+          throw genErr;
+        }
+      }
+    });
+
+    // Also inspect any additional tool responses from generation response messages
+    if (response?.messages) {
       for (const msg of response.messages) {
         if (msg.content) {
           for (const part of msg.content as any[]) {
@@ -272,10 +330,15 @@ You assist engineering leads, project managers, QA testers, PMO directors, and t
               const toolName = part.toolResponse.name;
               const output = part.toolResponse.output;
               if (output && typeof output === 'object') {
-                executedActions.push({
-                  toolName,
-                  ...output,
-                });
+                const alreadyAdded = executedActions.some(
+                  (a) => a.toolName === toolName && (a.id === output.id || a.title === output.title || a.name === output.name)
+                );
+                if (!alreadyAdded) {
+                  executedActions.push({
+                    toolName,
+                    ...output,
+                  });
+                }
               }
             }
           }
@@ -284,7 +347,7 @@ You assist engineering leads, project managers, QA testers, PMO directors, and t
     }
 
     return {
-      reply: response.text || 'I have completed your request.',
+      reply: response?.text || 'I have completed your request.',
       executedActions: executedActions.length > 0 ? executedActions : undefined,
       aiDetails,
     };

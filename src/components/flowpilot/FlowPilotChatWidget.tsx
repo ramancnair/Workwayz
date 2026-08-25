@@ -26,7 +26,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { FlowPilotActionCard } from './FlowPilotActionCard';
 import type { FlowPilotActionItem } from '@/ai/flows/flowpilot-agent';
-import { collection, getDocs, db } from '@/lib/db-provider';
+import { collection, getDocs, doc, getDoc, db } from '@/lib/db-provider';
 import { executeFlowPilotActionOnClient } from '@/lib/flowpilot-client-executor';
 
 import { useToast } from '@/hooks/use-toast';
@@ -232,6 +232,79 @@ export function FlowPilotChatWidget() {
     abortControllerRef.current = controller;
 
     try {
+      // Build live authenticated project snapshot if project is selected
+      let activeProjectSnapshot: any = null;
+      if (selectedProjectId && db) {
+        try {
+          const projectRef = doc(db, 'projects', selectedProjectId);
+          const [pSnap, sysSnap, horSnap, storiesSnap, sprintsSnap, epicsSnap] = await Promise.all([
+            getDoc(projectRef).catch(() => null),
+            getDocs(collection(projectRef, 'initialImpactedSystems')).catch(() => null),
+            getDocs(collection(projectRef, 'initialHorizontals')).catch(() => null),
+            getDocs(collection(projectRef, 'stories')).catch(() => null),
+            getDocs(collection(projectRef, 'sprints')).catch(() => null),
+            getDocs(collection(projectRef, 'epics')).catch(() => null),
+          ]);
+
+          let impactedList = sysSnap?.docs?.map((d: any) => ({ id: d.id, ...d.data() })) || [];
+          if (impactedList.length === 0) {
+            const sysSnap2 = await getDocs(collection(projectRef, 'impactedSystems')).catch(() => null);
+            impactedList = sysSnap2?.docs?.map((d: any) => ({ id: d.id, ...d.data() })) || [];
+          }
+
+          let horList = horSnap?.docs?.map((d: any) => ({ id: d.id, ...d.data() })) || [];
+          if (horList.length === 0) {
+            const horSnap2 = await getDocs(collection(projectRef, 'horizontals')).catch(() => null);
+            horList = horSnap2?.docs?.map((d: any) => ({ id: d.id, ...d.data() })) || [];
+          }
+
+          const pData = pSnap?.data ? pSnap.data() : {};
+          activeProjectSnapshot = {
+            id: selectedProjectId,
+            name: pData?.name || selectedProjectName,
+            summary: pData?.summary || '',
+            description: pData?.description || '',
+            status: pData?.status || 'Active',
+            pricingModel: pData?.pricingModel || 'Fixed Bid',
+            impactedSystems: impactedList.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              category: s.category || 'Technology',
+              description: s.description || '',
+              estimate: s.estimate || 0,
+              dailyBillingRate: s.dailyBillingRate || 0,
+            })),
+            horizontals: horList.map((h: any) => ({
+              id: h.id,
+              name: h.name,
+              weightage: h.weightage || 0,
+              dailyBillingRate: h.dailyBillingRate || 0,
+            })),
+            stories: (storiesSnap?.docs || [])
+              .filter((d: any) => !d.data().isDeleted)
+              .map((d: any) => ({
+                id: d.id,
+                storyId: d.data().storyId,
+                title: d.data().title,
+                itemType: d.data().itemType,
+                status: d.data().status,
+                priority: d.data().priority,
+              })),
+            sprints: (sprintsSnap?.docs || []).map((d: any) => ({
+              id: d.id,
+              title: d.data().title,
+              status: d.data().status,
+            })),
+            epics: (epicsSnap?.docs || []).map((d: any) => ({
+              id: d.id,
+              title: d.data().title,
+            })),
+          };
+        } catch (snapErr) {
+          console.warn('Could not build live project snapshot for FlowPilot', snapErr);
+        }
+      }
+
       // Build request payload for backend
       const apiMessages = newMessages.map((m) => ({
         role: m.role,
@@ -246,6 +319,7 @@ export function FlowPilotChatWidget() {
           messages: apiMessages,
           currentProjectId: selectedProjectId || undefined,
           currentProjectName: selectedProjectName || undefined,
+          activeProjectSnapshot,
           currentUser: currentUser
             ? {
                 empId: currentUser.empId,
@@ -505,10 +579,11 @@ export function FlowPilotChatWidget() {
 
                         {/* Google Gemini Cloud Section */}
                         <div className="space-y-1">
-                          <div className="px-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                            Google Gemini (Cloud)
+                          <div className="flex items-center justify-between px-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            <span>Google Gemini (Live API)</span>
+                            <span className="text-[9px] text-primary font-bold">Cloud</span>
                           </div>
-                          <div className="space-y-0.5">
+                          <div className="max-h-40 overflow-y-auto space-y-0.5 pr-0.5">
                             {availableModels.geminiModels.map((m) => {
                               const isSelected = aiDetails?.provider === 'google' && aiDetails?.model === m;
                               return (
