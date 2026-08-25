@@ -6,6 +6,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 
+import { HermesChatWidget } from "@/components/hermes/HermesChatWidget";
+
 export const metadata: Metadata = {
   title: 'ProjectFlow',
   description: 'Manage your projects with ease and clarity.',
@@ -34,6 +36,7 @@ export default function RootLayout({
           <SupabaseBootstrap />
           <SetupInterceptor />
           {children}
+          <HermesChatWidget />
           <Toaster />
         </ThemeProvider>
       </body>

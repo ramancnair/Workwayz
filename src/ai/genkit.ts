@@ -5,22 +5,53 @@ import { openAICompatible } from '@genkit-ai/compat-oai';
 import { anthropic, claude35Sonnet, claude37Sonnet, claude3Opus, claude3Haiku, claude45Sonnet } from 'genkitx-anthropic';
 import { ollama } from 'genkitx-ollama';
 
-const provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'google';
+let provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'google';
+let apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
+let localBaseUrl = process.env.LOCAL_AI_BASE_URL;
+let configuredModel = process.env.AI_DEFAULT_MODEL;
 
-let fallbackModel = 'gemini-3-flash-preview';
+// Fallback to connections.json on server
+if (typeof window === 'undefined') {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const connsPath = path.join(process.cwd(), 'connections.json');
+    if (fs.existsSync(connsPath)) {
+      const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
+      const activeAi = conns.ai?.find((p: any) => p.isActive) || conns.ai?.[0];
+      if (activeAi) {
+        provider = activeAi.provider || provider;
+        if (activeAi.apiKey) apiKey = activeAi.apiKey;
+        if (activeAi.baseUrl) localBaseUrl = activeAi.baseUrl;
+        if (activeAi.model) configuredModel = activeAi.model;
+      }
+    }
+  } catch (e) {
+    // Non-fatal
+  }
+}
+
+// Safety: If model is 'local-model' or local endpoint is configured, ensure provider is lmstudio
+if (configuredModel === 'local-model' || provider === 'lmstudio') {
+  provider = 'lmstudio';
+  if (!configuredModel) configuredModel = 'local-model';
+}
+
+let fallbackModel = 'gemini-2.5-flash';
 if (provider === 'openai') fallbackModel = 'gpt-4o';
 if (provider === 'anthropic') fallbackModel = 'claude-sonnet-4-6';
 if (provider === 'lmstudio') fallbackModel = 'local-model';
 if (provider === 'ollama') fallbackModel = 'llama3';
 
-let defaultModel = process.env.AI_DEFAULT_MODEL || fallbackModel;
+let defaultModel = configuredModel || fallbackModel;
 
 const plugins: any[] = [];
 let mappedModel: any = defaultModel;
 
 if (provider === 'google') {
-  if (process.env.GEMINI_API_KEY) {
-    plugins.push(googleAI({ apiKey: process.env.GEMINI_API_KEY }));
+  const geminiKey = process.env.GEMINI_API_KEY || apiKey;
+  if (geminiKey) {
+    plugins.push(googleAI({ apiKey: geminiKey }));
   } else {
     plugins.push(googleAI()); 
   }
@@ -28,20 +59,21 @@ if (provider === 'google') {
     mappedModel = `googleai/${defaultModel}`;
   }
 } else if (provider === 'openai') {
-  if (process.env.OPENAI_API_KEY) {
-    plugins.push(openAI({ apiKey: process.env.OPENAI_API_KEY }));
+  const oaiKey = process.env.OPENAI_API_KEY || apiKey;
+  if (oaiKey) {
+    plugins.push(openAI({ apiKey: oaiKey }));
   }
   if (typeof mappedModel === 'string' && !mappedModel.startsWith('openai/')) {
     mappedModel = `openai/${defaultModel}`;
   }
 } else if (provider === 'lmstudio') {
-  const baseUrl = process.env.LOCAL_AI_BASE_URL || 'http://localhost:1234/v1';
+  const baseUrl = localBaseUrl || process.env.LOCAL_AI_BASE_URL || 'http://localhost:1234/v1';
   plugins.push(openAICompatible({ name: 'lmstudio', apiKey: 'lm-studio', baseURL: baseUrl }));
   if (typeof mappedModel === 'string' && !mappedModel.startsWith('lmstudio/')) {
     mappedModel = `lmstudio/${defaultModel}`;
   }
 } else if (provider === 'ollama') {
-  const baseUrl = process.env.LOCAL_AI_BASE_URL || 'http://localhost:11434';
+  const baseUrl = localBaseUrl || process.env.LOCAL_AI_BASE_URL || 'http://localhost:11434';
   let autoModel = defaultModel;
   
   try {
@@ -68,16 +100,12 @@ if (provider === 'google') {
   }));
   mappedModel = `ollama/${autoModel}`;
 } else if (provider === 'anthropic') {
-  if (process.env.ANTHROPIC_API_KEY) {
-    plugins.push(anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }));
+  if (process.env.ANTHROPIC_API_KEY || apiKey) {
+    plugins.push(anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || apiKey }));
   }
   
-  // Dynamically map the user's string to the correct ModelReference
   let version = defaultModel;
-  
   if (version.includes('sonnet-4-6') || version.includes('4-5-sonnet')) {
-    // There is no explicit claude46Sonnet export yet in this version of the plugin, 
-    // but the 4.5 schema perfectly maps the parameters.
     mappedModel = claude45Sonnet.withVersion(version);
   } else if (version.includes('3-7-sonnet')) {
     mappedModel = claude37Sonnet.withVersion(version);
