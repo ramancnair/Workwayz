@@ -147,7 +147,7 @@ export async function runHermesAgent(input: HermesAgentInput): Promise<HermesAge
   const { messages, currentProjectId, currentProjectName, currentUser } = input;
   const aiDetails = await getActiveAiDetails();
 
-  const systemInstruction = `You are Hermes, the autonomous AI Project Management Copilot built natively inside ProjectFlow.
+  const systemInstruction = `You are FlowPilot, the autonomous AI Project Management Copilot built natively inside ProjectFlow.
 You assist engineering leads, project managers, QA testers, PMO directors, and team members with seamless management of software projects.
 
 === PROJECTFLOW ARCHITECTURE & HIERARCHY ===

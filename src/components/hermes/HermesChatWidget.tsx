@@ -309,7 +309,7 @@ export function HermesChatWidget() {
                 <button
                   onClick={() => setIsOpen(true)}
                   className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl hover:shadow-primary/25 hover:scale-105 active:scale-95 transition-all duration-300 ring-4 ring-primary/20"
-                  aria-label="Open Hermes AI Assistant"
+                  aria-label="Open FlowPilot AI Copilot"
                 >
                   <Bot className="w-7 h-7 transition-transform group-hover:rotate-6" />
                   <span className="absolute -top-1 -right-1 flex h-4 w-4">
@@ -321,7 +321,7 @@ export function HermesChatWidget() {
               <TooltipContent side="left" className="font-medium bg-popover text-popover-foreground border-border shadow-md">
                 <p className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  Chat with Hermes AI
+                  Chat with FlowPilot AI
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -348,7 +348,7 @@ export function HermesChatWidget() {
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h3 className="font-bold text-sm leading-tight text-foreground">Hermes Agent</h3>
+                  <h3 className="font-bold text-sm leading-tight text-foreground">FlowPilot</h3>
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/30 text-primary bg-primary/10 font-semibold">
                     AI
                   </Badge>
@@ -480,7 +480,7 @@ export function HermesChatWidget() {
                     Hello{currentUser?.firstName ? `, ${currentUser.firstName}` : ''}!
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-[320px]">
-                    I am <span className="font-semibold text-primary">Hermes</span>, your autonomous project copilot. Tell me what you need and I will implement it in ProjectFlow.
+                    I am <span className="font-semibold text-primary">FlowPilot</span>, your autonomous project copilot. Tell me what you need and I will implement it in ProjectFlow.
                   </p>
                 </div>
 
@@ -543,7 +543,7 @@ export function HermesChatWidget() {
               <div className="flex items-start gap-2">
                 <div className="bg-muted/70 border border-border/50 rounded-lg rounded-bl-none px-3.5 py-2.5 shadow-sm flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                  <span>Hermes is executing actions & writing to DB...</span>
+                  <span>FlowPilot is executing actions & writing to DB...</span>
                 </div>
               </div>
             )}
@@ -559,7 +559,7 @@ export function HermesChatWidget() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask Hermes (e.g. 'Create a critical bug for login failure')..."
+                placeholder="Ask FlowPilot (e.g. 'Create a critical bug for login failure')..."
                 rows={1}
                 className="min-h-[38px] max-h-28 text-xs sm:text-sm resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent py-2 px-2"
               />

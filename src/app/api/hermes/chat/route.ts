@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const aiDetails = await getActiveAiDetails().catch(() => undefined);
     return NextResponse.json(
       {
-        reply: `⚠️ Hermes Agent encountered an issue: ${error.message || 'Unknown error. Please check your AI API key or connection settings.'}`,
+        reply: `⚠️ FlowPilot encountered an issue: ${error.message || 'Unknown error. Please check your AI API key or connection settings.'}`,
         error: error.message,
         aiDetails,
       },
