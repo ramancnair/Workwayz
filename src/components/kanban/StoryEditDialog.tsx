@@ -51,6 +51,7 @@ const storyFormSchema = z.object({
   itemType: z.enum(workItemTypes as [string, ...string[]]),
   title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   status: z.string().optional(),
+  resolution: z.string().optional(),
   description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
@@ -213,6 +214,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
               itemType: selectedStory.itemType as any,
               title: (selectedStory.title || '').slice(0, 60),
               status: selectedStory.status as any || 'To Do',
+              resolution: selectedStory.resolution || 'none',
               description: (selectedStory.description || '').slice(0, 300),
               acceptanceCriteria: selectedStory.acceptanceCriteria || '',
               epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
@@ -250,6 +252,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
         itemType: values.itemType as WorkItemType | undefined,
         priority: values.priority as Priority | undefined,
         severity: values.severity as BugSeverity | undefined,
+        resolution: values.resolution === 'none' ? undefined : values.resolution,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
@@ -797,6 +800,31 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             </FormItem>
                             )}
                         />
+                        {selectedStory.itemType === 'Bug' && (
+                          <FormField
+                            control={editStoryForm.control}
+                            name="resolution"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Resolution</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select resolution" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    {['Invalid', 'Need Help', 'Duplicate', "Won't Fix", 'Cannot Reproduce'].map(r => (
+                                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
                         {selectedStory.itemType === 'Bug' && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField

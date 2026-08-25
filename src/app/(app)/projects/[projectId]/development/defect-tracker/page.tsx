@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Bug,
   Circle,
-  Paperclip
+  Paperclip,
+  Search
 } from 'lucide-react';
 
 import { PageHeader } from '@/components/PageHeader';
@@ -113,10 +114,14 @@ const bugFormSchema = z.object({
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.string(),
+  resolution: z.string().optional(),
   severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
   sprintId: z.string().optional(),
-  releaseId: z.string().optional(),
   attachments: z.string().optional(),
+  relatedBugId: z.string().optional(),
+  releaseId: z.string().optional(),
+  foundInTestPlanId: z.string().optional(),
+  epicId: z.string().optional(),
   createdAt: z.date().optional(),
   closedAt: z.date().optional(),
 });
@@ -135,7 +140,10 @@ function BugCard({
   onEdit: () => void;
 }) {
   return (
-    <Card className="bg-card">
+    <Card 
+      className="bg-card cursor-pointer hover:border-primary/50 transition-colors"
+      onClick={onEdit}
+    >
       <div className="p-4 space-y-3">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 space-y-1 min-w-0">
@@ -145,7 +153,11 @@ function BugCard({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button type="button" className="focus:outline-none">
+                      <button 
+                        type="button" 
+                        className="focus:outline-none"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Circle className={cn("h-3 w-3 cursor-pointer", priorityStyles[bug.priority])} />
                       </button>
                     </TooltipTrigger>
@@ -160,7 +172,15 @@ function BugCard({
             <p className="font-semibold break-words text-sm">{bug.title}</p>
           </div>
           <div className="flex items-center flex-shrink-0">
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+            >
               <Edit className="h-4 w-4" />
             </Button>
           </div>
@@ -170,6 +190,11 @@ function BugCard({
           {bug.severity && (
             <Badge className={cn("text-[10px] px-2 py-0.5 font-medium border-none", severityStyles[bug.severity])}>
               {bug.severity}
+            </Badge>
+          )}
+          {bug.resolution && (
+            <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium">
+              {bug.resolution}
             </Badge>
           )}
           {bug.attachments && bug.attachments.split('\n').filter(Boolean).length > 0 && (
@@ -182,7 +207,7 @@ function BugCard({
       </div>
 
       <CardFooter className="flex justify-between items-center p-4 pt-0 gap-2">
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           {assignee && (
             <TooltipProvider>
               <Tooltip>
@@ -200,20 +225,22 @@ function BugCard({
           )}
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-xs px-2">
-              Move <ChevronDown className="ml-1 h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {columns.filter(col => col.id !== getSwimlaneForStatus(bug.status)).map(col => (
-              <DropdownMenuItem key={col.id} onClick={() => onStatusChange(col.name)}>
-                Move to {col.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                Move <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {columns.filter(col => col.id !== getSwimlaneForStatus(bug.status)).map(col => (
+                <DropdownMenuItem key={col.id} onClick={() => onStatusChange(col.name)}>
+                  Move to {col.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardFooter>
     </Card>
   );
@@ -222,13 +249,15 @@ function BugCard({
 export default function DefectTrackerPage() {
   const {
     stories,
+    epics,
     sprints,
     moveStoryStatus,
     employees: users,
     updateStory,
     deleteStory,
     releasesAndMilestones,
-    testCases
+    testCases,
+    testPlans
   } = useProject();
   const { toast } = useToast();
 
@@ -237,10 +266,21 @@ export default function DefectTrackerPage() {
   const [filterType, setFilterType] = useState<'sprint' | 'testCycle'>('sprint');
   const [selectedTestCycleId, setSelectedTestCycleId] = useState<string>('all');
   const [selectedBug, setSelectedBug] = useState<Story | null>(null);
+  const [deletingBug, setDeletingBug] = useState<Story | null>(null);
   const [isSubmitInProgress, setIsSubmitInProgress] = useState(false);
+  const [testCaseInputText, setTestCaseInputText] = useState('');
+  const [relatedBugInputText, setRelatedBugInputText] = useState('');
 
+  const bugs = useMemo(() => stories.filter(s => s.itemType === 'Bug'), [stories]);
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
-  const activeTestCaseOptions = useMemo(() => testCases.filter(tc => !tc.isDeleted).map(tc => ({ value: tc.id, label: `[${tc.testCaseId}] ${tc.title}` })), [testCases]);
+  const testCaseOptions = useMemo(() => testCases.map(tc => ({
+    value: tc.id,
+    label: `[${tc.testCaseId}] ${tc.title}`,
+  })), [testCases]);
+  const relatedBugOptions = useMemo(() => bugs.map(b => ({
+    value: b.id,
+    label: `[${b.storyId}] ${b.title}`,
+  })), [bugs]);
 
   const editBugForm = useForm<z.infer<typeof bugFormSchema>>({
     resolver: zodResolver(bugFormSchema),
@@ -248,38 +288,63 @@ export default function DefectTrackerPage() {
 
   const handleOpenEdit = useCallback((bug: Story) => {
     setSelectedBug(bug);
+    const testCase = testCases.find(tc => tc.id === bug.relatedTestCaseId);
+    setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
+    const relBug = bugs.find(b => b.id === bug.relatedBugId);
+    setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
+
     editBugForm.reset({
       title: (bug.title || '').slice(0, 60),
       description: (bug.description || '').slice(0, 300),
       acceptanceCriteria: bug.acceptanceCriteria || '',
-      relatedTestCaseId: bug.relatedTestCaseId || '',
-      reporterId: bug.reporterId || '',
-      assigneeId: bug.assigneeId || '',
-      status: bug.status || 'To Triage',
+      relatedTestCaseId: bug.relatedTestCaseId || 'unassigned',
+      reporterId: bug.reporterId || 'unassigned',
+      assigneeId: bug.assigneeId || 'unassigned',
+      status: (bug.status || 'To Triage') as StoryStatus,
+      resolution: bug.resolution || 'none',
       severity: bug.severity || 'Medium',
-      sprintId: bug.sprintId || '',
-      releaseId: bug.releaseId || '',
+      sprintId: bug.sprintId || 'backlog',
+      foundInTestPlanId: bug.foundInTestPlanId || 'unassigned',
+      relatedBugId: bug.relatedBugId || 'unassigned',
       attachments: bug.attachments || '',
-      createdAt: typeof bug.createdAt === 'string' ? parseISO(bug.createdAt) : new Date(),
+      releaseId: bug.releaseId || 'unassigned',
+      epicId: bug.epicId || 'unassigned',
+      createdAt: typeof bug.createdAt === 'string' ? parseISO(bug.createdAt) : undefined,
       closedAt: typeof bug.closedAt === 'string' ? parseISO(bug.closedAt) : undefined,
     });
-  }, [editBugForm]);
+  }, [editBugForm, testCases, bugs]);
 
   const onFormSubmit = async (values: z.infer<typeof bugFormSchema>) => {
     if (!selectedBug) return;
     setIsSubmitInProgress(true);
 
-    const success = await updateStory(selectedBug.id, {
-      ...values,
+    const payload: Partial<Story> = {
+      title: values.title,
+      description: values.description || '',
+      acceptanceCriteria: values.acceptanceCriteria,
+      reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
+      assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+      relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
+      status: values.status,
+      resolution: values.resolution === 'none' ? undefined : values.resolution,
+      severity: values.severity as BugSeverity | undefined,
+      sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+      foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
+      relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
+      attachments: values.attachments,
+      releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+      epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
       createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
       closedAt: values.status === 'Closed' ? (values.closedAt ? values.closedAt.toISOString() : new Date().toISOString()) : null as any,
-    });
+    };
+
+    const success = await updateStory(selectedBug.id, payload);
 
     if (success) {
       setSelectedBug(null);
-      toast({ title: "Defect Updated", description: "The defect was updated successfully." });
+      toast({ title: "Success", description: "Defect updated successfully." });
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Failed to update defect." });
+      toast({ variant: "destructive", title: "Error", description: "Could not update defect." });
     }
     setIsSubmitInProgress(false);
   };
@@ -384,15 +449,17 @@ export default function DefectTrackerPage() {
 
       {/* Edit Bug Dialog */}
       <Dialog open={!!selectedBug} onOpenChange={(isOpen) => !isOpen && setSelectedBug(null)}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden" bypassScrollWrapper={true}>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0" bypassScrollWrapper={true}>
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>Edit Defect</DialogTitle>
-            <DialogDescription>Make changes to your defect here. Click save when you're done.</DialogDescription>
+            <DialogDescription>
+              Make changes to the defect details here.
+            </DialogDescription>
           </DialogHeader>
 
           <Form {...editBugForm}>
-            <form onSubmit={editBugForm.handleSubmit(onFormSubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
-              <div className="flex-1 overflow-y-auto px-1 py-4 space-y-4">
+            <form onSubmit={editBugForm.handleSubmit(onFormSubmit)} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
                 <FormField
                   control={editBugForm.control}
                   name="title"
@@ -400,27 +467,204 @@ export default function DefectTrackerPage() {
                     <FormItem>
                       <FormLabel>Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter defect title" {...field} maxLength={60} />
+                        <Input placeholder="Defect title" {...field} maxLength={60} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={editBugForm.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Description (Steps to Reproduce)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe the issue..." {...field} maxLength={300} />
+                        <Textarea placeholder="Describe the steps to reproduce the defect..." {...field} maxLength={300} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
+                <FormField
+                  control={editBugForm.control}
+                  name="acceptanceCriteria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expected Result</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Describe what should happen..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={editBugForm.control}
+                    name="reporterId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Reporter</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select a reporter" /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editBugForm.control}
+                    name="assigneeId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assignee</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={editBugForm.control}
+                    name="relatedTestCaseId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Related Test Case</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <Input
+                              list="testcase-options-dev-tracker"
+                              placeholder="Search for a test case..."
+                              className="pl-9"
+                              value={testCaseInputText}
+                              onChange={(e) => {
+                                const text = e.target.value;
+                                setTestCaseInputText(text);
+                                const matchingOption = testCaseOptions.find(opt => opt.label === text);
+                                field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                              }}
+                              onBlur={() => {
+                                const matchingOption = testCaseOptions.find(opt => opt.label === testCaseInputText);
+                                if (!matchingOption) {
+                                  setTestCaseInputText('');
+                                  field.onChange('unassigned');
+                                }
+                              }}
+                            />
+                          </div>
+                        </FormControl>
+                        <datalist id="testcase-options-dev-tracker">
+                          {testCaseOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                        </datalist>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editBugForm.control}
+                    name="sprintId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sprint</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="backlog">Backlog</SelectItem>
+                            {sprints.map(sprint => (
+                              <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={editBugForm.control}
+                    name="foundInTestPlanId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Found In Test Cycle</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a Test Cycle" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="unassigned">None</SelectItem>
+                            {testPlans.map(tp => (
+                              <SelectItem key={tp.id} value={tp.id}>{tp.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editBugForm.control}
+                    name="relatedBugId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Related / Original Defect</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <Input
+                              list="bug-options-dev-tracker"
+                              placeholder="Search for a defect..."
+                              className="pl-9"
+                              value={relatedBugInputText}
+                              onChange={(e) => {
+                                const text = e.target.value;
+                                setRelatedBugInputText(text);
+                                const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                              }}
+                              onBlur={() => {
+                                const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                if (!matchingOption) {
+                                  setRelatedBugInputText('');
+                                  field.onChange('unassigned');
+                                }
+                              }}
+                            />
+                          </div>
+                        </FormControl>
+                        <datalist id="bug-options-dev-tracker">
+                          {relatedBugOptions.filter(opt => opt.value !== selectedBug?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                        </datalist>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={editBugForm.control}
@@ -435,14 +679,44 @@ export default function DefectTrackerPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {severities.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            {severities.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {s}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
+                  <FormField
+                    control={editBugForm.control}
+                    name="epicId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Epic</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Assign to an epic" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {epics.map((epic) => (
+                              <SelectItem key={epic.id} value={epic.id}>
+                                {epic.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={editBugForm.control}
                     name="status"
@@ -458,7 +732,7 @@ export default function DefectTrackerPage() {
                               editBugForm.setValue('closedAt', undefined);
                             }
                           }} 
-                          value={field.value}
+                          value={field.value as StoryStatus}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -466,7 +740,30 @@ export default function DefectTrackerPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {BUG_COLUMNS.map(col => <SelectItem key={col.id} value={col.name}>{col.name}</SelectItem>)}
+                            {BUG_COLUMNS.map((col) => (
+                              <SelectItem key={col.id} value={col.name}>
+                                {col.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editBugForm.control}
+                    name="resolution"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Resolution</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select resolution" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {['Invalid', 'Need Help', 'Duplicate', "Won't Fix", 'Cannot Reproduce'].map(r => (
+                              <SelectItem key={r} value={r}>{r}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -474,53 +771,6 @@ export default function DefectTrackerPage() {
                     )}
                   />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={editBugForm.control}
-                    name="reporterId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Reporter</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Set reporter" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {[...users].filter(u => !u.isDeleted && u.isEnabled !== false && !!u.empId && u.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.empId.trim()})</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editBugForm.control}
-                    name="assigneeId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assignee</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Set assignee" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {[...users].filter(u => !u.isDeleted && u.isEnabled !== false && !!u.empId && u.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.empId.trim()})</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={editBugForm.control}
@@ -529,36 +779,12 @@ export default function DefectTrackerPage() {
                       <FormItem>
                         <FormLabel>Release</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Link to release" />
-                            </SelectTrigger>
-                          </FormControl>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
                           <SelectContent>
                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                            {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name || r.releaseId}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editBugForm.control}
-                    name="relatedTestCaseId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Related Test Case</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Link to test case" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="unassigned">None</SelectItem>
-                            {activeTestCaseOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                            {releases.map(release => (
+                              <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -566,49 +792,6 @@ export default function DefectTrackerPage() {
                     )}
                   />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={editBugForm.control}
-                    name="createdAt"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Created On</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            disabled
-                            value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              field.onChange(val ? new Date(val) : undefined);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editBugForm.control}
-                    name="closedAt"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Closed On</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            disabled
-                            value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
                 <FormField
                   control={editBugForm.control}
                   name="attachments"
@@ -622,22 +805,47 @@ export default function DefectTrackerPage() {
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <DialogFooter className="mt-4 flex justify-between gap-2 border-t pt-4">
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setDeletingBug(selectedBug)}
-                >
-                  Delete Defect
-                </Button>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setSelectedBug(null)}>Cancel</Button>
-                  <Button type="submit" disabled={isSubmitInProgress}>
-                    {isSubmitInProgress ? 'Saving...' : 'Save Changes'}
-                  </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField control={editBugForm.control} name="createdAt" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Created On</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          disabled
+                          value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val ? new Date(val) : undefined);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={editBugForm.control} name="closedAt" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Closed On</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          disabled
+                          value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val ? new Date(val) : undefined);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
+              </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
+                <Button type="submit" disabled={isSubmitInProgress}>
+                  {isSubmitInProgress ? 'Saving...' : 'Save Changes'}
+                </Button>
               </DialogFooter>
             </form>
           </Form>

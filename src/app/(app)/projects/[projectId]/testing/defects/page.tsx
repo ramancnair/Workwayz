@@ -80,6 +80,7 @@ const bugFormSchema = z.object({
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
   status: z.string(),
+  resolution: z.string().optional(),
   severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
   sprintId: z.string().optional(),
   attachments: z.string().optional(),
@@ -114,6 +115,7 @@ export default function DefectsPage() {
         bug.title?.toLowerCase().includes(searchLower) ||
         (bug.description && bug.description.toLowerCase().includes(searchLower)) ||
         bug.status?.toLowerCase().includes(searchLower) ||
+        (bug.resolution && bug.resolution.toLowerCase().includes(searchLower)) ||
         (bug.severity && bug.severity.toLowerCase().includes(searchLower)) ||
         assigneeName.toLowerCase().includes(searchLower)
       );
@@ -156,6 +158,7 @@ export default function DefectsPage() {
           reporterId: editingBug.reporterId || 'unassigned',
           assigneeId: editingBug.assigneeId || 'unassigned',
           status: editingBug.status as StoryStatus,
+          resolution: editingBug.resolution || 'none',
           severity: editingBug.severity,
           sprintId: editingBug.sprintId || 'backlog',
           foundInTestPlanId: editingBug.foundInTestPlanId || 'unassigned',
@@ -177,6 +180,7 @@ export default function DefectsPage() {
             reporterId: 'unassigned',
             assigneeId: 'unassigned',
             status: 'To Triage',
+            resolution: 'none',
             severity: 'Medium',
             sprintId: currentSprint?.id || 'backlog',
             foundInTestPlanId: 'unassigned',
@@ -206,6 +210,7 @@ export default function DefectsPage() {
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         status: values.status,
+        resolution: values.resolution === 'none' ? undefined : values.resolution,
         severity: values.severity as BugSeverity | undefined,
         sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
         foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
@@ -335,6 +340,7 @@ export default function DefectsPage() {
               <SortableHeader columnId="storyId">ID</SortableHeader>
               <SortableHeader columnId="title">Title</SortableHeader>
               <SortableHeader columnId="status">Status</SortableHeader>
+              <SortableHeader columnId="resolution">Resolution</SortableHeader>
               <SortableHeader columnId="severity">Severity</SortableHeader>
               <SortableHeader columnId="foundInTestPlanId">Test Cycle</SortableHeader>
               <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
@@ -343,7 +349,7 @@ export default function DefectsPage() {
           <TableBody>
             {sortedBugs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   No defects found.
                 </TableCell>
               </TableRow>
@@ -379,6 +385,15 @@ export default function DefectsPage() {
                       <Badge className={cn('font-semibold', statusStyles[bug.status as StoryStatus])}>
                         {bug.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {bug.resolution ? (
+                        <Badge variant="outline" className="font-medium text-xs">
+                          {bug.resolution}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {bug.severity && (
@@ -713,24 +728,24 @@ export default function DefectsPage() {
                        )}
                        />
                        <FormField
-                       control={form.control}
-                       name="sprintId"
-                       render={({ field }) => (
-                           <FormItem>
-                           <FormLabel>Sprint</FormLabel>
-                           <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
-                               <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
-                               <SelectContent>
-                               <SelectItem value="backlog">Backlog (No Sprint)</SelectItem>
-                               {sprints.map(s => (
-                                   <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
-                               ))}
-                               </SelectContent>
-                           </Select>
-                           <FormMessage />
-                           </FormItem>
-                       )}
-                       />
+                        control={form.control}
+                        name="resolution"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Resolution</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select resolution" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                {['Invalid', 'Need Help', 'Duplicate', "Won't Fix", 'Cannot Reproduce'].map(r => (
+                                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <FormField

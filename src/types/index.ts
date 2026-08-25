@@ -33,6 +33,8 @@ export type StatusHistoryItem = {
   date: string; // ISO String
 };
 
+export type DefectResolution = 'Invalid' | 'Need Help' | 'Duplicate' | "Won't Fix" | 'Cannot Reproduce';
+
 export type Story = {
   id: string;
   storyId: string;
@@ -46,6 +48,7 @@ export type Story = {
   epicId?: string;
   sprintId?: string | null;
   status: StoryStatus;
+  resolution?: DefectResolution | string;
   statusHistory?: StatusHistoryItem[];
   estimatedHours?: number;
   priority?: Priority;
