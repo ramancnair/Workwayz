@@ -130,7 +130,7 @@ export function HermesActionCard({ action, onNavigate }: HermesActionCardProps) 
   const displayTitle = action.title || action.name || action.description;
 
   return (
-    <div className="mt-2.5 p-3 rounded-xl border border-primary/20 bg-card/90 shadow-sm text-xs space-y-2.5 transition-all hover:border-primary/40">
+    <div className="mt-2.5 p-3 rounded-lg border border-primary/20 bg-card/90 shadow-sm text-xs space-y-2.5 transition-all hover:border-primary/40">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 font-semibold text-foreground">
           <div className="p-1 rounded-md bg-muted/80">{getItemIcon()}</div>

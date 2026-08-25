@@ -308,19 +308,19 @@ export function HermesChatWidget() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setIsOpen(true)}
-                  className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 text-white shadow-xl hover:shadow-cyan-500/25 hover:scale-105 active:scale-95 transition-all duration-300 ring-4 ring-indigo-500/20"
+                  className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl hover:shadow-primary/25 hover:scale-105 active:scale-95 transition-all duration-300 ring-4 ring-primary/20"
                   aria-label="Open Hermes AI Assistant"
                 >
                   <Bot className="w-7 h-7 transition-transform group-hover:rotate-6" />
                   <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-cyan-500 border-2 border-background"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-primary border-2 border-background"></span>
                   </span>
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="left" className="font-medium bg-slate-900 text-white border-slate-800">
+              <TooltipContent side="left" className="font-medium bg-popover text-popover-foreground border-border shadow-md">
                 <p className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
                   Chat with Hermes AI
                 </p>
               </TooltipContent>
@@ -333,23 +333,23 @@ export function HermesChatWidget() {
       {isOpen && (
         <div
           className={cn(
-            'fixed bottom-6 right-6 z-50 flex flex-col bg-background/95 backdrop-blur-xl border border-border/80 shadow-2xl rounded-2xl overflow-hidden transition-all duration-200',
+            'fixed bottom-6 right-6 z-50 flex flex-col bg-background/95 backdrop-blur-xl border-2 border-border shadow-2xl rounded-lg overflow-hidden transition-all duration-200',
             isMaximized
               ? 'w-[94vw] md:w-[720px] h-[88vh]'
               : 'w-[94vw] sm:w-[420px] md:w-[460px] h-[600px] max-h-[85vh]'
           )}
         >
           {/* Header */}
-          <div className="px-4 py-3 bg-gradient-to-r from-indigo-950/90 via-slate-900/90 to-indigo-900/90 text-white border-b border-indigo-500/20 flex items-center justify-between shrink-0">
+          <div className="px-4 py-3 bg-card text-card-foreground border-b border-border flex items-center justify-between shrink-0 shadow-sm">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-cyan-400 text-white shadow-md shrink-0">
+              <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-primary-foreground shadow-md shrink-0">
                 <Bot className="w-5 h-5" />
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-900" />
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-card" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h3 className="font-bold text-sm leading-tight text-slate-100">Hermes Agent</h3>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-cyan-400/40 text-cyan-300 bg-cyan-950/40 font-semibold">
+                  <h3 className="font-bold text-sm leading-tight text-foreground">Hermes Agent</h3>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/30 text-primary bg-primary/10 font-semibold">
                     AI
                   </Badge>
 
@@ -358,20 +358,20 @@ export function HermesChatWidget() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 max-w-[170px] sm:max-w-[210px] truncate cursor-help shadow-sm">
+                          <span className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 max-w-[170px] sm:max-w-[210px] truncate cursor-help shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                             <span className="truncate">{aiDetails.displayName || aiDetails.model}</span>
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="bg-slate-900 text-white text-xs border-slate-700 space-y-1 p-2 shadow-xl">
-                          <p className="font-bold text-cyan-300 flex items-center gap-1">
+                        <TooltipContent side="bottom" className="bg-popover text-popover-foreground text-xs border-border space-y-1 p-2.5 shadow-xl">
+                          <p className="font-bold text-primary flex items-center gap-1">
                             <Cpu className="w-3.5 h-3.5" />
                             Active Inference Engine
                           </p>
-                          <p><span className="text-slate-400">Provider:</span> <span className="font-semibold uppercase text-slate-200">{aiDetails.provider}</span></p>
-                          <p><span className="text-slate-400">Model:</span> <span className="font-mono text-emerald-400 font-semibold">{aiDetails.model}</span></p>
+                          <p><span className="text-muted-foreground">Provider:</span> <span className="font-semibold uppercase text-foreground">{aiDetails.provider}</span></p>
+                          <p><span className="text-muted-foreground">Model:</span> <span className="font-mono text-primary font-semibold">{aiDetails.model}</span></p>
                           {aiDetails.endpoint && (
-                            <p><span className="text-slate-400">Endpoint:</span> <span className="font-mono text-slate-300 text-[11px]">{aiDetails.endpoint}</span></p>
+                            <p><span className="text-muted-foreground">Endpoint:</span> <span className="font-mono text-foreground text-[11px]">{aiDetails.endpoint}</span></p>
                           )}
                         </TooltipContent>
                       </Tooltip>
@@ -382,18 +382,18 @@ export function HermesChatWidget() {
                 <div className="relative flex items-center gap-1 mt-0.5">
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-white transition-colors truncate max-w-[200px]"
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors truncate max-w-[200px]"
                     title="Switch target project scope"
                   >
-                    <FolderKanban className="w-3 h-3 text-cyan-400 shrink-0" />
+                    <FolderKanban className="w-3 h-3 text-primary shrink-0" />
                     <span className="truncate">{selectedProjectName ? selectedProjectName : 'Global Scope'}</span>
                     <ChevronDown className="w-3 h-3 shrink-0 opacity-70" />
                   </button>
 
                   {/* Project Selector Dropdown */}
                   {isDropdownOpen && (
-                    <div className="absolute top-6 left-0 z-50 w-56 p-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl text-xs space-y-1 text-slate-200">
-                      <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    <div className="absolute top-6 left-0 z-50 w-56 p-1 bg-popover border border-border rounded-lg shadow-xl text-xs space-y-1 text-popover-foreground">
+                      <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Target Project Scope
                       </div>
                       <button
@@ -403,14 +403,14 @@ export function HermesChatWidget() {
                           setIsDropdownOpen(false);
                         }}
                         className={cn(
-                          'w-full text-left px-2 py-1.5 rounded-md hover:bg-slate-800 flex items-center justify-between',
-                          !selectedProjectId && 'bg-indigo-600/30 text-cyan-300 font-semibold'
+                          'w-full text-left px-2 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between transition-colors',
+                          !selectedProjectId && 'bg-primary/15 text-primary font-semibold'
                         )}
                       >
                         <span>🌐 Global (All Projects)</span>
                         {!selectedProjectId && <CheckCircle2 className="w-3.5 h-3.5" />}
                       </button>
-                      <div className="h-px bg-slate-800 my-1" />
+                      <div className="h-px bg-border my-1" />
                       <div className="max-h-36 overflow-y-auto space-y-0.5">
                         {projects.map((p) => (
                           <button
@@ -421,8 +421,8 @@ export function HermesChatWidget() {
                               setIsDropdownOpen(false);
                             }}
                             className={cn(
-                              'w-full text-left px-2 py-1.5 rounded-md hover:bg-slate-800 flex items-center justify-between truncate',
-                              selectedProjectId === p.id && 'bg-indigo-600/30 text-cyan-300 font-semibold'
+                              'w-full text-left px-2 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between truncate transition-colors',
+                              selectedProjectId === p.id && 'bg-primary/15 text-primary font-semibold'
                             )}
                           >
                             <span className="truncate">{p.name}</span>
@@ -437,12 +437,12 @@ export function HermesChatWidget() {
             </div>
 
             {/* Window Action Controls */}
-            <div className="flex items-center gap-1 text-slate-300">
+            <div className="flex items-center gap-1 text-muted-foreground">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleClearChat}
-                className="w-7 h-7 text-slate-300 hover:text-white hover:bg-white/10"
+                className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-accent"
                 title="Clear Conversation"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -451,7 +451,7 @@ export function HermesChatWidget() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsMaximized(!isMaximized)}
-                className="w-7 h-7 text-slate-300 hover:text-white hover:bg-white/10 hidden sm:flex"
+                className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-accent hidden sm:flex"
                 title={isMaximized ? 'Restore Size' : 'Maximize'}
               >
                 {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
@@ -460,7 +460,7 @@ export function HermesChatWidget() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsOpen(false)}
-                className="w-7 h-7 text-slate-300 hover:text-white hover:bg-white/10"
+                className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-accent"
                 title="Close Chat"
               >
                 <X className="w-4 h-4" />
@@ -472,7 +472,7 @@ export function HermesChatWidget() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col justify-center items-center text-center p-4 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600/20 to-cyan-500/20 flex items-center justify-center text-primary ring-1 ring-primary/20">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary ring-1 ring-primary/20">
                   <Sparkles className="w-6 h-6 text-primary animate-pulse" />
                 </div>
                 <div className="space-y-1">
@@ -514,7 +514,7 @@ export function HermesChatWidget() {
                 >
                   <div
                     className={cn(
-                      'max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm',
+                      'max-w-[85%] rounded-lg px-3.5 py-2.5 shadow-sm text-sm',
                       msg.role === 'user'
                         ? 'bg-primary text-primary-foreground rounded-br-none'
                         : 'bg-muted/70 text-foreground border border-border/50 rounded-bl-none'
@@ -541,7 +541,7 @@ export function HermesChatWidget() {
             {/* Loading Indicator */}
             {isLoading && (
               <div className="flex items-start gap-2">
-                <div className="bg-muted/70 border border-border/50 rounded-2xl rounded-bl-none px-3.5 py-2.5 shadow-sm flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="bg-muted/70 border border-border/50 rounded-lg rounded-bl-none px-3.5 py-2.5 shadow-sm flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                   <span>Hermes is executing actions & writing to DB...</span>
                 </div>
@@ -552,8 +552,8 @@ export function HermesChatWidget() {
           </div>
 
           {/* Footer Input Area */}
-          <div className="p-3 bg-background/90 border-t border-border/70 shrink-0">
-            <div className="flex items-end gap-2 bg-muted/40 border border-input rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+          <div className="p-3 bg-card/60 border-t border-border shrink-0">
+            <div className="flex items-end gap-2 bg-background border border-input rounded-lg p-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -567,7 +567,7 @@ export function HermesChatWidget() {
                 size="icon"
                 onClick={() => handleSendMessage()}
                 disabled={!input.trim() || isLoading}
-                className="w-8 h-8 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 shadow-sm disabled:opacity-40"
+                className="w-8 h-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 shadow-sm disabled:opacity-40"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
