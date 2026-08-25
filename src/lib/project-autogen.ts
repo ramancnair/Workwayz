@@ -717,7 +717,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
 
   const createAutogenBug = (title: string, foundInPlanId: string) => {
     const bugRef = doc(col('stories'));
-    const bugStatus = rand(['To Do', 'In Progress', 'Done']);
+    const bugStatus = rand(['To Triage', 'Open', 'In Progress', 'Resolved', 'Reopened', 'Closed']);
     const severity = rand(['Critical', 'High', 'Medium', 'Low']);
     const bugSprintId = rand(sprintIds);
     // Use the correct sprint dates for statusHistory based on assigned sprint

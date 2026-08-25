@@ -785,7 +785,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                 </FormControl>
                                 <SelectContent>
                                      {(selectedStory?.itemType === 'Bug' 
-                                       ? ['In Triage', 'Defect Backlog', 'In Progress', 'Retest', 'Closed']
+                                       ? ['To Triage', 'Open', 'In Progress', 'Resolved', 'Reopened', 'Closed']
                                        : statusOptions).map((s) => (
                                     <SelectItem key={s} value={s}>
                                         {s}

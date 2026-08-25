@@ -48,16 +48,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { parseISO } from 'date-fns';
 
 const statusStyles: Record<string, string> = {
-  'In Triage': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-  'Defect Backlog': 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
-  'In Progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  'Retest': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300',
-  'Closed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  'To Triage': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300',
+  'Open': 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
+  'In Progress': 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
+  'Resolved': 'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300',
+  'Reopened': 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
+  'Closed': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+  // Fallbacks for legacy statuses
+  'New': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300',
+  'In Triage': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300',
+  'Defect Backlog': 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
+  'Retest': 'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300',
   'To Do': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-  'Done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  'Open': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-  'Reopened': 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
-  'Resolved': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300',
+  'Done': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
 };
 
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
@@ -173,7 +176,7 @@ export default function DefectsPage() {
             relatedTestCaseId: 'unassigned',
             reporterId: 'unassigned',
             assigneeId: 'unassigned',
-            status: 'In Triage',
+            status: 'To Triage',
             severity: 'Medium',
             sprintId: currentSprint?.id || 'backlog',
             foundInTestPlanId: 'unassigned',
@@ -219,7 +222,7 @@ export default function DefectsPage() {
     } else {
         payload.createdAt = (values.createdAt || new Date()).toISOString();
         payload.closedAt = values.status === 'Closed' ? (values.closedAt ? values.closedAt.toISOString() : new Date().toISOString()) : undefined;
-        const res = await addStory({ ...payload, itemType: 'Bug', title: payload.title || '', description: payload.description || '', status: payload.status || 'In Triage' });
+        const res = await addStory({ ...payload, itemType: 'Bug', title: payload.title || '', description: payload.description || '', status: payload.status || 'To Triage' });
         success = !!res;
     }
     
@@ -698,7 +701,7 @@ export default function DefectsPage() {
                                </SelectTrigger>
                                </FormControl>
                                <SelectContent>
-                               {['In Triage', 'Defect Backlog', 'In Progress', 'Retest', 'Closed'].map((p) => (
+                               {['To Triage', 'Open', 'In Progress', 'Resolved', 'Reopened', 'Closed'].map((p) => (
                                    <SelectItem key={p} value={p}>
                                    {p}
                                    </SelectItem>

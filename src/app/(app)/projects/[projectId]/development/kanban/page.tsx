@@ -82,11 +82,12 @@ const priorityStyles: Record<Priority, string> = {
 const getColumnForBugStatus = (status: string, columns: KanbanColumn[]): string => {
   const doneColName = columns.find(c => c.isDoneColumn)?.name || 'Done';
   const inQaColName = columns.find(c => c.name === 'In QA' || c.name === 'QA')?.name || 'In QA';
+  const inProgressColName = columns.find(c => c.name === 'In Progress' || c.name === 'In Dev' || c.name === 'In Development')?.name || 'In Progress';
   const firstColName = columns[0]?.name || 'To Do';
 
-  if (status === 'In Triage' || status === 'Defect Backlog' || status === 'Open' || status === 'Reopened') return firstColName;
-  if (status === 'In Progress') return 'In Progress';
-  if (status === 'Retest' || status === 'Resolved') return inQaColName;
+  if (status === 'To Triage' || status === 'New' || status === 'Open' || status === 'Reopened' || status === 'In Triage' || status === 'Defect Backlog') return firstColName;
+  if (status === 'In Progress') return inProgressColName;
+  if (status === 'Resolved' || status === 'Retest') return inQaColName;
   if (status === 'Closed') return doneColName;
   return status;
 };
@@ -358,7 +359,7 @@ function StoryCard({
                               </DropdownMenuTrigger>
                               <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
                                 {(item.itemType === 'Bug' 
-                                  ? ['In Triage', 'Defect Backlog', 'In Progress', 'Retest', 'Closed']
+                                  ? ['To Triage', 'Open', 'In Progress', 'Resolved', 'Reopened', 'Closed']
                                   : statusOptions).filter(s => s !== item.status).map(status => (
                                   <DropdownMenuItem key={status} onSelect={() => onSubItemStatusChange(item.id, status)}>
                                     {status}
@@ -1330,7 +1331,7 @@ export default function KanbanPage() {
                                             </SelectTrigger>
                                           </FormControl>
                                           <SelectContent>
-                                            {(selectedStory?.itemType === 'Bug' ? ['In Triage', 'Defect Backlog', 'In Progress', 'Retest', 'Closed'] : statusOptions).map((p) => (
+                                            {(selectedStory?.itemType === 'Bug' ? ['To Triage', 'Open', 'In Progress', 'Resolved', 'Reopened', 'Closed'] : statusOptions).map((p) => (
                                               <SelectItem key={p} value={p}>
                                                 {p}
                                               </SelectItem>

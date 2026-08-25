@@ -68,12 +68,24 @@ import { cn } from '@/lib/utils';
 
 // Swimlanes config with requested styling
 const BUG_COLUMNS = [
-  { id: 'in-triage', name: 'In Triage', colorClass: 'border-t-4 border-t-gray-400 bg-gray-500/5' },
-  { id: 'defect-backlog', name: 'Defect Backlog', colorClass: 'border-t-4 border-t-orange-500 bg-orange-500/5' },
-  { id: 'in-progress', name: 'In Progress', colorClass: 'border-t-4 border-t-blue-500 bg-blue-500/5' },
-  { id: 'retest', name: 'Retest', colorClass: 'border-t-4 border-t-indigo-500 bg-indigo-500/5' },
-  { id: 'closed', name: 'Closed', colorClass: 'border-t-4 border-t-green-500 bg-green-500/5' },
+  { id: 'to-triage', name: 'To Triage', colorClass: 'border-t-4 border-t-cyan-500 bg-cyan-500/5' },
+  { id: 'open', name: 'Open', colorClass: 'border-t-4 border-t-blue-500 bg-blue-500/5' },
+  { id: 'in-progress', name: 'In Progress', colorClass: 'border-t-4 border-t-amber-500 bg-amber-500/5' },
+  { id: 'resolved', name: 'Resolved', colorClass: 'border-t-4 border-t-purple-500 bg-purple-500/5' },
+  { id: 'reopened', name: 'Reopened', colorClass: 'border-t-4 border-t-rose-500 bg-rose-500/5' },
+  { id: 'closed', name: 'Closed', colorClass: 'border-t-4 border-t-emerald-500 bg-emerald-500/5' },
 ];
+
+const getSwimlaneForStatus = (status: string): string => {
+  const s = (status || 'To Triage').toLowerCase();
+  if (s === 'to triage' || s === 'to-triage' || s === 'new' || s === 'in triage' || s === 'in-triage') return 'to triage';
+  if (s === 'open') return 'open';
+  if (s === 'in progress' || s === 'in-progress') return 'in progress';
+  if (s === 'resolved' || s === 'retest') return 'resolved';
+  if (s === 'reopened' || s === 'defect backlog' || s === 'defect-backlog') return 'reopened';
+  if (s === 'closed' || s === 'done') return 'closed';
+  return 'to triage';
+};
 
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
@@ -195,7 +207,7 @@ function BugCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {columns.filter(col => col.name !== bug.status).map(col => (
+            {columns.filter(col => col.id !== getSwimlaneForStatus(bug.status)).map(col => (
               <DropdownMenuItem key={col.id} onClick={() => onStatusChange(col.name)}>
                 Move to {col.name}
               </DropdownMenuItem>
@@ -221,8 +233,10 @@ export default function DefectTrackerPage() {
   const { toast } = useToast();
 
   const [selectedAssigneeId, setSelectedAssigneeId] = useState('all');
+  const [selectedSprintId, setSelectedSprintId] = useState<string>('all');
+  const [filterType, setFilterType] = useState<'sprint' | 'testCycle'>('sprint');
+  const [selectedTestCycleId, setSelectedTestCycleId] = useState<string>('all');
   const [selectedBug, setSelectedBug] = useState<Story | null>(null);
-  const [deletingBug, setDeletingBug] = useState<Story | null>(null);
   const [isSubmitInProgress, setIsSubmitInProgress] = useState(false);
 
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
@@ -241,7 +255,7 @@ export default function DefectTrackerPage() {
       relatedTestCaseId: bug.relatedTestCaseId || '',
       reporterId: bug.reporterId || '',
       assigneeId: bug.assigneeId || '',
-      status: bug.status || 'In Triage',
+      status: bug.status || 'To Triage',
       severity: bug.severity || 'Medium',
       sprintId: bug.sprintId || '',
       releaseId: bug.releaseId || '',
@@ -334,8 +348,7 @@ export default function DefectTrackerPage() {
         <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
           {BUG_COLUMNS.map((column) => {
             const itemsInColumn = sprintBugs.filter(bug => {
-              const bugStatus = bug.status || 'In Triage';
-              return bugStatus.toLowerCase() === column.name.toLowerCase();
+              return getSwimlaneForStatus(bug.status) === column.name.toLowerCase();
             });
 
             return (

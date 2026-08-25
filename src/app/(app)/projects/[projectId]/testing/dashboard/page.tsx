@@ -50,25 +50,46 @@ const bugStatusConfig = {
   bugs: {
     label: "Bugs",
   },
-  'In Triage': {
-    label: "In Triage",
-    color: '#a1a1aa',
+  'To Triage': {
+    label: "To Triage",
+    color: '#06b6d4',
   },
-  'Defect Backlog': {
-    label: "Defect Backlog",
-    color: '#f97316',
+  'Open': {
+    label: "Open",
+    color: '#3b82f6',
   },
   'In Progress': {
     label: "In Progress",
-    color: '#3b82f6',
+    color: '#f59e0b',
+  },
+  'Resolved': {
+    label: "Resolved",
+    color: '#a855f7',
+  },
+  'Reopened': {
+    label: "Reopened",
+    color: '#f43f5e',
+  },
+  'Closed': {
+    label: "Closed",
+    color: '#10b981',
+  },
+  // Legacy mappings fallback
+  'New': {
+    label: "New",
+    color: '#06b6d4',
+  },
+  'In Triage': {
+    label: "In Triage",
+    color: '#06b6d4',
+  },
+  'Defect Backlog': {
+    label: "Defect Backlog",
+    color: '#f43f5e',
   },
   'Retest': {
     label: "Retest",
     color: '#a855f7',
-  },
-  'Closed': {
-    label: "Closed",
-    color: '#22c55e',
   },
 } satisfies ChartConfig;
 
@@ -184,7 +205,7 @@ export default function TestingDashboard() {
     // Bug Metrics
     const bugStatusData = Object.entries(
       relatedBugs.reduce((acc, bug) => {
-        const status = bug.status || 'In Triage';
+        const status = bug.status || 'To Triage';
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>)

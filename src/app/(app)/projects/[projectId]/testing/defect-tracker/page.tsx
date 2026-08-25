@@ -68,21 +68,23 @@ import { cn } from '@/lib/utils';
 
 // Swimlanes config with requested styling
 const BUG_COLUMNS = [
-  { id: 'in-triage', name: 'In Triage', colorClass: 'border-t-4 border-t-gray-400 bg-gray-500/5' },
-  { id: 'defect-backlog', name: 'Defect Backlog', colorClass: 'border-t-4 border-t-orange-500 bg-orange-500/5' },
-  { id: 'in-progress', name: 'In Progress', colorClass: 'border-t-4 border-t-blue-500 bg-blue-500/5' },
-  { id: 'retest', name: 'Retest', colorClass: 'border-t-4 border-t-indigo-500 bg-indigo-500/5' },
-  { id: 'closed', name: 'Closed', colorClass: 'border-t-4 border-t-green-500 bg-green-500/5' },
+  { id: 'to-triage', name: 'To Triage', colorClass: 'border-t-4 border-t-cyan-500 bg-cyan-500/5' },
+  { id: 'open', name: 'Open', colorClass: 'border-t-4 border-t-blue-500 bg-blue-500/5' },
+  { id: 'in-progress', name: 'In Progress', colorClass: 'border-t-4 border-t-amber-500 bg-amber-500/5' },
+  { id: 'resolved', name: 'Resolved', colorClass: 'border-t-4 border-t-purple-500 bg-purple-500/5' },
+  { id: 'reopened', name: 'Reopened', colorClass: 'border-t-4 border-t-rose-500 bg-rose-500/5' },
+  { id: 'closed', name: 'Closed', colorClass: 'border-t-4 border-t-emerald-500 bg-emerald-500/5' },
 ];
 
 const getSwimlaneForStatus = (status: string): string => {
-  const s = (status || 'In Triage').toLowerCase();
-  if (s === 'open' || s === 'in triage' || s === 'in-triage') return 'in triage';
-  if (s === 'reopened' || s === 'defect backlog' || s === 'defect-backlog') return 'defect backlog';
+  const s = (status || 'To Triage').toLowerCase();
+  if (s === 'to triage' || s === 'to-triage' || s === 'new' || s === 'in triage' || s === 'in-triage') return 'to triage';
+  if (s === 'open') return 'open';
   if (s === 'in progress' || s === 'in-progress') return 'in progress';
-  if (s === 'resolved' || s === 'retest') return 'retest';
+  if (s === 'resolved' || s === 'retest') return 'resolved';
+  if (s === 'reopened' || s === 'defect backlog' || s === 'defect-backlog') return 'reopened';
   if (s === 'closed' || s === 'done') return 'closed';
-  return 'in triage';
+  return 'to triage';
 };
 
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
@@ -252,7 +254,7 @@ export default function DefectTrackerPage() {
       relatedTestCaseId: bug.relatedTestCaseId || '',
       reporterId: bug.reporterId || '',
       assigneeId: bug.assigneeId || '',
-      status: bug.status || 'In Triage',
+      status: bug.status || 'To Triage',
       severity: bug.severity || 'Medium',
       sprintId: bug.sprintId || '',
       releaseId: bug.releaseId || '',
