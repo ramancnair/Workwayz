@@ -84,7 +84,7 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     testCaseId: { label: 'ID', defaultVisible: true },
     title: { label: 'Title', defaultVisible: true },
     type: { label: 'Type', defaultVisible: false },
-    storyId: { label: 'Related Story', defaultVisible: false },
+    storyId: { label: 'Related Requirement', defaultVisible: false },
     sprintId: { label: 'Sprint', defaultVisible: true },
     releaseId: { label: 'Release', defaultVisible: true },
 };
@@ -196,7 +196,7 @@ export default function TestBacklogPage() {
   };
 
   const storyOptions = useMemo(() => stories
-    .filter(s => s.itemType === 'Requirement/Story')
+    .filter(s => !s.isDeleted && ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType))
     .map(story => ({
       value: story.id,
       label: `[${story.storyId}] ${story.title}`,
@@ -501,7 +501,7 @@ export default function TestBacklogPage() {
                 {columnVisibility.testCaseId && <SortableHeader columnId="testCaseId">ID</SortableHeader>}
                 {columnVisibility.title && <SortableHeader columnId="title">Title</SortableHeader>}
                 {columnVisibility.type && <SortableHeader columnId="type">Type</SortableHeader>}
-                {columnVisibility.storyId && <SortableHeader columnId="storyId">Story</SortableHeader>}
+                {columnVisibility.storyId && <SortableHeader columnId="storyId">Requirement</SortableHeader>}
                 {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
                 {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
                 <TableHead className="text-right">Actions</TableHead>
@@ -597,13 +597,13 @@ export default function TestBacklogPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name="storyId" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Related Story (Optional)</FormLabel>
+                              <FormLabel>Related Requirement</FormLabel>
                                 <FormControl>
                                   <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                     <Input 
                                         list="story-options-tc" 
-                                        placeholder="Select a story..." 
+                                        placeholder="Select a requirement..." 
                                         className="pl-9"
                                         value={relatedStoryInputText}
                                         onChange={(e) => {

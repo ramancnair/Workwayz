@@ -1113,9 +1113,9 @@ export default function TestPlanPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  {/* Related Story (read-only, from the original) */}
+                  {/* Related Requirement (read-only, from the original) */}
                   <FormItem>
-                    <FormLabel>Related Story</FormLabel>
+                    <FormLabel>Related Requirement</FormLabel>
                     <Input
                       readOnly
                       value={editingTestCase?.storyId
