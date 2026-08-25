@@ -246,8 +246,8 @@ export default function DefectTrackerPage() {
   const handleOpenEdit = useCallback((bug: Story) => {
     setSelectedBug(bug);
     editBugForm.reset({
-      title: bug.title || '',
-      description: bug.description || '',
+      title: (bug.title || '').slice(0, 60),
+      description: (bug.description || '').slice(0, 300),
       acceptanceCriteria: bug.acceptanceCriteria || '',
       relatedTestCaseId: bug.relatedTestCaseId || '',
       reporterId: bug.reporterId || '',
@@ -269,7 +269,7 @@ export default function DefectTrackerPage() {
     const success = await updateStory(selectedBug.id, {
       ...values,
       createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
-      closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
+      closedAt: values.status === 'Closed' ? (values.closedAt ? values.closedAt.toISOString() : new Date().toISOString()) : null as any,
     });
 
     if (success) {
@@ -537,7 +537,7 @@ export default function DefectTrackerPage() {
                     <FormItem>
                       <FormLabel>Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter defect title" {...field} />
+                        <Input placeholder="Enter defect title" {...field} maxLength={60} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -551,7 +551,7 @@ export default function DefectTrackerPage() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe the issue..." {...field} />
+                        <Textarea placeholder="Describe the issue..." {...field} maxLength={300} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -586,7 +586,17 @@ export default function DefectTrackerPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select 
+                          onValueChange={(val) => {
+                            field.onChange(val);
+                            if (val === 'Closed') {
+                              editBugForm.setValue('closedAt', new Date());
+                            } else {
+                              editBugForm.setValue('closedAt', undefined);
+                            }
+                          }} 
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue />
@@ -726,11 +736,8 @@ export default function DefectTrackerPage() {
                         <FormControl>
                           <Input 
                             type="date" 
+                            disabled
                             value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              field.onChange(val ? new Date(val) : undefined);
-                            }}
                           />
                         </FormControl>
                         <FormMessage />

@@ -112,6 +112,7 @@ export default function SignupPage() {
           authProvider: 'supabase',
           issuedAt: Date.now(),
         }));
+        localStorage.setItem('projectflow_last_activity', Date.now().toString());
 
       } else {
         if (!auth || !db) {
@@ -156,6 +157,7 @@ export default function SignupPage() {
           authProvider: 'firebase',
           issuedAt: Date.now(),
         }));
+        localStorage.setItem('projectflow_last_activity', Date.now().toString());
       }
 
       toast({

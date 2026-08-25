@@ -53,6 +53,7 @@ export function SessionManager() {
     let activityInterval: NodeJS.Timeout;
     let throttleTimeout: NodeJS.Timeout | null = null;
     let isRememberMe = false;
+    let issuedAt = 0;
 
     // 1. Check if we need to track activity based on rememberMe flag
     const userStr = localStorage.getItem(USER_STORAGE_KEY);
@@ -61,6 +62,7 @@ export function SessionManager() {
     try {
       const session = JSON.parse(userStr);
       isRememberMe = session.rememberMe !== false;
+      issuedAt = session.issuedAt || 0;
     } catch {
       // Ignore parse errors, AuthGuard handles invalid sessions
     }
@@ -70,8 +72,10 @@ export function SessionManager() {
       return;
     }
 
-    // Initialize last activity if missing
-    if (!localStorage.getItem(ACTIVITY_STORAGE_KEY)) {
+    // Initialize last activity if missing or if it predates the current session's login timestamp
+    const lastActivityStr = localStorage.getItem(ACTIVITY_STORAGE_KEY);
+    const lastActivity = lastActivityStr ? parseInt(lastActivityStr, 10) : 0;
+    if (!lastActivity || (issuedAt > 0 && lastActivity < issuedAt)) {
       localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
     }
 
@@ -86,11 +90,19 @@ export function SessionManager() {
     };
 
     const checkInactivity = () => {
-      const lastActivityStr = localStorage.getItem(ACTIVITY_STORAGE_KEY);
-      if (!lastActivityStr) return;
+      const currentActivityStr = localStorage.getItem(ACTIVITY_STORAGE_KEY);
+      if (!currentActivityStr) {
+        localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
+        return;
+      }
 
-      const lastActivity = parseInt(lastActivityStr, 10);
-      if (Date.now() - lastActivity > INACTIVITY_TIMEOUT_MS) {
+      const currentActivity = parseInt(currentActivityStr, 10);
+      if (issuedAt > 0 && currentActivity < issuedAt) {
+        localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
+        return;
+      }
+
+      if (Date.now() - currentActivity > INACTIVITY_TIMEOUT_MS) {
         console.warn('[SessionManager] Session timed out due to inactivity.');
         handleLogout();
       }

@@ -169,6 +169,7 @@ export default function LoginPage() {
           needsPasswordReset: passwordInput === 'P@ssw0rd',
           rememberMe: rememberMe
         }));
+        localStorage.setItem('projectflow_last_activity', Date.now().toString());
 
         if (!rememberMe) {
           document.cookie = "projectflow_session_active=true; path=/";
@@ -215,6 +216,7 @@ export default function LoginPage() {
           needsPasswordReset: passwordInput === 'P@ssw0rd',
           rememberMe: rememberMe
         }));
+        localStorage.setItem('projectflow_last_activity', Date.now().toString());
 
         if (!rememberMe) {
           document.cookie = "projectflow_session_active=true; path=/";
@@ -286,6 +288,7 @@ export default function LoginPage() {
               authProvider: 'keycloak',
               issuedAt: Date.now(),
             }));
+            localStorage.setItem('projectflow_last_activity', Date.now().toString());
             toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
             router.push('/my-projects');
         }
@@ -321,6 +324,7 @@ export default function LoginPage() {
                            authProvider: 'keycloak',
                            issuedAt: Date.now(),
                          }));
+                         localStorage.setItem('projectflow_last_activity', Date.now().toString());
                          toast({ title: "Welcome back!", description: "You have successfully logged in via Keycloak." });
                          router.push('/my-projects');
                      });

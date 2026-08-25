@@ -144,8 +144,8 @@ export default function ReleasesPage() {
     if (isDialogOpen) {
       if (editingItem) {
         form.reset({
-          name: editingItem.name,
-          description: editingItem.description,
+          name: (editingItem.name || '').slice(0, 60),
+          description: (editingItem.description || '').slice(0, 300),
           startDate: editingItem.startDate ? format(new Date(editingItem.startDate), 'yyyy-MM-dd') : '',
           endDate: editingItem.endDate ? format(new Date(editingItem.endDate), 'yyyy-MM-dd') : '',
           milestoneDate: editingItem.milestoneDate ? format(new Date(editingItem.milestoneDate), 'yyyy-MM-dd') : '',
@@ -440,7 +440,7 @@ export default function ReleasesPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Name</FormLabel>
-                      <FormControl><Input placeholder={`E.g., Q3 2024 ${currentItemType}`} {...field} /></FormControl>
+                      <FormControl><Input placeholder={`E.g., Q3 2024 ${currentItemType}`} {...field} maxLength={60} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -451,7 +451,7 @@ export default function ReleasesPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Description</FormLabel>
-                      <FormControl><Textarea placeholder="Describe the main goals..." {...field} rows={4} /></FormControl>
+                      <FormControl><Textarea placeholder="Describe the main goals..." {...field} rows={4} maxLength={300} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

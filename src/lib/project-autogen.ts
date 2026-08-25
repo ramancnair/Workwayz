@@ -79,11 +79,21 @@ class AutoBatch {
   }
 }
 
-/** Strip undefined fields (Firestore requirement). */
+/** Strip undefined fields (Firestore requirement) and truncate strings to max lengths. */
 const clean = (obj: any): any => {
   const out: any = {};
   for (const k of Object.keys(obj)) {
-    if (obj[k] !== undefined) out[k] = obj[k];
+    if (obj[k] !== undefined) {
+      let val = obj[k];
+      if (typeof val === 'string') {
+        if ((k === 'title' || k === 'name') && val.length > 60) {
+          val = val.slice(0, 60);
+        } else if (k === 'description' && val.length > 300) {
+          val = val.slice(0, 300);
+        }
+      }
+      out[k] = val;
+    }
   }
   return out;
 };
@@ -668,39 +678,39 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const prodBugsCount = totalBugs - (sitBugsCount + uatBugsCount);
 
   const sitTemplates = [
-    'SIT: API validation error during batch import',
-    'SIT: Database lock deadlock when saving story status',
-    'SIT: Authentication token expires prematurely on refresh',
-    'SIT: Memory leak observed in real-time chart re-rendering',
-    'SIT: Component layout shift when resizing employee sidebar',
-    'SIT: File upload fails for attachments larger than 2MB',
-    'SIT: Incorrect JSON payload signature on webhook payload',
-    'SIT: System exception when generating utilization reports',
-    'SIT: WebSocket subscription disconnects after 5 minutes',
-    'SIT: Thread exhaustion on parallel background sync tasks'
+    'SIT: Batch import API validation error',
+    'SIT: Deadlock when saving story status',
+    'SIT: Auth token expires prematurely on refresh',
+    'SIT: Memory leak in real-time chart re-rendering',
+    'SIT: Layout shift when resizing employee sidebar',
+    'SIT: File upload fails for attachments > 2MB',
+    'SIT: Incorrect JSON webhook payload signature',
+    'SIT: System error on generating utilization reports',
+    'SIT: WebSocket disconnects after 5 minutes',
+    'SIT: Thread exhaustion on parallel background tasks'
   ];
 
   const uatTemplates = [
-    'UAT: Holiday generator confirmation modal is confusing',
-    'UAT: Utilization heatmaps are difficult to read in light mode',
-    'UAT: Expected payment milestones format doesn\'t match invoicing layout',
-    'UAT: Missing confirmation prompt before archiving a project',
-    'UAT: Text overlap in resource Gantt chart headers',
-    'UAT: Dashboard stats cards count archived items incorrectly',
-    'UAT: User profile editing doesn\'t save avatar selection',
-    'UAT: Wording of "Move to Backlog" button is misleading',
-    'UAT: Datepicker field allows past dates on sprint creation',
-    'UAT: Export to CSV button is hidden on smaller screens'
+    'UAT: Holiday generator confirmation modal issue',
+    'UAT: Utilization heatmaps difficult in light mode',
+    'UAT: Payment milestone layout mismatch',
+    'UAT: Missing confirmation on archiving project',
+    'UAT: Text overlap in resource Gantt headers',
+    'UAT: Dashboard counts archived items incorrectly',
+    'UAT: Profile editing avatar selection unsaved',
+    'UAT: Move to Backlog button wording issue',
+    'UAT: Datepicker allows past dates on sprint create',
+    'UAT: Export to CSV button hidden on small screens'
   ];
 
   const prodTemplates = [
-    'Production: Concurrent worklog submissions corrupt total hours count',
-    'Production: Supabase auth rate limit exceeded under high load',
-    'Production: Payment gateway callback signature mismatches on webhook',
-    'Production: CDN assets take more than 5s to load in APAC region',
-    'Production: Browser crash in Safari due to grid layout flex overlap',
-    'Production: Billing calculations round cents incorrectly under fixed-bid plans',
-    'Production: Sentry reports unhandled promise rejection on logout'
+    'Production: Concurrent worklog corrupts total hours',
+    'Production: Auth rate limit exceeded on high load',
+    'Production: Webhook signature verification error',
+    'Production: CDN assets slow to load in APAC region',
+    'Production: Safari browser crash on grid layout',
+    'Production: Billing rounding issue on fixed-bid',
+    'Production: Unhandled promise rejection on logout'
   ];
 
   let bugCounter = storyCounter;

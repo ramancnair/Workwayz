@@ -192,8 +192,8 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   
       if (selectedStory.itemType === 'Sub Task') {
           subTaskForm.reset({
-              title: selectedStory.title,
-              description: selectedStory.description || '',
+              title: (selectedStory.title || '').slice(0, 60),
+              description: (selectedStory.description || '').slice(0, 300),
               impactedSystemId: selectedStory.impactedSystemId || 'unassigned',
               estimatedHours: selectedStory.estimatedHours,
               assigneeId: selectedStory.assigneeId || 'unassigned',
@@ -211,9 +211,9 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
           setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
           editStoryForm.reset({
               itemType: selectedStory.itemType as any,
-              title: selectedStory.title,
+              title: (selectedStory.title || '').slice(0, 60),
               status: selectedStory.status as any || 'To Do',
-              description: selectedStory.description || '',
+              description: (selectedStory.description || '').slice(0, 300),
               acceptanceCriteria: selectedStory.acceptanceCriteria || '',
               epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
               parentStoryId: isSubItem ? selectedStory.parentStoryId || undefined : undefined,
@@ -244,6 +244,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;
     setIsEditStorySubmitting(true);
+    const isClosed = values.status === 'Closed' || values.status === 'Done';
     const success = await updateStory(selectedStory.id, {
         ...values,
         itemType: values.itemType as WorkItemType | undefined,
@@ -254,7 +255,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
         foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
         createdAt: values.createdAt ? values.createdAt.toISOString() : undefined,
-        closedAt: values.closedAt ? values.closedAt.toISOString() : undefined,
+        closedAt: isClosed ? (values.closedAt ? values.closedAt.toISOString() : new Date().toISOString()) : null as any,
     });
     if (success) {
         onClose();
@@ -329,7 +330,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
-                            <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field}/></FormControl><FormMessage/></FormItem>
+                            <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Sub-task title" {...field} maxLength={60} /></FormControl><FormMessage/></FormItem>
                         )}/>
                         <Tabs defaultValue="details" className="w-full">
                             <TabsList variant="folder">
@@ -344,7 +345,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                                 <div className="space-y-4">
                                     <FormField control={subTaskForm.control} name="description" render={({field}) => (
-                                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field}/></FormControl><FormMessage/></FormItem>
+                                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe sub-task..." {...field} maxLength={300} /></FormControl><FormMessage/></FormItem>
                                     )}/>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={subTaskForm.control} name="impactedSystemId" render={({field}) => (
@@ -501,7 +502,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                       <FormItem>
                         <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="Story title" {...field} />
+                          <Input placeholder="Story title" {...field} maxLength={60} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -589,7 +590,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             <FormItem>
                                 <FormLabel>Description</FormLabel>
                                 <FormControl>
-                                <Textarea placeholder="Describe the story..." {...field} />
+                                <Textarea placeholder="Describe the story..." {...field} maxLength={300} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -766,7 +767,17 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select 
+                                    onValueChange={(val) => {
+                                        field.onChange(val);
+                                        if (val === 'Closed' || val === 'Done') {
+                                            editStoryForm.setValue('closedAt', new Date());
+                                        } else {
+                                            editStoryForm.setValue('closedAt', undefined);
+                                        }
+                                    }} 
+                                    value={field.value}
+                                >
                                 <FormControl>
                                     <SelectTrigger>
                                     <SelectValue placeholder="Set status" />
@@ -971,6 +982,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                          <FormControl>
                                              <Input 
                                                  type="date" 
+                                                 disabled
                                                  value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
                                                  onChange={(e) => {
                                                      const val = e.target.value;

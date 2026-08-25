@@ -250,8 +250,8 @@ export default function DevelopmentTasksPage() {
     if (isDialogOpen) {
       if (editingSubTask) {
         form.reset({
-          title: editingSubTask.title || '',
-          description: editingSubTask.description || '',
+          title: (editingSubTask.title || '').slice(0, 60),
+          description: (editingSubTask.description || '').slice(0, 300),
           parentStoryId: editingSubTask.parentStoryId || '',
           assigneeId: editingSubTask.assigneeId || 'unassigned',
           status: editingSubTask.status as 'To Do' | 'In Progress' | 'Done',
@@ -652,7 +652,7 @@ export default function DevelopmentTasksPage() {
                     <FormItem>
                       <FormLabel>Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Sub-task title" {...field} />
+                        <Input placeholder="Sub-task title" {...field} maxLength={60} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -665,7 +665,7 @@ export default function DevelopmentTasksPage() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe the sub-task..." {...field} />
+                        <Textarea placeholder="Describe the sub-task..." {...field} maxLength={300} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

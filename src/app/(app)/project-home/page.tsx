@@ -175,7 +175,7 @@ function ProjectDialogContent({
               <FormItem>
                 <FormLabel>Project Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="E.g., Q3 Marketing Campaign" {...field} />
+                  <Input placeholder="E.g., Q3 Marketing Campaign" {...field} maxLength={60} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -420,6 +420,7 @@ export default function ProjectsDashboard() {
       if (editingProject) {
         form.reset({
           ...editingProject,
+          name: (editingProject.name || '').slice(0, 60),
           pricingModel: editingProject.pricingModel || 'T&M',
           projectManagerId: editingProject.projectManagerId || '',
           status: editingProject.status || 'Initial Estimation',
@@ -436,7 +437,10 @@ export default function ProjectsDashboard() {
   useEffect(() => {
     if (isPortfolioDialogOpen) {
       if (editingPortfolio) {
-        portfolioForm.reset({ name: editingPortfolio.name, description: editingPortfolio.description || '' });
+        portfolioForm.reset({
+          name: (editingPortfolio.name || '').slice(0, 60),
+          description: (editingPortfolio.description || '').slice(0, 300),
+        });
       } else {
         portfolioForm.reset({ name: '', description: '' });
       }
@@ -808,7 +812,7 @@ export default function ProjectsDashboard() {
                     <FormItem>
                       <FormLabel>Portfolio Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="E.g., Q1 Strategic Initiatives" {...field} />
+                        <Input placeholder="E.g., Q1 Strategic Initiatives" {...field} maxLength={60} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -821,7 +825,7 @@ export default function ProjectsDashboard() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe the portfolio..." {...field} />
+                        <Textarea placeholder="Describe the portfolio..." {...field} maxLength={300} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -27,15 +27,23 @@ import { generateNextSprintId } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { eachDayOfInterval, format, isSameDay, parseISO } from 'date-fns';
 
-// Helper to remove undefined values from an object before sending to Firestore
+// Helper to remove undefined values and enforce max string lengths before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
   const sanitized: any = {};
   for (const key in data) {
     if (data[key] !== undefined) {
-      if (typeof data[key] === 'number' && !Number.isNaN(data[key])) {
-        sanitized[key] = data[key];
-      } else if (typeof data[key] !== 'number') {
-        sanitized[key] = data[key];
+      let val = data[key];
+      if (typeof val === 'string') {
+        if ((key === 'title' || key === 'name') && val.length > 60) {
+          val = val.slice(0, 60);
+        } else if (key === 'description' && val.length > 300) {
+          val = val.slice(0, 300);
+        }
+      }
+      if (typeof val === 'number' && !Number.isNaN(val)) {
+        sanitized[key] = val;
+      } else if (typeof val !== 'number') {
+        sanitized[key] = val;
       }
     }
   }
@@ -356,6 +364,26 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
               ...sh,
               date: convertTimestamp(sh.date),
             }))
+          }
+          let needsDbTruncate = false;
+          const truncateUpdates: Record<string, string> = {};
+          if (typeof docData.title === 'string' && docData.title.length > 60) {
+            docData.title = docData.title.slice(0, 60);
+            truncateUpdates.title = docData.title;
+            needsDbTruncate = true;
+          }
+          if (typeof docData.name === 'string' && docData.name.length > 60) {
+            docData.name = docData.name.slice(0, 60);
+            truncateUpdates.name = docData.name;
+            needsDbTruncate = true;
+          }
+          if (typeof docData.description === 'string' && docData.description.length > 300) {
+            docData.description = docData.description.slice(0, 300);
+            truncateUpdates.description = docData.description;
+            needsDbTruncate = true;
+          }
+          if (needsDbTruncate && doc.ref) {
+            updateDoc(doc.ref, truncateUpdates).catch(() => {});
           }
           return { ...docData, id: doc.id };
         };
@@ -882,7 +910,13 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     }
   };
 
-  const moveStoryStatus = (storyId: string, newStatus: StoryStatus) => updateStory(storyId, { status: newStatus });
+  const moveStoryStatus = (storyId: string, newStatus: StoryStatus) => {
+    const isClosed = newStatus === 'Closed' || newStatus === 'Done';
+    return updateStory(storyId, { 
+      status: newStatus,
+      closedAt: isClosed ? new Date().toISOString() : (null as any),
+    });
+  };
   const moveStoryToEpic = (storyId: string, epicId: string | null) => updateStory(storyId, { epicId: epicId ?? undefined });
 
   const bulkUpdateSubTaskReleases = async (releaseIdCode: string): Promise<boolean> => {

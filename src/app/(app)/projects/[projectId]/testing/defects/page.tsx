@@ -146,8 +146,8 @@ export default function DefectsPage() {
         setRelatedBugInputText(relBug ? `[${relBug.storyId}] ${relBug.title}` : '');
 
         form.reset({
-          title: editingBug.title,
-          description: editingBug.description || '',
+          title: (editingBug.title || '').slice(0, 60),
+          description: (editingBug.description || '').slice(0, 300),
           acceptanceCriteria: editingBug.acceptanceCriteria || '',
           relatedTestCaseId: editingBug.relatedTestCaseId || 'unassigned',
           reporterId: editingBug.reporterId || 'unassigned',
@@ -214,11 +214,11 @@ export default function DefectsPage() {
 
     if (editingBug) {
         payload.createdAt = values.createdAt ? values.createdAt.toISOString() : undefined;
-        payload.closedAt = values.closedAt ? values.closedAt.toISOString() : undefined;
+        payload.closedAt = values.status === 'Closed' ? (values.closedAt ? values.closedAt.toISOString() : new Date().toISOString()) : null as any;
         success = await updateStory(editingBug.id, payload);
     } else {
         payload.createdAt = (values.createdAt || new Date()).toISOString();
-        payload.closedAt = values.closedAt ? values.closedAt.toISOString() : undefined;
+        payload.closedAt = values.status === 'Closed' ? (values.closedAt ? values.closedAt.toISOString() : new Date().toISOString()) : undefined;
         const res = await addStory({ ...payload, itemType: 'Bug', title: payload.title || '', description: payload.description || '', status: payload.status || 'In Triage' });
         success = !!res;
     }
@@ -427,7 +427,7 @@ export default function DefectsPage() {
                       <FormItem>
                         <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="Defect title" {...field} />
+                          <Input placeholder="Defect title" {...field} maxLength={60} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -440,7 +440,7 @@ export default function DefectsPage() {
                       <FormItem>
                         <FormLabel>Description (Steps to Reproduce)</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Describe the steps to reproduce the defect..." {...field} />
+                          <Textarea placeholder="Describe the steps to reproduce the defect..." {...field} maxLength={300} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -681,7 +681,17 @@ export default function DefectsPage() {
                        render={({ field }) => (
                            <FormItem>
                            <FormLabel>Status</FormLabel>
-                           <Select onValueChange={field.onChange} value={field.value as StoryStatus}>
+                           <Select 
+                                onValueChange={(val) => {
+                                    field.onChange(val);
+                                    if (val === 'Closed') {
+                                        form.setValue('closedAt', new Date());
+                                    } else {
+                                        form.setValue('closedAt', undefined);
+                                    }
+                                }} 
+                                value={field.value as StoryStatus}
+                           >
                                <FormControl>
                                <SelectTrigger>
                                    <SelectValue />
@@ -777,6 +787,7 @@ export default function DefectsPage() {
                                 <FormControl>
                                     <Input 
                                         type="date" 
+                                        disabled
                                         value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : ''}
                                         onChange={(e) => {
                                             const val = e.target.value;

@@ -269,6 +269,8 @@ export default function TestBacklogPage() {
           setRelatedStoryInputText(relatedStory?.label || '');
           form.reset({
             ...editingTestCase,
+            title: (editingTestCase.title || '').slice(0, 60),
+            description: (editingTestCase.description || '').slice(0, 300),
             storyId: editingTestCase.storyId || '',
             releaseId: editingTestCase.releaseId || 'unassigned',
             sprintId: editingTestCase.sprintId || 'backlog',
@@ -562,7 +564,7 @@ export default function TestBacklogPage() {
                 <FormField control={form.control} name="title" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Title</FormLabel>
-                          <FormControl><Input placeholder="E.g., Verify user login with valid credentials" {...field} /></FormControl>
+                          <FormControl><Input placeholder="E.g., Verify user login with valid credentials" {...field} maxLength={60} /></FormControl>
                           <FormMessage />
                         </FormItem>
                     )} />
@@ -581,7 +583,7 @@ export default function TestBacklogPage() {
                     <FormField control={form.control} name="description" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Description (Steps)</FormLabel>
-                          <FormControl><Textarea placeholder="1. Navigate to login page..." {...field} rows={4} /></FormControl>
+                          <FormControl><Textarea placeholder="1. Navigate to login page..." {...field} rows={4} maxLength={300} /></FormControl>
                           <FormMessage />
                         </FormItem>
                     )} />
