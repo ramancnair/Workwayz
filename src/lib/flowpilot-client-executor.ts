@@ -4,6 +4,7 @@ import {
   doc,
   addDoc,
   updateDoc,
+  deleteDoc,
   getDocs,
   getDoc,
   setDoc,
@@ -1251,6 +1252,175 @@ export async function executeFlowPilotActionOnClient(action: any) {
   }
 }
 
+// Master Undo Dispatcher for reversing AI actions
+export async function undoFlowPilotActionOnClient(action: any) {
+  if (!db) throw new Error('Database is not initialized on client');
+  const toolName = action.toolName;
+  const projectId = action.projectId;
+  const targetId = action.id || action.itemId || action.testCaseId || action.storyId || action.sprintId;
+
+  try {
+    switch (toolName) {
+      case 'createWorkItem': {
+        if (!projectId) throw new Error('Project ID missing');
+        const projectDocRef = doc(db, 'projects', projectId);
+        const storiesRef = collection(projectDocRef, 'stories');
+        // Search by ID or storyId
+        if (action.id) {
+          await updateDoc(doc(storiesRef, action.id), { isDeleted: true, deletedAt: new Date().toISOString() });
+        } else if (action.storyId) {
+          const snapshot = await getDocs(storiesRef);
+          const match = snapshot.docs.find((d: any) => d.data().storyId === action.storyId);
+          if (match) {
+            await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+          }
+        }
+        return { success: true, message: `Reverted work item ${action.storyId || action.title || ''}` };
+      }
+
+      case 'createEpic': {
+        if (!projectId || !action.id) throw new Error('Epic ID or Project ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'epics', action.id));
+        return { success: true, message: `Deleted Epic "${action.title || ''}"` };
+      }
+
+      case 'createSprint': {
+        if (!projectId || !action.id) throw new Error('Sprint ID or Project ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'sprints', action.id));
+        return { success: true, message: `Deleted Sprint "${action.title || ''}"` };
+      }
+
+      case 'createTestCase': {
+        if (!projectId) throw new Error('Project ID missing');
+        const tcRef = collection(doc(db, 'projects', projectId), 'testCases');
+        if (action.id) {
+          await updateDoc(doc(tcRef, action.id), { isDeleted: true, deletedAt: new Date().toISOString() });
+        } else if (action.testCaseId) {
+          const snapshot = await getDocs(tcRef);
+          const match = snapshot.docs.find((d: any) => d.data().testCaseId === action.testCaseId);
+          if (match) await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        }
+        return { success: true, message: `Reverted test case ${action.testCaseId || action.title || ''}` };
+      }
+
+      case 'createTestPlan': {
+        if (!projectId || !action.id) throw new Error('Test Plan ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'testPlans', action.id));
+        return { success: true, message: `Deleted test cycle "${action.name || ''}"` };
+      }
+
+      case 'createRaidItem': {
+        if (!projectId) throw new Error('Project ID missing');
+        const collMap: Record<string, string> = {
+          risk: 'risks',
+          assumption: 'assumptions',
+          issue: 'issues',
+          dependency: 'dependencies',
+        };
+        const coll = collMap[action.raidType] || 'issues';
+        const raidRef = collection(doc(db, 'projects', projectId), coll);
+        if (action.id) {
+          await updateDoc(doc(raidRef, action.id), { isDeleted: true, deletedAt: new Date().toISOString() });
+        } else if (action.itemId) {
+          const snapshot = await getDocs(raidRef);
+          const match = snapshot.docs.find((d: any) => d.data()[`${action.raidType}Id`] === action.itemId);
+          if (match) await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        }
+        return { success: true, message: `Reverted ${action.raidType?.toUpperCase() || 'item'} ${action.itemId || ''}` };
+      }
+
+      case 'createPortfolio': {
+        if (!action.id) throw new Error('Portfolio ID missing');
+        await updateDoc(doc(db, 'portfolios', action.id), { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, message: `Reverted portfolio "${action.name || ''}"` };
+      }
+
+      case 'createProject': {
+        if (!action.id) throw new Error('Project ID missing');
+        await updateDoc(doc(db, 'projects', action.id), { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, message: `Reverted project "${action.name || ''}"` };
+      }
+
+      case 'addImpactedSystem': {
+        if (!projectId || !action.id) throw new Error('Impacted System ID missing');
+        try {
+          await deleteDoc(doc(db, 'projects', projectId, 'initialImpactedSystems', action.id));
+        } catch (e) {}
+        try {
+          await deleteDoc(doc(db, 'projects', projectId, 'impactedSystems', action.id));
+        } catch (e) {}
+        return { success: true, message: `Removed Impacted System "${action.name || ''}"` };
+      }
+
+      case 'addHorizontal': {
+        if (!projectId || !action.id) throw new Error('Horizontal ID missing');
+        try {
+          await deleteDoc(doc(db, 'projects', projectId, 'initialHorizontals', action.id));
+        } catch (e) {}
+        try {
+          await deleteDoc(doc(db, 'projects', projectId, 'horizontals', action.id));
+        } catch (e) {}
+        return { success: true, message: `Removed Horizontal "${action.name || ''}"` };
+      }
+
+      case 'createRelease': {
+        if (!projectId || !action.id) throw new Error('Release ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'releases', action.id));
+        return { success: true, message: `Deleted Release "${action.name || ''}"` };
+      }
+
+      case 'createPaymentMilestone': {
+        if (!projectId || !action.id) throw new Error('Payment Milestone ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'paymentMilestones', action.id));
+        return { success: true, message: `Deleted Milestone "${action.name || ''}"` };
+      }
+
+      case 'assignProjectResource': {
+        if (!projectId || !action.id) throw new Error('Resource ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'employees', action.id));
+        return { success: true, message: `Removed Resource "${action.name || ''}"` };
+      }
+
+      case 'addEnvironment': {
+        if (!projectId || !action.id) throw new Error('Environment ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'environments', action.id));
+        return { success: true, message: `Removed Environment "${action.name || ''}"` };
+      }
+
+      case 'addCodeRepository': {
+        if (!projectId || !action.id) throw new Error('Code Repository ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'codeRepositories', action.id));
+        return { success: true, message: `Removed Code Repository "${action.name || ''}"` };
+      }
+
+      case 'addFixedCost': {
+        if (!projectId || !action.id) throw new Error('Fixed Cost ID missing');
+        await deleteDoc(doc(db, 'projects', projectId, 'fixedCosts', action.id));
+        return { success: true, message: `Removed Fixed Cost "${action.name || ''}"` };
+      }
+
+      case 'assignStoryToSprint': {
+        if (!projectId) throw new Error('Project ID missing');
+        const storiesRef = collection(doc(db, 'projects', projectId), 'stories');
+        const snapshot = await getDocs(storiesRef);
+        const match = snapshot.docs.find((d: any) => d.id === action.storyId || d.data().storyId === action.storyId);
+        if (match) {
+          await updateDoc(match.ref, { sprintId: null, updatedAt: new Date().toISOString() });
+        }
+        return { success: true, message: `Unassigned ${action.storyId} from sprint` };
+      }
+
+      default:
+        console.warn(`No specific undo handler for tool: ${toolName}`);
+        return { success: true, message: `Action ${toolName} rolled back` };
+    }
+  } catch (err: any) {
+    console.error(`Error undoing action ${toolName}:`, err);
+    throw err;
+  }
+}
+
 // Backwards compatibility alias
 export const executeHermesActionOnClient = executeFlowPilotActionOnClient;
+
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Bug,
@@ -24,11 +24,15 @@ import {
   Server,
   GitBranch,
   CreditCard,
+  RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { FlowPilotActionItem } from '@/ai/flows/flowpilot-agent';
+import { undoFlowPilotActionOnClient } from '@/lib/flowpilot-client-executor';
+import { useToast } from '@/hooks/use-toast';
 
 interface FlowPilotActionCardProps {
   action: FlowPilotActionItem;
@@ -36,6 +40,31 @@ interface FlowPilotActionCardProps {
 }
 
 export function FlowPilotActionCard({ action, onNavigate }: FlowPilotActionCardProps) {
+  const { toast } = useToast();
+  const [isUndone, setIsUndone] = useState(false);
+  const [isUndoing, setIsUndoing] = useState(false);
+
+  const handleUndo = async () => {
+    if (isUndone || isUndoing) return;
+    setIsUndoing(true);
+    try {
+      const res = await undoFlowPilotActionOnClient(action);
+      setIsUndone(true);
+      toast({
+        title: 'Action Reverted',
+        description: res.message || 'The action was successfully undone.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Undo Failed',
+        description: err.message || 'Could not revert this action.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
   const getItemIcon = () => {
     const itemType = action.itemType || action.raidType || action.toolName;
     switch (itemType) {
@@ -187,21 +216,35 @@ export function FlowPilotActionCard({ action, onNavigate }: FlowPilotActionCardP
   const displayTitle = action.title || action.name || action.description;
 
   return (
-    <div className="mt-2.5 p-3 rounded-lg border border-primary/20 bg-card/90 shadow-sm text-xs space-y-2.5 transition-all hover:border-primary/40">
+    <div
+      className={cn(
+        'mt-2.5 p-3 rounded-lg border shadow-sm text-xs space-y-2.5 transition-all',
+        isUndone
+          ? 'border-border/60 bg-muted/40 opacity-75'
+          : 'border-primary/20 bg-card/90 hover:border-primary/40'
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 font-semibold text-foreground">
           <div className="p-1 rounded-md bg-muted/80">{getItemIcon()}</div>
-          <span>{getActionTitle()}</span>
+          <span className={cn(isUndone && 'line-through text-muted-foreground')}>
+            {getActionTitle()}
+          </span>
+          {isUndone && (
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-500/10 text-amber-600 border-amber-300">
+              Reverted
+            </Badge>
+          )}
         </div>
         {displayId && (
-          <span className="font-mono text-[11px] px-2 py-0.5 rounded-md bg-primary/10 text-primary font-bold">
+          <span className={cn('font-mono text-[11px] px-2 py-0.5 rounded-md font-bold', isUndone ? 'bg-muted text-muted-foreground line-through' : 'bg-primary/10 text-primary')}>
             {displayId}
           </span>
         )}
       </div>
 
       {displayTitle && (
-        <div className="font-medium text-foreground line-clamp-2 text-xs">
+        <div className={cn('font-medium text-foreground line-clamp-2 text-xs', isUndone && 'line-through text-muted-foreground')}>
           {displayTitle}
         </div>
       )}
@@ -225,20 +268,41 @@ export function FlowPilotActionCard({ action, onNavigate }: FlowPilotActionCardP
           )}
         </div>
 
-        {action.url && (
-          <Button
-            asChild
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-[11px] font-medium text-primary hover:text-primary/90 hover:bg-primary/10"
-            onClick={onNavigate}
-          >
-            <Link href={action.url} className="flex items-center gap-1">
-              <span>View</span>
-              <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {/* Undo Action Button */}
+          {!isUndone && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={isUndoing}
+              onClick={handleUndo}
+              className="h-6 px-2 text-[11px] font-medium text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+              title="Undo this action"
+            >
+              {isUndoing ? (
+                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+              ) : (
+                <RotateCcw className="w-3 h-3 mr-1" />
+              )}
+              <span>Undo</span>
+            </Button>
+          )}
+
+          {action.url && !isUndone && (
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-[11px] font-medium text-primary hover:text-primary/90 hover:bg-primary/10"
+              onClick={onNavigate}
+            >
+              <Link href={action.url} className="flex items-center gap-1">
+                <span>View</span>
+                <ArrowUpRight className="w-3 h-3" />
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -246,4 +310,3 @@ export function FlowPilotActionCard({ action, onNavigate }: FlowPilotActionCardP
 
 // Backwards compatibility alias
 export const HermesActionCard = FlowPilotActionCard;
-

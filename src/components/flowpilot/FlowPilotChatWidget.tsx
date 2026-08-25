@@ -17,6 +17,7 @@ import {
   Loader2,
   Lightbulb,
   Cpu,
+  Square,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,6 +28,8 @@ import { FlowPilotActionCard } from './FlowPilotActionCard';
 import type { FlowPilotActionItem } from '@/ai/flows/flowpilot-agent';
 import { collection, getDocs, db } from '@/lib/db-provider';
 import { executeFlowPilotActionOnClient } from '@/lib/flowpilot-client-executor';
+
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatMessage {
   id: string;
@@ -58,6 +61,7 @@ const QUICK_PROMPTS = [
 
 export function FlowPilotChatWidget() {
   const pathname = usePathname();
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -68,24 +72,67 @@ export function FlowPilotChatWidget() {
   const [selectedProjectName, setSelectedProjectName] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [aiDetails, setAiDetails] = useState<AiDetailsInfo | null>(null);
+  const [availableModels, setAvailableModels] = useState<{
+    lmStudioModels: string[];
+    geminiModels: string[];
+    isLmStudioRunning: boolean;
+  }>({
+    lmStudioModels: [],
+    geminiModels: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+    isLmStudioRunning: false,
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Fetch active AI details from backend
+  // Fetch active AI details & live model list from backend
   const refreshAiDetails = () => {
-    fetch('/api/flowpilot/chat')
+    fetch('/api/flowpilot/models')
       .then((r) => r.json())
       .then((d) => {
-        if (d?.aiDetails) setAiDetails(d.aiDetails);
+        if (d?.active) setAiDetails(d.active);
+        if (d?.lmStudioModels) {
+          setAvailableModels({
+            lmStudioModels: d.lmStudioModels,
+            geminiModels: d.geminiModels || ['gemini-2.5-flash', 'gemini-2.5-pro'],
+            isLmStudioRunning: d.isLmStudioRunning,
+          });
+        }
       })
-      .catch((e) => console.warn('Could not fetch AI details for header', e));
+      .catch((e) => console.warn('Could not fetch AI models for header', e));
   };
 
   useEffect(() => {
     refreshAiDetails();
   }, [isOpen]);
+
+  const handleSelectModel = async (provider: string, model: string) => {
+    try {
+      const res = await fetch('/api/flowpilot/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, model }),
+      });
+      const data = await res.json();
+      if (data?.active) {
+        setAiDetails(data.active);
+        toast({
+          title: 'AI Model Switched',
+          description: `Active model is now ${data.active.displayName || model}`,
+        });
+      }
+      setIsModelDropdownOpen(false);
+    } catch (err: any) {
+      toast({
+        title: 'Model Switch Failed',
+        description: err.message || 'Could not switch AI model.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Auto-detect current project from URL path e.g. /projects/[projectId]/...
   useEffect(() => {
@@ -148,6 +195,23 @@ export function FlowPilotChatWidget() {
     }
   }, [messages, isOpen, isLoading]);
 
+  const handleStopExecution = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `msg-cancelled-${Date.now()}`,
+        role: 'model',
+        content: '🛑 *Execution was cancelled.*',
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || input).trim();
     if (!text || isLoading) return;
@@ -164,6 +228,9 @@ export function FlowPilotChatWidget() {
     setInput('');
     setIsLoading(true);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       // Build request payload for backend
       const apiMessages = newMessages.map((m) => ({
@@ -174,6 +241,7 @@ export function FlowPilotChatWidget() {
       const res = await fetch('/api/flowpilot/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: apiMessages,
           currentProjectId: selectedProjectId || undefined,
@@ -210,6 +278,7 @@ export function FlowPilotChatWidget() {
       if (finalActions.length > 0) {
         const processedActions: FlowPilotActionItem[] = [];
         for (const action of finalActions) {
+          if (controller.signal.aborted) break;
           if (action.needsClientExecution) {
             try {
               const clientResult = await executeFlowPilotActionOnClient(action);
@@ -229,6 +298,8 @@ export function FlowPilotChatWidget() {
         finalActions = processedActions;
       }
 
+      if (controller.signal.aborted) return;
+
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         role: 'model',
@@ -239,6 +310,10 @@ export function FlowPilotChatWidget() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
+      if (error.name === 'AbortError' || controller.signal.aborted) {
+        // Handled cleanly in handleStopExecution
+        return;
+      }
       console.error('Failed to communicate with FlowPilot:', error);
       const errorMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
@@ -249,6 +324,7 @@ export function FlowPilotChatWidget() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -353,30 +429,109 @@ export function FlowPilotChatWidget() {
                     AI
                   </Badge>
 
-                  {/* Model Engine Pill */}
-                  {aiDetails && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 max-w-[170px] sm:max-w-[210px] truncate cursor-help shadow-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                            <span className="truncate">{aiDetails.displayName || aiDetails.model}</span>
+                  {/* Model Engine Selector Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setIsModelDropdownOpen(!isModelDropdownOpen);
+                        setIsDropdownOpen(false);
+                        refreshAiDetails();
+                      }}
+                      className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 hover:border-primary/40 hover:bg-primary/15 transition-all max-w-[170px] sm:max-w-[220px] truncate shadow-sm cursor-pointer"
+                      title="Click to switch AI Model"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                      <span className="truncate">{aiDetails?.displayName || aiDetails?.model || 'AI Model'}</span>
+                      <ChevronDown className="w-2.5 h-2.5 opacity-70 shrink-0" />
+                    </button>
+
+                    {isModelDropdownOpen && (
+                      <div className="absolute top-7 left-0 z-50 w-72 p-2 bg-popover border border-border rounded-lg shadow-2xl text-xs space-y-2 text-popover-foreground animate-in fade-in-50 zoom-in-95">
+                        <div className="flex items-center justify-between px-1 pb-1 border-b border-border">
+                          <span className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                            <Cpu className="w-3.5 h-3.5 text-primary" />
+                            Select AI Inference Model
                           </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="bg-popover text-popover-foreground text-xs border-border space-y-1 p-2.5 shadow-xl">
-                          <p className="font-bold text-primary flex items-center gap-1">
-                            <Cpu className="w-3.5 h-3.5" />
-                            Active Inference Engine
-                          </p>
-                          <p><span className="text-muted-foreground">Provider:</span> <span className="font-semibold uppercase text-foreground">{aiDetails.provider}</span></p>
-                          <p><span className="text-muted-foreground">Model:</span> <span className="font-mono text-primary font-semibold">{aiDetails.model}</span></p>
-                          {aiDetails.endpoint && (
-                            <p><span className="text-muted-foreground">Endpoint:</span> <span className="font-mono text-foreground text-[11px]">{aiDetails.endpoint}</span></p>
+                          <span className="text-[9px] font-mono text-muted-foreground uppercase px-1.5 py-0.2 bg-muted rounded">
+                            {aiDetails?.provider || 'auto'}
+                          </span>
+                        </div>
+
+                        {/* LM Studio Local Models Section */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between px-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            <span>LM Studio (Local Server)</span>
+                            {availableModels.isLmStudioRunning ? (
+                              <span className="text-[9px] text-emerald-500 font-bold flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Online (1234)
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-amber-500">Offline</span>
+                            )}
+                          </div>
+
+                          {availableModels.lmStudioModels.length > 0 ? (
+                            <div className="max-h-36 overflow-y-auto space-y-0.5 pr-0.5">
+                              {availableModels.lmStudioModels.map((m) => {
+                                const isSelected = aiDetails?.provider === 'lmstudio' && aiDetails?.model === m;
+                                return (
+                                  <button
+                                    key={m}
+                                    onClick={() => handleSelectModel('lmstudio', m)}
+                                    className={cn(
+                                      'w-full text-left px-2 py-1.5 rounded-md text-[11px] font-mono transition-colors flex items-center justify-between gap-1.5',
+                                      isSelected
+                                        ? 'bg-primary/20 text-primary font-bold border border-primary/30'
+                                        : 'hover:bg-accent hover:text-accent-foreground text-foreground/90'
+                                    )}
+                                  >
+                                    <span className="truncate">{m}</span>
+                                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="px-2 py-1 text-[10px] text-muted-foreground italic">
+                              {availableModels.isLmStudioRunning
+                                ? 'No models loaded in LM Studio.'
+                                : 'Start LM Studio & enable local server on port 1234.'}
+                            </div>
                           )}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
+                        </div>
+
+                        <div className="h-px bg-border my-1" />
+
+                        {/* Google Gemini Cloud Section */}
+                        <div className="space-y-1">
+                          <div className="px-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            Google Gemini (Cloud)
+                          </div>
+                          <div className="space-y-0.5">
+                            {availableModels.geminiModels.map((m) => {
+                              const isSelected = aiDetails?.provider === 'google' && aiDetails?.model === m;
+                              return (
+                                <button
+                                  key={m}
+                                  onClick={() => handleSelectModel('google', m)}
+                                  className={cn(
+                                    'w-full text-left px-2 py-1.5 rounded-md text-[11px] font-mono transition-colors flex items-center justify-between gap-1.5',
+                                    isSelected
+                                      ? 'bg-primary/20 text-primary font-bold border border-primary/30'
+                                      : 'hover:bg-accent hover:text-accent-foreground text-foreground/90'
+                                  )}
+                                >
+                                  <span className="truncate">{m}</span>
+                                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="relative flex items-center gap-1 mt-0.5">
@@ -541,9 +696,21 @@ export function FlowPilotChatWidget() {
             {/* Loading Indicator */}
             {isLoading && (
               <div className="flex items-start gap-2">
-                <div className="bg-muted/70 border border-border/50 rounded-lg rounded-bl-none px-3.5 py-2.5 shadow-sm flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                  <span>FlowPilot is executing actions & writing to DB...</span>
+                <div className="bg-muted/70 border border-border/50 rounded-lg rounded-bl-none px-3.5 py-2 shadow-sm flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                    <span>FlowPilot is executing actions...</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleStopExecution}
+                    className="h-5 px-1.5 text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold transition-colors"
+                    title="Cancel execution"
+                  >
+                    <Square className="w-2.5 h-2.5 fill-current mr-1" />
+                    Stop
+                  </Button>
                 </div>
               </div>
             )}
@@ -563,14 +730,26 @@ export function FlowPilotChatWidget() {
                 rows={1}
                 className="min-h-[38px] max-h-28 text-xs sm:text-sm resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent py-2 px-2"
               />
-              <Button
-                size="icon"
-                onClick={() => handleSendMessage()}
-                disabled={!input.trim() || isLoading}
-                className="w-8 h-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 shadow-sm disabled:opacity-40"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </Button>
+              {isLoading ? (
+                <Button
+                  size="icon"
+                  onClick={handleStopExecution}
+                  className="w-8 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 shrink-0 shadow-sm transition-all animate-pulse"
+                  title="Stop execution"
+                >
+                  <Square className="w-3.5 h-3.5 fill-current" />
+                </Button>
+              ) : (
+                <Button
+                  size="icon"
+                  onClick={() => handleSendMessage()}
+                  disabled={!input.trim()}
+                  className="w-8 h-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 shadow-sm disabled:opacity-40"
+                  title="Send message"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              )}
             </div>
             <div className="flex items-center justify-between px-2 pt-1.5 text-[10px] text-muted-foreground/70">
               <span>Press Enter to send, Shift+Enter for newline</span>
