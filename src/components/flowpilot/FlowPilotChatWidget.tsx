@@ -102,7 +102,7 @@ export function FlowPilotChatWidget() {
           });
         }
       })
-      .catch((e) => console.warn('Could not fetch AI models for header', e));
+      .catch((e: any) => console.warn('Could not fetch AI models for header', e));
   };
 
   useEffect(() => {
@@ -172,7 +172,7 @@ export function FlowPilotChatWidget() {
             if (match) setSelectedProjectName(match.name);
           }
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.warn('Could not load projects for FlowPilot switcher', err);
         });
     }
