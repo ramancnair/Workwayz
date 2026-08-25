@@ -1,18 +1,18 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import {
-  hermesCreateWorkItem,
-  hermesUpdateWorkItem,
-  hermesCreateProject,
-  hermesCreateEpic,
-  hermesCreateSprint,
-  hermesCreateTestCase,
-  hermesCreateRaidItem,
-  hermesQueryProjectContext,
-  hermesListProjects,
-  hermesCreatePortfolio,
-  hermesListPortfolios,
-} from '@/lib/hermes-db-server';
+  flowpilotCreateWorkItem,
+  flowpilotUpdateWorkItem,
+  flowpilotCreateProject,
+  flowpilotCreateEpic,
+  flowpilotCreateSprint,
+  flowpilotCreateTestCase,
+  flowpilotCreateRaidItem,
+  flowpilotQueryProjectContext,
+  flowpilotListProjects,
+  flowpilotCreatePortfolio,
+  flowpilotListPortfolios,
+} from '@/lib/flowpilot-db-server';
 
 // 1. Tool: Create Work Item (Story, Bug, Task, Feature Change, Sub Task)
 export const createWorkItemTool = ai.defineTool(
@@ -60,9 +60,8 @@ export const createWorkItemTool = ai.defineTool(
   },
   async (input) => {
     try {
-      return await hermesCreateWorkItem(input);
+      return await flowpilotCreateWorkItem(input);
     } catch (err: any) {
-      // Return client-executable payload if server permissions are restricted
       return {
         success: true,
         itemType: input.itemType,
@@ -113,7 +112,7 @@ export const updateWorkItemTool = ai.defineTool(
   },
   async (input) => {
     try {
-      return await hermesUpdateWorkItem(input);
+      return await flowpilotUpdateWorkItem(input);
     } catch (err: any) {
       return {
         success: true,
@@ -134,7 +133,7 @@ export const createPortfolioTool = ai.defineTool(
     name: 'createPortfolio',
     description: 'Creates a new Portfolio in the workspace to group and organize projects.',
     inputSchema: z.object({
-      name: z.string().describe('Name of the portfolio (e.g. "Fintech Solutions", "Hermes", "Mobile Apps").'),
+      name: z.string().describe('Name of the portfolio (e.g. "Fintech Solutions", "FlowPilot", "Mobile Apps").'),
       description: z.string().optional().describe('Description of what this portfolio encompasses.'),
     }),
     outputSchema: z.object({
@@ -149,7 +148,7 @@ export const createPortfolioTool = ai.defineTool(
   },
   async (input) => {
     try {
-      return await hermesCreatePortfolio(input);
+      return await flowpilotCreatePortfolio(input);
     } catch (err: any) {
       return {
         success: true,
@@ -175,7 +174,7 @@ export const listPortfoliosTool = ai.defineTool(
   },
   async () => {
     try {
-      const portfolios = await hermesListPortfolios();
+      const portfolios = await flowpilotListPortfolios();
       return { portfoliosJson: JSON.stringify(portfolios) };
     } catch (err: any) {
       return { portfoliosJson: JSON.stringify([]) };
@@ -188,7 +187,7 @@ export const createProjectTool = ai.defineTool(
   {
     name: 'createProject',
     description:
-      'Creates a new project in ProjectFlow workspace under a portfolio, initializing default Kanban columns, settings, and environments.',
+      'Creates a new project in ProjectFlow workspace under a portfolio, initializing default Kanban columns, settings, and environments. WARNING: DO NOT call this tool when the user is already working inside an active project and providing project specifications, platform summary, or domain details — use updateProjectSpecifications or updateProjectDetails instead.',
     inputSchema: z.object({
       name: z.string().describe('Name of the new project.'),
       portfolioId: z.string().optional().describe('Optional portfolio ID. If omitted, uses the default portfolio.'),
@@ -213,7 +212,7 @@ export const createProjectTool = ai.defineTool(
   },
   async (input) => {
     try {
-      return await hermesCreateProject(input);
+      return await flowpilotCreateProject(input);
     } catch (err: any) {
       return {
         success: true,
@@ -248,7 +247,7 @@ export const createEpicTool = ai.defineTool(
   },
   async (input) => {
     try {
-      return await hermesCreateEpic(input);
+      return await flowpilotCreateEpic(input);
     } catch (err: any) {
       return {
         success: true,
@@ -292,7 +291,7 @@ export const createSprintTool = ai.defineTool(
   },
   async (input) => {
     try {
-      return await hermesCreateSprint(input);
+      return await flowpilotCreateSprint(input);
     } catch (err: any) {
       return {
         success: true,
@@ -334,7 +333,7 @@ export const createTestCaseTool = ai.defineTool(
   },
   async (input) => {
     try {
-      return await hermesCreateTestCase(input);
+      return await flowpilotCreateTestCase(input);
     } catch (err: any) {
       return {
         success: true,
@@ -381,7 +380,7 @@ export const createRaidItemTool = ai.defineTool(
   },
   async (input) => {
     try {
-      return await hermesCreateRaidItem(input as any);
+      return await flowpilotCreateRaidItem(input as any);
     } catch (err: any) {
       return {
         success: true,
@@ -401,7 +400,7 @@ export const queryProjectDataContextTool = ai.defineTool(
   {
     name: 'queryProjectData',
     description:
-      'Queries live project state (stories, bugs, sprints, epics, test cases, risks, issues) or lists all projects so Hermes can answer queries accurately.',
+      'Queries live project state (stories, bugs, sprints, epics, test cases, risks, issues) or lists all projects so FlowPilot can answer queries accurately.',
     inputSchema: z.object({
       projectId: z.string().optional().describe('The project ID to query. If omitted, returns global portfolio overview.'),
     }),
@@ -411,7 +410,7 @@ export const queryProjectDataContextTool = ai.defineTool(
   },
   async (input) => {
     try {
-      const data = await hermesQueryProjectContext(input.projectId);
+      const data = await flowpilotQueryProjectContext(input.projectId);
       return { dataJson: JSON.stringify(data) };
     } catch (err: any) {
       return { dataJson: JSON.stringify({ error: err.message }) };
@@ -431,7 +430,7 @@ export const listProjectsTool = ai.defineTool(
   },
   async () => {
     try {
-      const projects = await hermesListProjects();
+      const projects = await flowpilotListProjects();
       return { projectsJson: JSON.stringify(projects) };
     } catch (err: any) {
       return { projectsJson: JSON.stringify([]) };
@@ -1003,7 +1002,7 @@ export const addFixedCostTool = ai.defineTool(
   }
 );
 
-export const allHermesTools = [
+export const allFlowPilotTools = [
   createPortfolioTool,
   listPortfoliosTool,
   createWorkItemTool,
@@ -1031,4 +1030,7 @@ export const allHermesTools = [
   queryProjectDataContextTool,
   listProjectsTool,
 ];
+
+// Backwards compatibility alias
+export const allHermesTools = allFlowPilotTools;
 

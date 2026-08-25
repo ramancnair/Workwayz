@@ -51,7 +51,7 @@ const sanitizeData = (data: any) => {
 };
 
 // 1. Create Work Item (Story, Bug, Task, Feature Change, Sub Task)
-export async function hermesCreateWorkItem(params: {
+export async function flowpilotCreateWorkItem(params: {
   projectId: string;
   itemType: WorkItemType;
   title: string;
@@ -131,7 +131,7 @@ export async function hermesCreateWorkItem(params: {
 }
 
 // 2. Update Work Item
-export async function hermesUpdateWorkItem(params: {
+export async function flowpilotUpdateWorkItem(params: {
   projectId: string;
   storyIdOrDocId: string;
   updates: {
@@ -203,7 +203,7 @@ export async function hermesUpdateWorkItem(params: {
 }
 
 // 3. Create Project
-export async function hermesCreateProject(params: {
+export async function flowpilotCreateProject(params: {
   name: string;
   portfolioId?: string;
   pricingModel?: 'Fixed Bid' | 'T&M';
@@ -236,7 +236,7 @@ export async function hermesCreateProject(params: {
     if (activePort) {
       portfolioId = activePort.id;
     } else {
-      const defaultPort = await hermesCreatePortfolio({
+      const defaultPort = await flowpilotCreatePortfolio({
         name: 'Main Portfolio',
         description: 'Default portfolio',
       });
@@ -330,7 +330,7 @@ export async function hermesCreateProject(params: {
 }
 
 // 4. Create Epic
-export async function hermesCreateEpic(params: {
+export async function flowpilotCreateEpic(params: {
   projectId: string;
   title: string;
   description?: string;
@@ -355,7 +355,7 @@ export async function hermesCreateEpic(params: {
 }
 
 // 5. Create Sprint
-export async function hermesCreateSprint(params: {
+export async function flowpilotCreateSprint(params: {
   projectId: string;
   title: string;
   startDate?: string;
@@ -394,7 +394,7 @@ export async function hermesCreateSprint(params: {
 }
 
 // 6. Create Test Case
-export async function hermesCreateTestCase(params: {
+export async function flowpilotCreateTestCase(params: {
   projectId: string;
   title: string;
   description?: string;
@@ -444,23 +444,19 @@ export async function hermesCreateTestCase(params: {
 }
 
 // 7. Create RAID Item (Risk, Assumption, Issue, Dependency)
-export async function hermesCreateRaidItem(params: {
+export async function flowpilotCreateRaidItem(params: {
   projectId: string;
   raidType: 'risk' | 'assumption' | 'issue' | 'dependency';
   description: string;
-  // Risk fields
   severity?: 1 | 2 | 3;
   probability?: 1 | 2 | 3;
   mitigationPlan?: string;
   residualRisk?: string;
   contingencyPlan?: string;
-  // Assumption fields
   category?: 'Technical' | 'Resource' | 'Business' | 'External';
   assumptionStatus?: 'Active' | 'Validated' | 'Invalidated';
-  // Issue fields
   priority?: 'Low' | 'Medium' | 'High' | 'Critical';
   issueStatus?: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
-  // Dependency fields
   dependencyType?: 'Internal' | 'External';
   dependencyOn?: string;
   expectedByDate?: string;
@@ -528,12 +524,11 @@ export async function hermesCreateRaidItem(params: {
   };
 }
 
-// 8. Query Project Context & Summary for Hermes
-export async function hermesQueryProjectContext(projectId?: string) {
+// 8. Query Project Context & Summary for FlowPilot
+export async function flowpilotQueryProjectContext(projectId?: string) {
   if (!db) throw new Error('Database not initialized');
 
   if (!projectId) {
-    // List all projects
     const projectsSnap = await getDocs(collection(db, 'projects'));
     const projects = projectsSnap.docs
       .filter((d: any) => !d.data().isDeleted)
@@ -555,7 +550,6 @@ export async function hermesQueryProjectContext(projectId?: string) {
 
   const projData = projectSnap.data();
 
-  // Fetch summaries
   const [storiesSnap, epicsSnap, sprintsSnap, testCasesSnap, risksSnap, issuesSnap] = await Promise.all([
     getDocs(collection(projectDocRef, 'stories')),
     getDocs(collection(projectDocRef, 'epics')),
@@ -639,7 +633,7 @@ export async function hermesQueryProjectContext(projectId?: string) {
 }
 
 // 9. List All Projects
-export async function hermesListProjects() {
+export async function flowpilotListProjects() {
   if (!db) throw new Error('Database not initialized');
   const snap = await getDocs(collection(db, 'projects'));
   return snap.docs
@@ -654,13 +648,12 @@ export async function hermesListProjects() {
 }
 
 // 10. Create Portfolio
-export async function hermesCreatePortfolio(params: { name: string; description?: string }) {
+export async function flowpilotCreatePortfolio(params: { name: string; description?: string }) {
   if (!db) throw new Error('Database not initialized');
   
   const portSnap = await getDocs(collection(db, 'portfolios'));
   const trimmedName = params.name.trim();
 
-  // Check if portfolio already exists (case-insensitive)
   const existing = portSnap.docs.find(
     (d: any) => !d.data().isDeleted && d.data().name?.trim().toLowerCase() === trimmedName.toLowerCase()
   );
@@ -676,7 +669,6 @@ export async function hermesCreatePortfolio(params: { name: string; description?
     };
   }
 
-  // Calculate next sequential PF ID (PF001, PF002, ...)
   const existingIds = portSnap.docs
     .map((d: any) => parseInt(d.id.replace('PF', ''), 10))
     .filter((num: number) => !isNaN(num));
@@ -706,7 +698,7 @@ export async function hermesCreatePortfolio(params: { name: string; description?
 }
 
 // 11. List All Portfolios
-export async function hermesListPortfolios() {
+export async function flowpilotListPortfolios() {
   if (!db) throw new Error('Database not initialized');
   const snap = await getDocs(collection(db, 'portfolios'));
   return snap.docs
@@ -717,5 +709,4 @@ export async function hermesListPortfolios() {
       description: d.data().description,
     }));
 }
-
 

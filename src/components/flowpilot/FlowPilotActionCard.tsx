@@ -28,14 +28,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { HermesActionItem } from '@/ai/flows/hermes-agent';
+import type { FlowPilotActionItem } from '@/ai/flows/flowpilot-agent';
 
-interface HermesActionCardProps {
-  action: HermesActionItem;
+interface FlowPilotActionCardProps {
+  action: FlowPilotActionItem;
   onNavigate?: () => void;
 }
 
-export function HermesActionCard({ action, onNavigate }: HermesActionCardProps) {
+export function FlowPilotActionCard({ action, onNavigate }: FlowPilotActionCardProps) {
   const getItemIcon = () => {
     const itemType = action.itemType || action.raidType || action.toolName;
     switch (itemType) {
@@ -243,4 +243,7 @@ export function HermesActionCard({ action, onNavigate }: HermesActionCardProps) 
     </div>
   );
 }
+
+// Backwards compatibility alias
+export const HermesActionCard = FlowPilotActionCard;
 

@@ -23,16 +23,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { HermesActionCard } from './HermesActionCard';
-import type { HermesActionItem } from '@/ai/flows/hermes-agent';
+import { FlowPilotActionCard } from './FlowPilotActionCard';
+import type { FlowPilotActionItem } from '@/ai/flows/flowpilot-agent';
 import { collection, getDocs, db } from '@/lib/db-provider';
-import { executeHermesActionOnClient } from '@/lib/hermes-client-executor';
+import { executeFlowPilotActionOnClient } from '@/lib/flowpilot-client-executor';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'model';
   content: string;
-  executedActions?: HermesActionItem[];
+  executedActions?: FlowPilotActionItem[];
   timestamp: Date;
 }
 
@@ -56,7 +56,7 @@ const QUICK_PROMPTS = [
   'Summarize current project status',
 ];
 
-export function HermesChatWidget() {
+export function FlowPilotChatWidget() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -75,7 +75,7 @@ export function HermesChatWidget() {
 
   // Fetch active AI details from backend
   const refreshAiDetails = () => {
-    fetch('/api/hermes/chat')
+    fetch('/api/flowpilot/chat')
       .then((r) => r.json())
       .then((d) => {
         if (d?.aiDetails) setAiDetails(d.aiDetails);
@@ -126,7 +126,7 @@ export function HermesChatWidget() {
           }
         })
         .catch((err) => {
-          console.warn('Could not load projects for Hermes switcher', err);
+          console.warn('Could not load projects for FlowPilot switcher', err);
         });
     }
   }, [selectedProjectId]);
@@ -171,7 +171,7 @@ export function HermesChatWidget() {
         content: m.content,
       }));
 
-      const res = await fetch('/api/hermes/chat', {
+      const res = await fetch('/api/flowpilot/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -208,11 +208,11 @@ export function HermesChatWidget() {
       // Execute actions via authenticated client session if needed
       let finalActions = data.executedActions || [];
       if (finalActions.length > 0) {
-        const processedActions: HermesActionItem[] = [];
+        const processedActions: FlowPilotActionItem[] = [];
         for (const action of finalActions) {
           if (action.needsClientExecution) {
             try {
-              const clientResult = await executeHermesActionOnClient(action);
+              const clientResult = await executeFlowPilotActionOnClient(action);
               processedActions.push({
                 ...action,
                 ...clientResult,
@@ -239,11 +239,11 @@ export function HermesChatWidget() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
-      console.error('Failed to communicate with Hermes:', error);
+      console.error('Failed to communicate with FlowPilot:', error);
       const errorMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         role: 'model',
-        content: `⚠️ Sorry, I encountered an issue executing your request: ${error.message || 'Could not connect to Hermes service.'}`,
+        content: `⚠️ Sorry, I encountered an issue executing your request: ${error.message || 'Could not connect to FlowPilot service.'}`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -451,8 +451,8 @@ export function HermesChatWidget() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsMaximized(!isMaximized)}
-                className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-accent hidden sm:flex"
-                title={isMaximized ? 'Restore Size' : 'Maximize'}
+                className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-accent"
+                title={isMaximized ? 'Restore' : 'Maximize'}
               >
                 {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
               </Button>
@@ -461,17 +461,17 @@ export function HermesChatWidget() {
                 size="icon"
                 onClick={() => setIsOpen(false)}
                 className="w-7 h-7 text-muted-foreground hover:text-foreground hover:bg-accent"
-                title="Close Chat"
+                title="Minimize Chat"
               >
-                <X className="w-4 h-4" />
+                <Minus className="w-3.5 h-3.5" />
               </Button>
             </div>
           </div>
 
-          {/* Messages Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Messages Scroll Area */}
+          <div className="flex-1 p-3.5 overflow-y-auto space-y-3.5 text-xs bg-background/50">
             {messages.length === 0 ? (
-              <div className="h-full flex flex-col justify-center items-center text-center p-4 space-y-4">
+              <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-3 my-auto">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary ring-1 ring-primary/20">
                   <Sparkles className="w-6 h-6 text-primary animate-pulse" />
                 </div>
@@ -526,7 +526,7 @@ export function HermesChatWidget() {
                     {msg.executedActions && msg.executedActions.length > 0 && (
                       <div className="space-y-2 mt-2">
                         {msg.executedActions.map((action, idx) => (
-                          <HermesActionCard key={idx} action={action} onNavigate={() => setIsOpen(false)} />
+                          <FlowPilotActionCard key={idx} action={action} onNavigate={() => setIsOpen(false)} />
                         ))}
                       </div>
                     )}
@@ -573,8 +573,10 @@ export function HermesChatWidget() {
               </Button>
             </div>
             <div className="flex items-center justify-between px-2 pt-1.5 text-[10px] text-muted-foreground/70">
-              <span>Press <strong>Enter</strong> to send, <strong>Shift+Enter</strong> for newline</span>
-              <span className="font-mono">{selectedProjectName ? `Target: ${selectedProjectName}` : 'Global Scope'}</span>
+              <span>Press Enter to send, Shift+Enter for newline</span>
+              <span className="font-mono text-[9px] opacity-75">
+                Target: {selectedProjectName ? selectedProjectName : 'Global'}
+              </span>
             </div>
           </div>
         </div>
@@ -582,3 +584,7 @@ export function HermesChatWidget() {
     </>
   );
 }
+
+// Backwards compatibility alias
+export const HermesChatWidget = FlowPilotChatWidget;
+

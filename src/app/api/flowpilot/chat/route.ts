@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { runHermesAgent, getActiveAiDetails, type HermesAgentInput } from '@/ai/flows/hermes-agent';
+import { runFlowPilotAgent, getActiveAiDetails, type FlowPilotAgentInput } from '@/ai/flows/flowpilot-agent';
 
 export async function GET() {
   try {
@@ -18,7 +18,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body: HermesAgentInput = await request.json();
+    const body: FlowPilotAgentInput = await request.json();
 
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       return NextResponse.json(
@@ -27,10 +27,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await runHermesAgent(body);
+    const result = await runFlowPilotAgent(body);
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Hermes Chat API error:', error);
+    console.error('FlowPilot Chat API error:', error);
     const aiDetails = await getActiveAiDetails().catch(() => undefined);
     return NextResponse.json(
       {
@@ -42,3 +42,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

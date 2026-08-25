@@ -48,7 +48,6 @@ export async function executeClientCreatePortfolio(params: { name: string; descr
   const portSnap = await getDocs(collection(db, 'portfolios'));
   const trimmedName = params.name.trim();
 
-  // Check if portfolio already exists (case-insensitive)
   const existing = portSnap.docs.find(
     (d: any) => !d.data().isDeleted && d.data().name?.trim().toLowerCase() === trimmedName.toLowerCase()
   );
@@ -64,7 +63,6 @@ export async function executeClientCreatePortfolio(params: { name: string; descr
     };
   }
 
-  // Calculate next sequential PF ID (PF001, PF002, ...)
   const existingIds = portSnap.docs
     .map((d: any) => parseInt(d.id.replace('PF', ''), 10))
     .filter((num: number) => !isNaN(num));
@@ -107,7 +105,6 @@ export async function executeClientCreateProject(params: {
 }) {
   if (!db) throw new Error('Database is not initialized on client');
 
-  // Resolve target portfolio
   const portSnap = await getDocs(collection(db, 'portfolios'));
   let portfolioId = params.portfolioId;
 
@@ -123,7 +120,6 @@ export async function executeClientCreateProject(params: {
     }
   }
 
-  // If still not resolved, use first active portfolio or create default PF001
   if (!portfolioId) {
     const activePort = portSnap.docs.find((d: any) => !d.data().isDeleted);
     if (activePort) {
@@ -137,7 +133,6 @@ export async function executeClientCreateProject(params: {
     }
   }
 
-  // Calculate standard Project ID (P + YY + 5-digit sequence, e.g. P2600001)
   const currentYear = new Date().getFullYear().toString().slice(-2);
   const projectsSnapshot = await getDocs(collection(db, 'projects'));
 
@@ -209,7 +204,7 @@ export async function executeClientCreateProject(params: {
       await addDoc(collection(projectDocRef, 'environments'), env);
     }
   } catch (err) {
-    console.warn('Non-fatal initializing project subcollections on client:', err);
+    console.warn('Non-fatal error initializing subcollections on client:', err);
   }
 
   return {
@@ -222,7 +217,7 @@ export async function executeClientCreateProject(params: {
   };
 }
 
-// 3. Client Execute: Create Work Item (Story, Bug, Task, Feature Change, Sub Task)
+// 3. Client Execute: Create Work Item
 export async function executeClientCreateWorkItem(params: {
   projectId: string;
   itemType: WorkItemType;
@@ -620,9 +615,7 @@ export async function executeClientAddImpactedSystem(params: {
   const doc1 = await addDoc(collection(projectDocRef, 'initialImpactedSystems'), payload);
   try {
     await addDoc(collection(projectDocRef, 'impactedSystems'), payload);
-  } catch (e) {
-    // Non-fatal if collection doesn't exist
-  }
+  } catch (e) {}
 
   return {
     success: true,
@@ -659,9 +652,7 @@ export async function executeClientAddHorizontal(params: {
   const doc1 = await addDoc(collection(projectDocRef, 'initialHorizontals'), payload);
   try {
     await addDoc(collection(projectDocRef, 'horizontals'), payload);
-  } catch (e) {
-    // Non-fatal
-  }
+  } catch (e) {}
 
   return {
     success: true,
@@ -696,12 +687,10 @@ export async function executeClientUpdateSpecifications(params: {
 
   const projectDocRef = doc(db, 'projects', projectId);
 
-  // Update summary on project doc
   if (summary) {
     await updateDoc(projectDocRef, sanitizeData({ summary, updatedAt: new Date().toISOString() }));
   }
 
-  // Insert Impacted Systems
   if (impactedSystems && Array.isArray(impactedSystems) && impactedSystems.length > 0) {
     for (const sys of impactedSystems) {
       const payload = sanitizeData({
@@ -719,7 +708,6 @@ export async function executeClientUpdateSpecifications(params: {
     }
   }
 
-  // Insert Horizontals
   if (horizontals && Array.isArray(horizontals) && horizontals.length > 0) {
     for (const h of horizontals) {
       const payload = sanitizeData({
@@ -761,7 +749,6 @@ export async function executeClientUpdateSprint(params: {
   const projectDocRef = doc(db, 'projects', projectId);
   const sprintRef = doc(projectDocRef, 'sprints', sprintId);
 
-  // Check if updating by ID or document ID
   let targetRef = sprintRef;
   const snapshot = await getDocs(collection(projectDocRef, 'sprints'));
   const match = snapshot.docs.find((d: any) => d.id === sprintId || d.data().title === sprintId);
@@ -971,7 +958,6 @@ export async function executeClientAssignProjectResource(params: {
 
   const projectDocRef = doc(db, 'projects', projectId);
 
-  // Find user from all users or create placeholder
   let empId = userId;
   let firstName = name || 'Resource';
   let lastName = '';
@@ -1202,7 +1188,7 @@ export async function executeClientUpdateRaidItem(params: {
 }
 
 // Master Dispatcher for client-side tool execution
-export async function executeHermesActionOnClient(action: any) {
+export async function executeFlowPilotActionOnClient(action: any) {
   const toolName = action.toolName;
   const params = action.params || action;
 
@@ -1264,4 +1250,7 @@ export async function executeHermesActionOnClient(action: any) {
     throw err;
   }
 }
+
+// Backwards compatibility alias
+export const executeHermesActionOnClient = executeFlowPilotActionOnClient;
 

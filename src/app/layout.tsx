@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 
-import { HermesChatWidget } from "@/components/hermes/HermesChatWidget";
+import { FlowPilotChatWidget } from "@/components/flowpilot/FlowPilotChatWidget";
 
 export const metadata: Metadata = {
   title: 'ProjectFlow',
@@ -36,7 +36,7 @@ export default function RootLayout({
           <SupabaseBootstrap />
           <SetupInterceptor />
           {children}
-          <HermesChatWidget />
+          <FlowPilotChatWidget />
           <Toaster />
         </ThemeProvider>
       </body>
