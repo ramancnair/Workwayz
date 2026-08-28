@@ -360,7 +360,7 @@ export default function IssuesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move the selected {selectedIssues.length} issue(s) to the trash.
+              This will move the selected {selectedIssues.length} issue(s) to the trash. They will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -369,7 +369,7 @@ export default function IssuesPage() {
               onClick={handleBulkDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
-              Delete Selected
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

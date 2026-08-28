@@ -40,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PlusCircle, Edit, Trash2, ArrowUpDown, CheckCircle2, Calendar } from 'lucide-react';
 import { type PaymentMilestone, type PaymentMilestoneStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, isValidUrl, formatUrl } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from '@/components/ui/badge';
 import { eachMonthOfInterval, format, parseISO, subMonths, addMonths } from 'date-fns';
@@ -50,7 +50,10 @@ const milestoneSchema = z.object({
   amount: z.coerce.number().min(0, "Amount must be a positive number."),
   status: z.enum(['TBD', 'In Progress', 'Milestone completed', 'Invoice raised', 'Payment Completed']),
   statusDate: z.string().optional().or(z.literal('')),
-  attachments: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  attachments: z.string().refine(
+    val => !val || val.trim() === '' || isValidUrl(val),
+    { message: "Please enter a valid URL (e.g. https://example.com or www.example.com)." }
+  ).optional().or(z.literal('')),
 }).superRefine((data, ctx) => {
   if (data.statusDate) {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -248,6 +251,9 @@ export default function TnmPaymentMilestonesPage() {
       ...payloadData, 
       billingPercentage: 0 
     } as any;
+    if (payload.attachments) {
+      payload.attachments = formatUrl(payload.attachments);
+    }
 
     const originalStatus = editingMilestone?.status;
     const newStatus = values.status;

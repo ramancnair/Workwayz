@@ -409,7 +409,7 @@ export default function RisksPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move the selected {selectedRisks.length} risk(s) to the trash.
+              This will move the selected {selectedRisks.length} risk(s) to the trash. They will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

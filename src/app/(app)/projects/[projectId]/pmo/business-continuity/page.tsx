@@ -27,28 +27,26 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { cn, isValidUrl, formatUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { type Environment, type CodeRepository } from '@/types';
 import { format, parseISO } from 'date-fns';
 
-const ensureHttp = (val: unknown) => {
-  if (typeof val !== 'string' || val.trim() === '') return val;
-  const trimmed = val.trim();
-  if (!/^https?:\/\//i.test(trimmed)) {
-    return `https://${trimmed}`;
-  }
-  return trimmed;
-};
-
 const environmentFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
-  url: z.preprocess(ensureHttp, z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal(''))),
+  url: z.string().refine(
+    val => !val || val.trim() === '' || isValidUrl(val),
+    { message: "Please enter a valid URL (e.g. https://example.com or www.example.com)." }
+  ).optional().or(z.literal('')),
   renewalDate: z.string().optional(),
 });
 
 const repositoryFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
-  url: z.preprocess(ensureHttp, z.string().url({ message: 'Please enter a valid URL.' })),
+  url: z.string().refine(
+    val => !!val && isValidUrl(val),
+    { message: 'Please enter a valid URL (e.g. https://example.com or www.example.com).' }
+  ),
   expiryDate: z.string().optional(),
 });
 
@@ -124,6 +122,7 @@ export default function BusinessContinuityPage() {
     if (!editingEnvironment) return;
     const environmentData = {
       ...values,
+      url: values.url ? formatUrl(values.url) : '',
       renewalDate: values.renewalDate ? new Date(values.renewalDate).toISOString() : undefined,
     };
 
@@ -145,6 +144,7 @@ export default function BusinessContinuityPage() {
   const onRepoSubmit = async (values: z.infer<typeof repositoryFormSchema>) => {
     const repoData = {
       ...values,
+      url: formatUrl(values.url),
       expiryDate: values.expiryDate ? new Date(values.expiryDate).toISOString() : undefined,
     };
 

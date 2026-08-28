@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
+import { cn, isValidUrl, formatUrl } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -82,7 +82,9 @@ const testCaseFormSchema = z.object({
   effortHours: z.string().optional(),
   attachments: z.array(z.object({
     name: z.string(),
-    url: z.string(),
+    url: z.string().refine(val => !val || val.trim() === '' || isValidUrl(val), {
+      message: "Please enter a valid URL (e.g. https://example.com or www.example.com).",
+    }),
   })).optional(),
 });
 
@@ -251,12 +253,25 @@ export default function TestPlanPage() {
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     if (!editingTestCase || !selectedPlanId) return;
 
+    // Validate attachment URLs
+    const invalidAttachment = (values.attachments || []).find(
+      a => a.url && a.url.trim() !== '' && !isValidUrl(a.url)
+    );
+    if (invalidAttachment) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid URL',
+        description: `Attachment "${invalidAttachment.name || 'Untitled'}" has an invalid URL format. Please enter a valid URL (e.g. https://example.com or www.example.com).`,
+      });
+      return;
+    }
+
     const parsedEffort = values.effortHours && values.effortHours.trim() !== ''
       ? parseFloat(values.effortHours)
       : undefined;
 
     const cleanedAttachments = (values.attachments || [])
-      .map(a => ({ name: (a.name || '').trim(), url: (a.url || '').trim() }))
+      .map(a => ({ name: (a.name || '').trim(), url: a.url && a.url.trim() !== '' ? formatUrl(a.url) : '' }))
       .filter(a => a.name !== '' || a.url !== '');
 
     const updateData: Partial<TestPlanTestCase> = {
@@ -1313,6 +1328,14 @@ export default function TestPlanPage() {
                                   size="sm"
                                   className="h-7 text-xs px-2.5 gap-1 font-medium bg-primary/10 hover:bg-primary/20 text-primary"
                                   onClick={() => {
+                                    if (att.url && att.url.trim() !== '' && !isValidUrl(att.url)) {
+                                      toast({
+                                        variant: 'destructive',
+                                        title: 'Invalid URL',
+                                        description: 'Please enter a valid URL (e.g. https://example.com or www.example.com)',
+                                      });
+                                      return;
+                                    }
                                     setEditingAttachmentIndices(prev => ({ ...prev, [index]: false }));
                                   }}
                                 >
@@ -1366,8 +1389,11 @@ export default function TestPlanPage() {
                                     current[index] = { ...current[index], url: e.target.value };
                                     testCaseForm.setValue('attachments', current);
                                   }}
-                                  className="h-8 text-xs bg-background font-mono"
+                                  className={cn("h-8 text-xs bg-background font-mono", att.url && !isValidUrl(att.url) && "border-destructive focus-visible:ring-destructive")}
                                 />
+                                {att.url && !isValidUrl(att.url) && (
+                                  <p className="text-[10px] text-destructive">Invalid URL format (e.g. https://example.com or www.example.com)</p>
+                                )}
                               </div>
                             </div>
                           </div>

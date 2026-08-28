@@ -40,22 +40,16 @@ import { type ProjectDocument } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, isValidUrl, formatUrl } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 
-const ensureHttp = (val: unknown) => {
-  if (typeof val !== 'string' || val.trim() === '') return val;
-  const trimmed = val.trim();
-  if (!/^https?:\/\//i.test(trimmed)) {
-    return `https://${trimmed}`;
-  }
-  return trimmed;
-};
-
 const documentSchema = z.object({
   name: z.string().min(1, 'Document name is required.'),
-  location: z.preprocess(ensureHttp, z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal(''))),
+  location: z.string().refine(
+    val => !val || val.trim() === '' || isValidUrl(val),
+    { message: "Please enter a valid URL (e.g. https://example.com or www.example.com)." }
+  ).optional().or(z.literal('')),
 });
 
 const defaultDocsList = [
@@ -128,7 +122,7 @@ export default function DocumentsPage() {
     
     const payload = {
       name: values.name,
-      location: values.location || '',
+      location: values.location ? formatUrl(values.location) : '',
     };
 
     const success = editingDocument

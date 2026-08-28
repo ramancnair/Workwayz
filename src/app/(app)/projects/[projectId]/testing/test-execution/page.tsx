@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { format, eachDayOfInterval, parseISO, isSameDay } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, isValidUrl, formatUrl } from '@/lib/utils';
 import type { TestCaseStatus, TestCaseType, TestPlanTestCase } from '@/types';
 import {
   Play,
@@ -369,11 +369,24 @@ export default function TestExecutionPage() {
   const handleSaveDetails = async () => {
     if (!selectedPlanId || !selectedTC) return;
 
+    // Validate attachment URLs
+    const invalidAttachment = formAttachments.find(
+      a => a.url && a.url.trim() !== '' && !isValidUrl(a.url)
+    );
+    if (invalidAttachment) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid URL',
+        description: `Attachment "${invalidAttachment.name || 'Untitled'}" has an invalid URL format. Please enter a valid URL (e.g. https://example.com or www.example.com).`,
+      });
+      return;
+    }
+
     setIsSaving(true);
     const parsedActual = formActualEffort.trim() !== '' ? parseFloat(formActualEffort) : undefined;
 
     const cleanedAttachments = formAttachments
-      .map(a => ({ name: (a.name || '').trim(), url: (a.url || '').trim() }))
+      .map(a => ({ name: (a.name || '').trim(), url: a.url && a.url.trim() !== '' ? formatUrl(a.url) : '' }))
       .filter(a => a.name !== '' || a.url !== '');
 
     const payload: Partial<TestPlanTestCase> = {
@@ -1214,6 +1227,14 @@ export default function TestExecutionPage() {
                                 size="sm"
                                 className="h-7 text-xs px-2.5 gap-1 font-medium bg-primary/10 hover:bg-primary/20 text-primary"
                                 onClick={() => {
+                                  if (att.url && att.url.trim() !== '' && !isValidUrl(att.url)) {
+                                    toast({
+                                      variant: 'destructive',
+                                      title: 'Invalid URL',
+                                      description: 'Please enter a valid URL (e.g. https://example.com or www.example.com)',
+                                    });
+                                    return;
+                                  }
                                   setEditingExecAttachmentIndices(prev => ({ ...prev, [index]: false }));
                                 }}
                               >
@@ -1269,8 +1290,11 @@ export default function TestExecutionPage() {
                                     return next;
                                   });
                                 }}
-                                className="h-8 text-xs bg-background font-mono"
+                                className={cn("h-8 text-xs bg-background font-mono", att.url && !isValidUrl(att.url) && "border-destructive focus-visible:ring-destructive")}
                               />
+                              {att.url && !isValidUrl(att.url) && (
+                                <p className="text-[10px] text-destructive">Invalid URL format (e.g. https://example.com or www.example.com)</p>
+                              )}
                             </div>
                           </div>
                         </div>

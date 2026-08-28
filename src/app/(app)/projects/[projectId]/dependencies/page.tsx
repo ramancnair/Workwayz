@@ -165,10 +165,10 @@ export default function DependenciesPage() {
 
     const successCount = results.filter(Boolean).length;
     if (successCount > 0) {
-      toast({ title: "Success", description: `${successCount} dependency(s) moved to trash.` });
+      toast({ title: "Success", description: `${successCount} dependency(ies) moved to trash.` });
     }
     if (successCount < selectedDependencies.length) {
-      toast({ variant: "destructive", title: "Error", description: `Could not move ${selectedDependencies.length - successCount} dependency(s) to trash.` });
+      toast({ variant: "destructive", title: "Error", description: `Could not move ${selectedDependencies.length - successCount} dependency(ies) to trash.` });
     }
 
     setSelectedDependencies([]);
@@ -410,7 +410,7 @@ export default function DependenciesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move the selected {selectedDependencies.length} dependency(s) to the trash.
+              This will move the selected {selectedDependencies.length} dependency(ies) to the trash. They will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
