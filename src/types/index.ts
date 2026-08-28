@@ -101,6 +101,12 @@ export type TestPlan = {
   testCaseIds?: string[]; // Legacy: kept for migration only
 };
 
+export type AttachmentItem = {
+  id?: string;
+  name: string;
+  url: string;
+};
+
 export type TestPlanTestCase = {
   id: string;                    // Firestore doc ID (within the plan subcollection)
   originalTestCaseId: string;    // Reference back to the backlog TestCase
@@ -122,6 +128,7 @@ export type TestPlanTestCase = {
   effortHours?: number;
   actualEffortHours?: number;
   attachment?: string;
+  attachments?: AttachmentItem[];
 };
 
 export type TestCase = {

@@ -26,6 +26,12 @@ import {
   User,
   Save,
   CheckSquare,
+  Paperclip,
+  Plus,
+  Trash2,
+  Edit,
+  Link as LinkIcon,
+  Check,
 } from 'lucide-react';
 
 const statusStyles: Record<TestCaseStatus, string> = {
@@ -76,6 +82,8 @@ export default function TestExecutionPage() {
   const [formActualEffort, setFormActualEffort] = useState<string>('');
   const [formDescription, setFormDescription] = useState<string>('');
   const [formExpectedResult, setFormExpectedResult] = useState<string>('');
+  const [formAttachments, setFormAttachments] = useState<Array<{ name: string; url: string }>>([]);
+  const [editingExecAttachmentIndices, setEditingExecAttachmentIndices] = useState<Record<number, boolean>>({});
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Auto-select first test plan if none selected
@@ -124,6 +132,12 @@ export default function TestExecutionPage() {
       );
       setFormDescription(selectedTC.description || '');
       setFormExpectedResult(selectedTC.expectedResult || '');
+      let initialAttachments = (selectedTC.attachments || []).map(a => ({ name: a.name || '', url: a.url || '' }));
+      if (initialAttachments.length === 0 && selectedTC.attachment) {
+        initialAttachments = [{ name: 'Attachment', url: selectedTC.attachment }];
+      }
+      setFormAttachments(initialAttachments);
+      setEditingExecAttachmentIndices({});
     } else {
       setFormStatus('Not Run');
       setFormAssigneeId('unassigned');
@@ -131,6 +145,8 @@ export default function TestExecutionPage() {
       setFormActualEffort('');
       setFormDescription('');
       setFormExpectedResult('');
+      setFormAttachments([]);
+      setEditingExecAttachmentIndices({});
     }
   }, [selectedTC]);
 
@@ -356,6 +372,10 @@ export default function TestExecutionPage() {
     setIsSaving(true);
     const parsedActual = formActualEffort.trim() !== '' ? parseFloat(formActualEffort) : undefined;
 
+    const cleanedAttachments = formAttachments
+      .map(a => ({ name: (a.name || '').trim(), url: (a.url || '').trim() }))
+      .filter(a => a.name !== '' || a.url !== '');
+
     const payload: Partial<TestPlanTestCase> = {
       status: formStatus,
       assigneeId: formAssigneeId === 'unassigned' ? undefined : formAssigneeId,
@@ -363,6 +383,7 @@ export default function TestExecutionPage() {
       actualEffortHours: parsedActual !== undefined && !isNaN(parsedActual) ? parsedActual : undefined,
       description: formDescription,
       expectedResult: formExpectedResult,
+      attachments: cleanedAttachments,
     };
 
     const success = await updateTestPlanTestCase(selectedPlanId, selectedTC.id, payload);
@@ -627,8 +648,16 @@ export default function TestExecutionPage() {
                                   </div>
 
                                   {/* Title */}
-                                  <div className="text-xs font-medium text-foreground truncate" title={tc.title}>
-                                    {tc.title}
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <div className="text-xs font-medium text-foreground truncate" title={tc.title}>
+                                      {tc.title}
+                                    </div>
+                                    {((tc.attachments && tc.attachments.length > 0) || !!tc.attachment) && (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0 bg-muted px-1.5 py-0.5 rounded" title={`${(tc.attachments?.length || 1)} attachment(s)`}>
+                                        <Paperclip className="h-2.5 w-2.5" />
+                                        {tc.attachments && tc.attachments.length > 1 ? tc.attachments.length : ''}
+                                      </span>
+                                    )}
                                   </div>
 
                                   {/* Meta */}
@@ -725,8 +754,17 @@ export default function TestExecutionPage() {
                                 </Badge>
                               </div>
 
-                              <div className="text-xs font-medium text-foreground truncate" title={tc.title}>
-                                {tc.title}
+                              {/* Title */}
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="text-xs font-medium text-foreground truncate" title={tc.title}>
+                                  {tc.title}
+                                </div>
+                                {((tc.attachments && tc.attachments.length > 0) || !!tc.attachment) && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0 bg-muted px-1.5 py-0.5 rounded" title={`${(tc.attachments?.length || 1)} attachment(s)`}>
+                                    <Paperclip className="h-2.5 w-2.5" />
+                                    {tc.attachments && tc.attachments.length > 1 ? tc.attachments.length : ''}
+                                  </span>
+                                )}
                               </div>
 
                               <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
@@ -1067,6 +1105,179 @@ export default function TestExecutionPage() {
                   className="text-xs resize-y bg-background"
                   placeholder="Expected behavior / acceptance criteria..."
                 />
+              </div>
+
+              {/* Attachments Section */}
+              <div className="space-y-3 p-4 rounded-lg border bg-card/60">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">
+                      Attachments
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Add document links, test evidence, or specifications URLs.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1.5 border-dashed"
+                    onClick={() => {
+                      setFormAttachments(prev => [...prev, { name: '', url: '' }]);
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Attachment
+                  </Button>
+                </div>
+
+                {formAttachments.length === 0 ? (
+                  <div className="text-center py-4 border border-dashed rounded-md bg-muted/20 text-xs text-muted-foreground">
+                    No attachments added yet. Click &quot;Add Attachment&quot; to link documents or test evidence.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {formAttachments.map((att, index) => {
+                      const isEditing = editingExecAttachmentIndices[index] ?? (att.name === '' && att.url === '');
+
+                      if (!isEditing && (att.name || att.url)) {
+                        return (
+                          <div key={index} className="p-3 rounded-md border bg-background/80 flex items-center justify-between gap-3 shadow-xs">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 min-w-0 flex-1">
+                              <div className="min-w-[120px] max-w-[200px] truncate">
+                                <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Document Name</span>
+                                <span className="text-xs font-medium text-foreground truncate block" title={att.name || 'Untitled Document'}>
+                                  {att.name || 'Untitled Document'}
+                                </span>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Location</span>
+                                {att.url ? (
+                                  <a
+                                    href={att.url.startsWith('http://') || att.url.startsWith('https://') ? att.url : `https://${att.url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:underline inline-flex items-center gap-1.5 text-xs font-medium truncate max-w-full"
+                                  >
+                                    <LinkIcon className="h-3.5 w-3.5 shrink-0" />
+                                    <span>View Document</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic">No URL provided</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                onClick={() => setEditingExecAttachmentIndices(prev => ({ ...prev, [index]: true }))}
+                                title="Edit attachment"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                  setFormAttachments(prev => prev.filter((_, i) => i !== index));
+                                  setEditingExecAttachmentIndices(prev => {
+                                    const next = { ...prev };
+                                    delete next[index];
+                                    return next;
+                                  });
+                                }}
+                                title="Remove attachment"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={index} className="p-3 rounded-md border bg-background/80 space-y-3 relative group">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase">
+                              Attachment #{index + 1}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 text-xs px-2.5 gap-1 font-medium bg-primary/10 hover:bg-primary/20 text-primary"
+                                onClick={() => {
+                                  setEditingExecAttachmentIndices(prev => ({ ...prev, [index]: false }));
+                                }}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                Done
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                  setFormAttachments(prev => prev.filter((_, i) => i !== index));
+                                  setEditingExecAttachmentIndices(prev => {
+                                    const next = { ...prev };
+                                    delete next[index];
+                                    return next;
+                                  });
+                                }}
+                                title="Remove attachment"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-[11px] text-muted-foreground font-medium">Document Name</Label>
+                              <Input
+                                placeholder="e.g. SOW, Test Evidence Screenshot"
+                                value={att.name || ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setFormAttachments(prev => {
+                                    const next = [...prev];
+                                    next[index] = { ...next[index], name: val };
+                                    return next;
+                                  });
+                                }}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[11px] text-muted-foreground font-medium">Location (URL)</Label>
+                              <Input
+                                placeholder="https://example.com/your-document-link"
+                                value={att.url || ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setFormAttachments(prev => {
+                                    const next = [...prev];
+                                    next[index] = { ...next[index], url: val };
+                                    return next;
+                                  });
+                                }}
+                                className="h-8 text-xs bg-background font-mono"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </>
           )}

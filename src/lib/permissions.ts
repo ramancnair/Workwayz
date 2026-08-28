@@ -109,6 +109,8 @@ export function hasPagePermission(
     ? ['Test Cycle', 'Test Plan'] 
     : (pageName === 'Portfolio Trash' || pageName === 'Trash')
     ? ['Portfolio Trash', 'Trash']
+    : (pageName === 'Test Cases' || pageName === 'Test Backlog' || pageName === 'Test Backlogs')
+    ? ['Test Cases', 'Test Backlog', 'Test Backlogs']
     : [pageName];
 
   if (customPageAccess) {
@@ -322,6 +324,7 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/testing`,
         candidates: [
           { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
+          { name: 'Test Cases', path: `${basePath}/testing/test-backlog` },
           { name: 'Test Backlogs', path: `${basePath}/testing/test-backlog` },
           { name: 'Test Backlog', path: `${basePath}/testing/test-backlog` },
           { name: 'Test Cycles', path: `${basePath}/testing/test-plan` },

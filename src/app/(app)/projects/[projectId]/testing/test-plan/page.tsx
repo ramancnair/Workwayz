@@ -21,7 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown, Search, ArrowRight } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Edit, Trash2, ArrowUpDown, X, ChevronsUpDown, Search, ArrowRight, Paperclip, Plus, Link as LinkIcon, Check } from 'lucide-react';
 import type { TestCase, TestCaseStatus, TestCaseType, Story, Sprint, Release, Employee, TestPlan, TestPlanTestCase } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +80,10 @@ const testCaseFormSchema = z.object({
   assigneeId: z.string().optional(),
   executionDate: z.string().optional(),
   effortHours: z.string().optional(),
+  attachments: z.array(z.object({
+    name: z.string(),
+    url: z.string(),
+  })).optional(),
 });
 
 const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped'];
@@ -134,6 +138,7 @@ export default function TestPlanPage() {
   });
 
   const testCaseForm = useForm<z.infer<typeof testCaseFormSchema>>({});
+  const [editingAttachmentIndices, setEditingAttachmentIndices] = useState<Record<number, boolean>>({});
 
   const watchedPlanType = useWatch({ control: testPlanForm.control, name: 'planType' });
   const watchedSprintId = useWatch({ control: testPlanForm.control, name: 'sprintId' });
@@ -208,6 +213,11 @@ export default function TestPlanPage() {
 
   useEffect(() => {
     if (isTestCaseDialogOpen && editingTestCase) {
+        let initialAttachments = (editingTestCase.attachments || []).map(a => ({ name: a.name || '', url: a.url || '' }));
+        if (initialAttachments.length === 0 && editingTestCase.attachment) {
+          initialAttachments = [{ name: 'Attachment', url: editingTestCase.attachment }];
+        }
+        setEditingAttachmentIndices({});
         testCaseForm.reset({
             title: (editingTestCase.title || '').slice(0, 60),
             type: editingTestCase.type,
@@ -217,6 +227,7 @@ export default function TestPlanPage() {
             assigneeId: editingTestCase.assigneeId || 'unassigned',
             executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
             effortHours: editingTestCase.effortHours !== undefined && editingTestCase.effortHours !== null ? String(editingTestCase.effortHours) : '',
+            attachments: initialAttachments,
         });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
@@ -244,6 +255,10 @@ export default function TestPlanPage() {
       ? parseFloat(values.effortHours)
       : undefined;
 
+    const cleanedAttachments = (values.attachments || [])
+      .map(a => ({ name: (a.name || '').trim(), url: (a.url || '').trim() }))
+      .filter(a => a.name !== '' || a.url !== '');
+
     const updateData: Partial<TestPlanTestCase> = {
       title: values.title,
       type: values.type,
@@ -253,6 +268,7 @@ export default function TestPlanPage() {
       assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
       executionDate: values.executionDate ? new Date(values.executionDate).toISOString() : undefined,
       effortHours: parsedEffort !== undefined && !isNaN(parsedEffort) ? parsedEffort : undefined,
+      attachments: cleanedAttachments,
     };
 
     const success = await updateTestPlanTestCase(selectedPlanId, editingTestCase.id, updateData);
@@ -769,13 +785,21 @@ export default function TestPlanPage() {
                                       </button>
                                     </TableCell>
                                     <TableCell className="py-1.5">
-                                      <button
-                                        onClick={() => handleTestCaseDialogOpen(tc)}
-                                        className="text-left text-xs truncate max-w-[240px] font-normal hover:underline hover:text-primary transition-colors block"
-                                        title={tc.title}
-                                      >
-                                        {tc.title}
-                                      </button>
+                                      <div className="flex items-center gap-1.5">
+                                        <button
+                                          onClick={() => handleTestCaseDialogOpen(tc)}
+                                          className="text-left text-xs truncate max-w-[240px] font-normal hover:underline hover:text-primary transition-colors block"
+                                          title={tc.title}
+                                        >
+                                          {tc.title}
+                                        </button>
+                                        {((tc.attachments && tc.attachments.length > 0) || !!tc.attachment) && (
+                                          <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0 bg-muted px-1.5 py-0.5 rounded" title={`${(tc.attachments?.length || 1)} attachment(s)`}>
+                                            <Paperclip className="h-2.5 w-2.5" />
+                                            {tc.attachments && tc.attachments.length > 1 ? tc.attachments.length : ''}
+                                          </span>
+                                        )}
+                                      </div>
                                     </TableCell>
                                     <TableCell>
                                       <Badge className={cn("text-[11px] px-1.5 py-0 whitespace-nowrap", statusStyles[tc.status])}>
@@ -885,13 +909,21 @@ export default function TestPlanPage() {
                                   </button>
                                 </TableCell>
                                 <TableCell className="py-1.5">
-                                  <button
-                                    onClick={() => handleTestCaseDialogOpen(tc)}
-                                    className="text-left text-xs truncate max-w-[240px] font-normal hover:underline hover:text-primary transition-colors block"
-                                    title={tc.title}
-                                  >
-                                    {tc.title}
-                                  </button>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      onClick={() => handleTestCaseDialogOpen(tc)}
+                                      className="text-left text-xs truncate max-w-[240px] font-normal hover:underline hover:text-primary transition-colors block"
+                                      title={tc.title}
+                                    >
+                                      {tc.title}
+                                    </button>
+                                    {((tc.attachments && tc.attachments.length > 0) || !!tc.attachment) && (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0 bg-muted px-1.5 py-0.5 rounded" title={`${(tc.attachments?.length || 1)} attachment(s)`}>
+                                        <Paperclip className="h-2.5 w-2.5" />
+                                        {tc.attachments && tc.attachments.length > 1 ? tc.attachments.length : ''}
+                                      </span>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <Badge className={cn("text-[11px] px-1.5 py-0 whitespace-nowrap", statusStyles[tc.status])}>
@@ -1172,6 +1204,177 @@ export default function TestPlanPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                </div>
+
+                {/* Attachments Section */}
+                <div className="space-y-3 p-4 rounded-lg border bg-card/60">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-xs font-semibold">Attachments</Label>
+                      <p className="text-[11px] text-muted-foreground">Add document links, test evidence, or specifications URLs.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1.5 border-dashed"
+                      onClick={() => {
+                        const current = testCaseForm.getValues('attachments') || [];
+                        testCaseForm.setValue('attachments', [...current, { name: '', url: '' }]);
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Attachment
+                    </Button>
+                  </div>
+
+                  {/* Attachment items list */}
+                  {(!testCaseForm.watch('attachments') || testCaseForm.watch('attachments')!.length === 0) ? (
+                    <div className="text-center py-4 border border-dashed rounded-md bg-muted/20 text-xs text-muted-foreground">
+                      No attachments added yet. Click &quot;Add Attachment&quot; to link documents or test evidence.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {testCaseForm.watch('attachments')!.map((att, index) => {
+                        const isEditing = editingAttachmentIndices[index] ?? (att.name === '' && att.url === '');
+
+                        if (!isEditing && (att.name || att.url)) {
+                          return (
+                            <div key={index} className="p-3 rounded-md border bg-background/80 flex items-center justify-between gap-3 shadow-xs">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 min-w-0 flex-1">
+                                <div className="min-w-[120px] max-w-[200px] truncate">
+                                  <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Document Name</span>
+                                  <span className="text-xs font-medium text-foreground truncate block" title={att.name || 'Untitled Document'}>
+                                    {att.name || 'Untitled Document'}
+                                  </span>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Location</span>
+                                  {att.url ? (
+                                    <a
+                                      href={att.url.startsWith('http://') || att.url.startsWith('https://') ? att.url : `https://${att.url}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-500 hover:underline inline-flex items-center gap-1.5 text-xs font-medium truncate max-w-full"
+                                    >
+                                      <LinkIcon className="h-3.5 w-3.5 shrink-0" />
+                                      <span>View Document</span>
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground italic">No URL provided</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  onClick={() => setEditingAttachmentIndices(prev => ({ ...prev, [index]: true }))}
+                                  title="Edit attachment"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => {
+                                    const current = testCaseForm.getValues('attachments') || [];
+                                    testCaseForm.setValue(
+                                      'attachments',
+                                      current.filter((_, i) => i !== index)
+                                    );
+                                    setEditingAttachmentIndices(prev => {
+                                      const next = { ...prev };
+                                      delete next[index];
+                                      return next;
+                                    });
+                                  }}
+                                  title="Remove attachment"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={index} className="p-3 rounded-md border bg-background/80 space-y-3 relative group">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-semibold text-muted-foreground uppercase">Attachment #{index + 1}</span>
+                              <div className="flex items-center gap-1.5">
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  className="h-7 text-xs px-2.5 gap-1 font-medium bg-primary/10 hover:bg-primary/20 text-primary"
+                                  onClick={() => {
+                                    setEditingAttachmentIndices(prev => ({ ...prev, [index]: false }));
+                                  }}
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                  Done
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => {
+                                    const current = testCaseForm.getValues('attachments') || [];
+                                    testCaseForm.setValue(
+                                      'attachments',
+                                      current.filter((_, i) => i !== index)
+                                    );
+                                    setEditingAttachmentIndices(prev => {
+                                      const next = { ...prev };
+                                      delete next[index];
+                                      return next;
+                                    });
+                                  }}
+                                  title="Remove attachment"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-[11px] text-muted-foreground font-medium">Document Name</Label>
+                                <Input
+                                  placeholder="e.g. SOW, Test Evidence Screenshot"
+                                  value={att.name || ''}
+                                  onChange={(e) => {
+                                    const current = [...(testCaseForm.getValues('attachments') || [])];
+                                    current[index] = { ...current[index], name: e.target.value };
+                                    testCaseForm.setValue('attachments', current);
+                                  }}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[11px] text-muted-foreground font-medium">Location (URL)</Label>
+                                <Input
+                                  placeholder="https://example.com/your-document-link"
+                                  value={att.url || ''}
+                                  onChange={(e) => {
+                                    const current = [...(testCaseForm.getValues('attachments') || [])];
+                                    current[index] = { ...current[index], url: e.target.value };
+                                    testCaseForm.setValue('attachments', current);
+                                  }}
+                                  className="h-8 text-xs bg-background font-mono"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">

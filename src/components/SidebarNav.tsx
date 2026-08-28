@@ -187,7 +187,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
     {
       href: `${basePath}/testing/test-backlog`,
-      label: "Test Backlogs",
+      label: "Test Cases",
       icon: ClipboardCheck,
     },
     {
