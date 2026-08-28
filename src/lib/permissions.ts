@@ -2,30 +2,30 @@ import { AccessLevel } from '@/types';
 
 export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, string[]> = {
   'Senior Management': [
-    'My Projects', 'Project Home', 'Portfolio Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate', 'Trash',
+    'Project Home', 'Portfolio Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate', 'Trash',
     'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ],
   'Project Manager': [
-    'My Projects', 'Project Home', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
+    'Project Home', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
     'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
   ],
   'Lead': [
-    'My Projects', 'Project Home', 'User List', 'Holiday Calendar', 'Leave Tracker',
+    'Project Home', 'User List', 'Holiday Calendar', 'Leave Tracker',
     'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
   ],
   'Team Member': [
-    'My Projects', 'Project Home', 'Leave Tracker',
+    'Project Home', 'Leave Tracker',
     'Development Dashboard', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Execution', 'Defects', 'Project Status', 'Specifications', 'Project Resources', 'Worklog', 'RAID Dashboard', 'Project Holiday Calendar', 'PMO Documents'
   ],
   'PMO': [
-    'My Projects', 'Project Home', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Tracker', 'Billing', 'Billing Rate',
+    'Project Home', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Tracker', 'Billing', 'Billing Rate',
     'Project Status', 'PM Dashboard', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ]
 };
 
 export function getPageNameForRoute(pathname: string): string | null {
-  if (!pathname || pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/setup-wizard' || pathname.startsWith('/my-account')) {
-    return null; // Public or personal profile path (no specific role restriction)
+  if (!pathname || pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/setup-wizard' || pathname.startsWith('/my-account') || pathname.startsWith('/my-projects')) {
+    return null; // Public or universal profile/landing path (no specific role restriction)
   }
 
   // Admin Level Pages
@@ -37,7 +37,6 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.startsWith('/portfolio-settings')) return 'Access Settings';
 
   // Portfolio Level Pages
-  if (pathname.startsWith('/my-projects')) return 'My Projects';
   if (pathname.startsWith('/project-home')) return 'Project Home';
   if (pathname.startsWith('/portfolio-dashboard')) return 'Portfolio Dashboard';
   if (pathname.startsWith('/quality/estimations')) return 'Estimations';
@@ -102,7 +101,7 @@ export function hasPagePermission(
   pageName: string | null,
   customPageAccess?: Record<string, boolean> | null
 ): boolean {
-  if (!pageName) return true; // No permission restriction required
+  if (!pageName || pageName === 'My Projects') return true; // Universal landing page
   const userRole = (role || 'Team Member') as AccessLevel;
   if (userRole === 'Administrator') return true;
 
@@ -126,6 +125,160 @@ export function hasPagePermission(
   }
 
   return false;
+}
+
+export const allProjectPageNames = [
+  'Specifications (Initial Estimation)',
+  'Project Status (Initial Estimation)',
+  'Project Status',
+  'PM Dashboard',
+  'Specifications',
+  'Project Resources',
+  'Worklog',
+  'Resource Workload',
+  'Project Gantt',
+  'Project Releases',
+  'Development Dashboard',
+  'Product Backlog',
+  'Grooming',
+  'Kanban Board',
+  'Sub-Tasks',
+  'Defect Tracker',
+  'Test Dashboard',
+  'Test Backlog',
+  'Test Cycle',
+  'Test Plan',
+  'Test Execution',
+  'Defects',
+  'RAID Dashboard',
+  'Risks',
+  'Assumptions',
+  'Issues',
+  'Dependencies',
+  'Project Holiday Calendar',
+  'Leave Calendar',
+  'PMO Documents',
+  'PMO FB Billing',
+  'PMO FB Payment Milestones',
+  'PMO TnM Billing',
+  'PMO TnM Payment Milestones',
+  'Business Continuity',
+  'Board Settings',
+  'Sprint Settings',
+  'Effort Settings',
+  'Project Trash',
+];
+
+export function hasAnyProjectPermission(
+  role: string | null | undefined,
+  customPageAccess?: Record<string, boolean> | null
+): boolean {
+  if (!role || role === 'Administrator') return true;
+  return allProjectPageNames.some(pageName => hasPagePermission(role, pageName, customPageAccess));
+}
+
+export function getProjectLandingPage(
+  projectId: string,
+  projectStatus: string | undefined,
+  role: string | null | undefined,
+  customPageAccess?: Record<string, boolean> | null
+): string | null {
+  if (!projectId) return null;
+  if (!role || role === 'Administrator') {
+    return (projectStatus === 'Initial Estimation' || projectStatus === 'Not Started')
+      ? `/projects/${projectId}/initial-estimation/specifications`
+      : `/projects/${projectId}/development/dashboard`;
+  }
+
+  const basePath = `/projects/${projectId}`;
+
+  const candidates = (projectStatus === 'Initial Estimation' || projectStatus === 'Not Started')
+    ? [
+        { name: 'Specifications (Initial Estimation)', path: `${basePath}/initial-estimation/specifications` },
+        { name: 'Project Status (Initial Estimation)', path: `${basePath}/initial-estimation/project-status` },
+        { name: 'Development Dashboard', path: `${basePath}/development/dashboard` },
+        { name: 'Specifications', path: `${basePath}/project-details/specifications` },
+        { name: 'Project Status', path: `${basePath}/project-details/project-status` },
+        { name: 'Kanban Board', path: `${basePath}/development/kanban` },
+        { name: 'Product Backlog', path: `${basePath}/development/backlog` },
+        { name: 'Sub-Tasks', path: `${basePath}/development/development-tasks` },
+        { name: 'Defect Tracker', path: `${basePath}/development/defect-tracker` },
+        { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
+        { name: 'Test Backlog', path: `${basePath}/testing/test-backlog` },
+        { name: 'Test Cycle', path: `${basePath}/testing/test-plan` },
+        { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
+        { name: 'Defects', path: `${basePath}/testing/defects` },
+        { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+        { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
+        { name: 'Worklog', path: `${basePath}/resources/worklog` },
+        { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
+        { name: 'Project Gantt', path: `${basePath}/resources/project-gantt` },
+        { name: 'Project Releases', path: `${basePath}/releases/project-releases` },
+        { name: 'RAID Dashboard', path: `${basePath}/raid-dashboard` },
+        { name: 'Risks', path: `${basePath}/risks` },
+        { name: 'Assumptions', path: `${basePath}/assumptions` },
+        { name: 'Issues', path: `${basePath}/issues` },
+        { name: 'Dependencies', path: `${basePath}/dependencies` },
+        { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
+        { name: 'Leave Calendar', path: `${basePath}/holidays/leave-calendar` },
+        { name: 'PMO Documents', path: `${basePath}/pmo/documents` },
+        { name: 'PMO FB Billing', path: `${basePath}/pmo/fb-billing` },
+        { name: 'PMO FB Payment Milestones', path: `${basePath}/pmo/fb-payment-milestones` },
+        { name: 'PMO TnM Billing', path: `${basePath}/pmo/tnm-billing` },
+        { name: 'PMO TnM Payment Milestones', path: `${basePath}/pmo/tnm-payment-milestones` },
+        { name: 'Business Continuity', path: `${basePath}/pmo/business-continuity` },
+        { name: 'Board Settings', path: `${basePath}/project-settings/board` },
+        { name: 'Sprint Settings', path: `${basePath}/project-settings/sprint` },
+        { name: 'Effort Settings', path: `${basePath}/project-settings/effort` },
+        { name: 'Project Trash', path: `${basePath}/project-trash` },
+      ]
+    : [
+        { name: 'Development Dashboard', path: `${basePath}/development/dashboard` },
+        { name: 'Project Status', path: `${basePath}/project-details/project-status` },
+        { name: 'Kanban Board', path: `${basePath}/development/kanban` },
+        { name: 'Product Backlog', path: `${basePath}/development/backlog` },
+        { name: 'Sub-Tasks', path: `${basePath}/development/development-tasks` },
+        { name: 'Defect Tracker', path: `${basePath}/development/defect-tracker` },
+        { name: 'Specifications', path: `${basePath}/project-details/specifications` },
+        { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+        { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
+        { name: 'Test Backlog', path: `${basePath}/testing/test-backlog` },
+        { name: 'Test Cycle', path: `${basePath}/testing/test-plan` },
+        { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
+        { name: 'Defects', path: `${basePath}/testing/defects` },
+        { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
+        { name: 'Worklog', path: `${basePath}/resources/worklog` },
+        { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
+        { name: 'Project Gantt', path: `${basePath}/resources/project-gantt` },
+        { name: 'Project Releases', path: `${basePath}/releases/project-releases` },
+        { name: 'RAID Dashboard', path: `${basePath}/raid-dashboard` },
+        { name: 'Risks', path: `${basePath}/risks` },
+        { name: 'Assumptions', path: `${basePath}/assumptions` },
+        { name: 'Issues', path: `${basePath}/issues` },
+        { name: 'Dependencies', path: `${basePath}/dependencies` },
+        { name: 'Specifications (Initial Estimation)', path: `${basePath}/initial-estimation/specifications` },
+        { name: 'Project Status (Initial Estimation)', path: `${basePath}/initial-estimation/project-status` },
+        { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
+        { name: 'Leave Calendar', path: `${basePath}/holidays/leave-calendar` },
+        { name: 'PMO Documents', path: `${basePath}/pmo/documents` },
+        { name: 'PMO FB Billing', path: `${basePath}/pmo/fb-billing` },
+        { name: 'PMO FB Payment Milestones', path: `${basePath}/pmo/fb-payment-milestones` },
+        { name: 'PMO TnM Billing', path: `${basePath}/pmo/tnm-billing` },
+        { name: 'PMO TnM Payment Milestones', path: `${basePath}/pmo/tnm-payment-milestones` },
+        { name: 'Business Continuity', path: `${basePath}/pmo/business-continuity` },
+        { name: 'Board Settings', path: `${basePath}/project-settings/board` },
+        { name: 'Sprint Settings', path: `${basePath}/project-settings/sprint` },
+        { name: 'Effort Settings', path: `${basePath}/project-settings/effort` },
+        { name: 'Project Trash', path: `${basePath}/project-trash` },
+      ];
+
+  for (const c of candidates) {
+    if (hasPagePermission(role, c.name, customPageAccess)) {
+      return c.path;
+    }
+  }
+
+  return null;
 }
 
 export function getPermittedFallbackRoute(

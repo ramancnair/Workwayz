@@ -157,11 +157,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
             <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4 shrink-0">
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                        {hasAccess('My Projects') && (
-                          <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                            <Link href={getDefaultRouteForTab('my-projects')}>My Projects</Link>
-                          </TabsTrigger>
-                        )}
+                        <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                          <Link href={getDefaultRouteForTab('my-projects')}>My Projects</Link>
+                        </TabsTrigger>
                         {!showOnlyMyProjects && (
                           <>
                             {(hasAccess('Project Home') || hasAccess('Portfolio Dashboard')) && (

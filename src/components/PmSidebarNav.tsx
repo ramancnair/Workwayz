@@ -298,7 +298,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const activeGroup = getGroupForTab(activeTab);
   const menuItems = allMenuItems
     .filter(item => item.group === activeGroup)
-    .filter(item => hasAccess(item.label));
+    .filter(item => item.label === 'My Projects' || hasAccess(item.label));
 
   return (
     <>

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, query, where, getDocs, doc, updateDoc } from '@/lib/db-provider';
 import { db } from '@/lib/db-provider';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +13,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { PageHeader } from '@/components/PageHeader';
 import { type User, type Project, type AccessLevel, type RagStatus, type ProjectStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/use-permissions';
+import { getProjectLandingPage } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { Briefcase, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -33,6 +36,8 @@ const ragColors: Record<RagStatus, string> = {
 
 export default function MyProjectsPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const { userRole, customPageAccess } = usePermissions();
 
   const [currentUser, setCurrentUser] = useState<{ empId: string; accessLevel: AccessLevel; name: string; email: string } | null>(null);
   const [currentUserFromDb, setCurrentUserFromDb] = useState<User | null>(null);
@@ -148,6 +153,19 @@ export default function MyProjectsPage() {
 
   const isLoading = isLoadingUsers || isLoadingProjects;
 
+  const handleProjectClick = (project: Project) => {
+    const landingRoute = getProjectLandingPage(project.id, project.status, userRole, customPageAccess);
+    if (!landingRoute) {
+      toast({
+        variant: 'destructive',
+        title: 'Access Restricted',
+        description: `You do not have permission to access any pages in "${project.name}". Please contact your administrator.`,
+      });
+      return;
+    }
+    router.push(landingRoute);
+  };
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <PageHeader title="My Projects" description="View your assigned projects and quick links." />
@@ -188,12 +206,9 @@ export default function MyProjectsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {myProjects.map((project) => {
-            const projectUrl = (project.status === 'Initial Estimation' || project.status === 'Not Started')
-              ? `/projects/${project.id}/initial-estimation/specifications`
-              : `/projects/${project.id}/development/dashboard`;
             return (
-              <Link key={project.id} href={projectUrl}>
-                <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5">
+              <div key={project.id} onClick={() => handleProjectClick(project)}>
+                <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5 h-full flex flex-col justify-between">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base truncate">{project.name}</CardTitle>
@@ -220,7 +235,7 @@ export default function MyProjectsPage() {
                     )}
                   </CardContent>
                 </Card>
-              </Link>
+              </div>
             );
           })}
         </div>
