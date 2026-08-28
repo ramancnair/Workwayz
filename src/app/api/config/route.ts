@@ -93,7 +93,16 @@ export async function POST(request: Request) {
             } else if (['lmstudio', 'ollama'].includes(ai.provider)) {
                 if (ai.baseUrl) envMap.set('LOCAL_AI_BASE_URL', `"${ai.baseUrl}"`);
             }
-            if (ai.model) envMap.set('AI_DEFAULT_MODEL', `"${ai.model}"`);
+
+            let targetModel = ai.model;
+            if (!targetModel || (ai.provider === 'google' && (targetModel === 'local-model' || !targetModel.startsWith('gemini-')))) {
+                if (ai.provider === 'google') targetModel = 'gemini-2.5-flash';
+                else if (ai.provider === 'lmstudio') targetModel = 'meta/muse-glimmer';
+                else if (ai.provider === 'openai') targetModel = 'gpt-4o';
+                else if (ai.provider === 'anthropic') targetModel = 'claude-3-5-sonnet';
+                else if (ai.provider === 'ollama') targetModel = 'llama3';
+            }
+            if (targetModel) envMap.set('AI_DEFAULT_MODEL', `"${targetModel}"`);
             envMap.set('NEXT_PUBLIC_AI_PROVIDER', `"${ai.provider}"`);
         }
         

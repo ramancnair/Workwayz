@@ -72,7 +72,13 @@ function SortableItem({ column }: { column: KanbanColumn }) {
           toast({ variant: 'destructive', title: 'Error', description: 'Swimlane name cannot be empty.' });
           return;
         }
-        const success = await updateKanbanColumn(id, { name: newName });
+        const trimmed = newName.trim();
+        const isDuplicate = kanbanColumns.some(c => c.id !== id && c.name.trim().toLowerCase() === trimmed.toLowerCase());
+        if (isDuplicate) {
+          toast({ variant: 'destructive', title: 'Duplicate Lane', description: `A lane named "${trimmed}" already exists.` });
+          return;
+        }
+        const success = await updateKanbanColumn(id, { name: trimmed });
         if (success) {
           toast({ title: 'Success', description: 'Swimlane renamed.' });
         } else {
@@ -124,9 +130,15 @@ export default function BoardSettingsPage() {
   );
   
   const handleAddNewSwimlane = async (values: z.infer<typeof swimlaneSchema>) => {
+    const nameToCheck = values.name.trim();
+    const isDuplicate = kanbanColumns.some(c => c.name.trim().toLowerCase() === nameToCheck.toLowerCase());
+    if (isDuplicate) {
+      toast({ variant: 'destructive', title: 'Duplicate Lane', description: `A lane named "${nameToCheck}" already exists.` });
+      return;
+    }
     const newOrder = kanbanColumns.length > 0 ? Math.max(...kanbanColumns.map(c => c.order)) + 1 : 0;
     const success = await addKanbanColumn({
-      name: values.name,
+      name: nameToCheck,
       order: newOrder,
     });
 

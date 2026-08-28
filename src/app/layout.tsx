@@ -6,6 +6,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 
+import { FlowPilotChatWidget } from "@/components/flowpilot/FlowPilotChatWidget";
+
 export const metadata: Metadata = {
   title: 'ProjectFlow',
   description: 'Manage your projects with ease and clarity.',
@@ -34,6 +36,7 @@ export default function RootLayout({
           <SupabaseBootstrap />
           <SetupInterceptor />
           {children}
+          <FlowPilotChatWidget />
           <Toaster />
         </ThemeProvider>
       </body>
