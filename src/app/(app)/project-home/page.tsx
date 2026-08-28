@@ -746,6 +746,9 @@ export default function ProjectsDashboard() {
             const pmB = userMap.get(b.projectManagerId || '');
             valA = pmA ? `${pmA.firstName} ${pmA.lastName}` : 'zzz'; // put unassigned last
             valB = pmB ? `${pmB.firstName} ${pmB.lastName}` : 'zzz';
+          } else if (sorting.id === 'pricingModel') {
+            valA = a.pricingModel || 'T&M';
+            valB = b.pricingModel || 'T&M';
           } else {
             valA = (a as any)[sorting.id] || '';
             valB = (b as any)[sorting.id] || '';
@@ -929,7 +932,8 @@ export default function ProjectsDashboard() {
                               <TableRow>
                                 <SortableHeader columnId="id" className="w-[120px]">Project ID</SortableHeader>
                                 <SortableHeader columnId="name">Project Name</SortableHeader>
-                                <TableHead>Project Health</TableHead>
+                                <TableHead className="w-[90px]">Health</TableHead>
+                                <SortableHeader columnId="pricingModel">Pricing Model</SortableHeader>
                                 <SortableHeader columnId="status">Status</SortableHeader>
                                 <SortableHeader columnId="projectManagerId">Project Manager</SortableHeader>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -960,46 +964,58 @@ export default function ProjectsDashboard() {
                                     </TableCell>
                                     <TableCell>
                                       {project.status === 'Not Started' || project.status === 'Initial Estimation' || !project.overallStatus ? (
-                                        <span className="text-xs text-muted-foreground font-medium pl-1">—</span>
+                                        <span className="text-xs text-muted-foreground font-medium pl-3">—</span>
                                       ) : (
                                         <Popover>
                                           <PopoverTrigger asChild>
-                                            <div className="flex items-center gap-2 cursor-pointer">
-                                              <div className={cn("h-3 w-3 rounded-full", project.overallStatus ? ragStatusStyles[project.overallStatus] : 'bg-gray-300')} />
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <span className="text-xs text-muted-foreground truncate max-w-xs">{project.statusComments}</span>
-                                                </TooltipTrigger>
-                                                {project.statusComments && (
-                                                  <TooltipContent>
-                                                    <p>{project.statusComments}</p>
-                                                  </TooltipContent>
-                                                )}
-                                              </Tooltip>
-                                              <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 ml-auto" />
-                                            </div>
+                                            <button
+                                              type="button"
+                                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer border border-transparent hover:border-border"
+                                              title={`Project Health: ${project.overallStatus}. Click to view details.`}
+                                            >
+                                              <div className={cn("h-3 w-3 rounded-full shrink-0", ragStatusStyles[project.overallStatus])} />
+                                              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground opacity-70" />
+                                            </button>
                                           </PopoverTrigger>
-                                          <PopoverContent className="w-96">
-                                            <div className="space-y-4">
-                                              <div className="flex gap-4 border-b pb-2">
+                                          <PopoverContent className="w-96 p-4">
+                                            <div className="space-y-3">
+                                              <div className="flex items-center justify-between border-b pb-2">
+                                                <div className="flex items-center gap-2">
+                                                  <div className={cn("h-3 w-3 rounded-full shrink-0", ragStatusStyles[project.overallStatus])} />
+                                                  <span className="text-sm font-semibold">{project.overallStatus}</span>
+                                                </div>
+                                                <Badge variant="outline" className="text-xs font-normal">Overall Health</Badge>
+                                              </div>
+
+                                              {project.statusComments ? (
+                                                <div className="text-xs text-foreground bg-muted/40 p-2.5 rounded-md border">
+                                                  <span className="text-[10px] uppercase font-semibold text-muted-foreground block mb-1">Status Comments</span>
+                                                  <p className="whitespace-pre-wrap">{project.statusComments}</p>
+                                                </div>
+                                              ) : (
+                                                <p className="text-xs text-muted-foreground italic">No comments recorded.</p>
+                                              )}
+
+                                              <div className="flex gap-4 border-b pb-2 pt-1">
                                                 <HealthIndicator status={project.scopeStatus} label="Scope" />
                                                 <HealthIndicator status={project.costStatus} label="Cost" />
                                                 <HealthIndicator status={project.timeStatus} label="Time" />
                                               </div>
+
                                               {project.statusHistory && project.statusHistory.length > 0 && (
                                                 <Accordion type="single" collapsible className="w-full">
                                                   <AccordionItem value="history" className="border-none">
-                                                    <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">Status History</AccordionTrigger>
+                                                    <AccordionTrigger className="py-1 text-xs font-medium hover:no-underline">Status History ({project.statusHistory.length})</AccordionTrigger>
                                                     <AccordionContent>
-                                                      <div className="max-h-60 overflow-y-auto pr-2 space-y-3">
+                                                      <div className="max-h-56 overflow-y-auto pr-2 space-y-2 mt-1">
                                                         {[...project.statusHistory].reverse().map((historyItem, idx) => (
-                                                          <div key={idx} className="text-sm p-3 bg-muted/50 rounded-md border">
-                                                            <div className="flex justify-between items-center mb-2 text-muted-foreground border-b pb-2">
+                                                          <div key={idx} className="text-xs p-2.5 bg-muted/50 rounded-md border">
+                                                            <div className="flex justify-between items-center mb-1.5 text-muted-foreground border-b pb-1">
                                                               <span>{format(parseISO(historyItem.date), 'MMM dd, yyyy HH:mm')}</span>
                                                               {historyItem.overallStatus && <HealthIndicator status={historyItem.overallStatus} label={historyItem.overallStatus} />}
                                                             </div>
                                                             {historyItem.statusComments ? (
-                                                              <p className="mt-1">{historyItem.statusComments}</p>
+                                                              <p className="mt-1 text-foreground">{historyItem.statusComments}</p>
                                                             ) : (
                                                               <p className="mt-1 text-muted-foreground italic">No comments</p>
                                                             )}
@@ -1014,6 +1030,13 @@ export default function ProjectsDashboard() {
                                           </PopoverContent>
                                         </Popover>
                                       )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={projectUrl} className="block w-full h-full">
+                                        <span className="text-xs font-medium">
+                                          {project.pricingModel || 'T&M'}
+                                        </span>
+                                      </Link>
                                     </TableCell>
                                     <TableCell>
                                       <Link href={projectUrl} className="block w-full h-full">
@@ -1101,6 +1124,7 @@ export default function ProjectsDashboard() {
                               <TableRow>
                                 <SortableHeader columnId="id" className="w-[120px]">Project ID</SortableHeader>
                                 <SortableHeader columnId="name">Project Name</SortableHeader>
+                                <SortableHeader columnId="pricingModel">Pricing Model</SortableHeader>
                                 <SortableHeader columnId="status">Status</SortableHeader>
                                 <SortableHeader columnId="archivedAt">Archived On</SortableHeader>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -1112,6 +1136,9 @@ export default function ProjectsDashboard() {
                                   <TableRow key={project.id} className="opacity-70 grayscale">
                                     <TableCell className="font-medium">{project.id}</TableCell>
                                     <TableCell>{project.name}</TableCell>
+                                    <TableCell>
+                                      <span className="text-xs font-medium">{project.pricingModel || 'T&M'}</span>
+                                    </TableCell>
                                     <TableCell>
                                       {project.status ? (
                                         <Badge className={cn('font-semibold', statusStyles[project.status])}>

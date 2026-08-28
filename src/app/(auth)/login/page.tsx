@@ -82,7 +82,7 @@ const syncKeycloakUserWithDatabase = async (userProfile: any, accessLevel: strin
             phone: 'N/A',
             experience: 0,
             accessLevel,
-            avatar: 'https://placehold.co/40x40.png',
+            avatar: '',
             isDeleted: false,
             uid: subject
         });

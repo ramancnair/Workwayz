@@ -574,13 +574,14 @@ export default function WorklogPage() {
                       )}
                       <Input
                         type="number"
-                        placeholder="Hours"
+                        placeholder="0.00"
                         value={item.hours === 0 ? '' : item.hours}
                         onChange={(e) => handleItemChange(item.id, 'hours', e.target.value)}
                         onBlur={handleAutoSave}
                         min="0"
                         max="24"
-                        step="0.5"
+                        step="any"
+                        className="font-mono"
                         disabled={isSaving}
                       />
                     </div>

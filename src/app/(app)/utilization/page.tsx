@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { type User, type Project, type Story } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
     startOfMonth, 
     endOfMonth, 
@@ -422,8 +422,9 @@ export default function UtilizationPage() {
                                     {/* User Micro Profile */}
                                     <div className="flex items-center gap-3">
                                         <Avatar className="h-10 w-10 border">
+                                            <AvatarImage src={selectedUser.avatar} alt={`${selectedUser.firstName} ${selectedUser.lastName}`} />
                                             <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                                {getInitials(selectedUser.firstName, selectedUser.lastName)}
+                                                {getUserInitials(selectedUser.firstName, selectedUser.lastName)}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div>

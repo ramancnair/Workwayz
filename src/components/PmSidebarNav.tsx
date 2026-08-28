@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getUserInitials } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -356,8 +357,8 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
           <DropdownMenuTrigger asChild>
             <div className="flex items-center mt-2 h-12 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1.5 -mx-1 transition-colors">
               <Avatar className="h-8 w-8 shrink-0">
-                  {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-                  <AvatarFallback className="bg-primary/10 text-primary">{getInitials(user.name)}</AvatarFallback>
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="bg-primary/10 text-primary">{getUserInitials(null, null, user.name)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col ml-3 transition-opacity duration-300 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap min-w-0 leading-tight">
                   <span className="font-semibold text-sm text-sidebar-foreground truncate">{user.name || 'User'}</span>

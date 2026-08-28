@@ -445,7 +445,8 @@ export default function ResourceBillingPage() {
                       <TableCell>
                         <Input
                           type="text"
-                          placeholder=""
+                          inputMode="decimal"
+                          placeholder="0.00"
                           value={editingRates[user.id]?.billedRate ?? (user.billedRate !== undefined ? user.billedRate.toString() : '')}
                           onChange={(e) => handleRateChange(user.id, 'billedRate', e.target.value)}
                           onKeyDown={(e) => {
@@ -463,13 +464,14 @@ export default function ResourceBillingPage() {
                               return next;
                             });
                           }}
-                          className="w-28"
+                          className="w-28 font-mono"
                         />
                       </TableCell>
                       <TableCell>
                          <Input
                           type="text"
-                          placeholder=""
+                          inputMode="decimal"
+                          placeholder="0.00"
                           value={editingRates[user.id]?.costRate ?? (user.costRate !== undefined ? user.costRate.toString() : '')}
                           onChange={(e) => handleRateChange(user.id, 'costRate', e.target.value)}
                           onKeyDown={(e) => {
@@ -582,7 +584,7 @@ export default function ResourceBillingPage() {
                       id="cost"
                       type="text"
                       inputMode="decimal"
-                      placeholder=""
+                      placeholder="0.00"
                       value={newCostValue}
                       onChange={(e) => {
                         let val = e.target.value;
@@ -641,7 +643,7 @@ export default function ResourceBillingPage() {
                       id="edit-cost"
                       type="text"
                       inputMode="decimal"
-                      placeholder=""
+                      placeholder="0.00"
                       value={editCostValue}
                       onChange={(e) => {
                         let val = e.target.value;

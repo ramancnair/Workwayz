@@ -1204,7 +1204,7 @@ export default function TestPlanPage() {
                         <Input
                           type="text"
                           inputMode="decimal"
-                          placeholder="E.g., 1.5"
+                          placeholder="0.00"
                           {...field}
                           value={field.value || ''}
                           onChange={(e) => {
@@ -1213,6 +1213,7 @@ export default function TestPlanPage() {
                               field.onChange(val);
                             }
                           }}
+                          className="font-mono"
                         />
                       </FormControl>
                       <p className="text-[11px] text-muted-foreground">Execution time in hours</p>

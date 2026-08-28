@@ -16,7 +16,7 @@ export const employees: Employee[] = [
     availability: 100,
     costAmount: 110000,
     costCurrency: 'USD',
-    avatar: 'https://placehold.co/40x40.png'
+    avatar: ''
   },
   {
     id: 'dev2',
@@ -32,7 +32,7 @@ export const employees: Employee[] = [
     availability: 100,
     costAmount: 90000,
     costCurrency: 'USD',
-    avatar: 'https://placehold.co/40x40.png'
+    avatar: ''
   },
   {
     id: 'dev3',
@@ -48,7 +48,7 @@ export const employees: Employee[] = [
     availability: 75,
     costAmount: 135000,
     costCurrency: 'USD',
-    avatar: 'https://placehold.co/40x40.png'
+    avatar: ''
   },
   {
     id: 'tester1',
@@ -64,7 +64,7 @@ export const employees: Employee[] = [
     availability: 100,
     costAmount: 85000,
     costCurrency: 'USD',
-    avatar: 'https://placehold.co/40x40.png'
+    avatar: ''
   },
   {
     id: 'tester2',
@@ -80,7 +80,7 @@ export const employees: Employee[] = [
     availability: 100,
     costAmount: 95000,
     costCurrency: 'USD',
-    avatar: 'https://placehold.co/40x40.png'
+    avatar: ''
   },
 ];
 

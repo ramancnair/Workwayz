@@ -49,7 +49,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
-import { cn, getSprintDisplayId } from '@/lib/utils';
+import { cn, getSprintDisplayId, getUserInitials } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -238,7 +238,7 @@ function StoryCard({
                         <TooltipTrigger>
                             <Avatar className="h-6 w-6">
                                 <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
-                                <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                                <AvatarFallback className="text-[10px]">{getUserInitials(assignee.firstName, assignee.lastName)}</AvatarFallback>
                             </Avatar>
                         </TooltipTrigger>
                         <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
@@ -887,7 +887,7 @@ export default function KanbanPage() {
                                         )}
                                         />
                                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
                                         )}/>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1416,14 +1416,14 @@ export default function KanbanPage() {
                                           control={editStoryForm.control}
                                           name="estimatedHours"
                                           render={({ field }) => (
-                                          <FormItem>
-                                              <FormLabel>Effort (hours)</FormLabel>
-                                              <FormControl>
-                                              <Input type="number" placeholder="" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
-                                              </FormControl>
-                                              {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
-                                              <FormMessage />
-                                          </FormItem>
+                                            <FormItem>
+                                                <FormLabel>Effort (hours)</FormLabel>
+                                                <FormControl>
+                                                <Input type="number" step="any" placeholder="0.00" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} className="font-mono" />
+                                                </FormControl>
+                                                {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
+                                                <FormMessage />
+                                            </FormItem>
                                           )}
                                       />
                               </div>

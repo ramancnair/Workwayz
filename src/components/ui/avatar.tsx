@@ -23,13 +23,28 @@ Avatar.displayName = AvatarPrimitive.Root.displayName
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image
-    ref={ref}
-    className={cn("aspect-square h-full w-full", className)}
-    {...props}
-  />
-))
+>(({ className, src, ...props }, ref) => {
+  // If src is empty, placeholder URL (e.g. placehold.co), or invalid, do not render Image so Fallback displays initials
+  const isPlaceholder =
+    !src ||
+    typeof src !== "string" ||
+    src.trim() === "" ||
+    src.includes("placehold.co") ||
+    src.includes("placeholder.com");
+
+  if (isPlaceholder) {
+    return null;
+  }
+
+  return (
+    <AvatarPrimitive.Image
+      ref={ref}
+      src={src}
+      className={cn("aspect-square h-full w-full object-cover", className)}
+      {...props}
+    />
+  );
+})
 AvatarImage.displayName = AvatarPrimitive.Image.displayName
 
 const AvatarFallback = React.forwardRef<
@@ -39,7 +54,7 @@ const AvatarFallback = React.forwardRef<
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      "flex h-full w-full items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs uppercase select-none leading-none",
       className
     )}
     {...props}

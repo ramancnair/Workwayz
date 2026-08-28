@@ -62,7 +62,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
@@ -217,7 +217,7 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
                           alt={`${assignee.firstName} ${assignee.lastName}`}
                           data-ai-hint="developer avatar"
                         />
-                        <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="text-xs">{getUserInitials(assignee.firstName, assignee.lastName)}</AvatarFallback>
                       </Avatar>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -1428,8 +1428,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormItem>
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="" {...field} value={field.value || ''} />
-                                </FormControl>
+                                    <Input type="number" step="any" placeholder="0.00" {...field} value={field.value || ''} className="font-mono" />
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -1812,9 +1811,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                             )}
                                             />
                                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
                                         )}/>
-                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
                                             <FormItem>
@@ -2321,10 +2319,9 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormItem>
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
+                                    <Input type="number" step="any" placeholder="0.00" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} className="font-mono" />
                                 </FormControl>
                                 {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
-                                <FormMessage />
                                 </FormItem>
                             )}
                             />
@@ -2452,15 +2449,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                         </FormItem>
                                                     )} />
                                                 </div>
-                                                <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
-                                                )}/>
+                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
+                                                     <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
+                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
                                                   <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
-                                                </div>
-                                            </div>
-                                        </Form>
                                     </div>
                                 ) : (
                                     <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Sub-Task</Button>

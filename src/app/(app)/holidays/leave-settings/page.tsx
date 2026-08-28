@@ -325,8 +325,7 @@ export default function AllocatedLeavesPage() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-7 w-7 border">
                             <AvatarImage src={res.avatar} alt={`${res.firstName} ${res.lastName}`} />
-                            <AvatarFallback className="text-xs font-semibold">{res.firstName.charAt(0)}{res.lastName.charAt(0)}</AvatarFallback>
-                          </Avatar>
+                            <AvatarFallback className="text-xs font-semibold">{getUserInitials(res.firstName, res.lastName)}</AvatarFallback>
                           <span className="font-medium text-sm">{res.firstName} {res.lastName}</span>
                         </div>
                       </TableCell>

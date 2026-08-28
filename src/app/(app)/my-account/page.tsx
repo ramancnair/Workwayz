@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Mail, User, Upload, Trash2, Save, Shield } from 'lucide-react';
 import { db, doc, updateDoc, collection, getDocs, query, where } from '@/lib/db-provider';
 import { useToast } from '@/hooks/use-toast';
+import { getUserInitials } from '@/lib/utils';
 
 export default function MyAccountPage() {
   const { toast } = useToast();
@@ -375,9 +376,9 @@ export default function MyAccountPage() {
         <CardContent className="space-y-6">
           <div className="flex items-center space-x-6 flex-wrap gap-y-4">
             <Avatar className="h-24 w-24 border shadow-sm shrink-0">
-              {user.avatar && <AvatarImage src={user.avatar} alt={user.name} className="object-cover" />}
+              <AvatarImage src={user.avatar} alt={user.name} className="object-cover" />
               <AvatarFallback className="text-3xl bg-primary/10 text-primary font-bold">
-                {getInitials(user.name)}
+                {getUserInitials(user.firstName, user.lastName, user.name)}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-2">

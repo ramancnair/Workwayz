@@ -82,3 +82,22 @@ export function formatUrl(urlString: string | null | undefined): string {
   return /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
+/**
+ * Formats user initials from first name, last name, or full name.
+ * Examples: ("John", "Doe") => "JD", ("", "", "Raman Nair") => "RN", ("Alice") => "AL"
+ */
+export function getUserInitials(firstName?: string | null, lastName?: string | null, fullName?: string | null): string {
+  const f = firstName?.trim();
+  const l = lastName?.trim();
+  if (f && l) {
+    return `${f.charAt(0)}${l.charAt(0)}`.toUpperCase();
+  }
+  const name = (fullName || f || l || '').trim();
+  if (!name) return '?';
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+

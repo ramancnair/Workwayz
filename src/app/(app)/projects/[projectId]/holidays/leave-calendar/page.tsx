@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronLeft, ChevronRight, Search, Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -339,7 +339,7 @@ export default function LeaveCalendarPage() {
                             <div className="flex items-center gap-3">
                               <Avatar className="h-7 w-7 border">
                                 <AvatarImage src={res.avatar} alt={`${res.firstName} ${res.lastName}`} />
-                                <AvatarFallback className="text-xs font-semibold">{res.firstName.charAt(0)}{res.lastName.charAt(0)}</AvatarFallback>
+                                <AvatarFallback className="text-xs font-semibold">{getUserInitials(res.firstName, res.lastName)}</AvatarFallback>
                               </Avatar>
                               <span className="font-medium text-sm">{res.firstName} {res.lastName}</span>
                             </div>

@@ -44,7 +44,7 @@ import { type Story, type StoryStatus, type Epic, Release, User, ImpactedSystem,
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { format, parseISO } from 'date-fns';
@@ -578,7 +578,7 @@ export default function DevelopmentTasksPage() {
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
                           <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar" />
-                          <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                          <AvatarFallback className="text-[10px]">{getUserInitials(assignee.firstName, assignee.lastName)}</AvatarFallback>
                         </Avatar>
                         {assignee.firstName} {assignee.lastName}
                       </div>
@@ -742,7 +742,7 @@ export default function DevelopmentTasksPage() {
                             <FormItem>
                               <FormLabel>Effort (hours)</FormLabel>
                               <FormControl>
-                                <Input type="number" placeholder="" {...field} value={field.value ?? ''} />
+                                <Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

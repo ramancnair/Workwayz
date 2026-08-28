@@ -87,7 +87,7 @@ export default function SignupPage() {
           email: emailInput,
           phone,
           experience,
-          avatar: 'https://placehold.co/40x40.png',
+          avatar: '',
           isDeleted: false,
           isEnabled: false,
           uid: user.id
@@ -138,7 +138,7 @@ export default function SignupPage() {
           email: emailInput,
           phone,
           experience,
-          avatar: 'https://placehold.co/40x40.png',
+          avatar: '',
           isDeleted: false,
           isEnabled: false,
           uid: user.uid
@@ -152,7 +152,7 @@ export default function SignupPage() {
           name: `${firstName} ${lastName}`.trim(),
           email: emailInput,
           empId,
-          avatar: 'https://placehold.co/40x40.png',
+          avatar: '',
           uid: user.uid,
           authProvider: 'firebase',
           issuedAt: Date.now(),

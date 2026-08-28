@@ -667,14 +667,15 @@ export default function EnvironmentsPage() {
                                 updateImpactedSystem(system.id, { estimate: undefined });
                             }
                         }}
-                        className="w-24"
-                        placeholder=""
+                        className="w-24 font-mono"
+                        placeholder="0.00"
                       />
                     </TableCell>
                     <TableCell>
                       <Input
                         key={`${system.id}-rate-${system.dailyBillingRate}`}
                         type="number"
+                        step="any"
                         defaultValue={system.dailyBillingRate || ''}
                         onWheel={(e) => e.currentTarget.blur()}
                         onBlur={(e) => {
@@ -685,8 +686,8 @@ export default function EnvironmentsPage() {
                                 updateImpactedSystem(system.id, { dailyBillingRate: undefined });
                             }
                         }}
-                        className="w-24"
-                        placeholder=""
+                        className="w-24 font-mono"
+                        placeholder="0.00"
                       />
                     </TableCell>
                     <TableCell>${((system.estimate || 0) * (system.dailyBillingRate || 0)).toFixed(2)}</TableCell>
@@ -965,7 +966,7 @@ export default function EnvironmentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Effort (man-days)</FormLabel>
-                      <FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -977,7 +978,7 @@ export default function EnvironmentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Daily Billing Rate (USD)</FormLabel>
-                      <FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

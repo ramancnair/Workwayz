@@ -1030,7 +1030,7 @@ export default function TestExecutionPage() {
                   <Input
                     type="text"
                     inputMode="decimal"
-                    placeholder="E.g., 1.5"
+                    placeholder="0.00"
                     value={formActualEffort}
                     onChange={e => {
                       const val = e.target.value;
@@ -1038,7 +1038,7 @@ export default function TestExecutionPage() {
                         setFormActualEffort(val);
                       }
                     }}
-                    className="h-9 text-xs"
+                    className="h-9 text-xs font-mono"
                   />
                   <p className="text-[11px] text-muted-foreground">
                     Auto-accumulates from the stopwatch or edited directly

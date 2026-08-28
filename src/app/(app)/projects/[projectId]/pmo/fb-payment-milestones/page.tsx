@@ -555,10 +555,11 @@ export default function BillingPage() {
                           <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
                           <Input
                             type="number"
-                            placeholder=""
+                            step="any"
+                            placeholder="0.00"
                             value={projectValueInput}
                             onChange={(e) => setProjectValueInput(e.target.value)}
-                            className="pl-8 bg-background/50 border-muted focus-visible:ring-1"
+                            className="pl-8 bg-background/50 border-muted focus-visible:ring-1 font-mono"
                             disabled={!isOverriddenInput}
                             autoFocus={isOverriddenInput}
                           />
@@ -614,10 +615,11 @@ export default function BillingPage() {
                         <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
                         <Input
                           type="number"
-                          placeholder=""
+                          step="any"
+                          placeholder="0.00"
                           value={monthlyBilledInput}
                           onChange={(e) => setMonthlyBilledInput(e.target.value)}
-                          className="pl-8 bg-background/50 border-muted"
+                          className="pl-8 bg-background/50 border-muted font-mono"
                           autoFocus
                         />
                       </div>
@@ -763,7 +765,7 @@ export default function BillingPage() {
                         <FormControl>
                             <Input 
                               type="number" 
-                              placeholder="0" 
+                              placeholder="0.00" 
                               step="any"
                               min="0"
                               max="100"
@@ -773,6 +775,7 @@ export default function BillingPage() {
                                 const val = e.target.value;
                                 field.onChange(val === '' ? '' : val);
                               }}
+                              className="font-mono"
                             />
                         </FormControl>
                         <FormMessage />
@@ -788,9 +791,11 @@ export default function BillingPage() {
                         <FormControl>
                             <Input 
                               type="number" 
-                              placeholder={project?.pricingModel === 'Fixed Bid' ? "Auto-calculated from %" : "50000"} 
+                              step="any"
+                              placeholder={project?.pricingModel === 'Fixed Bid' ? "Auto-calculated from %" : "0.00"} 
                               {...field} 
                               disabled={project?.pricingModel === 'Fixed Bid'}
+                              className="font-mono"
                             />
                         </FormControl>
                         <FormMessage />

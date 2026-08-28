@@ -172,7 +172,7 @@ export async function POST(request: Request) {
                         phone: 'N/A',
                         experience: 0,
                         accessLevel: 'Administrator',
-                        avatar: 'https://placehold.co/40x40.png',
+                        avatar: '',
                         isDeleted: false,
                         uid: uid
                     }
@@ -262,7 +262,7 @@ export async function POST(request: Request) {
                 });
                 empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
                 await setDoc(doc(tempDb, 'employees', empId), {
-                    empId, firstName, lastName, email: adminEmail, phone: 'N/A', experience: 0, accessLevel: 'Administrator', avatar: 'https://placehold.co/40x40.png', isDeleted: false, uid
+                    empId, firstName, lastName, email: adminEmail, phone: 'N/A', experience: 0, accessLevel: 'Administrator', avatar: '', isDeleted: false, uid
                 });
             }
             await deleteApp(tempApp);

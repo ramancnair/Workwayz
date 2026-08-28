@@ -32,7 +32,7 @@ import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown,
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase } from '@/types';
-import { cn, getSprintDisplayId, generateNextSprintId } from '@/lib/utils';
+import { cn, getSprintDisplayId, generateNextSprintId, getUserInitials } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -256,7 +256,7 @@ function StoryItemCard({
                         <TooltipTrigger>
                             <Avatar className="h-6 w-6">
                             <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} data-ai-hint="developer avatar"/>
-                            <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                            <AvatarFallback className="text-[10px]">{getUserInitials(assignee.firstName, assignee.lastName)}</AvatarFallback>
                             </Avatar>
                         </TooltipTrigger>
                         <TooltipContent><p>Assigned to {assignee.firstName} {assignee.lastName}</p></TooltipContent>
@@ -1215,7 +1215,7 @@ export default function GroomingPage() {
                                         )}
                                         />
                                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                            <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
                                         )}/>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1653,7 +1653,7 @@ export default function GroomingPage() {
                                     <FormItem>
                                         <FormLabel>Effort (hours)</FormLabel>
                                         <FormControl>
-                                        <Input type="number" placeholder="" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} />
+                                        <Input type="number" step="any" placeholder="0.00" {...field} value={isEffortReadOnly ? subItemsEffort : (field.value ?? '')} readOnly={isEffortReadOnly} className="font-mono" />
                                         </FormControl>
                                         {isEffortReadOnly && <p className="text-xs text-muted-foreground">Effort is calculated from linked sub-tasks.</p>}
                                         <FormMessage />
@@ -1740,7 +1740,7 @@ export default function GroomingPage() {
                                                     )} />
                                                 </div>
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
-                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" placeholder="" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
+                                                    <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
                                                 )}/>
                                                 <div className='flex justify-end gap-2'>
                                                   <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>

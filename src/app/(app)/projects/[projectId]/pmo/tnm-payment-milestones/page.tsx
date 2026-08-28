@@ -407,8 +407,10 @@ export default function TnmPaymentMilestonesPage() {
                     <FormControl>
                       <Input 
                         type="number" 
-                        placeholder="e.g., 50000" 
+                        step="any"
+                        placeholder="0.00" 
                         {...field} 
+                        className="font-mono"
                       />
                     </FormControl>
                     <FormMessage />

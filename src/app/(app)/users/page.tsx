@@ -44,8 +44,8 @@ import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot, ShieldCheck
 import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn, getUserInitials } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
@@ -264,7 +264,7 @@ export default function UsersPage() {
                     phone: '555-555-5555',
                     experience: Math.floor(Math.random() * 10) + 1,
                     accessLevel: level,
-                    avatar: 'https://placehold.co/40x40.png',
+                    avatar: '',
                     isDeleted: false,
                     isEnabled: true,
                     costCurrency: 'USD',
@@ -377,7 +377,7 @@ export default function UsersPage() {
         const userRef = doc(db, 'employees', values.empId);
         await setDoc(userRef, { 
             ...sanitizedValues, 
-            avatar: 'https://placehold.co/40x40.png',
+            avatar: '',
             isDeleted: false,
             isEnabled: true,
         });
@@ -556,8 +556,9 @@ export default function UsersPage() {
                       <TableCell className="font-medium pl-4">
                         <div className="flex items-center gap-2">
                           <Avatar className="h-7 w-7">
-                            <AvatarFallback className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                              {getInitials(`${user.firstName} ${user.lastName}`)}
+                            <AvatarImage src={user.avatar} alt={`${user.firstName} ${user.lastName}`} />
+                            <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+                              {getUserInitials(user.firstName, user.lastName)}
                             </AvatarFallback>
                           </Avatar>
                           {user.firstName} {user.lastName}
@@ -799,8 +800,9 @@ export default function UsersPage() {
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder=""
-                            className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-l-none shadow-none h-full bg-transparent px-3"
+                            step="any"
+                            placeholder="0.00"
+                            className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-l-none shadow-none h-full bg-transparent px-3 font-mono"
                             {...field}
                             value={field.value ?? ''}
                           />

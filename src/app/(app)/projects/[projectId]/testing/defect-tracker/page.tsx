@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getUserInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -214,7 +215,7 @@ function BugCard({
                 <TooltipTrigger>
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={assignee.avatar} alt={`${assignee.firstName} ${assignee.lastName}`} />
-                    <AvatarFallback>{assignee.firstName?.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="text-[10px]">{getUserInitials(assignee.firstName, assignee.lastName)}</AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent>
