@@ -88,7 +88,11 @@ export function FlowPilotActionCard({ action, onNavigate }: FlowPilotActionCardP
       case 'createProject':
         return <FolderKanban className="w-4 h-4 text-cyan-600" />;
       case 'createTestCase':
+      case 'bulkCreateTestCases':
+      case 'generateTestCases':
       case 'createTestPlan':
+      case 'addTestCasesToTestPlan':
+      case 'updateTestCaseStatus':
         return <FileCheck className="w-4 h-4 text-teal-500" />;
       case 'risk':
         return <ShieldAlert className="w-4 h-4 text-orange-500" />;
@@ -179,8 +183,17 @@ export function FlowPilotActionCard({ action, onNavigate }: FlowPilotActionCardP
     if (action.toolName === 'createTestCase') {
       return 'Created Test Case';
     }
+    if (action.toolName === 'bulkCreateTestCases' || action.toolName === 'generateTestCases') {
+      return action.count ? `Created ${action.count} Test Cases` : 'Created Test Cases';
+    }
     if (action.toolName === 'createTestPlan') {
       return 'Created Test Cycle';
+    }
+    if (action.toolName === 'addTestCasesToTestPlan') {
+      return action.addedCount ? `Added ${action.addedCount} Test Cases to Plan` : 'Added Test Cases to Plan';
+    }
+    if (action.toolName === 'updateTestCaseStatus') {
+      return 'Updated Test Case Status';
     }
     if (action.toolName === 'createRaidItem') {
       return `Logged ${action.raidType?.toUpperCase() || 'RAID Item'}`;

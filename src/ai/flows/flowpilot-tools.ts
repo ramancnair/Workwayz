@@ -8,6 +8,10 @@ import {
   flowpilotCreateEpic,
   flowpilotCreateSprint,
   flowpilotCreateTestCase,
+  flowpilotBulkCreateTestCases,
+  flowpilotCreateTestPlan,
+  flowpilotAddTestCasesToTestPlan,
+  flowpilotUpdateTestCaseStatus,
   flowpilotCreateRaidItem,
   flowpilotQueryProjectContext,
   flowpilotListProjects,
@@ -459,6 +463,57 @@ export const createTestCaseTool = ai.defineTool(
   }
 );
 
+// 10b. Tool: Bulk Create / Generate Test Cases
+export const bulkCreateTestCasesTool = ai.defineTool(
+  {
+    name: 'bulkCreateTestCases',
+    description:
+      'Creates multiple QA test cases in a single batch operation. Highly recommended when generating test cases for user stories, features, or system specifications.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      testCases: z
+        .array(
+          z.object({
+            title: z.string().describe('Clear, descriptive test case title.'),
+            description: z.string().describe('Steps to execute or test condition.'),
+            expectedResult: z.string().describe('Expected outcome.'),
+            type: z.enum(['Functional', 'Non-functional', 'Regression', 'Smoke', 'Integration']).default('Functional'),
+            storyId: z.string().optional().describe('Optional story ID (e.g. "ST-1") this test case verifies.'),
+            assigneeId: z.string().optional().describe('Optional tester user ID.'),
+          })
+        )
+        .describe('Array of test cases to create.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      count: z.number().optional(),
+      testCases: z.array(z.any()).optional(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotBulkCreateTestCases(input);
+    } catch (err: any) {
+      result = {
+        success: true,
+        count: input.testCases.length,
+        testCases: input.testCases,
+        projectId: input.projectId,
+        url: `/projects/${input.projectId}/testing/test-backlog`,
+        needsClientExecution: true,
+        params: input,
+      };
+    }
+    recordExecutedAction('bulkCreateTestCases', result, input);
+    return result;
+  }
+);
+
 // 11. Tool: Create Test Plan / Cycle
 export const createTestPlanTool = ai.defineTool(
   {
@@ -477,6 +532,7 @@ export const createTestPlanTool = ai.defineTool(
     outputSchema: z.object({
       success: z.boolean(),
       id: z.string().optional(),
+      testPlanId: z.string().optional(),
       name: z.string(),
       planType: z.string(),
       projectId: z.string(),
@@ -486,16 +542,107 @@ export const createTestPlanTool = ai.defineTool(
     }),
   },
   async (input) => {
-    const result = {
-      success: true,
-      name: input.name,
-      planType: input.planType,
-      projectId: input.projectId,
-      url: `/projects/${input.projectId}/testing/test-cycle`,
-      needsClientExecution: true,
-      params: input,
-    };
+    let result: any;
+    try {
+      result = await flowpilotCreateTestPlan(input);
+    } catch (err: any) {
+      result = {
+        success: true,
+        name: input.name,
+        planType: input.planType,
+        projectId: input.projectId,
+        url: `/projects/${input.projectId}/testing/test-cycle`,
+        needsClientExecution: true,
+        params: input,
+      };
+    }
     recordExecutedAction('createTestPlan', result, input);
+    return result;
+  }
+);
+
+// 11b. Tool: Add Test Cases to Test Plan / Cycle
+export const addTestCasesToTestPlanTool = ai.defineTool(
+  {
+    name: 'addTestCasesToTestPlan',
+    description: 'Adds existing project test cases into a specific Test Plan or Test Cycle for execution.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      planId: z.string().optional().describe('Test plan document ID or testPlanId (e.g. "TP-1").'),
+      planName: z.string().optional().describe('Optional name of the test plan.'),
+      testCaseIds: z.array(z.string()).optional().describe('Array of test case IDs (e.g. ["TC-1", "TC-2"]). If omitted, all test cases in the project are added.'),
+      executionDate: z.string().optional().describe('Target execution date ISO string.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      planId: z.string().optional(),
+      planName: z.string().optional(),
+      addedCount: z.number().optional(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotAddTestCasesToTestPlan(input);
+    } catch (err: any) {
+      result = {
+        success: true,
+        planId: input.planId,
+        planName: input.planName,
+        projectId: input.projectId,
+        url: `/projects/${input.projectId}/testing/test-plan`,
+        needsClientExecution: true,
+        params: input,
+      };
+    }
+    recordExecutedAction('addTestCasesToTestPlan', result, input);
+    return result;
+  }
+);
+
+// 11c. Tool: Update Test Case Execution Status in Cycle
+export const updateTestCaseStatusTool = ai.defineTool(
+  {
+    name: 'updateTestCaseStatus',
+    description: 'Updates the execution status of a test case in a test cycle (Passed, Failed, Blocked, Skipped, Not Run).',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      testCaseId: z.string().describe('Test case ID (e.g. "TC-1" or "TP-1-TC-1").'),
+      planId: z.string().optional().describe('Optional target test plan ID.'),
+      status: z.enum(['Not Run', 'Passed', 'Failed', 'Blocked', 'Skipped']).describe('Execution status.'),
+      actualEffortHours: z.number().optional().describe('Actual effort hours spent on execution.'),
+      comments: z.string().optional().describe('Execution notes or comments.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      testCaseId: z.string(),
+      status: z.string(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotUpdateTestCaseStatus(input);
+    } catch (err: any) {
+      result = {
+        success: true,
+        testCaseId: input.testCaseId,
+        status: input.status,
+        projectId: input.projectId,
+        url: `/projects/${input.projectId}/testing/test-execution`,
+        needsClientExecution: true,
+        params: input,
+      };
+    }
+    recordExecutedAction('updateTestCaseStatus', result, input);
     return result;
   }
 );
@@ -1086,7 +1233,10 @@ export const allFlowPilotTools = [
   updateSprintTool,
   assignStoryToSprintTool,
   createTestCaseTool,
+  bulkCreateTestCasesTool,
   createTestPlanTool,
+  addTestCasesToTestPlanTool,
+  updateTestCaseStatusTool,
   createRaidItemTool,
   updateRaidItemTool,
   updateProjectDetailsTool,

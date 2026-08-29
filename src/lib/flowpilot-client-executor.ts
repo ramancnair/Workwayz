@@ -10,6 +10,7 @@ import {
   setDoc,
   query,
   where,
+  writeBatch,
 } from '@/lib/db-provider';
 import type {
   Story,
@@ -481,6 +482,283 @@ export async function executeClientCreateTestCase(params: {
   };
 }
 
+// 7b. Client Execute: Bulk Create Test Cases
+export async function executeClientBulkCreateTestCases(params: {
+  projectId: string;
+  testCases: Array<{
+    title: string;
+    description?: string;
+    expectedResult?: string;
+    type?: 'Functional' | 'Non-functional';
+    storyId?: string;
+    assigneeId?: string;
+  }>;
+}) {
+  const { projectId, testCases } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+  if (!Array.isArray(testCases) || testCases.length === 0) {
+    throw new Error('No test cases provided for creation');
+  }
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const tcSnapshot = await getDocs(collection(projectDocRef, 'testCases'));
+
+  const existingNumbers = tcSnapshot.docs
+    .map((d: any) => d.data().testCaseId)
+    .filter((id: string | undefined) => id && typeof id === 'string' && id.startsWith('TC-'))
+    .map((id: string) => parseInt(id.replace('TC-', ''), 10) || 0);
+
+  let nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+  const batch = writeBatch(db);
+  const createdItems: Array<{ id: string; testCaseId: string; title: string; type: string }> = [];
+
+  for (const tc of testCases) {
+    const testCaseId = `TC-${nextNumber++}`;
+    const newRef = doc(collection(projectDocRef, 'testCases'));
+    const payload = sanitizeData({
+      testCaseId,
+      title: tc.title,
+      description: tc.description || '',
+      expectedResult: tc.expectedResult || '',
+      type: tc.type || 'Functional',
+      storyId: tc.storyId || undefined,
+      assigneeId: tc.assigneeId || undefined,
+      isDeleted: false,
+      deletedAt: null,
+      createdAt: new Date().toISOString(),
+    });
+    batch.set(newRef, payload);
+    createdItems.push({
+      id: newRef.id,
+      testCaseId,
+      title: tc.title,
+      type: tc.type || 'Functional',
+    });
+  }
+
+  await batch.commit();
+
+  return {
+    success: true,
+    count: createdItems.length,
+    testCases: createdItems,
+    projectId,
+    url: `/projects/${projectId}/testing/test-backlog`,
+  };
+}
+
+// 7c. Client Execute: Create Test Plan / Cycle
+export async function executeClientCreateTestPlan(params: {
+  projectId: string;
+  name: string;
+  planType?: 'Sprint' | 'Release';
+  startDate?: string;
+  endDate?: string;
+  environmentId?: string;
+  sprintId?: string;
+  releaseId?: string;
+}) {
+  const { projectId, name, planType = 'Sprint', startDate, endDate, environmentId, sprintId, releaseId } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const planSnapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+
+  const existingNumbers = planSnapshot.docs
+    .map((d: any) => d.data().testPlanId)
+    .filter((id: string | undefined) => id && typeof id === 'string' && id.startsWith('TP-'))
+    .map((id: string) => parseInt(id.replace('TP-', ''), 10) || 0);
+
+  const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+  const testPlanId = `TP-${nextNumber}`;
+
+  const parseDate = (dStr: any) => {
+    if (!dStr) return null;
+    const d = new Date(dStr);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  };
+
+  const payload = sanitizeData({
+    testPlanId,
+    name,
+    planType,
+    startDate: parseDate(startDate),
+    endDate: parseDate(endDate),
+    environmentId: environmentId || undefined,
+    sprintId: sprintId || undefined,
+    releaseId: releaseId || undefined,
+    createdAt: new Date().toISOString(),
+  });
+
+  const docRef = await addDoc(collection(projectDocRef, 'testPlans'), payload);
+
+  return {
+    success: true,
+    id: docRef.id,
+    testPlanId,
+    name,
+    planType,
+    projectId,
+    url: `/projects/${projectId}/testing/test-cycle`,
+  };
+}
+
+// 7d. Client Execute: Add Test Cases to Test Plan / Cycle
+export async function executeClientAddTestCasesToTestPlan(params: {
+  projectId: string;
+  planId?: string;
+  testPlanId?: string;
+  planName?: string;
+  testCaseIds?: string[];
+  executionDate?: string;
+}) {
+  const { projectId, executionDate } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+
+  const plansSnapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+  const planDoc = plansSnapshot.docs.find((d: any) => {
+    const data = d.data();
+    if (params.planId && (d.id === params.planId || data.testPlanId === params.planId)) return true;
+    if (params.testPlanId && data.testPlanId === params.testPlanId) return true;
+    if (params.planName && data.name?.toLowerCase().includes(params.planName.toLowerCase())) return true;
+    return false;
+  }) || plansSnapshot.docs[0];
+
+  if (!planDoc) {
+    throw new Error('No test plan found in this project. Please create a test cycle/plan first.');
+  }
+
+  const planId = planDoc.id;
+  const planData = planDoc.data();
+  const planPrefix = planData.testPlanId || 'TP-1';
+
+  const tcsSnapshot = await getDocs(collection(projectDocRef, 'testCases'));
+  const allTestCases = tcsSnapshot.docs
+    .map((d: any) => ({ id: d.id, ...d.data() }))
+    .filter((tc: any) => !tc.isDeleted);
+
+  const existingInPlanSnapshot = await getDocs(collection(projectDocRef, 'testPlans', planId, 'testCases'));
+  const existingOrigIds = new Set(existingInPlanSnapshot.docs.map((d: any) => d.data().originalTestCaseId));
+
+  let targetTCs = allTestCases;
+  if (params.testCaseIds && params.testCaseIds.length > 0) {
+    const wanted = new Set(params.testCaseIds.map(id => id.toLowerCase()));
+    targetTCs = allTestCases.filter((tc: any) =>
+      wanted.has(tc.id.toLowerCase()) || wanted.has(tc.testCaseId?.toLowerCase())
+    );
+  }
+
+  const batch = writeBatch(db);
+  let addedCount = 0;
+
+  for (const originalTC of targetTCs) {
+    if (existingOrigIds.has(originalTC.id)) continue;
+
+    const uniqueTestCaseId = originalTC.testCaseId?.startsWith(planPrefix)
+      ? originalTC.testCaseId
+      : `${planPrefix}-${originalTC.testCaseId}`;
+
+    const newRef = doc(collection(projectDocRef, 'testPlans', planId, 'testCases'));
+    const copy = sanitizeData({
+      originalTestCaseId: originalTC.id,
+      testCaseId: uniqueTestCaseId,
+      testPlanId: planId,
+      testPlanName: planData.name,
+      title: originalTC.title,
+      type: originalTC.type || 'Functional',
+      description: originalTC.description || '',
+      expectedResult: originalTC.expectedResult || '',
+      storyId: originalTC.storyId || undefined,
+      releaseId: originalTC.releaseId || undefined,
+      sprintId: originalTC.sprintId || undefined,
+      status: 'Not Run',
+      executionDate: executionDate || new Date().toISOString(),
+    });
+
+    batch.set(newRef, copy);
+    addedCount++;
+  }
+
+  if (addedCount > 0) {
+    await batch.commit();
+  }
+
+  return {
+    success: true,
+    planId,
+    planName: planData.name,
+    addedCount,
+    projectId,
+    url: `/projects/${projectId}/testing/test-plan`,
+  };
+}
+
+// 7e. Client Execute: Update Test Case Execution Status
+export async function executeClientUpdateTestCaseStatus(params: {
+  projectId: string;
+  testCaseId: string;
+  planId?: string;
+  status: 'Not Run' | 'Passed' | 'Failed' | 'Blocked' | 'Skipped';
+  actualEffortHours?: number;
+  comments?: string;
+}) {
+  const { projectId, testCaseId, status, actualEffortHours } = params;
+  if (!db || !projectId) throw new Error('Database or Project ID is missing');
+
+  const projectDocRef = doc(db, 'projects', projectId);
+  const plansSnapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+
+  let foundDocRef: any = null;
+  let targetPlanId = params.planId || '';
+
+  for (const planDoc of plansSnapshot.docs) {
+    if (targetPlanId && planDoc.id !== targetPlanId && planDoc.data().testPlanId !== targetPlanId) continue;
+    const planTCs = await getDocs(collection(projectDocRef, 'testPlans', planDoc.id, 'testCases'));
+    const match = planTCs.docs.find((d: any) => {
+      const data = d.data();
+      return (
+        d.id === testCaseId ||
+        data.testCaseId?.toLowerCase() === testCaseId.toLowerCase() ||
+        data.originalTestCaseId === testCaseId ||
+        data.testCaseId?.endsWith(`-${testCaseId}`)
+      );
+    });
+    if (match) {
+      foundDocRef = match.ref;
+      targetPlanId = planDoc.id;
+      break;
+    }
+  }
+
+  if (!foundDocRef) {
+    throw new Error(`Test case "${testCaseId}" was not found in any active test cycle.`);
+  }
+
+  const updatePayload: any = {
+    status,
+    executionDate: new Date().toISOString(),
+  };
+  if (status === 'Passed') {
+    updatePayload.closeDate = new Date().toISOString();
+  }
+  if (actualEffortHours !== undefined) {
+    updatePayload.actualEffortHours = actualEffortHours;
+  }
+
+  await updateDoc(foundDocRef, sanitizeData(updatePayload));
+
+  return {
+    success: true,
+    testCaseId,
+    planId: targetPlanId,
+    status,
+    projectId,
+    url: `/projects/${projectId}/testing/test-execution`,
+  };
+}
+
 // 8. Client Execute: Create RAID Item
 export async function executeClientCreateRaidItem(params: {
   projectId: string;
@@ -795,56 +1073,6 @@ export async function executeClientAssignStoryToSprint(params: {
     sprintId,
     projectId,
     url: `/projects/${projectId}/development/backlog`,
-  };
-}
-
-// 15. Client Execute: Create Test Plan / Cycle
-export async function executeClientCreateTestPlan(params: {
-  projectId: string;
-  name: string;
-  planType: 'Sprint' | 'Release';
-  startDate?: string;
-  endDate?: string;
-  environmentId?: string;
-  sprintId?: string;
-  releaseId?: string;
-}) {
-  const { projectId, name, planType, startDate, endDate, environmentId, sprintId, releaseId } = params;
-  if (!db || !projectId) throw new Error('Database or Project ID is missing');
-
-  const projectDocRef = doc(db, 'projects', projectId);
-  const snapshot = await getDocs(collection(projectDocRef, 'testPlans'));
-  const newIdNumber = snapshot.size > 0
-    ? Math.max(0, ...snapshot.docs
-      .map((d: any) => d.data().testPlanId)
-      .filter((id: string | undefined) => id && typeof id === 'string')
-      .map((id: string) => parseInt(id.replace('TP-', ''), 10) || 0)
-    ) + 1
-    : 1;
-
-  const testPlanId = `TP-${newIdNumber}`;
-  const payload = sanitizeData({
-    testPlanId,
-    name,
-    planType,
-    startDate: startDate || new Date().toISOString(),
-    endDate: endDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-    environmentId: environmentId || 'Dev',
-    sprintId,
-    releaseId,
-    createdAt: new Date().toISOString(),
-  });
-
-  const docRef = await addDoc(collection(projectDocRef, 'testPlans'), payload);
-
-  return {
-    success: true,
-    id: docRef.id,
-    testPlanId,
-    name,
-    planType,
-    projectId,
-    url: `/projects/${projectId}/testing/test-cycle`,
   };
 }
 
@@ -1213,8 +1441,15 @@ export async function executeFlowPilotActionOnClient(action: any) {
         return await executeClientAssignStoryToSprint(params);
       case 'createTestCase':
         return await executeClientCreateTestCase(params);
+      case 'bulkCreateTestCases':
+      case 'generateTestCases':
+        return await executeClientBulkCreateTestCases(params);
       case 'createTestPlan':
         return await executeClientCreateTestPlan(params);
+      case 'addTestCasesToTestPlan':
+        return await executeClientAddTestCasesToTestPlan(params);
+      case 'updateTestCaseStatus':
+        return await executeClientUpdateTestCaseStatus(params);
       case 'createRaidItem':
         return await executeClientCreateRaidItem(params);
       case 'updateRaidItem':
@@ -1301,6 +1536,22 @@ export async function undoFlowPilotActionOnClient(action: any) {
           if (match) await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
         }
         return { success: true, message: `Reverted test case ${action.testCaseId || action.title || ''}` };
+      }
+
+      case 'bulkCreateTestCases':
+      case 'generateTestCases': {
+        if (!projectId) throw new Error('Project ID missing');
+        const tcRef = collection(doc(db, 'projects', projectId), 'testCases');
+        if (Array.isArray(action.testCases)) {
+          const batch = writeBatch(db);
+          for (const tc of action.testCases) {
+            if (tc.id) {
+              batch.update(doc(tcRef, tc.id), { isDeleted: true, deletedAt: new Date().toISOString() });
+            }
+          }
+          await batch.commit();
+        }
+        return { success: true, message: `Reverted ${action.count || action.testCases?.length || ''} test cases` };
       }
 
       case 'createTestPlan': {
