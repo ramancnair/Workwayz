@@ -1,0 +1,266 @@
+Section,Top Nav Group,Page Name,Proposed Tool Name,Purpose / Required Capability,Implemented
+Portfolio Level Pages,Projects,Project Home,createProject,"Create Project: Creates a new project in ProjectFlow workspace under a portfolio, initializing default Kanban columns, settings, and environments.",Yes
+Portfolio Level Pages,Projects,Project Home,createPortfolio,"Create Portfolio: Creates a new Portfolio container in the workspace to group and organize projects.",Yes
+Portfolio Level Pages,Projects,Project Home,listProjects,"List All Projects: Lists all projects currently in the workspace with ID, name, portfolio, and status.",Yes
+Portfolio Level Pages,Projects,Project Home,listPortfolios,"List Portfolios: Lists all portfolios available in the workspace.",Yes
+Portfolio Level Pages,Projects,Project Home,archiveProject,"Archive Project: Archives an active project, moving it to the Archived Projects tab on Project Home.",Yes
+Portfolio Level Pages,Projects,Project Home,unarchiveProject,"Restore Project: Restores an archived project back to Active status on Project Home.",Yes
+Portfolio Level Pages,Projects,Project Home,deleteProject,"Delete Project: Soft-deletes a project, moving it to trash.",Yes
+Portfolio Level Pages,Projects,Project Home,updatePortfolio,"Update Portfolio: Updates a portfolio folder name or description on Project Home.",Yes
+Portfolio Level Pages,Projects,Project Home,deletePortfolio,"Delete Portfolio: Deletes an empty portfolio folder from Project Home.",Yes
+Portfolio Level Pages,Projects,Project Home,setProjectManager,"Set Primary Project Manager: Assigns or updates the primary Project Manager for a project.",Yes
+Portfolio Level Pages,Projects,Project Home,autogenProject,"Autogen Turnkey Project: Scaffolds an entire turnkey project with epics, stories, tasks, test cycles, test cases, and RAID items.",Yes
+Portfolio Level Pages,Projects,Project Home,getProjectHomeMetrics,"Project Home Metrics: Queries summary count cards of total active projects, portfolios, and health distributions.",Yes
+Portfolio Level Pages,Projects,Project Home,duplicateProject,"Clone Project: Clones an existing project structure, settings, columns, and templates into a new project.",Yes
+Portfolio Level Pages,Projects,Portfolio Dashboard,getPortfolioDashboardSummary,"Portfolio Health Summary: Retrieves executive RAG health distribution (Red, Amber, Green), high potential risks, and critical issues across the portfolio.",Yes
+Portfolio Level Pages,Projects,Portfolio Dashboard,queryPortfolioRisks,"Portfolio Risks: Queries and ranks high-potential risks across all active projects in the portfolio.",Yes
+Portfolio Level Pages,Projects,Portfolio Dashboard,queryPortfolioIssues,"Portfolio Issues: Queries open critical and high priority issues/blockers across all active projects.",Yes
+Portfolio Level Pages,Projects,Portfolio Dashboard,filterPortfolioDashboardByDate,"Filter Dashboard Trends: Filters executive health and defect/risk trends across custom date intervals.",Yes
+Portfolio Level Pages,Projects,Portfolio Dashboard,exportPortfolioDashboardReport,"Export Portfolio Summary: Generates executive PDF/CSV portfolio status summary report.",Yes
+Portfolio Level Pages,Quality,Estimations,queryQualityEstimations,"Query Quality Estimations: Queries initial man-days vs planned man-days, variance, actual effort, and conformance rates across projects.",Yes
+Portfolio Level Pages,Quality,Estimations,exportQualityEstimationsReport,"Export Quality Estimations: Exports cross-project estimation accuracy and effort variance data to CSV.",Yes
+Portfolio Level Pages,Quality,Estimations,setQualityVarianceAlertThreshold,"Variance Alert Threshold: Configures threshold percentages to trigger alerts when project planned effort exceeds initial estimation.",Yes
+Portfolio Level Pages,Quality,Defects,queryQualityDefects,"Query Quality Defects: Queries cross-project defect counts (SIT, UAT, Production) and production defect leakage rate percentages.",Yes
+Portfolio Level Pages,Quality,Defects,queryDefectTrendByMonth,"Monthly Defect Trends: Analyzes monthly defect creation, resolution, and leakage trends across the portfolio.",Yes
+Portfolio Level Pages,Quality,Defects,queryDefectRootCauseSummary,"Defect Root Cause Aggregation: Aggregates defect classification by root cause category (Coding, Requirement, Environment, Design).",Yes
+Portfolio Level Pages,Billing,Billing,queryBillingOverview,"Query Billing Overview: Queries revenue, resource costs, fixed costs, gross profit, and profit margin % across all projects.",Yes
+Portfolio Level Pages,Billing,Billing,exportBillingOverviewCsv,"Export Billing Sheet: Exports consolidated portfolio financial breakdown to CSV.",Yes
+Portfolio Level Pages,Billing,Billing,queryProjectProfitabilityForecast,"Profitability Forecast: Generates future profit margin projections based on planned sprint allocations and milestone schedules.",Yes
+Portfolio Level Pages,Billing,Billing Rate,queryBillingRates,"Query Billing Rates: Queries master resource rate directory, role benchmarks (avg billed rate, avg cost rate, avg margin %), and assigned rates.",Yes
+Portfolio Level Pages,Billing,Billing Rate,updateResourceRate,"Update Resource Rate: Updates daily billed rate and internal cost rate for an assigned resource in a project.",Yes
+Portfolio Level Pages,Billing,Billing Rate,updateSpecificationRate,"Update Specification Rate: Updates the daily billing rate on an impacted system or horizontal capability.",Yes
+Portfolio Level Pages,Billing,Billing Rate,bulkUpdateResourceRates,"Bulk Update Rates: Batch updates daily billed and cost rates for multiple resources across projects.",Yes
+Portfolio Level Pages,Billing,Billing Rate,setDefaultRoleBenchmarkRates,"Set Role Benchmarks: Sets standard organization baseline billed and cost rates for Developer, Tester, Architect, BA, and PM.",Yes
+Portfolio Level Pages,Users,User List,queryAvailableResources,"Query Available Resources: Searches for employees with available/free capacity (< 100% allocated across projects) filtered by role.",Yes
+Portfolio Level Pages,Users,User List,createUser,"Create User: Adds a new team member/user to the workspace directory with email, role, and employee ID.",Yes
+Portfolio Level Pages,Users,User List,updateUserRole,"Update User Role: Modifies an existing user's organization role, department, or access level.",Yes
+Portfolio Level Pages,Users,User List,toggleUserStatus,"Activate/Deactivate User: Enables or disables user account login access.",Yes
+Portfolio Level Pages,Users,User List,listAllUsers,"List All Users: Retrieves the complete organization user directory with active project allocations.",Yes
+Portfolio Level Pages,Users,Utilization,queryResourceUtilization,"Query Resource Utilization: Queries resource workload: active project allocations, availability %, planned task hours, actual logged hours, and over/under-allocation status.",Yes
+Portfolio Level Pages,Users,Utilization,queryAvailableResources,"Query Bench Resources: Searches team members with free allocation bandwidth (< 100%).",Yes
+Portfolio Level Pages,Users,Utilization,queryOverallocatedResources,"Query Overallocated Resources: Identifies team members allocated > 100% across multiple simultaneous active projects.",Yes
+Portfolio Level Pages,Users,Utilization,queryDepartmentUtilizationTrends,"Department Utilization: Aggregates capacity utilization percentages grouped by department and skill set.",Yes
+Portfolio Level Pages,Users,Utilization,exportResourceUtilizationReport,"Export Utilization Report: Exports complete organization resource utilization sheet to CSV.",Yes
+Portfolio Level Pages,Holidays,Holiday Calendar,queryHolidays,"Query Holidays: Queries organization calendar holidays for the specified year.",Yes
+Portfolio Level Pages,Holidays,Holiday Calendar,createHoliday,"Create Holiday: Adds a new holiday to the organization Holiday Calendar.",Yes
+Portfolio Level Pages,Holidays,Holiday Calendar,deleteHoliday,"Delete Holiday: Deletes a holiday from the organization Holiday Calendar.",Yes
+Portfolio Level Pages,Holidays,Holiday Calendar,bulkImportHolidays,"Bulk Import Holidays: Batch uploads a list of national/regional holidays from JSON or CSV.",Yes
+Portfolio Level Pages,Holidays,Holiday Calendar,updateHoliday,"Update Holiday: Modifies an existing holiday name, date, or category.",Yes
+Portfolio Level Pages,Holidays,Leave Settings,queryLeaveSettings,"Query Leave Settings: Queries global leave policy quotas (allocated annual paid leaves, carryover limit, weekly off days).",Yes
+Portfolio Level Pages,Holidays,Leave Settings,updateLeaveSettings,"Update Leave Settings: Updates organization leave quotas, carryover permissions, or weekly off days in Leave Settings.",Yes
+Portfolio Level Pages,Holidays,Leave Settings,resetAnnualLeaveBalances,"Annual Leave Rollover: Executes year-end leave balance reset and applies carryover limit quotas for all employees.",Yes
+Portfolio Level Pages,Holidays,Leave Tracker,queryLeaveRequests,"Query Leave Requests: Queries employee leave requests and planned absences across the portfolio.",Yes
+Portfolio Level Pages,Holidays,Leave Tracker,applyLeave,"Apply Leave: Submits a leave request for an employee in Leave Tracker.",Yes
+Portfolio Level Pages,Holidays,Leave Tracker,deleteLeave,"Cancel Leave: Cancels and deletes an employee leave record in Leave Tracker.",Yes
+Portfolio Level Pages,Holidays,Leave Tracker,approveLeaveRequest,"Approve Leave: Approves a pending employee leave request.",Yes
+Portfolio Level Pages,Holidays,Leave Tracker,rejectLeaveRequest,"Reject Leave: Rejects a pending leave request with explanatory comments.",Yes
+Portfolio Level Pages,Holidays,Leave Tracker,queryEmployeeLeaveBalance,"Check Leave Balance: Checks remaining paid leave balance and used leave days for a specific employee.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),updateProjectSpecifications,"Bulk Update Specifications: Bulk sets the project summary, impacted systems, and horizontals in project specifications.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),addImpactedSystem,"Add Impacted System: Adds an architectural component / module impacted by the project to specifications with estimation.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),addHorizontal,"Add Horizontal: Adds a cross-cutting capability (e.g. QA & Testing, Architecture, DevOps) to project specifications.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),updateSpecificationRate,"Update Specification Rate: Updates the daily billing rate on an impacted system or horizontal capability.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),updateProjectDetails,"Update Project Summary: Updates project summary and scope description in project specifications.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),updateInitialImpactedSystem,"Edit Initial Impacted System: Updates an existing initial impacted system's name, description, category, or man-days estimate.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),deleteInitialImpactedSystem,"Delete Initial Impacted System: Deletes a specific impacted system from initial estimation specifications.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),updateInitialHorizontal,"Edit Initial Horizontal: Updates an initial horizontal capability's name or weightage percentage.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),deleteInitialHorizontal,"Delete Initial Horizontal: Deletes a horizontal capability from initial estimation specifications.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),queryInitialSpecifications,"Read Initial Specifications: Queries the current summary, list of initial impacted systems, horizontals, total dev effort/cost, and grand total effort/cost.",Yes
+Project Level Pages,Initial Estimation,Specifications (Initial Estimation),confirmProjectEstimation,"Confirm Estimation: Promotes initial estimation specifications to the active project plan and transitions project status.",Yes
+Project Level Pages,Initial Estimation,Project Status (Initial Estimation),updateProjectDetails,"Update Initial Status: Updates initial project status, pricing model (Fixed Bid / T&M), name, and description.",Yes
+Project Level Pages,Initial Estimation,Project Status (Initial Estimation),setProjectManager,"Assign Project Manager: Assigns or updates the primary Project Manager for the initial estimation phase.",Yes
+Project Level Pages,Initial Estimation,Project Status (Initial Estimation),queryProjectContext,"Query Project Context: Queries initial estimation status, stories, and specifications context.",Yes
+Project Level Pages,Initial Estimation,Project Status (Initial Estimation),updateInitialProjectDates,"Set Estimation Timeline: Sets initial planned start date and end date with date sequence validation.",Yes
+Project Level Pages,Initial Estimation,Project Status (Initial Estimation),queryInitialProjectStatus,"Read Initial Status: Returns key project metadata, PM assignment, pricing model, and estimation timeline.",Yes
+Project Level Pages,Project Details,Project Status,updateProjectDetails,"Update Key Information: Updates project summary, scope description, pricing model, overall health status, or name.",Yes
+Project Level Pages,Project Details,Project Status,setProjectManager,"Set Project Manager: Assigns or updates the primary Project Manager for the project.",Yes
+Project Level Pages,Project Details,Project Status,queryProjectContext,"Query Project Context: Queries project information: stories count, epics, sprints, risks, issues, environments, specifications.",Yes
+Project Level Pages,Project Details,Project Status,updateProjectHealth,"Update Project Health: Updates individual Scope, Cost, Time, and Overall RAG health indicators and appends commentary to status history.",Yes
+Project Level Pages,Project Details,Project Status,updateProjectDates,"Set Project Timeline: Updates project start date and end date with date sequence validation.",Yes
+Project Level Pages,Project Details,Project Status,queryProjectStatusDetails,"Read Project Status & History: Retrieves full project key information, PM details, current RAG indicators, and complete status history audit log.",Yes
+Project Level Pages,Project Details,PM Dashboard,addFixedCost,"Add Fixed Cost: Adds a fixed financial cost item (software license, infrastructure, third-party API) to project finances.",Yes
+Project Level Pages,Project Details,PM Dashboard,queryProjectContext,"Query Project Context: Queries high-level project statistics, active items, and sprints.",Yes
+Project Level Pages,Project Details,PM Dashboard,queryProjectPmDashboard,"PM Dashboard Metrics: Retrieves release/sprint task distribution, epic progress %, and planned vs derived vs logged hours.",Yes
+Project Level Pages,Project Details,PM Dashboard,queryProjectWorkload,"Resource Workload: Queries sub-task effort hours vs bug effort hours allocated to each team member filtered by sprint.",Yes
+Project Level Pages,Project Details,PM Dashboard,queryProjectResourceFinancials,"Resource Revenue & Cost: Computes project billing revenue vs internal cost broken down by role for Overall, Release, or Sprint timeframes.",Yes
+Project Level Pages,Project Details,PM Dashboard,querySwimLaneCycleTime,"Swim Lane Cycle Time: Returns total and average duration (in days) spent by items in each Kanban swim lane status.",Yes
+Project Level Pages,Project Details,PM Dashboard,queryResourceBottlenecks,"Bottleneck Risk Analysis: Returns average cycle time per resource, active WIP counts, and bottleneck risk rankings (High, Medium, Low).",Yes
+Project Level Pages,Project Details,PM Dashboard,queryEpicProgress,"Epic Completion Progress: Returns list of all project Epics with completed stories count, total stories, and progress percentage.",Yes
+Project Level Pages,Project Details,Specifications,updateProjectSpecifications,"Bulk Update Specifications: Bulk sets the project summary, impacted systems, and horizontals in project specifications.",Yes
+Project Level Pages,Project Details,Specifications,addImpactedSystem,"Add Impacted System: Adds an architectural component / module impacted by the project to specifications with estimation.",Yes
+Project Level Pages,Project Details,Specifications,addHorizontal,"Add Horizontal: Adds a cross-cutting capability (e.g. QA & Testing, Architecture, DevOps) to project specifications.",Yes
+Project Level Pages,Project Details,Specifications,updateSpecificationRate,"Update Specification Rate: Updates the daily billing rate on an impacted system or horizontal capability.",Yes
+Project Level Pages,Project Details,Specifications,addEnvironment,"Add Environment: Adds an environment (Dev, SIT, UAT, Staging, Production) to project configurations.",Yes
+Project Level Pages,Project Details,Specifications,updateProjectDetails,"Update Project Summary: Updates project executive summary in specifications.",Yes
+Project Level Pages,Project Details,Specifications,updateImpactedSystem,"Edit Impacted System: Updates an existing impacted system's name, description, category, or man-days estimate.",Yes
+Project Level Pages,Project Details,Specifications,deleteImpactedSystem,"Delete Impacted System: Deletes a specific impacted system from project specifications.",Yes
+Project Level Pages,Project Details,Specifications,updateHorizontal,"Edit Horizontal: Updates an existing horizontal capability's name or weightage percentage.",Yes
+Project Level Pages,Project Details,Specifications,deleteHorizontal,"Delete Horizontal: Deletes a horizontal capability from project specifications.",Yes
+Project Level Pages,Project Details,Specifications,queryProjectSpecifications,"Read Specifications Breakdown: Queries the current summary, list of impacted systems, horizontals, total dev effort/cost, and grand total effort/cost.",Yes
+Project Level Pages,Project Details,Specifications,deleteEnvironment,"Delete Environment: Deletes a testing/deployment environment from the project.",Yes
+Project Level Pages,Project Details,Specifications,reorderEnvironments,"Reorder Environments: Updates the display order sequence of testing environments.",Yes
+Project Level Pages,Resources,Project Resources,assignProjectResource,"Assign Project Resource: Assigns an employee/resource to the project team with role and daily billing rate.",Yes
+Project Level Pages,Resources,Project Resources,queryBillingRates,"Query Resource Rates: Queries master resource rates and assigned project rates.",Yes
+Project Level Pages,Resources,Project Resources,updateResourceRate,"Update Resource Rate: Updates daily billed rate and internal cost rate for an assigned resource in a project.",Yes
+Project Level Pages,Resources,Project Resources,removeProjectResource,"Remove Project Resource: De-allocates and removes an employee from the project team.",Yes
+Project Level Pages,Resources,Project Resources,updateProjectResourceRole,"Update Resource Role: Modifies an assigned team member's role (Developer, Tester, Architect, BA, PM) or allocation percentage.",Yes
+Project Level Pages,Resources,Project Resources,queryProjectTeamMembers,"List Project Resources: Retrieves all allocated project team members with onboarding dates and daily billing rates.",Yes
+Project Level Pages,Resources,Worklog,logWork,"Log Work: Logs work hours against a user story or task for a specific date in timesheets.",Yes
+Project Level Pages,Resources,Worklog,queryProjectWorklogs,"Query Worklogs: Queries submitted timesheet entries for a project filtered by date range or employee.",Yes
+Project Level Pages,Resources,Worklog,deleteWorklogEntry,"Delete Worklog: Deletes an erroneous timesheet worklog entry.",Yes
+Project Level Pages,Resources,Worklog,updateWorklogEntry,"Update Worklog: Modifies logged hours, description, or work type for an existing timesheet entry.",Yes
+Project Level Pages,Resources,Resource Workload,queryResourceUtilization,"Query Resource Workload: Queries employee workload, availability %, planned task hours, and actual logged hours.",Yes
+Project Level Pages,Resources,Resource Workload,queryProjectResourceWorkloadMatrix,"Project Workload Matrix: Returns full matrix of all project resources comparing capacity against planned task hours.",Yes
+Project Level Pages,Resources,Resource Workload,reassignWorkload,"Reassign Task Workload: Reallocates work items or sub-tasks from an overloaded resource to an available team member.",Yes
+Project Level Pages,Resources,Project Gantt,queryProjectContext,"Query Gantt Milestones: Queries project context, epics, sprints, and release milestones.",Yes
+Project Level Pages,Resources,Project Gantt,queryProjectGanttTimeline,"Gantt Timeline Data: Returns chronological project timeline with sprint dates, release milestones, and story schedules.",Yes
+Project Level Pages,Resources,Project Gantt,updateGanttTaskDependency,"Set Task Predecessor: Creates start-to-finish predecessor dependency links between project timeline tasks.",Yes
+Project Level Pages,Releases,Project Releases,createRelease,"Create Release: Creates a project Release, Stage, or Milestone in the project schedule.",Yes
+Project Level Pages,Releases,Project Releases,updateRelease,"Update Release: Modifies release start date, end date, milestone date, or status.",Yes
+Project Level Pages,Releases,Project Releases,deleteRelease,"Delete Release: Deletes a release or milestone from the project schedule.",Yes
+Project Level Pages,Releases,Project Releases,queryProjectReleases,"List Project Releases: Retrieves all project releases, stages, and milestones with schedule dates.",Yes
+Project Level Pages,Releases,Project Releases,assignStoriesToRelease,"Assign Stories to Release: Associates user stories or defects with a specific project release.",Yes
+Project Level Pages,Development,Development Dashboard,queryProjectContext,"Query Dev Context: Queries total stories, epics, and active sprint statistics.",Yes
+Project Level Pages,Development,Development Dashboard,queryDevDashboardSummary,"Development Dashboard Metrics: Retrieves active sprint progress, sprint velocity points, and open defect counts.",Yes
+Project Level Pages,Development,Development Dashboard,querySprintBurndownData,"Sprint Burndown Data: Fetches ideal vs actual remaining effort points across active sprint days.",Yes
+Project Level Pages,Development,Development Dashboard,queryVelocityMetrics,"Velocity Tracking: Computes completed story points per sprint across historical project sprints.",Yes
+Project Level Pages,Development,Product Backlog,createWorkItem,"Create Work Item: Creates a new work item (User Story, Bug, Task, Feature Change, or Sub Task) with auto-generated sequential ID.",Yes
+Project Level Pages,Development,Product Backlog,createEpic,"Create Epic: Creates a new Agile Epic in a project to group related user stories.",Yes
+Project Level Pages,Development,Product Backlog,createSprint,"Create Sprint: Creates a new sprint timebox in a project.",Yes
+Project Level Pages,Development,Product Backlog,updateSprint,"Update Sprint: Updates sprint status (start sprint to Current, or Completed), goal, or dates.",Yes
+Project Level Pages,Development,Product Backlog,assignStoryToSprint,"Assign Story to Sprint: Assigns a work item (story, bug, task) to a sprint, or removes it to backlog.",Yes
+Project Level Pages,Development,Product Backlog,reorderBacklogStories,"Reorder Backlog: Updates the priority order ranking of user stories in the product backlog.",Yes
+Project Level Pages,Development,Product Backlog,deleteEpic,"Delete Epic: Deletes an agile epic and unlinks its associated user stories.",Yes
+Project Level Pages,Development,Product Backlog,queryBacklogStories,"Query Product Backlog: Returns all unassigned backlog stories filtered by epic, priority, or status.",Yes
+Project Level Pages,Development,Product Backlog,deleteWorkItem,"Delete Work Item: Soft-deletes a work item, moving it to project trash.",Yes
+Project Level Pages,Development,Grooming,updateWorkItem,"Groom Story: Updates story estimation hours, acceptance criteria, title, and priority during grooming.",Yes
+Project Level Pages,Development,Grooming,bulkEstimateStories,"Bulk Estimate Stories: Applies story points or estimated hours to multiple backlog items simultaneously.",Yes
+Project Level Pages,Development,Grooming,queryUngroomedStories,"Query Ungroomed Stories: Filters backlog items that lack estimation hours or acceptance criteria.",Yes
+Project Level Pages,Development,Grooming,tagStoryAcceptanceCriteria,"Set Acceptance Criteria: Adds structured Gherkin (Given/When/Then) acceptance criteria to a story.",Yes
+Project Level Pages,Development,Kanban Board,createWorkItem,"Create Kanban Item: Creates a story, task, or bug directly onto the Kanban board.",Yes
+Project Level Pages,Development,Kanban Board,updateWorkItem,"Move Kanban Card: Updates work item status column (To Do -> In Progress -> In QA -> Done).",Yes
+Project Level Pages,Development,Kanban Board,queryKanbanBoardState,"Query Kanban Board: Retrieves all active work items grouped by their current Kanban column.",Yes
+Project Level Pages,Development,Kanban Board,updateKanbanWipLimits,"Configure WIP Limits: Sets maximum work-in-progress card limits for specific Kanban columns.",Yes
+Project Level Pages,Development,Sub-Tasks,createWorkItem,"Create Sub-Task: Creates a sub-task (SUB-X) linked to a parent user story with estimated hours.",Yes
+Project Level Pages,Development,Sub-Tasks,updateWorkItem,"Update Sub-Task: Updates sub-task status, priority, description, or assigned developer.",Yes
+Project Level Pages,Development,Sub-Tasks,querySubTasksByStory,"Query Story Sub-Tasks: Retrieves all sub-tasks linked under a specified parent story ID.",Yes
+Project Level Pages,Development,Sub-Tasks,deleteSubTask,"Delete Sub-Task: Deletes a sub-task from a parent user story.",Yes
+Project Level Pages,Development,Sub-Tasks,bulkCreateSubTasks,"Bulk Create Sub-Tasks: Generates standard sub-tasks (Frontend, Backend, Unit Tests, Code Review) for a story in batch.",Yes
+Project Level Pages,Development,Defect Tracker,createWorkItem,"Log Defect: Creates a new Bug (BUG-X) with severity (Critical/High/Medium/Low) and priority.",Yes
+Project Level Pages,Development,Defect Tracker,updateWorkItem,"Update Defect Status: Updates bug status (To Do, In Progress, In QA, Done) and resolution notes.",Yes
+Project Level Pages,Development,Defect Tracker,queryProjectDefects,"Query Defects: Lists all logged project bugs filtered by severity, status, or sprint.",Yes
+Project Level Pages,Development,Defect Tracker,linkDefectToStory,"Link Defect to Story: Associates a defect with the specific user story that introduced the regression.",Yes
+Project Level Pages,Development,Defect Tracker,closeDefect,"Close Defect: Marks a defect as verified and closed with resolution summary.",Yes
+Project Level Pages,Testing,Test Dashboard,queryProjectContext,"Query Testing Context: Queries basic test cases and test cycle counts.",Yes
+Project Level Pages,Testing,Test Dashboard,queryTestDashboardSummary,"Test Dashboard Summary: Retrieves total test cases, execution pass/fail rates, and cycle completion status.",Yes
+Project Level Pages,Testing,Test Dashboard,queryTestExecutionProgress,"Test Execution Velocity: Returns test execution burn-up metrics across active test cycles.",Yes
+Project Level Pages,Testing,Test Dashboard,queryDefectDensity,"Defect Density Metrics: Computes defect density per story and QA leakage rate to production.",Yes
+Project Level Pages,Testing,Test Backlog,createTestCase,"Create Test Case: Creates a QA test case in a project with auto-generated TC-X sequential ID.",Yes
+Project Level Pages,Testing,Test Backlog,bulkCreateTestCases,"Bulk Generate Test Cases: Creates multiple QA test cases in a single batch operation with steps and expected results.",Yes
+Project Level Pages,Testing,Test Backlog,updateTestCase,"Edit Test Case: Updates test case title, step description, expected outcome, or type.",Yes
+Project Level Pages,Testing,Test Backlog,deleteTestCase,"Delete Test Case: Soft-deletes a test case from the QA backlog.",Yes
+Project Level Pages,Testing,Test Backlog,queryTestCases,"Query Test Backlog: Retrieves all test cases in the project filtered by story ID or test type.",Yes
+Project Level Pages,Testing,Test Backlog,bulkImportTestCases,"Bulk Import Test Suites: Imports test cases from structured CSV/JSON test repositories.",Yes
+Project Level Pages,Testing,Test Cycle,createTestPlan,"Create Test Cycle: Creates a QA test cycle or test plan (TP-X) on Dev, SIT, UAT, or Production.",Yes
+Project Level Pages,Testing,Test Cycle,addTestCasesToTestPlan,"Add Test Cases to Cycle: Adds existing project test cases into a specific Test Plan/Cycle for execution.",Yes
+Project Level Pages,Testing,Test Cycle,updateTestPlan,"Update Test Cycle: Modifies test cycle dates, environment, or target release.",Yes
+Project Level Pages,Testing,Test Cycle,deleteTestPlan,"Delete Test Cycle: Deletes a test cycle and its execution run records.",Yes
+Project Level Pages,Testing,Test Cycle,queryTestPlans,"List Test Cycles: Retrieves all test plans and cycles created in the project.",Yes
+Project Level Pages,Testing,Test Cycle,removeTestCaseFromPlan,"Remove Test Case from Cycle: Removes a test case from a specific test plan.",Yes
+Project Level Pages,Testing,Test Execution,updateTestCaseStatus,"Record Test Execution: Updates the execution status of a test case in a cycle (Passed, Failed, Blocked, Skipped, Not Run) with effort hours.",Yes
+Project Level Pages,Testing,Test Execution,queryTestExecutionList,"Query Execution Run: Retrieves all test cases assigned to a test cycle with their current execution status.",Yes
+Project Level Pages,Testing,Test Execution,bulkUpdateTestExecutionStatus,"Bulk Update Test Status: Batch marks multiple test cases as Passed or Skipped in a single action.",Yes
+Project Level Pages,Testing,Test Execution,logDefectFromTestExecution,"Log Defect from Test Run: Automatically creates a Bug linked directly to a failed test case execution.",Yes
+Project Level Pages,Testing,Defects,createWorkItem,"Log QA Defect: Logs a defect identified during test execution with severity and reproduction steps.",Yes
+Project Level Pages,Testing,Defects,updateWorkItem,"Update QA Defect: Updates bug status following QA re-testing.",Yes
+Project Level Pages,Testing,Defects,queryQaDefects,"Query QA Defects: Queries defects logged during active test cycles filtered by environment (SIT, UAT).",Yes
+Project Level Pages,Testing,Defects,exportDefectsReport,"Export Defects Report: Exports testing defects summary with severity and resolution notes to CSV.",Yes
+Project Level Pages,Governance,RAID Dashboard,createRaidItem,"Create RAID Item: Logs a governance item (Risk, Assumption, Issue, or Dependency) in the RAID log with RSK-X, ASM-X, ISS-X, or DEP-X ID.",Yes
+Project Level Pages,Governance,RAID Dashboard,updateRaidItem,"Update RAID Item: Updates an existing RAID item (e.g. close an issue, update risk mitigation).",Yes
+Project Level Pages,Governance,RAID Dashboard,queryProjectContext,"Query RAID Stats: Queries total counts of active risks, assumptions, issues, and dependencies.",Yes
+Project Level Pages,Governance,RAID Dashboard,queryRaidDashboardSummary,"RAID Summary: Retrieves executive breakdown of high-impact risks, open issues, unvalidated assumptions, and blocked dependencies.",Yes
+Project Level Pages,Governance,RAID Dashboard,exportRaidLogCsv,"Export RAID Log: Exports the complete project RAID register to CSV.",Yes
+Project Level Pages,Governance,Risks,createRaidItem,"Log Risk: Creates a risk item (RSK-X) with severity (1-3), probability (1-3), and mitigation plan.",Yes
+Project Level Pages,Governance,Risks,updateRaidItem,"Update Risk Mitigation: Updates planned mitigation strategy, contingency plan, or risk status.",Yes
+Project Level Pages,Governance,Risks,queryProjectRisks,"Query Project Risks: Returns all project risks ranked by risk score (Severity x Probability).",Yes
+Project Level Pages,Governance,Risks,deleteRisk,"Delete Risk: Deletes a risk entry from the project RAID log.",Yes
+Project Level Pages,Governance,Risks,closeRisk,"Close Risk: Marks a risk as successfully mitigated and closed.",Yes
+Project Level Pages,Governance,Assumptions,createRaidItem,"Log Assumption: Logs an assumption (ASM-X) with category (Technical, Resource, Business, External) and status (Active, Validated, Invalidated).",Yes
+Project Level Pages,Governance,Assumptions,updateRaidItem,"Update Assumption: Modifies assumption category or description.",Yes
+Project Level Pages,Governance,Assumptions,queryProjectAssumptions,"Query Assumptions: Lists all active and validated project assumptions.",Yes
+Project Level Pages,Governance,Assumptions,deleteAssumption,"Delete Assumption: Deletes an assumption from the project RAID log.",Yes
+Project Level Pages,Governance,Assumptions,validateAssumption,"Validate Assumption: Changes assumption status to Validated or Invalidated with validation notes.",Yes
+Project Level Pages,Governance,Issues,createRaidItem,"Log Issue: Logs an active issue/blocker (ISS-X) with priority (Critical, High, Medium, Low) and status.",Yes
+Project Level Pages,Governance,Issues,updateRaidItem,"Update Issue Status: Updates issue status (Open, In Progress, Resolved, Closed).",Yes
+Project Level Pages,Governance,Issues,queryProjectIssues,"Query Project Issues: Returns open project blockers filtered by priority.",Yes
+Project Level Pages,Governance,Issues,deleteIssue,"Delete Issue: Deletes an issue entry from the project RAID log.",Yes
+Project Level Pages,Governance,Issues,resolveIssue,"Resolve Issue: Marks a blocker as resolved with resolution details.",Yes
+Project Level Pages,Governance,Dependencies,createRaidItem,"Log Dependency: Logs an internal/external dependency (DEP-X), dependent team/system, expected date, and status (On Track, At Risk, Blocked).",Yes
+Project Level Pages,Governance,Dependencies,updateRaidItem,"Update Dependency Status: Updates dependency progress, expected delivery date, or blocker notes.",Yes
+Project Level Pages,Governance,Dependencies,queryProjectDependencies,"Query Dependencies: Lists all project dependencies categorized by incoming/outgoing and tracking status.",Yes
+Project Level Pages,Governance,Dependencies,deleteDependency,"Delete Dependency: Deletes a dependency entry from the project RAID log.",Yes
+Project Level Pages,Governance,Dependencies,updateDependencyStatus,"Set Dependency Status: Updates status to On Track, At Risk, or Blocked.",Yes
+Project Level Pages,Holidays,Project Holiday Calendar,queryHolidays,"Query Project Holidays: Queries organization and project holidays for working day calculation.",Yes
+Project Level Pages,Holidays,Project Holiday Calendar,createHoliday,"Add Project Holiday: Adds an additional holiday to the calendar.",Yes
+Project Level Pages,Holidays,Project Holiday Calendar,overrideProjectHolidayCalendar,"Toggle Holiday Override: Configures whether the project inherits global holidays or uses custom project holidays.",Yes
+Project Level Pages,Holidays,Project Holiday Calendar,queryProjectSpecificHolidays,"Query Custom Holidays: Retrieves project-specific holiday calendar overrides.",Yes
+Project Level Pages,Holidays,Leave Calendar,queryLeaveRequests,"Query Team Absences: Queries planned leave requests of allocated project team members.",Yes
+Project Level Pages,Holidays,Leave Calendar,applyLeave,"Submit Leave: Submits leave for a project resource.",Yes
+Project Level Pages,Holidays,Leave Calendar,queryTeamAbsenceCalendarBySprint,"Sprint Absence Overlay: Returns planned team absences overlapping with active sprint date ranges.",Yes
+Project Level Pages,PMO,PMO Documents,addCodeRepository,"Link Code Repository: Links a GitHub, GitLab, or Bitbucket repository URL to the project.",Yes
+Project Level Pages,PMO,PMO Documents,uploadPmoDocument,"Upload PMO Document: Uploads project charter, architecture diagram, SOW, or signoff deliverables.",Yes
+Project Level Pages,PMO,PMO Documents,deletePmoDocument,"Delete PMO Document: Deletes a document attachment from the project repository.",Yes
+Project Level Pages,PMO,PMO Documents,queryPmoDocuments,"List Project Documents: Retrieves all uploaded project documents with upload dates and categories.",Yes
+Project Level Pages,PMO,PMO Documents,addExternalDocLink,"Add External Link: Links external SharePoint, Google Drive, or Confluence document URLs.",Yes
+Project Level Pages,PMO,PMO FB Billing,queryBillingOverview,"Query Fixed Bid Financials: Queries contract revenue, resource cost, fixed cost, and profit margin.",Yes
+Project Level Pages,PMO,PMO FB Billing,queryFbBillingSummary,"FB Billing Summary: Retrieves fixed bid contract value, billed amount, remaining unbilled balance, and billing schedule.",Yes
+Project Level Pages,PMO,PMO FB Billing,updateFbContractValue,"Update Contract Value: Updates total contracted fixed bid revenue amount.",Yes
+Project Level Pages,PMO,PMO FB Billing,logFbInvoice,"Record FB Invoice: Logs an invoice raised against fixed bid milestones.",Yes
+Project Level Pages,PMO,PMO FB Payment Milestones,createPaymentMilestone,"Create Payment Milestone: Creates a commercial payment milestone with billing percentage, amount, and status.",Yes
+Project Level Pages,PMO,PMO FB Payment Milestones,updatePaymentMilestone,"Update Payment Milestone: Updates milestone name, billing percentage, dollar amount, or status.",Yes
+Project Level Pages,PMO,PMO FB Payment Milestones,deletePaymentMilestone,"Delete Payment Milestone: Deletes a payment milestone from the commercial schedule.",Yes
+Project Level Pages,PMO,PMO FB Payment Milestones,queryPaymentMilestones,"List Payment Milestones: Returns all payment milestones with current billing status (TBD, In Progress, Milestone completed, Invoice raised, Payment Completed).",Yes
+Project Level Pages,PMO,PMO FB Payment Milestones,markMilestoneInvoiceRaised,"Raise Milestone Invoice: Transitions milestone status to Invoice raised with invoice reference number.",Yes
+Project Level Pages,PMO,PMO TnM Billing,queryBillingOverview,"Query T&M Financials: Queries T&M total billed revenue, resource costs, and realized profit margin.",Yes
+Project Level Pages,PMO,PMO TnM Billing,queryTnmBillingSummary,"T&M Billing Summary: Retrieves monthly hours logged across all roles multiplied by daily billed rates.",Yes
+Project Level Pages,PMO,PMO TnM Billing,generateMonthlyTnmInvoice,"Generate T&M Invoice: Calculates monthly billing invoice amount from approved timesheets.",Yes
+Project Level Pages,PMO,PMO TnM Payment Milestones,createPaymentMilestone,"Create T&M Milestone: Creates a T&M billing checkpoint milestone with target amount.",Yes
+Project Level Pages,PMO,PMO TnM Payment Milestones,updateTnmMilestone,"Update T&M Milestone: Modifies T&M billing milestone target amount or status.",Yes
+Project Level Pages,PMO,PMO TnM Payment Milestones,deleteTnmMilestone,"Delete T&M Milestone: Deletes a T&M billing milestone.",Yes
+Project Level Pages,PMO,PMO TnM Payment Milestones,queryTnmMilestones,"List T&M Milestones: Retrieves all periodic T&M milestone checkpoints.",Yes
+Project Level Pages,PMO,Business Continuity,queryProjectContext,"Query Project Governance Context: Queries team allocations and risk posture.",Yes
+Project Level Pages,PMO,Business Continuity,queryBcpPlan,"Query BCP Plan: Retrieves project business continuity plan, key role handovers, and emergency contact matrix.",Yes
+Project Level Pages,PMO,Business Continuity,updateBcpPrimaryContacts,"Update BCP Handover: Configures primary and secondary successor backups for key project roles.",Yes
+Project Level Pages,PMO,Business Continuity,logBcpDisasterRecoveryPlan,"Update Disaster Recovery: Updates disaster recovery procedures, backup verification dates, and offsite contacts.",Yes
+Project Level Pages,Project Settings,Board Settings,addKanbanColumn,"Add Kanban Column: Adds a custom workflow column (e.g. Code Review, Blocked) to the Kanban board.",Yes
+Project Level Pages,Project Settings,Board Settings,deleteKanbanColumn,"Delete Kanban Column: Deletes a custom Kanban column from the project board.",Yes
+Project Level Pages,Project Settings,Board Settings,updateKanbanColumnsOrder,"Reorder Kanban Columns: Updates the sequence and order of Kanban workflow columns.",Yes
+Project Level Pages,Project Settings,Board Settings,queryBoardSettings,"Query Board Settings: Retrieves all configured Kanban columns and workflow properties.",Yes
+Project Level Pages,Project Settings,Sprint Settings,updateSprintDurationSettings,"Set Sprint Duration: Configures default sprint duration in weeks (1, 2, 3, or 4 weeks).",Yes
+Project Level Pages,Project Settings,Sprint Settings,setSprintStartDay,"Set Sprint Start Day: Configures default day of week for sprint start (Monday=1, Sunday=0).",Yes
+Project Level Pages,Project Settings,Sprint Settings,querySprintSettings,"Query Sprint Settings: Retrieves configured default sprint duration and start day.",Yes
+Project Level Pages,Project Settings,Effort Settings,updateEffortConversionSettings,"Set Effort Conversion Factors: Updates project conversion units: manMonthToDays (22), manDayToHours (8), and storyPointToHours (8).",Yes
+Project Level Pages,Project Settings,Effort Settings,queryEffortSettings,"Query Effort Settings: Retrieves configured effort conversion ratios.",Yes
+Project Level Pages,Project Trash,Project Trash,queryProjectTrashItems,"Query Project Trash: Lists deleted work items, test cases, and sprints in the project trash.",Yes
+Project Level Pages,Project Trash,Project Trash,restoreProjectTrashItem,"Restore Trash Item: Restores a soft-deleted work item or test case back to the active project.",Yes
+Project Level Pages,Project Trash,Project Trash,permanentlyDeleteProjectItem,"Purge Trash Item: Permanently deletes an item from the project database.",Yes
+Admin Level Pages,Portfolio Settings,Access Settings,queryAccessSettings,"Query Access Settings: Retrieves the complete role-permission matrix across all pages and CRUD scopes.",No
+Admin Level Pages,Portfolio Settings,Access Settings,updateRolePageAccess,"Configure Page Access: Grants or revokes page access permissions for specific roles (Senior Management, PM, Lead, Team Member, PMO).",No
+Admin Level Pages,Portfolio Settings,Access Settings,updateRoleCrudAccess,"Configure CRUD Access: Configures Create/Read/Update/Delete permissions for Portfolio, Project, Story, and Sub-task levels.",No
+Admin Level Pages,Portfolio Settings,Access Settings,resetAccessSettingsToDefaults,"Reset Access Defaults: Restores all page and CRUD permissions to factory system defaults.",No
+Admin Level Pages,Portfolio Settings,Database,queryDatabaseConnectionStatus,"Check Database Health: Tests active database connection status (Firebase Firestore, Supabase, PostgreSQL).",No
+Admin Level Pages,Portfolio Settings,Database,testDatabaseConnection,"Test Database Credentials: Tests connectivity against specified database host, port, and credentials.",No
+Admin Level Pages,Portfolio Settings,Database,switchDatabaseProvider,"Switch Database Provider: Configures active database provider between Firebase and Supabase/Postgres.",No
+Admin Level Pages,Portfolio Settings,Authentication,queryAuthProviderConfig,"Check Auth Configuration: Queries active authentication provider (Firebase Auth, Keycloak SSO, Local Auth).",No
+Admin Level Pages,Portfolio Settings,Authentication,configureKeycloakSso,"Configure Keycloak SSO: Configures Keycloak realm URL, client ID, and SSO callback endpoints.",No
+Admin Level Pages,Portfolio Settings,Authentication,configureFirebaseAuth,"Configure Firebase Auth: Configures Firebase authentication API keys and project settings.",No
+Admin Level Pages,Portfolio Settings,AI Config,queryActiveAiConfiguration,"Query AI Config: Queries active LLM provider (Google Gemini, OpenAI, Claude, LM Studio, Ollama) and loaded model.",No
+Admin Level Pages,Portfolio Settings,AI Config,switchAiProvider,"Switch AI Provider: Switches active AI inference provider and model name.",No
+Admin Level Pages,Portfolio Settings,AI Config,testAiConnection,"Test AI Connection: Runs a test generation request to verify LLM endpoint connectivity and response latency.",No
+Admin Level Pages,Portfolio Settings,Setup Wizard,runInitialWorkspaceSetupWizard,"Workspace Setup Wizard: Guided initialization of a new organization workspace, setting up root portfolios and initial settings.",No
+Admin Level Pages,Portfolio Settings,Setup Wizard,seedDefaultOrganizationData,"Seed Demo Data: Populates the workspace with sample portfolios, benchmark rate cards, and holiday calendars.",No
+Admin Level Pages,Portfolio Settings,Archive,queryArchivedProjects,"Query Archived Projects: Retrieves detailed list of archived projects with archive timestamps and PM assignments.",No
+Admin Level Pages,Portfolio Settings,Archive,bulkUnarchiveProjects,"Bulk Restore Projects: Restores multiple archived projects simultaneously.",No
+Admin Level Pages,Portfolio Settings,Archive,exportArchiveReport,"Export Archive Log: Exports archived projects directory report to CSV.",No
+Admin Level Pages,Portfolio Trash,Portfolio Trash,queryPortfolioTrash,"Query Portfolio Trash: Lists all soft-deleted projects and portfolios currently in trash.",No
+Admin Level Pages,Portfolio Trash,Portfolio Trash,restorePortfolioProject,"Restore Trash Project: Restores a soft-deleted project back to its parent portfolio.",No
+Admin Level Pages,Portfolio Trash,Portfolio Trash,emptyPortfolioTrash,"Empty Portfolio Trash: Permanently purges all deleted projects and portfolios from the database.",No

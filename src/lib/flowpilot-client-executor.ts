@@ -1611,6 +1611,477 @@ export async function executeFlowPilotActionOnClient(action: any) {
         }
         return { success: true, employeeId: empDoc.id, leaveId: params.leaveId, url: '/holidays/leave-tracker' };
       }
+      case 'duplicateProject': {
+        const srcDocRef = doc(db, 'projects', params.sourceProjectId);
+        const srcDoc = await getDoc(srcDocRef);
+        if (!srcDoc.exists()) throw new Error(`Source project ${params.sourceProjectId} not found`);
+        const srcData = srcDoc.data();
+        const currentYear = new Date().getFullYear().toString().slice(-2);
+        const projectsSnapshot = await getDocs(collection(db, 'projects'));
+        const thisYearProjects = projectsSnapshot.docs
+          .map((d: any) => d.id)
+          .filter((id: string) => id.startsWith(`P${currentYear}`));
+        const nextIdNumber = thisYearProjects.length > 0
+          ? Math.max(...thisYearProjects.map((id: string) => parseInt(id.substring(3), 10) || 0)) + 1
+          : 1;
+        const newProjId = `P${currentYear}${nextIdNumber.toString().padStart(5, '0')}`;
+        await setDoc(doc(db, 'projects', newProjId), {
+          id: newProjId,
+          name: params.newProjectName,
+          portfolioId: params.targetPortfolioId || srcData.portfolioId || 'PF001',
+          pricingModel: srcData.pricingModel || 'Fixed Bid',
+          status: 'Active',
+          overallStatus: 'Green',
+          summary: srcData.summary || '',
+          description: srcData.description ? `Cloned from ${srcData.name}` : '',
+          createdAt: new Date().toISOString(),
+        });
+        return { success: true, sourceProjectId: params.sourceProjectId, newProjectId: newProjId, name: params.newProjectName, url: `/projects/${newProjId}/project-details/project-status` };
+      }
+      case 'setQualityVarianceAlertThreshold': {
+        await setDoc(doc(db, 'settings', 'quality'), { qualityVarianceThresholdPercent: params.thresholdPercent, updatedAt: new Date().toISOString() }, { merge: true });
+        return { success: true, thresholdPercent: params.thresholdPercent, url: '/quality/estimations' };
+      }
+      case 'bulkUpdateResourceRates': {
+        if (Array.isArray(params.updates)) {
+          const batch = writeBatch(db);
+          for (const item of params.updates) {
+            if (!item.employeeId) continue;
+            const empRef = doc(db, 'employees', item.employeeId);
+            const p: any = { updatedAt: new Date().toISOString() };
+            if (item.billedRate !== undefined) p.billedRate = item.billedRate;
+            if (item.costRate !== undefined) p.costRate = item.costRate;
+            batch.set(empRef, p, { merge: true });
+            if (item.projectId) {
+              batch.set(doc(db, 'projects', item.projectId, 'employees', item.employeeId), p, { merge: true });
+            }
+          }
+          await batch.commit();
+        }
+        return { success: true, url: '/billing-rate' };
+      }
+      case 'setDefaultRoleBenchmarkRates': {
+        const roleKey = (params.role || 'Developer').replace(/[^a-zA-Z0-9]/g, '_');
+        await setDoc(doc(db, 'settings', 'billingRates'), {
+          [`benchmark_${roleKey}`]: {
+            role: params.role,
+            defaultBilledRate: params.defaultBilledRate,
+            defaultCostRate: params.defaultCostRate,
+            updatedAt: new Date().toISOString(),
+          }
+        }, { merge: true });
+        return { success: true, role: params.role, url: '/billing-rate' };
+      }
+      case 'createUser': {
+        let empId = params.empId;
+        if (!empId) {
+          const employeesSnap = await getDocs(collection(db, 'employees'));
+          let highestId = 0;
+          employeesSnap.forEach((docSnap: any) => {
+            if (docSnap.id.startsWith('E')) {
+              const num = parseInt(docSnap.id.substring(1), 10);
+              if (!isNaN(num) && num > highestId) highestId = num;
+            }
+          });
+          empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+        }
+        await setDoc(doc(db, 'employees', empId), {
+          empId,
+          firstName: params.firstName,
+          lastName: params.lastName,
+          email: params.email,
+          phone: params.phone || '555-0100',
+          role: params.role || 'Developer',
+          accessLevel: params.accessLevel || 'Team Member',
+          isEnabled: true,
+          isDeleted: false,
+          createdAt: new Date().toISOString(),
+        });
+        return { success: true, id: empId, empId, name: `${params.firstName} ${params.lastName}`, email: params.email, url: '/users' };
+      }
+      case 'updateUserRole': {
+        const employeesSnap = await getDocs(collection(db, 'employees'));
+        const empDoc = employeesSnap.docs.find((d: any) => d.id === params.userIdOrEmpId || d.data().empId === params.userIdOrEmpId);
+        if (!empDoc) throw new Error(`User ${params.userIdOrEmpId} not found`);
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.role) p.role = params.role;
+        if (params.accessLevel) p.accessLevel = params.accessLevel;
+        if (params.department) p.department = params.department;
+        await updateDoc(doc(db, 'employees', empDoc.id), p);
+        return { success: true, id: empDoc.id, url: '/users' };
+      }
+      case 'toggleUserStatus': {
+        const employeesSnap = await getDocs(collection(db, 'employees'));
+        const empDoc = employeesSnap.docs.find((d: any) => d.id === params.userIdOrEmpId || d.data().empId === params.userIdOrEmpId);
+        if (!empDoc) throw new Error(`User ${params.userIdOrEmpId} not found`);
+        await updateDoc(doc(db, 'employees', empDoc.id), { isEnabled: params.isEnabled, updatedAt: new Date().toISOString() });
+        return { success: true, id: empDoc.id, isEnabled: params.isEnabled, url: '/users' };
+      }
+      case 'bulkImportHolidays': {
+        if (Array.isArray(params.holidays)) {
+          const batch = writeBatch(db);
+          for (const h of params.holidays) {
+            const newRef = doc(collection(db, 'holidays'));
+            batch.set(newRef, {
+              description: h.name,
+              date: Timestamp.fromDate(new Date(h.date)),
+              type: h.type || 'National',
+              createdAt: new Date().toISOString(),
+            });
+          }
+          await batch.commit();
+        }
+        return { success: true, url: '/holidays/holiday-calendar' };
+      }
+      case 'updateHoliday': {
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.name) p.description = params.name;
+        if (params.date) p.date = Timestamp.fromDate(new Date(params.date));
+        if (params.type) p.type = params.type;
+        await updateDoc(doc(db, 'holidays', params.holidayId), p);
+        return { success: true, holidayId: params.holidayId, url: '/holidays/holiday-calendar' };
+      }
+      case 'resetAnnualLeaveBalances': {
+        await setDoc(doc(db, 'settings', 'leaveRollOver'), { lastResetYear: params?.year || new Date().getFullYear(), resetExecutedAt: new Date().toISOString() }, { merge: true });
+        return { success: true, url: '/holidays/leave-settings' };
+      }
+      case 'approveLeaveRequest': {
+        const employeesSnap = await getDocs(collection(db, 'employees'));
+        const empDoc = employeesSnap.docs.find((d: any) => d.id === params.employeeId || d.data().empId === params.employeeId);
+        if (!empDoc) throw new Error(`Employee ${params.employeeId} not found`);
+        const leaves = (empDoc.data().leaves || []).map((l: any) => l.id === params.leaveId ? { ...l, status: 'Approved', approvedAt: new Date().toISOString() } : l);
+        await updateDoc(doc(db, 'employees', empDoc.id), { leaves });
+        return { success: true, employeeId: empDoc.id, leaveId: params.leaveId, status: 'Approved', url: '/holidays/leave-tracker' };
+      }
+      case 'rejectLeaveRequest': {
+        const employeesSnap = await getDocs(collection(db, 'employees'));
+        const empDoc = employeesSnap.docs.find((d: any) => d.id === params.employeeId || d.data().empId === params.employeeId);
+        if (!empDoc) throw new Error(`Employee ${params.employeeId} not found`);
+        const leaves = (empDoc.data().leaves || []).map((l: any) => l.id === params.leaveId ? { ...l, status: 'Rejected', rejectionReason: params.reason, rejectedAt: new Date().toISOString() } : l);
+        await updateDoc(doc(db, 'employees', empDoc.id), { leaves });
+        return { success: true, employeeId: empDoc.id, leaveId: params.leaveId, status: 'Rejected', url: '/holidays/leave-tracker' };
+      }
+      case 'updateInitialImpactedSystem': {
+        const docRef = doc(db, 'projects', params.projectId, 'initialImpactedSystems', params.itemId);
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.name !== undefined) p.name = params.name.trim();
+        if (params.description !== undefined) p.description = params.description.trim();
+        if (params.category !== undefined) p.category = params.category;
+        if (params.estimate !== undefined) p.estimate = Number(params.estimate);
+        if (params.dailyBillingRate !== undefined) p.dailyBillingRate = Number(params.dailyBillingRate);
+        await updateDoc(docRef, p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/initial-estimation/specifications` };
+      }
+      case 'deleteInitialImpactedSystem': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'initialImpactedSystems', params.itemId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/initial-estimation/specifications` };
+      }
+      case 'updateInitialHorizontal': {
+        const docRef = doc(db, 'projects', params.projectId, 'initialHorizontals', params.itemId);
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.name !== undefined) p.name = params.name.trim();
+        if (params.weightage !== undefined) p.weightage = Number(params.weightage);
+        if (params.dailyBillingRate !== undefined) p.dailyBillingRate = Number(params.dailyBillingRate);
+        await updateDoc(docRef, p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/initial-estimation/specifications` };
+      }
+      case 'deleteInitialHorizontal': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'initialHorizontals', params.itemId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/initial-estimation/specifications` };
+      }
+      case 'confirmProjectEstimation': {
+        const now = new Date().toISOString();
+        const targetStatus = params.targetStatus || 'Active';
+        await updateDoc(doc(db, 'projects', params.projectId), { status: targetStatus, estimationConfirmedAt: now, updatedAt: now });
+        return { success: true, projectId: params.projectId, newStatus: targetStatus, url: `/projects/${params.projectId}/project-details/project-status` };
+      }
+      case 'updateInitialProjectDates':
+      case 'updateProjectDates': {
+        const now = new Date().toISOString();
+        await updateDoc(doc(db, 'projects', params.projectId), { startDate: params.startDate, endDate: params.endDate, updatedAt: now });
+        return { success: true, projectId: params.projectId, startDate: params.startDate, endDate: params.endDate, url: `/projects/${params.projectId}/project-details/project-status` };
+      }
+      case 'updateProjectHealth': {
+        const now = new Date().toISOString();
+        const entry = {
+          date: now,
+          overallStatus: params.overallStatus,
+          scopeHealth: params.scopeHealth || params.overallStatus,
+          costHealth: params.costHealth || params.overallStatus,
+          timeHealth: params.timeHealth || params.overallStatus,
+          commentary: params.commentary || 'Health indicators updated',
+          author: params.authorName || 'FlowPilot AI',
+        };
+        const p: any = { overallStatus: params.overallStatus, updatedAt: now, statusHistory: arrayUnion(entry) };
+        if (params.scopeHealth) p.scopeHealth = params.scopeHealth;
+        if (params.costHealth) p.costHealth = params.costHealth;
+        if (params.timeHealth) p.timeHealth = params.timeHealth;
+        await updateDoc(doc(db, 'projects', params.projectId), p);
+        return { success: true, projectId: params.projectId, ...params, url: `/projects/${params.projectId}/project-details/project-status` };
+      }
+      case 'updateImpactedSystem': {
+        const docRef = doc(db, 'projects', params.projectId, 'impactedSystems', params.itemId);
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.name !== undefined) p.name = params.name.trim();
+        if (params.description !== undefined) p.description = params.description.trim();
+        if (params.category !== undefined) p.category = params.category;
+        if (params.estimate !== undefined) p.estimate = Number(params.estimate);
+        if (params.dailyBillingRate !== undefined) p.dailyBillingRate = Number(params.dailyBillingRate);
+        await updateDoc(docRef, p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/project-details/specifications` };
+      }
+      case 'deleteImpactedSystem': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'impactedSystems', params.itemId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-details/specifications` };
+      }
+      case 'updateHorizontal': {
+        const docRef = doc(db, 'projects', params.projectId, 'horizontals', params.itemId);
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.name !== undefined) p.name = params.name.trim();
+        if (params.weightage !== undefined) p.weightage = Number(params.weightage);
+        if (params.dailyBillingRate !== undefined) p.dailyBillingRate = Number(params.dailyBillingRate);
+        await updateDoc(docRef, p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/project-details/specifications` };
+      }
+      case 'deleteHorizontal': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'horizontals', params.itemId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-details/specifications` };
+      }
+      case 'deleteEnvironment': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'environments', params.envId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-details/specifications` };
+      }
+      case 'removeProjectResource': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'employees', params.resourceId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/resources/project-resources` };
+      }
+      case 'updateProjectResourceRole': {
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.role) p.role = params.role;
+        if (params.allocationPercentage !== undefined) p.allocationPercentage = params.allocationPercentage;
+        await updateDoc(doc(db, 'projects', params.projectId, 'employees', params.resourceId), p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/resources/project-resources` };
+      }
+      case 'deleteWorklogEntry': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'worklogs', params.worklogId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/resources/worklog` };
+      }
+      case 'updateWorklogEntry': {
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.hours !== undefined) p.hours = params.hours;
+        if (params.description !== undefined) p.description = params.description;
+        if (params.workType !== undefined) p.workType = params.workType;
+        await updateDoc(doc(db, 'projects', params.projectId, 'worklogs', params.worklogId), p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/resources/worklog` };
+      }
+      case 'updateRelease': {
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.name) p.name = params.name;
+        if (params.startDate) p.startDate = params.startDate;
+        if (params.endDate) p.endDate = params.endDate;
+        if (params.milestoneDate) p.milestoneDate = params.milestoneDate;
+        if (params.status) p.status = params.status;
+        await updateDoc(doc(db, 'projects', params.projectId, 'releases', params.releaseId), p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/releases/project-releases` };
+      }
+      case 'deleteRelease': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'releases', params.releaseId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/releases/project-releases` };
+      }
+      case 'deleteEpic': {
+        await updateDoc(doc(db, 'projects', params.projectId, 'epics', params.epicId), { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, ...params, url: `/projects/${params.projectId}/development/product-backlog` };
+      }
+      case 'deleteWorkItem': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
+        const match = snap.docs.find((d: any) => d.id === params.storyIdOrDocId || d.data().storyId === params.storyIdOrDocId);
+        if (match) {
+          await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        }
+        return { success: true, ...params, url: `/projects/${params.projectId}/development/product-backlog` };
+      }
+      case 'tagStoryAcceptanceCriteria': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
+        const match = snap.docs.find((d: any) => d.id === params.storyId || d.data().storyId === params.storyId);
+        if (match) {
+          await updateDoc(match.ref, { acceptanceCriteria: params.acceptanceCriteria, updatedAt: new Date().toISOString() });
+        }
+        return { success: true, ...params, url: `/projects/${params.projectId}/development/grooming` };
+      }
+      case 'deleteSubTask': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
+        const match = snap.docs.find((d: any) => d.id === params.subTaskId || d.data().storyId === params.subTaskId);
+        if (match) {
+          await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        }
+        return { success: true, ...params, url: `/projects/${params.projectId}/development/sub-tasks` };
+      }
+      case 'closeDefect': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
+        const match = snap.docs.find((d: any) => d.id === params.defectId || d.data().storyId === params.defectId);
+        if (match) {
+          await updateDoc(match.ref, { status: 'Done', resolutionSummary: params.resolutionSummary || 'Resolved', resolvedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        }
+        return { success: true, ...params, status: 'Done', url: `/projects/${params.projectId}/development/defect-tracker` };
+      }
+      case 'updateTestCase': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
+        const match = snap.docs.find((d: any) => d.id === params.testCaseId || d.data().testCaseId === params.testCaseId);
+        if (match) {
+          const p: any = { updatedAt: new Date().toISOString() };
+          if (params.title) p.title = params.title;
+          if (params.description) p.description = params.description;
+          if (params.expectedResult) p.expectedResult = params.expectedResult;
+          if (params.type) p.type = params.type;
+          await updateDoc(match.ref, p);
+        }
+        return { success: true, ...params, url: `/projects/${params.projectId}/testing/test-backlog` };
+      }
+      case 'deleteTestCase': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
+        const match = snap.docs.find((d: any) => d.id === params.testCaseId || d.data().testCaseId === params.testCaseId);
+        if (match) {
+          await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        }
+        return { success: true, ...params, url: `/projects/${params.projectId}/testing/test-backlog` };
+      }
+      case 'updateTestPlan': {
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.name) p.name = params.name;
+        if (params.startDate) p.startDate = params.startDate;
+        if (params.endDate) p.endDate = params.endDate;
+        if (params.environmentId) p.environmentId = params.environmentId;
+        await updateDoc(doc(db, 'projects', params.projectId, 'testPlans', params.planId), p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/testing/test-cycle` };
+      }
+      case 'deleteTestPlan': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'testPlans', params.planId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/testing/test-cycle` };
+      }
+      case 'deleteRisk': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'risks'));
+        const match = snap.docs.find((d: any) => d.id === params.riskId || d.data().riskId === params.riskId);
+        if (match) await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, ...params, url: `/projects/${params.projectId}/governance/risks` };
+      }
+      case 'closeRisk': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'risks'));
+        const match = snap.docs.find((d: any) => d.id === params.riskId || d.data().riskId === params.riskId);
+        if (match) await updateDoc(match.ref, { status: 'Closed', closureNotes: params.closureNotes || 'Risk mitigated', closedAt: new Date().toISOString() });
+        return { success: true, ...params, status: 'Closed', url: `/projects/${params.projectId}/governance/risks` };
+      }
+      case 'deleteAssumption': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'assumptions'));
+        const match = snap.docs.find((d: any) => d.id === params.assumptionId || d.data().assumptionId === params.assumptionId);
+        if (match) await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, ...params, url: `/projects/${params.projectId}/governance/assumptions` };
+      }
+      case 'validateAssumption': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'assumptions'));
+        const match = snap.docs.find((d: any) => d.id === params.assumptionId || d.data().assumptionId === params.assumptionId);
+        if (match) await updateDoc(match.ref, { assumptionStatus: params.status, validationNotes: params.validationNotes, validatedAt: new Date().toISOString() });
+        return { success: true, ...params, status: params.status, url: `/projects/${params.projectId}/governance/assumptions` };
+      }
+      case 'deleteIssue': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'issues'));
+        const match = snap.docs.find((d: any) => d.id === params.issueId || d.data().issueId === params.issueId);
+        if (match) await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, ...params, url: `/projects/${params.projectId}/governance/issues` };
+      }
+      case 'resolveIssue': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'issues'));
+        const match = snap.docs.find((d: any) => d.id === params.issueId || d.data().issueId === params.issueId);
+        if (match) await updateDoc(match.ref, { issueStatus: 'Resolved', resolutionDetails: params.resolutionDetails || 'Resolved', resolvedAt: new Date().toISOString() });
+        return { success: true, ...params, status: 'Resolved', url: `/projects/${params.projectId}/governance/issues` };
+      }
+      case 'deleteDependency': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'dependencies'));
+        const match = snap.docs.find((d: any) => d.id === params.dependencyId || d.data().dependencyId === params.dependencyId);
+        if (match) await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, ...params, url: `/projects/${params.projectId}/governance/dependencies` };
+      }
+      case 'updateDependencyStatus': {
+        const snap = await getDocs(collection(db, 'projects', params.projectId, 'dependencies'));
+        const match = snap.docs.find((d: any) => d.id === params.dependencyId || d.data().dependencyId === params.dependencyId);
+        if (match) await updateDoc(match.ref, { dependencyStatus: params.status, updatedAt: new Date().toISOString() });
+        return { success: true, ...params, status: params.status, url: `/projects/${params.projectId}/governance/dependencies` };
+      }
+      case 'overrideProjectHolidayCalendar': {
+        await updateDoc(doc(db, 'projects', params.projectId), { isHolidayOverrideEnabled: params.isHolidayOverrideEnabled, updatedAt: new Date().toISOString() });
+        return { success: true, ...params, url: `/projects/${params.projectId}/holidays/holiday-calendar` };
+      }
+      case 'uploadPmoDocument': {
+        const docRef = await addDoc(collection(db, 'projects', params.projectId, 'pmoDocuments'), {
+          name: params.name,
+          category: params.category,
+          fileUrl: params.fileUrl,
+          description: params.description || '',
+          uploadedAt: new Date().toISOString(),
+        });
+        return { success: true, id: docRef.id, ...params, url: `/projects/${params.projectId}/pmo/pmo-documents` };
+      }
+      case 'deletePmoDocument': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'pmoDocuments', params.documentId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/pmo/pmo-documents` };
+      }
+      case 'updateFbContractValue': {
+        await updateDoc(doc(db, 'projects', params.projectId), { contractValue: params.contractValue, updatedAt: new Date().toISOString() });
+        return { success: true, ...params, url: `/projects/${params.projectId}/pmo/pmo-fb-billing` };
+      }
+      case 'updatePaymentMilestone': {
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.name) p.name = params.name;
+        if (params.billingPercentage !== undefined) p.billingPercentage = params.billingPercentage;
+        if (params.amount !== undefined) p.amount = params.amount;
+        if (params.status) p.status = params.status;
+        await updateDoc(doc(db, 'projects', params.projectId, 'paymentMilestones', params.milestoneId), p);
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/pmo/pmo-fb-payment-milestones` };
+      }
+      case 'deletePaymentMilestone': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'paymentMilestones', params.milestoneId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/pmo/pmo-fb-payment-milestones` };
+      }
+      case 'addKanbanColumn': {
+        const id = params.columnName.toLowerCase().replace(/\s+/g, '_');
+        await setDoc(doc(db, 'projects', params.projectId, 'kanbanColumns', id), {
+          id,
+          name: params.columnName,
+          wipLimit: params.wipLimit || 0,
+          order: params.order || 5,
+          createdAt: new Date().toISOString(),
+        });
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-settings/board-settings` };
+      }
+      case 'deleteKanbanColumn': {
+        await deleteDoc(doc(db, 'projects', params.projectId, 'kanbanColumns', params.columnId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-settings/board-settings` };
+      }
+      case 'updateSprintDurationSettings': {
+        await setDoc(doc(db, 'projects', params.projectId, 'settings', 'sprint'), { durationWeeks: params.durationWeeks, updatedAt: new Date().toISOString() }, { merge: true });
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-settings/sprint-settings` };
+      }
+      case 'setSprintStartDay': {
+        await setDoc(doc(db, 'projects', params.projectId, 'settings', 'sprint'), { startDay: params.startDay, updatedAt: new Date().toISOString() }, { merge: true });
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-settings/sprint-settings` };
+      }
+      case 'updateEffortConversionSettings': {
+        const p: any = { updatedAt: new Date().toISOString() };
+        if (params.manMonthToDays !== undefined) p.manMonthToDays = params.manMonthToDays;
+        if (params.manDayToHours !== undefined) p.manDayToHours = params.manDayToHours;
+        if (params.storyPointToHours !== undefined) p.storyPointToHours = params.storyPointToHours;
+        await setDoc(doc(db, 'projects', params.projectId, 'settings', 'effort'), p, { merge: true });
+        return { success: true, ...params, ...p, url: `/projects/${params.projectId}/project-settings/effort-settings` };
+      }
+      case 'restoreProjectTrashItem': {
+        const coll = params.itemType === 'testCase' ? 'testCases' : params.itemType === 'epic' ? 'epics' : 'stories';
+        await updateDoc(doc(db, 'projects', params.projectId, coll, params.itemId), { isDeleted: false, deletedAt: null, restoredAt: new Date().toISOString() });
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-trash` };
+      }
+      case 'permanentlyDeleteProjectItem': {
+        const coll = params.itemType === 'testCase' ? 'testCases' : params.itemType === 'epic' ? 'epics' : 'stories';
+        await deleteDoc(doc(db, 'projects', params.projectId, coll, params.itemId));
+        return { success: true, ...params, url: `/projects/${params.projectId}/project-trash` };
+      }
       default:
         console.warn(`Unknown client action tool: ${toolName}`);
         return action;
