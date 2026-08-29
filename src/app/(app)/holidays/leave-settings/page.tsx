@@ -30,6 +30,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
+import { getUserInitials } from '@/lib/utils';
 
 const defaultSettings = {
   weeklyOffDays: [0, 6],
@@ -326,6 +327,7 @@ export default function AllocatedLeavesPage() {
                           <Avatar className="h-7 w-7 border">
                             <AvatarImage src={res.avatar} alt={`${res.firstName} ${res.lastName}`} />
                             <AvatarFallback className="text-xs font-semibold">{getUserInitials(res.firstName, res.lastName)}</AvatarFallback>
+                          </Avatar>
                           <span className="font-medium text-sm">{res.firstName} {res.lastName}</span>
                         </div>
                       </TableCell>
