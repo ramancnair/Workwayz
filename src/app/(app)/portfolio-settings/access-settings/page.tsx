@@ -12,7 +12,27 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Save, ChevronDown, ChevronRight, LayoutGrid, ShieldAlert, ChevronsUpDown, Layers } from 'lucide-react';
+import {
+  Save,
+  RotateCcw,
+  ChevronDown,
+  ChevronRight,
+  LayoutGrid,
+  ShieldAlert,
+  ChevronsUpDown,
+  Layers,
+} from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const accessLevels: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
@@ -229,7 +249,7 @@ const scopeItems = [
 // Seeded defaults mapping for each access level fallback (Page Access)
 const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, string[]> = {
   'Senior Management': [
-    'Project Home', 'Portfolio Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate', 'Portfolio Trash', 'Trash',
+    'Project Home', 'Portfolio Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
     'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ],
   'Project Manager': [
@@ -288,6 +308,8 @@ export default function AccessSettingsPage() {
     const [accessSettings, setAccessSettings] = useState<Record<AccessLevel, Record<string, boolean>>>({} as any);
     const [crudSettings, setCrudSettings] = useState<Record<AccessLevel, Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }>>>({} as any);
     const [isLoading, setIsLoading] = useState(true);
+    const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
         portfolio_level: true,
         project_level: true,
@@ -476,6 +498,64 @@ export default function AccessSettingsPage() {
         }
     };
 
+    const handleResetToDefaults = async () => {
+        if (!db) return;
+        setIsResetting(true);
+        try {
+            // Build default page access
+            const newSettings: Record<string, any> = {};
+            for (const level of accessLevels) {
+                newSettings[level] = {};
+                for (const page of appPages) {
+                    newSettings[level][page] = (
+                        (level as string) === 'Administrator' ||
+                        ((level as string) !== 'Administrator' && (defaultAccessSettings as any)[level]?.includes(page) === true)
+                    );
+                }
+                // Ensure legacy Trash follows Administrator only
+                newSettings[level]['Trash'] = (level as string) === 'Administrator';
+            }
+
+            // Build default CRUD access
+            const newCrudSettings: Record<string, any> = {};
+            for (const level of accessLevels) {
+                newCrudSettings[level] = {};
+                for (const scope of scopeItems) {
+                    newCrudSettings[level][scope.dbId] = level === 'Administrator' 
+                        ? { create: true, read: true, update: true, delete: true }
+                        : (defaultCrudSettings[level]?.[scope.dbId] ?? { create: false, read: false, update: false, delete: false });
+                }
+            }
+
+            // Persist defaults directly to Firestore accessControl collection
+            for (const level of accessLevels) {
+                const settingDoc: AccessControlSetting = {
+                    id: level,
+                    pageAccess: newSettings[level],
+                    crudAccess: newCrudSettings[level],
+                };
+                await setDoc(doc(db, 'accessControl', level), settingDoc);
+            }
+
+            setAccessSettings(newSettings as Record<AccessLevel, Record<string, boolean>>);
+            setCrudSettings(newCrudSettings as Record<AccessLevel, Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }>>);
+            setIsResetDialogOpen(false);
+            toast({
+                title: 'Access Settings Reset',
+                description: 'All permissions have been restored to system defaults and saved. Admin Level pages are restricted exclusively to Administrator.',
+            });
+        } catch (error: any) {
+            console.error('Error resetting access settings:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Reset Failed',
+                description: error.message || 'Could not reset access settings.',
+            });
+        } finally {
+            setIsResetting(false);
+        }
+    };
+
     if (isLoading && Object.keys(accessSettings).length === 0) {
         return <div className="p-8 text-sm text-muted-foreground">Loading access settings...</div>;
     }
@@ -486,10 +566,47 @@ export default function AccessSettingsPage() {
                 title="Access Settings" 
                 description="Configure page-level and operation-level permissions for different roles."
             >
-                 <Button onClick={handleSaveChanges} disabled={isLoading}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {isLoading ? 'Saving...' : 'Save Changes'}
-                 </Button>
+                <div className="flex items-center gap-2">
+                    <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="outline" disabled={isLoading || isResetting} className="gap-2 text-xs h-9">
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Reset to Defaults
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Reset Access Settings to System Defaults?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-xs space-y-2 text-muted-foreground">
+                                    <span>
+                                        This will restore all page access and CRUD permissions to their original factory defaults across all access levels.
+                                    </span>
+                                    <span className="block font-medium text-foreground pt-1">
+                                        • Admin Level pages (Access Settings, Database, Authentication, AI Config, Setup Wizard, Archive, and Portfolio Trash) will be accessible exclusively by Administrator.
+                                    </span>
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleResetToDefaults();
+                                    }}
+                                    disabled={isResetting}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                    {isResetting ? 'Resetting...' : 'Confirm Reset'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+
+                    <Button onClick={handleSaveChanges} disabled={isLoading || isResetting} className="gap-2 text-xs h-9">
+                        <Save className="h-3.5 w-3.5" />
+                        {isLoading ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                </div>
             </PageHeader>
 
             <Tabs defaultValue="pages" className="w-full">
