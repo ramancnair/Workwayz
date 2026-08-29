@@ -17,6 +17,33 @@ import {
   flowpilotListProjects,
   flowpilotCreatePortfolio,
   flowpilotListPortfolios,
+  flowpilotArchiveProject,
+  flowpilotUnarchiveProject,
+  flowpilotDeleteProject,
+  flowpilotUpdatePortfolio,
+  flowpilotDeletePortfolio,
+  flowpilotSetProjectManager,
+  flowpilotAutogenProject,
+  flowpilotGetPortfolioDashboardSummary,
+  flowpilotQueryPortfolioRisks,
+  flowpilotQueryPortfolioIssues,
+  flowpilotQueryQualityEstimations,
+  flowpilotQueryQualityDefects,
+  flowpilotQueryBillingOverview,
+  flowpilotQueryBillingRates,
+  flowpilotUpdateResourceRate,
+  flowpilotUpdateSpecificationRate,
+  flowpilotQueryResourceUtilization,
+  flowpilotQueryAvailableResources,
+  flowpilotQueryOverallocatedResources,
+  flowpilotQueryHolidays,
+  flowpilotCreateHoliday,
+  flowpilotDeleteHoliday,
+  flowpilotQueryLeaveSettings,
+  flowpilotUpdateLeaveSettings,
+  flowpilotQueryLeaveRequests,
+  flowpilotApplyLeave,
+  flowpilotDeleteLeave,
 } from '@/lib/flowpilot-db-server';
 
 // Global execution store to guarantee capture of all executed actions
@@ -1222,6 +1249,731 @@ export const listProjectsTool = ai.defineTool(
   }
 );
 
+// 27. Tool: Archive Project
+export const archiveProjectTool = ai.defineTool(
+  {
+    name: 'archiveProject',
+    description: 'Archives an active project, moving it to the Archived Projects tab on Project Home.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID to archive.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      message: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotArchiveProject(input);
+    } catch (err) {
+      result = { success: true, projectId: input.projectId, url: '/project-home', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('archiveProject', result, input);
+    return result;
+  }
+);
+
+// 28. Tool: Unarchive Project (Restore)
+export const unarchiveProjectTool = ai.defineTool(
+  {
+    name: 'unarchiveProject',
+    description: 'Restores an archived project back to Active status on Project Home.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID to restore.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      message: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotUnarchiveProject(input);
+    } catch (err) {
+      result = { success: true, projectId: input.projectId, url: '/project-home', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('unarchiveProject', result, input);
+    return result;
+  }
+);
+
+// 29. Tool: Delete Project
+export const deleteProjectTool = ai.defineTool(
+  {
+    name: 'deleteProject',
+    description: 'Moves a project to trash / deletes a project from Project Home.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID to delete.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      projectId: z.string(),
+      url: z.string().optional(),
+      message: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotDeleteProject(input);
+    } catch (err) {
+      result = { success: true, projectId: input.projectId, url: '/project-home', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('deleteProject', result, input);
+    return result;
+  }
+);
+
+// 30. Tool: Update Portfolio
+export const updatePortfolioTool = ai.defineTool(
+  {
+    name: 'updatePortfolio',
+    description: 'Updates a portfolio folder name or description on Project Home.',
+    inputSchema: z.object({
+      portfolioId: z.string().describe('The portfolio ID (e.g. "PF001").'),
+      name: z.string().optional().describe('New name for the portfolio.'),
+      description: z.string().optional().describe('New description.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      portfolioId: z.string(),
+      name: z.string().optional(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotUpdatePortfolio(input);
+    } catch (err) {
+      result = { success: true, portfolioId: input.portfolioId, name: input.name, url: '/project-home', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('updatePortfolio', result, input);
+    return result;
+  }
+);
+
+// 31. Tool: Delete Portfolio
+export const deletePortfolioTool = ai.defineTool(
+  {
+    name: 'deletePortfolio',
+    description: 'Deletes an empty portfolio folder from Project Home (fails if active projects belong to it).',
+    inputSchema: z.object({
+      portfolioId: z.string().describe('The portfolio ID to delete.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      portfolioId: z.string(),
+      url: z.string().optional(),
+      message: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotDeletePortfolio(input);
+    } catch (err: any) {
+      result = { success: false, portfolioId: input.portfolioId, message: err.message, url: '/project-home' };
+    }
+    recordExecutedAction('deletePortfolio', result, input);
+    return result;
+  }
+);
+
+// 32. Tool: Set Primary Project Manager
+export const setProjectManagerTool = ai.defineTool(
+  {
+    name: 'setProjectManager',
+    description: 'Assigns or updates the primary Project Manager for a project on Project Home.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      projectManagerId: z.string().describe('Employee ID of the Project Manager.'),
+      projectManagerName: z.string().optional().describe('Full name of the Project Manager.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      projectId: z.string(),
+      projectManagerId: z.string(),
+      projectManager: z.string().optional(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotSetProjectManager(input);
+    } catch (err) {
+      result = { success: true, projectId: input.projectId, projectManagerId: input.projectManagerId, url: '/project-home', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('setProjectManager', result, input);
+    return result;
+  }
+);
+
+// 33. Tool: Autogen Project
+export const autogenProjectTool = ai.defineTool(
+  {
+    name: 'autogenProject',
+    description: 'Scaffolds an entire turnkey project with epics, stories, tasks, test cycles, test cases, and RAID items.',
+    inputSchema: z.object({
+      projectName: z.string().describe('Name of the new project to generate.'),
+      portfolioId: z.string().optional().describe('Portfolio ID (e.g. "PF001").'),
+      pricingModel: z.enum(['Fixed Bid', 'T&M']).default('Fixed Bid').describe('Pricing model.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      projectId: z.string().optional(),
+      name: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotAutogenProject(input);
+    } catch (err) {
+      result = { success: true, name: input.projectName, needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('autogenProject', result, input);
+    return result;
+  }
+);
+
+// 34. Tool: Get Portfolio Dashboard Summary
+export const getPortfolioDashboardSummaryTool = ai.defineTool(
+  {
+    name: 'getPortfolioDashboardSummary',
+    description: 'Retrieves executive RAG health distribution (Red, Amber, Green), high potential risks, and critical issues across the portfolio.',
+    inputSchema: z.object({
+      portfolioId: z.string().optional().describe('Optional portfolio ID filter or "all".'),
+    }),
+    outputSchema: z.object({
+      summaryJson: z.string().describe('JSON summary of portfolio health, red projects, high risks, and critical issues.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const summary = await flowpilotGetPortfolioDashboardSummary(input);
+      return { summaryJson: JSON.stringify(summary) };
+    } catch (err: any) {
+      return { summaryJson: JSON.stringify({ error: err.message }) };
+    }
+  }
+);
+
+// 35. Tool: Query Portfolio Risks
+export const queryPortfolioRisksTool = ai.defineTool(
+  {
+    name: 'queryPortfolioRisks',
+    description: 'Queries and ranks high-potential risks across all active projects in the portfolio.',
+    inputSchema: z.object({
+      portfolioId: z.string().optional().describe('Optional portfolio ID filter or "all".'),
+      minPotential: z.enum(['High', 'Medium', 'Low']).optional().describe('Minimum risk potential filter.'),
+    }),
+    outputSchema: z.object({
+      risksJson: z.string().describe('JSON stringified array of ranked portfolio risks.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const risks = await flowpilotQueryPortfolioRisks(input);
+      return { risksJson: JSON.stringify(risks) };
+    } catch (err: any) {
+      return { risksJson: JSON.stringify([]) };
+    }
+  }
+);
+
+// 36. Tool: Query Portfolio Issues
+export const queryPortfolioIssuesTool = ai.defineTool(
+  {
+    name: 'queryPortfolioIssues',
+    description: 'Queries open critical and high priority issues/blockers across all active projects.',
+    inputSchema: z.object({
+      portfolioId: z.string().optional().describe('Optional portfolio ID filter or "all".'),
+      priority: z.enum(['Critical', 'High', 'Medium', 'Low']).optional().describe('Priority filter.'),
+      status: z.enum(['Open', 'In Progress', 'Resolved', 'Closed']).optional().describe('Status filter.'),
+    }),
+    outputSchema: z.object({
+      issuesJson: z.string().describe('JSON stringified array of portfolio issues.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const issues = await flowpilotQueryPortfolioIssues(input);
+      return { issuesJson: JSON.stringify(issues) };
+    } catch (err: any) {
+      return { issuesJson: JSON.stringify([]) };
+    }
+  }
+);
+
+// 37. Tool: Query Quality Estimations
+export const queryQualityEstimationsTool = ai.defineTool(
+  {
+    name: 'queryQualityEstimations',
+    description: 'Queries initial man-days vs planned man-days, variance, actual effort, and conformance rates across projects.',
+    inputSchema: z.object({
+      portfolioId: z.string().optional().describe('Optional portfolio ID filter.'),
+    }),
+    outputSchema: z.object({
+      estimationsJson: z.string().describe('JSON stringified array of project estimations and variance.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const est = await flowpilotQueryQualityEstimations(input);
+      return { estimationsJson: JSON.stringify(est) };
+    } catch (err: any) {
+      return { estimationsJson: JSON.stringify([]) };
+    }
+  }
+);
+
+// 38. Tool: Query Quality Defects
+export const queryQualityDefectsTool = ai.defineTool(
+  {
+    name: 'queryQualityDefects',
+    description: 'Queries cross-project defect counts (SIT, UAT, Production) and production defect leakage rate percentages.',
+    inputSchema: z.object({
+      portfolioId: z.string().optional().describe('Optional portfolio ID filter.'),
+    }),
+    outputSchema: z.object({
+      defectsJson: z.string().describe('JSON stringified array of project defect metrics.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const def = await flowpilotQueryQualityDefects(input);
+      return { defectsJson: JSON.stringify(def) };
+    } catch (err: any) {
+      return { defectsJson: JSON.stringify([]) };
+    }
+  }
+);
+
+// 39. Tool: Query Billing Overview
+export const queryBillingOverviewTool = ai.defineTool(
+  {
+    name: 'queryBillingOverview',
+    description: 'Queries revenue, resource costs, fixed costs, gross profit, and profit margin % across all projects.',
+    inputSchema: z.object({
+      portfolioId: z.string().optional().describe('Optional portfolio ID filter.'),
+    }),
+    outputSchema: z.object({
+      billingJson: z.string().describe('JSON stringified portfolio financial breakdown.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const billing = await flowpilotQueryBillingOverview(input);
+      return { billingJson: JSON.stringify(billing) };
+    } catch (err: any) {
+      return { billingJson: JSON.stringify({ error: err.message }) };
+    }
+  }
+);
+
+// 40. Tool: Query Billing Rates
+export const queryBillingRatesTool = ai.defineTool(
+  {
+    name: 'queryBillingRates',
+    description: 'Queries master resource rate directory, role benchmarks (avg billed rate, avg cost rate, avg margin %), and assigned rates.',
+    inputSchema: z.object({
+      projectId: z.string().optional().describe('Optional project ID filter.'),
+    }),
+    outputSchema: z.object({
+      ratesJson: z.string().describe('JSON stringified role benchmarks and resource rates.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const rates = await flowpilotQueryBillingRates(input);
+      return { ratesJson: JSON.stringify(rates) };
+    } catch (err: any) {
+      return { ratesJson: JSON.stringify({ error: err.message }) };
+    }
+  }
+);
+
+// 41. Tool: Update Resource Rate
+export const updateResourceRateTool = ai.defineTool(
+  {
+    name: 'updateResourceRate',
+    description: 'Updates daily billed rate and internal cost rate for an assigned resource in a project.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      employeeId: z.string().describe('The employee ID.'),
+      billedRate: z.number().describe('Daily billed rate in USD.'),
+      costRate: z.number().describe('Daily cost rate in USD.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      projectId: z.string(),
+      employeeId: z.string(),
+      billedRate: z.number(),
+      costRate: z.number(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotUpdateResourceRate(input);
+    } catch (err) {
+      result = { success: true, ...input, url: '/billing-rate', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('updateResourceRate', result, input);
+    return result;
+  }
+);
+
+// 42. Tool: Update Specification Rate
+export const updateSpecificationRateTool = ai.defineTool(
+  {
+    name: 'updateSpecificationRate',
+    description: 'Updates the daily billing rate on an impacted system or horizontal capability.',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID.'),
+      specType: z.enum(['system', 'horizontal']).describe('Whether updating an impacted system or horizontal.'),
+      itemId: z.string().describe('Item document ID.'),
+      dailyBillingRate: z.number().describe('New daily billing rate in USD.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      projectId: z.string(),
+      specType: z.string(),
+      itemId: z.string(),
+      dailyBillingRate: z.number(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotUpdateSpecificationRate(input);
+    } catch (err) {
+      result = { success: true, ...input, url: '/billing-rate', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('updateSpecificationRate', result, input);
+    return result;
+  }
+);
+
+// 43. Tool: Query Resource Utilization
+export const queryResourceUtilizationTool = ai.defineTool(
+  {
+    name: 'queryResourceUtilization',
+    description: 'Queries resource workload: active project allocations, availability %, planned task hours, actual logged hours, and over/under-allocation status.',
+    inputSchema: z.object({
+      employeeId: z.string().optional().describe('Employee ID to inspect.'),
+      employeeName: z.string().optional().describe('Employee name to search.'),
+    }),
+    outputSchema: z.object({
+      utilizationJson: z.string().describe('JSON stringified utilization metrics for the employee.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const util = await flowpilotQueryResourceUtilization(input);
+      return { utilizationJson: JSON.stringify(util) };
+    } catch (err: any) {
+      return { utilizationJson: JSON.stringify({ error: err.message }) };
+    }
+  }
+);
+
+// 44. Tool: Query Available Resources (Bench)
+export const queryAvailableResourcesTool = ai.defineTool(
+  {
+    name: 'queryAvailableResources',
+    description: 'Searches for employees with available/free capacity (< 100% allocated across projects) filtered by role.',
+    inputSchema: z.object({
+      role: z.string().optional().describe('Optional role filter (e.g. "Developer", "Tester", "Architect").'),
+      minAvailability: z.number().optional().describe('Minimum free percentage capacity (default 20%).'),
+    }),
+    outputSchema: z.object({
+      availableResourcesJson: z.string().describe('JSON stringified array of available team members.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const list = await flowpilotQueryAvailableResources(input);
+      return { availableResourcesJson: JSON.stringify(list) };
+    } catch (err: any) {
+      return { availableResourcesJson: JSON.stringify([]) };
+    }
+  }
+);
+
+// 45. Tool: Query Overallocated Resources
+export const queryOverallocatedResourcesTool = ai.defineTool(
+  {
+    name: 'queryOverallocatedResources',
+    description: 'Identifies team members allocated > 100% across multiple simultaneous active projects.',
+    inputSchema: z.object({}),
+    outputSchema: z.object({
+      overallocatedJson: z.string().describe('JSON stringified list of overallocated resources.'),
+    }),
+  },
+  async () => {
+    try {
+      const list = await flowpilotQueryOverallocatedResources();
+      return { overallocatedJson: JSON.stringify(list) };
+    } catch (err: any) {
+      return { overallocatedJson: JSON.stringify([]) };
+    }
+  }
+);
+
+// 46. Tool: Query Holidays
+export const queryHolidaysTool = ai.defineTool(
+  {
+    name: 'queryHolidays',
+    description: 'Queries organization calendar holidays for the specified year.',
+    inputSchema: z.object({
+      year: z.number().optional().describe('Year to query (defaults to current year).'),
+    }),
+    outputSchema: z.object({
+      holidaysJson: z.string().describe('JSON stringified list of holidays.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const hols = await flowpilotQueryHolidays(input);
+      return { holidaysJson: JSON.stringify(hols) };
+    } catch (err: any) {
+      return { holidaysJson: JSON.stringify({ error: err.message }) };
+    }
+  }
+);
+
+// 47. Tool: Create Holiday
+export const createHolidayTool = ai.defineTool(
+  {
+    name: 'createHoliday',
+    description: 'Adds a new holiday to the organization Holiday Calendar.',
+    inputSchema: z.object({
+      name: z.string().describe('Name or description of the holiday.'),
+      date: z.string().describe('Date in YYYY-MM-DD format.'),
+      type: z.enum(['National', 'Regional', 'Optional']).default('National').describe('Holiday type.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      id: z.string().optional(),
+      name: z.string(),
+      date: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotCreateHoliday(input);
+    } catch (err) {
+      result = { success: true, ...input, url: '/holidays/holiday-calendar', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('createHoliday', result, input);
+    return result;
+  }
+);
+
+// 48. Tool: Delete Holiday
+export const deleteHolidayTool = ai.defineTool(
+  {
+    name: 'deleteHoliday',
+    description: 'Deletes a holiday from the organization Holiday Calendar.',
+    inputSchema: z.object({
+      holidayId: z.string().describe('Holiday document ID to delete.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      holidayId: z.string(),
+      url: z.string().optional(),
+      message: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotDeleteHoliday(input);
+    } catch (err) {
+      result = { success: true, holidayId: input.holidayId, url: '/holidays/holiday-calendar', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('deleteHoliday', result, input);
+    return result;
+  }
+);
+
+// 49. Tool: Query Leave Settings
+export const queryLeaveSettingsTool = ai.defineTool(
+  {
+    name: 'queryLeaveSettings',
+    description: 'Queries global leave policy quotas (allocated annual paid leaves, carryover limit, weekly off days).',
+    inputSchema: z.object({}),
+    outputSchema: z.object({
+      settingsJson: z.string().describe('JSON stringified leave policy settings.'),
+    }),
+  },
+  async () => {
+    try {
+      const s = await flowpilotQueryLeaveSettings();
+      return { settingsJson: JSON.stringify(s) };
+    } catch (err: any) {
+      return { settingsJson: JSON.stringify({}) };
+    }
+  }
+);
+
+// 50. Tool: Update Leave Settings
+export const updateLeaveSettingsTool = ai.defineTool(
+  {
+    name: 'updateLeaveSettings',
+    description: 'Updates organization leave quotas, carryover permissions, or weekly off days in Leave Settings.',
+    inputSchema: z.object({
+      allocatedPaidLeavesPerYear: z.number().optional().describe('Annual allocated paid leave days.'),
+      allowCarryOver: z.boolean().optional().describe('Whether unused leaves can carry over.'),
+      carryOverLimit: z.number().optional().describe('Maximum carryover days limit.'),
+      weeklyOffDays: z.array(z.number()).optional().describe('Array of weekday indices (0=Sun, 6=Sat).'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      url: z.string().optional(),
+      settings: z.any().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotUpdateLeaveSettings(input);
+    } catch (err) {
+      result = { success: true, url: '/holidays/leave-settings', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('updateLeaveSettings', result, input);
+    return result;
+  }
+);
+
+// 51. Tool: Query Leave Requests
+export const queryLeaveRequestsTool = ai.defineTool(
+  {
+    name: 'queryLeaveRequests',
+    description: 'Queries employee leave requests and planned absences across the portfolio.',
+    inputSchema: z.object({
+      employeeId: z.string().optional().describe('Optional employee ID filter.'),
+      type: z.enum(['Paid Leave', 'Loss of Pay']).optional().describe('Leave type filter.'),
+    }),
+    outputSchema: z.object({
+      leavesJson: z.string().describe('JSON stringified list of leave records.'),
+    }),
+  },
+  async (input) => {
+    try {
+      const leaves = await flowpilotQueryLeaveRequests(input);
+      return { leavesJson: JSON.stringify(leaves) };
+    } catch (err: any) {
+      return { leavesJson: JSON.stringify([]) };
+    }
+  }
+);
+
+// 52. Tool: Apply Leave
+export const applyLeaveTool = ai.defineTool(
+  {
+    name: 'applyLeave',
+    description: 'Submits a leave request for an employee in Leave Tracker.',
+    inputSchema: z.object({
+      employeeId: z.string().describe('Employee ID or empId.'),
+      startDate: z.string().describe('Start date (YYYY-MM-DD).'),
+      endDate: z.string().describe('End date (YYYY-MM-DD).'),
+      type: z.enum(['Paid Leave', 'Loss of Pay']).default('Paid Leave').describe('Leave type.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      leaveId: z.string().optional(),
+      employeeId: z.string(),
+      employeeName: z.string().optional(),
+      startDate: z.string(),
+      endDate: z.string(),
+      type: z.string(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotApplyLeave(input);
+    } catch (err) {
+      result = { success: true, ...input, url: '/holidays/leave-tracker', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('applyLeave', result, input);
+    return result;
+  }
+);
+
+// 53. Tool: Delete / Cancel Leave
+export const deleteLeaveTool = ai.defineTool(
+  {
+    name: 'deleteLeave',
+    description: 'Cancels and deletes an employee leave record in Leave Tracker.',
+    inputSchema: z.object({
+      employeeId: z.string().describe('Employee ID or empId.'),
+      leaveId: z.string().describe('The leave record ID to delete.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      employeeId: z.string(),
+      leaveId: z.string(),
+      url: z.string().optional(),
+      message: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotDeleteLeave(input);
+    } catch (err) {
+      result = { success: true, ...input, url: '/holidays/leave-tracker', needsClientExecution: true, params: input };
+    }
+    recordExecutedAction('deleteLeave', result, input);
+    return result;
+  }
+);
+
 export const allFlowPilotTools = [
   createWorkItemTool,
   updateWorkItemTool,
@@ -1252,4 +2004,31 @@ export const allFlowPilotTools = [
   addFixedCostTool,
   queryProjectContextTool,
   listProjectsTool,
+  archiveProjectTool,
+  unarchiveProjectTool,
+  deleteProjectTool,
+  updatePortfolioTool,
+  deletePortfolioTool,
+  setProjectManagerTool,
+  autogenProjectTool,
+  getPortfolioDashboardSummaryTool,
+  queryPortfolioRisksTool,
+  queryPortfolioIssuesTool,
+  queryQualityEstimationsTool,
+  queryQualityDefectsTool,
+  queryBillingOverviewTool,
+  queryBillingRatesTool,
+  updateResourceRateTool,
+  updateSpecificationRateTool,
+  queryResourceUtilizationTool,
+  queryAvailableResourcesTool,
+  queryOverallocatedResourcesTool,
+  queryHolidaysTool,
+  createHolidayTool,
+  deleteHolidayTool,
+  queryLeaveSettingsTool,
+  updateLeaveSettingsTool,
+  queryLeaveRequestsTool,
+  applyLeaveTool,
+  deleteLeaveTool,
 ];

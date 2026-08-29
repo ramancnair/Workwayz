@@ -11,7 +11,11 @@ import {
   query,
   where,
   writeBatch,
+  arrayUnion,
+  arrayRemove,
+  Timestamp,
 } from '@/lib/db-provider';
+import { generateFullProjectData } from '@/lib/project-autogen';
 import type {
   Story,
   Epic,
@@ -1477,6 +1481,136 @@ export async function executeFlowPilotActionOnClient(action: any) {
         return await executeClientAddCodeRepository(params);
       case 'addFixedCost':
         return await executeClientAddFixedCost(params);
+      case 'archiveProject': {
+        const projectRef = doc(db, 'projects', params.projectId);
+        const now = new Date().toISOString();
+        await updateDoc(projectRef, { isArchived: true, archivedAt: now, updatedAt: now });
+        return { success: true, projectId: params.projectId, url: '/project-home', message: `Project ${params.projectId} archived` };
+      }
+      case 'unarchiveProject': {
+        const projectRef = doc(db, 'projects', params.projectId);
+        const now = new Date().toISOString();
+        await updateDoc(projectRef, { isArchived: false, archivedAt: null, updatedAt: now });
+        return { success: true, projectId: params.projectId, url: '/project-home', message: `Project ${params.projectId} restored` };
+      }
+      case 'deleteProject': {
+        const projectRef = doc(db, 'projects', params.projectId);
+        const now = new Date().toISOString();
+        await updateDoc(projectRef, { isDeleted: true, deletedAt: now, updatedAt: now });
+        return { success: true, projectId: params.projectId, url: '/project-home', message: `Project ${params.projectId} deleted` };
+      }
+      case 'updatePortfolio': {
+        const portfolioRef = doc(db, 'portfolios', params.portfolioId);
+        const now = new Date().toISOString();
+        const payload: any = { updatedAt: now };
+        if (params.name) payload.name = params.name.trim();
+        if (params.description !== undefined) payload.description = params.description;
+        await updateDoc(portfolioRef, payload);
+        return { success: true, portfolioId: params.portfolioId, name: params.name, url: '/project-home' };
+      }
+      case 'deletePortfolio': {
+        const portfolioRef = doc(db, 'portfolios', params.portfolioId);
+        const now = new Date().toISOString();
+        await updateDoc(portfolioRef, { isDeleted: true, deletedAt: now, updatedAt: now });
+        return { success: true, portfolioId: params.portfolioId, url: '/project-home' };
+      }
+      case 'setProjectManager': {
+        const projectRef = doc(db, 'projects', params.projectId);
+        const now = new Date().toISOString();
+        await updateDoc(projectRef, {
+          projectManagerId: params.projectManagerId,
+          projectManager: params.projectManagerName || params.projectManagerId,
+          updatedAt: now,
+        });
+        return { success: true, projectId: params.projectId, projectManagerId: params.projectManagerId, url: '/project-home' };
+      }
+      case 'autogenProject': {
+        const projectsSnap = await getDocs(collection(db, 'projects'));
+        const existingNumbers = projectsSnap.docs
+          .map((d: any) => d.id)
+          .filter((id: string) => id.startsWith('P26'))
+          .map((id: string) => parseInt(id.replace('P26', ''), 10))
+          .filter((n: number) => !isNaN(n));
+        const nextNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+        const projectId = `P26${nextNum.toString().padStart(5, '0')}`;
+        const now = new Date().toISOString();
+        await setDoc(doc(db, 'projects', projectId), {
+          id: projectId,
+          name: params.projectName,
+          portfolioId: params.portfolioId || 'PF001',
+          pricingModel: params.pricingModel || 'Fixed Bid',
+          status: 'Active',
+          overallStatus: 'Green',
+          summary: `Turnkey project generated for ${params.projectName}.`,
+          isArchived: false,
+          isDeleted: false,
+          createdAt: now,
+          updatedAt: now,
+        });
+        try {
+          await generateFullProjectData(db, projectId, params.projectName, {
+            pricingModel: params.pricingModel || 'Fixed Bid',
+            portfolioId: params.portfolioId || 'PF001',
+          });
+        } catch (e) {}
+        return { success: true, projectId, name: params.projectName, url: `/projects/${projectId}/project-details/pm-dashboard` };
+      }
+      case 'updateResourceRate': {
+        const empRef = doc(db, 'projects', params.projectId, 'employees', params.employeeId);
+        const now = new Date().toISOString();
+        await updateDoc(empRef, { billedRate: params.billedRate, costRate: params.costRate, updatedAt: now });
+        return { success: true, projectId: params.projectId, employeeId: params.employeeId, url: '/billing-rate' };
+      }
+      case 'updateSpecificationRate': {
+        const coll = params.specType === 'system' ? 'impactedSystems' : 'horizontals';
+        const itemRef = doc(db, 'projects', params.projectId, coll, params.itemId);
+        const now = new Date().toISOString();
+        await updateDoc(itemRef, { dailyBillingRate: params.dailyBillingRate, updatedAt: now });
+        return { success: true, projectId: params.projectId, itemId: params.itemId, url: '/billing-rate' };
+      }
+      case 'createHoliday': {
+        const holidayData: any = {
+          description: params.name,
+          date: Timestamp.fromDate(new Date(params.date)),
+          type: params.type || 'National',
+          createdAt: new Date().toISOString(),
+        };
+        const docRef = await addDoc(collection(db, 'holidays'), holidayData);
+        return { success: true, id: docRef.id, name: params.name, date: params.date, url: '/holidays/holiday-calendar' };
+      }
+      case 'deleteHoliday': {
+        await deleteDoc(doc(db, 'holidays', params.holidayId));
+        return { success: true, holidayId: params.holidayId, url: '/holidays/holiday-calendar' };
+      }
+      case 'updateLeaveSettings': {
+        const payload: any = {};
+        if (params.allocatedPaidLeavesPerYear !== undefined) payload.allocatedPaidLeavesPerYear = params.allocatedPaidLeavesPerYear;
+        if (params.allowCarryOver !== undefined) payload.allowCarryOver = params.allowCarryOver;
+        if (params.carryOverLimit !== undefined) payload.carryOverLimit = params.carryOverLimit;
+        if (params.weeklyOffDays !== undefined) payload.weeklyOffDays = params.weeklyOffDays;
+        await setDoc(doc(db, 'settings', 'main'), payload, { merge: true });
+        return { success: true, url: '/holidays/leave-settings', settings: payload };
+      }
+      case 'applyLeave': {
+        const employeesSnap = await getDocs(collection(db, 'employees'));
+        const empDoc = employeesSnap.docs.find((d: any) => d.id === params.employeeId || d.data().empId === params.employeeId);
+        if (!empDoc) throw new Error(`Employee ${params.employeeId} not found`);
+        const leaveId = `leave_${Date.now()}`;
+        const leaveObj = { id: leaveId, startDate: params.startDate, endDate: params.endDate, type: params.type };
+        await updateDoc(doc(db, 'employees', empDoc.id), { leaves: arrayUnion(leaveObj) });
+        return { success: true, leaveId, employeeId: empDoc.id, url: '/holidays/leave-tracker' };
+      }
+      case 'deleteLeave': {
+        const employeesSnap = await getDocs(collection(db, 'employees'));
+        const empDoc = employeesSnap.docs.find((d: any) => d.id === params.employeeId || d.data().empId === params.employeeId);
+        if (!empDoc) throw new Error(`Employee ${params.employeeId} not found`);
+        const currentLeaves = empDoc.data().leaves || [];
+        const target = currentLeaves.find((l: any) => l.id === params.leaveId);
+        if (target) {
+          await updateDoc(doc(db, 'employees', empDoc.id), { leaves: arrayRemove(target) });
+        }
+        return { success: true, employeeId: empDoc.id, leaveId: params.leaveId, url: '/holidays/leave-tracker' };
+      }
       default:
         console.warn(`Unknown client action tool: ${toolName}`);
         return action;
@@ -1498,31 +1632,29 @@ export async function undoFlowPilotActionOnClient(action: any) {
     switch (toolName) {
       case 'createWorkItem': {
         if (!projectId) throw new Error('Project ID missing');
-        const projectDocRef = doc(db, 'projects', projectId);
-        const storiesRef = collection(projectDocRef, 'stories');
-        // Search by ID or storyId
+        const storiesRef = collection(doc(db, 'projects', projectId), 'stories');
         if (action.id) {
           await updateDoc(doc(storiesRef, action.id), { isDeleted: true, deletedAt: new Date().toISOString() });
         } else if (action.storyId) {
           const snapshot = await getDocs(storiesRef);
           const match = snapshot.docs.find((d: any) => d.data().storyId === action.storyId);
-          if (match) {
-            await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
-          }
+          if (match) await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
         }
-        return { success: true, message: `Reverted work item ${action.storyId || action.title || ''}` };
+        return { success: true, message: `Reverted ${action.itemType || 'item'} ${action.storyId || action.title || ''}` };
       }
 
       case 'createEpic': {
-        if (!projectId || !action.id) throw new Error('Epic ID or Project ID missing');
-        await deleteDoc(doc(db, 'projects', projectId, 'epics', action.id));
-        return { success: true, message: `Deleted Epic "${action.title || ''}"` };
+        if (!projectId || !action.id) throw new Error('Project ID or Epic ID missing');
+        const epicRef = doc(db, 'projects', projectId, 'epics', action.id);
+        await updateDoc(epicRef, { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, message: `Reverted epic "${action.title || ''}"` };
       }
 
       case 'createSprint': {
-        if (!projectId || !action.id) throw new Error('Sprint ID or Project ID missing');
-        await deleteDoc(doc(db, 'projects', projectId, 'sprints', action.id));
-        return { success: true, message: `Deleted Sprint "${action.title || ''}"` };
+        if (!projectId || !action.id) throw new Error('Project ID or Sprint ID missing');
+        const sprintRef = doc(db, 'projects', projectId, 'sprints', action.id);
+        await updateDoc(sprintRef, { isDeleted: true, deletedAt: new Date().toISOString() });
+        return { success: true, message: `Reverted sprint "${action.name || ''}"` };
       }
 
       case 'createTestCase': {
@@ -1590,6 +1722,31 @@ export async function undoFlowPilotActionOnClient(action: any) {
         if (!action.id) throw new Error('Project ID missing');
         await updateDoc(doc(db, 'projects', action.id), { isDeleted: true, deletedAt: new Date().toISOString() });
         return { success: true, message: `Reverted project "${action.name || ''}"` };
+      }
+
+      case 'archiveProject': {
+        if (!action.projectId) throw new Error('Project ID missing');
+        await updateDoc(doc(db, 'projects', action.projectId), { isArchived: false, archivedAt: null });
+        return { success: true, message: `Unarchived project ${action.projectId}` };
+      }
+
+      case 'createHoliday': {
+        if (!action.id) throw new Error('Holiday ID missing');
+        await deleteDoc(doc(db, 'holidays', action.id));
+        return { success: true, message: `Deleted Holiday "${action.name || ''}"` };
+      }
+
+      case 'applyLeave': {
+        if (!action.employeeId || !action.leaveId) throw new Error('Employee ID or Leave ID missing');
+        const empDoc = await getDoc(doc(db, 'employees', action.employeeId));
+        if (empDoc.exists()) {
+          const current = empDoc.data().leaves || [];
+          const match = current.find((l: any) => l.id === action.leaveId);
+          if (match) {
+            await updateDoc(doc(db, 'employees', action.employeeId), { leaves: arrayRemove(match) });
+          }
+        }
+        return { success: true, message: `Cancelled leave application` };
       }
 
       case 'addImpactedSystem': {
@@ -1673,5 +1830,3 @@ export async function undoFlowPilotActionOnClient(action: any) {
 
 // Backwards compatibility alias
 export const executeHermesActionOnClient = executeFlowPilotActionOnClient;
-
-

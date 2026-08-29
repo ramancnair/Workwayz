@@ -24,7 +24,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { FlowPilotActionCard } from './FlowPilotActionCard';
 import type { FlowPilotActionItem } from '@/ai/flows/flowpilot-agent';
 import { collection, getDocs, doc, getDoc, db } from '@/lib/db-provider';
 import { executeFlowPilotActionOnClient } from '@/lib/flowpilot-client-executor';
@@ -751,15 +750,6 @@ export function FlowPilotChatWidget() {
                     )}
                   >
                     {msg.role === 'model' ? renderFormattedText(msg.content) : msg.content}
-
-                    {/* Executed Action Cards */}
-                    {msg.executedActions && msg.executedActions.length > 0 && (
-                      <div className="space-y-2 mt-2">
-                        {msg.executedActions.map((action, idx) => (
-                          <FlowPilotActionCard key={idx} action={action} onNavigate={() => setIsOpen(false)} />
-                        ))}
-                      </div>
-                    )}
                   </div>
                   <span className="text-[10px] text-muted-foreground/60 px-1 mt-1 font-mono">
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

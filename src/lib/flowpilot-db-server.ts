@@ -4,14 +4,18 @@ import {
   doc,
   addDoc,
   updateDoc,
+  deleteDoc,
   getDocs,
   getDoc,
   setDoc,
   query,
   where,
   writeBatch,
+  arrayUnion,
+  arrayRemove,
   Timestamp,
 } from '@/lib/db-provider';
+import { generateFullProjectData } from '@/lib/project-autogen';
 import type {
   Story,
   Epic,
@@ -989,4 +993,1008 @@ export async function flowpilotListPortfolios() {
       description: d.data().description,
     }));
 }
+
+// 12. Archive Project
+export async function flowpilotArchiveProject(params: { projectId: string }) {
+  if (!db || !params.projectId) throw new Error('Database or Project ID missing');
+  const projectRef = doc(db, 'projects', params.projectId);
+  const now = new Date().toISOString();
+  await updateDoc(projectRef, {
+    isArchived: true,
+    archivedAt: now,
+    updatedAt: now,
+  });
+  return {
+    success: true,
+    projectId: params.projectId,
+    url: '/project-home',
+    message: `Project ${params.projectId} has been archived.`,
+  };
+}
+
+// 13. Unarchive Project (Restore)
+export async function flowpilotUnarchiveProject(params: { projectId: string }) {
+  if (!db || !params.projectId) throw new Error('Database or Project ID missing');
+  const projectRef = doc(db, 'projects', params.projectId);
+  const now = new Date().toISOString();
+  await updateDoc(projectRef, {
+    isArchived: false,
+    archivedAt: null,
+    updatedAt: now,
+  });
+  return {
+    success: true,
+    projectId: params.projectId,
+    url: '/project-home',
+    message: `Project ${params.projectId} has been restored to active.`,
+  };
+}
+
+// 14. Delete Project (Soft Delete)
+export async function flowpilotDeleteProject(params: { projectId: string }) {
+  if (!db || !params.projectId) throw new Error('Database or Project ID missing');
+  const projectRef = doc(db, 'projects', params.projectId);
+  const now = new Date().toISOString();
+  await updateDoc(projectRef, {
+    isDeleted: true,
+    deletedAt: now,
+    updatedAt: now,
+  });
+  return {
+    success: true,
+    projectId: params.projectId,
+    url: '/project-home',
+    message: `Project ${params.projectId} has been moved to trash.`,
+  };
+}
+
+// 15. Update Portfolio
+export async function flowpilotUpdatePortfolio(params: { portfolioId: string; name?: string; description?: string }) {
+  if (!db || !params.portfolioId) throw new Error('Database or Portfolio ID missing');
+  const portfolioRef = doc(db, 'portfolios', params.portfolioId);
+  const now = new Date().toISOString();
+  const updatePayload: any = { updatedAt: now };
+  if (params.name) updatePayload.name = params.name.trim();
+  if (params.description !== undefined) updatePayload.description = params.description;
+  await updateDoc(portfolioRef, updatePayload);
+  return {
+    success: true,
+    portfolioId: params.portfolioId,
+    name: params.name,
+    url: '/project-home',
+  };
+}
+
+// 16. Delete Portfolio
+export async function flowpilotDeletePortfolio(params: { portfolioId: string }) {
+  if (!db || !params.portfolioId) throw new Error('Database or Portfolio ID missing');
+  // Check if active projects exist under this portfolio
+  const projectsSnap = await getDocs(
+    query(collection(db, 'projects'), where('portfolioId', '==', params.portfolioId), where('isDeleted', '==', false))
+  );
+  if (!projectsSnap.empty) {
+    throw new Error(`Cannot delete portfolio: ${projectsSnap.size} active project(s) still belong to this portfolio.`);
+  }
+  const portfolioRef = doc(db, 'portfolios', params.portfolioId);
+  const now = new Date().toISOString();
+  await updateDoc(portfolioRef, {
+    isDeleted: true,
+    deletedAt: now,
+    updatedAt: now,
+  });
+  return {
+    success: true,
+    portfolioId: params.portfolioId,
+    url: '/project-home',
+    message: `Portfolio ${params.portfolioId} deleted successfully.`,
+  };
+}
+
+// 17. Set Primary Project Manager
+export async function flowpilotSetProjectManager(params: { projectId: string; projectManagerId: string; projectManagerName?: string }) {
+  if (!db || !params.projectId) throw new Error('Database or Project ID missing');
+  const projectRef = doc(db, 'projects', params.projectId);
+  const now = new Date().toISOString();
+  await updateDoc(projectRef, {
+    projectManagerId: params.projectManagerId,
+    projectManager: params.projectManagerName || params.projectManagerId,
+    updatedAt: now,
+  });
+  return {
+    success: true,
+    projectId: params.projectId,
+    projectManagerId: params.projectManagerId,
+    projectManager: params.projectManagerName,
+    url: '/project-home',
+  };
+}
+
+// 18. Autogen Project (Full Lifecycle Scaffold)
+export async function flowpilotAutogenProject(params: {
+  projectName: string;
+  portfolioId?: string;
+  pricingModel?: 'Fixed Bid' | 'T&M';
+  template?: string;
+}) {
+  if (!db) throw new Error('Database not initialized');
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  const existingNumbers = projectsSnap.docs
+    .map((d: any) => d.id)
+    .filter((id: string) => id.startsWith('P26'))
+    .map((id: string) => parseInt(id.replace('P26', ''), 10))
+    .filter((n: number) => !isNaN(n));
+  const nextNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+  const projectId = `P26${nextNum.toString().padStart(5, '0')}`;
+
+  const now = new Date().toISOString();
+  const projectRef = doc(db, 'projects', projectId);
+  await setDoc(projectRef, {
+    id: projectId,
+    name: params.projectName,
+    portfolioId: params.portfolioId || 'PF001',
+    pricingModel: params.pricingModel || 'Fixed Bid',
+    status: 'Active',
+    overallStatus: 'Green',
+    summary: `Complete turnkey project generated for ${params.projectName}.`,
+    isArchived: false,
+    isDeleted: false,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Call project autogen engine to generate subcollections
+  try {
+    await generateFullProjectData(db, projectId, params.projectName, {
+      pricingModel: params.pricingModel || 'Fixed Bid',
+      portfolioId: params.portfolioId || 'PF001',
+    });
+  } catch (err: any) {
+    console.warn('[FlowPilot] Autogen subcollection creation warning:', err);
+  }
+
+  return {
+    success: true,
+    projectId,
+    name: params.projectName,
+    url: `/projects/${projectId}/project-details/pm-dashboard`,
+  };
+}
+
+// 19. Portfolio Dashboard Summary
+export async function flowpilotGetPortfolioDashboardSummary(params: { portfolioId?: string }) {
+  if (!db) throw new Error('Database not initialized');
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  let projects = projectsSnap.docs
+    .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
+    .map((d: any) => ({ id: d.id, ...d.data() }));
+
+  if (params.portfolioId && params.portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  }
+
+  const redProjects: any[] = [];
+  const amberProjects: any[] = [];
+  const greenProjects: any[] = [];
+  let totalRisks = 0;
+  let highRisksCount = 0;
+  let totalIssues = 0;
+  let criticalIssuesCount = 0;
+
+  for (const proj of projects) {
+    if (proj.overallStatus === 'Red') redProjects.push({ id: proj.id, name: proj.name, comments: proj.statusComments });
+    else if (proj.overallStatus === 'Amber') amberProjects.push({ id: proj.id, name: proj.name, comments: proj.statusComments });
+    else greenProjects.push({ id: proj.id, name: proj.name });
+
+    // Fetch risks
+    const risksSnap = await getDocs(collection(db, 'projects', proj.id, 'risks'));
+    risksSnap.docs.forEach((r: any) => {
+      const data = r.data();
+      totalRisks++;
+      const pot = (data.severity || 1) * (data.probability || 1);
+      if (pot > 6) highRisksCount++;
+    });
+
+    // Fetch issues
+    const issuesSnap = await getDocs(collection(db, 'projects', proj.id, 'issues'));
+    issuesSnap.docs.forEach((i: any) => {
+      const data = i.data();
+      if (data.status !== 'Closed' && data.status !== 'Resolved') {
+        totalIssues++;
+        if (data.priority === 'Critical' || data.priority === 'High') criticalIssuesCount++;
+      }
+    });
+  }
+
+  return {
+    totalActiveProjects: projects.length,
+    healthDistribution: {
+      red: redProjects.length,
+      amber: amberProjects.length,
+      green: greenProjects.length,
+    },
+    redProjects,
+    amberProjects,
+    risks: {
+      total: totalRisks,
+      highPotential: highRisksCount,
+    },
+    issues: {
+      totalOpen: totalIssues,
+      criticalOrHigh: criticalIssuesCount,
+    },
+  };
+}
+
+// 20. Query Portfolio Risks
+export async function flowpilotQueryPortfolioRisks(params: { portfolioId?: string; minPotential?: string }) {
+  if (!db) throw new Error('Database not initialized');
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  let projects = projectsSnap.docs
+    .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
+    .map((d: any) => ({ id: d.id, name: d.data().name, portfolioId: d.data().portfolioId }));
+
+  if (params.portfolioId && params.portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  }
+
+  const allRisks: any[] = [];
+  for (const proj of projects) {
+    const risksSnap = await getDocs(collection(db, 'projects', proj.id, 'risks'));
+    risksSnap.docs.forEach((r: any) => {
+      const data = r.data();
+      const score = (data.severity || 1) * (data.probability || 1);
+      const level = score <= 3 ? 'Low' : score <= 6 ? 'Medium' : 'High';
+      if (!params.minPotential || (params.minPotential === 'High' && level === 'High') || (params.minPotential === 'Medium' && level !== 'Low')) {
+        allRisks.push({
+          id: r.id,
+          riskId: data.riskId || r.id,
+          projectId: proj.id,
+          projectName: proj.name,
+          description: data.description,
+          category: data.category,
+          severity: data.severity,
+          probability: data.probability,
+          potentialLevel: level,
+          score,
+          mitigationPlan: data.mitigationPlan,
+          contingencyPlan: data.contingencyPlan,
+          owner: data.owner,
+        });
+      }
+    });
+  }
+
+  allRisks.sort((a, b) => b.score - a.score);
+  return allRisks;
+}
+
+// 21. Query Portfolio Issues
+export async function flowpilotQueryPortfolioIssues(params: { portfolioId?: string; priority?: string; status?: string }) {
+  if (!db) throw new Error('Database not initialized');
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  let projects = projectsSnap.docs
+    .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
+    .map((d: any) => ({ id: d.id, name: d.data().name, portfolioId: d.data().portfolioId }));
+
+  if (params.portfolioId && params.portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  }
+
+  const allIssues: any[] = [];
+  for (const proj of projects) {
+    const issuesSnap = await getDocs(collection(db, 'projects', proj.id, 'issues'));
+    issuesSnap.docs.forEach((i: any) => {
+      const data = i.data();
+      const statusMatch = !params.status || data.status === params.status;
+      const priorityMatch = !params.priority || data.priority === params.priority;
+      if (statusMatch && priorityMatch) {
+        allIssues.push({
+          id: i.id,
+          issueId: data.issueId || i.id,
+          projectId: proj.id,
+          projectName: proj.name,
+          description: data.description,
+          priority: data.priority,
+          status: data.status,
+          reportedDate: data.reportedDate,
+          assignee: data.assignee,
+        });
+      }
+    });
+  }
+
+  return allIssues;
+}
+
+// 22. Query Quality Estimations Rollup
+export async function flowpilotQueryQualityEstimations(params: { portfolioId?: string }) {
+  if (!db) throw new Error('Database not initialized');
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  let projects = projectsSnap.docs
+    .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
+    .map((d: any) => ({ id: d.id, ...d.data() }));
+
+  if (params.portfolioId && params.portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  }
+
+  const projectEstimations: any[] = [];
+  for (const proj of projects) {
+    let devInitial = 0;
+    let hzInitial = 0;
+
+    const sysSnap = await getDocs(collection(db, 'projects', proj.id, 'impactedSystems'));
+    sysSnap.docs.forEach((d: any) => {
+      devInitial += d.data().estimate || 0;
+    });
+
+    const hzSnap = await getDocs(collection(db, 'projects', proj.id, 'horizontals'));
+    hzSnap.docs.forEach((d: any) => {
+      if (d.data().isEnabled !== false) {
+        const wt = d.data().weightage || 0;
+        hzInitial += (devInitial * wt) / 100;
+      }
+    });
+
+    const totalInitial = devInitial > 0 ? devInitial + hzInitial : null;
+    const storiesSnap = await getDocs(collection(db, 'projects', proj.id, 'stories'));
+    let devPlannedHours = 0;
+    storiesSnap.docs.forEach((s: any) => {
+      const data = s.data();
+      if (data.itemType === 'Requirement/Story' || data.itemType === 'Task') {
+        devPlannedHours += data.estimatedHours || 0;
+      }
+    });
+    const devPlannedDays = devPlannedHours / 8;
+    const hzPlannedDays = (devPlannedDays * 15) / 100;
+    const totalPlannedDays = devPlannedDays + hzPlannedDays;
+
+    const logsSnap = await getDocs(collection(db, 'projects', proj.id, 'worklogs'));
+    let actualHours = 0;
+    logsSnap.docs.forEach((l: any) => {
+      actualHours += l.data().hours || 0;
+    });
+    const actualDays = actualHours / 8;
+
+    const variance = totalInitial ? totalPlannedDays - totalInitial : null;
+    const conformanceRate = totalPlannedDays > 0 ? (actualDays / totalPlannedDays) * 100 : 0;
+
+    projectEstimations.push({
+      projectId: proj.id,
+      projectName: proj.name,
+      status: proj.status,
+      pricingModel: proj.pricingModel,
+      initialEstimateDays: totalInitial ? Math.round(totalInitial) : null,
+      plannedEstimateDays: Math.round(totalPlannedDays),
+      actualEffortDays: Math.round(actualDays),
+      varianceDays: variance !== null ? Math.round(variance) : null,
+      conformanceRate: Math.round(conformanceRate),
+    });
+  }
+
+  return projectEstimations;
+}
+
+// 23. Query Quality Defects Rollup
+export async function flowpilotQueryQualityDefects(params: { portfolioId?: string }) {
+  if (!db) throw new Error('Database not initialized');
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  let projects = projectsSnap.docs
+    .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
+    .map((d: any) => ({ id: d.id, ...d.data() }));
+
+  if (params.portfolioId && params.portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  }
+
+  const defectsSummary: any[] = [];
+  for (const proj of projects) {
+    const storiesSnap = await getDocs(
+      query(collection(db, 'projects', proj.id, 'stories'), where('itemType', '==', 'Bug'))
+    );
+    let sitCount = 0;
+    let uatCount = 0;
+    let prodCount = 0;
+    let otherCount = 0;
+
+    storiesSnap.docs.forEach((b: any) => {
+      const data = b.data();
+      const phase = (data.defectPhase || data.environment || '').toLowerCase();
+      if (phase.includes('sit') || phase.includes('qa') || phase.includes('test')) sitCount++;
+      else if (phase.includes('uat') || phase.includes('staging')) uatCount++;
+      else if (phase.includes('prod') || phase.includes('live')) prodCount++;
+      else otherCount++;
+    });
+
+    const totalBugs = storiesSnap.size;
+    const leakageRate = totalBugs > 0 ? (prodCount / totalBugs) * 100 : 0;
+
+    defectsSummary.push({
+      projectId: proj.id,
+      projectName: proj.name,
+      status: proj.status,
+      totalBugs,
+      sitCount,
+      uatCount,
+      prodCount,
+      otherCount,
+      defectLeakageRate: Math.round(leakageRate * 10) / 10,
+    });
+  }
+
+  return defectsSummary;
+}
+
+// 24. Query Billing Overview
+export async function flowpilotQueryBillingOverview(params: { portfolioId?: string }) {
+  if (!db) throw new Error('Database not initialized');
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  let projects = projectsSnap.docs
+    .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
+    .map((d: any) => ({ id: d.id, ...d.data() }));
+
+  if (params.portfolioId && params.portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  }
+
+  let totalRevenue = 0;
+  let totalResourceCost = 0;
+  let totalFixedCosts = 0;
+  let totalProfit = 0;
+  const projectSummaries: any[] = [];
+
+  for (const proj of projects) {
+    let projRev = 0;
+    let projResCost = 0;
+    let projFixed = 0;
+
+    const pmSnap = await getDocs(collection(db, 'projects', proj.id, 'paymentMilestones'));
+    pmSnap.docs.forEach((pm: any) => {
+      projRev += pm.data().amount || 0;
+    });
+
+    const empSnap = await getDocs(collection(db, 'projects', proj.id, 'employees'));
+    empSnap.docs.forEach((emp: any) => {
+      const data = emp.data();
+      const dailyCost = data.costRate || 250;
+      projResCost += dailyCost * 20; // Avg 20 days monthly allocation
+    });
+
+    const fcSnap = await getDocs(collection(db, 'projects', proj.id, 'fixedCosts'));
+    fcSnap.docs.forEach((fc: any) => {
+      projFixed += fc.data().cost || 0;
+    });
+
+    const profit = projRev - (projResCost + projFixed);
+    const margin = projRev > 0 ? (profit / projRev) * 100 : 0;
+
+    totalRevenue += projRev;
+    totalResourceCost += projResCost;
+    totalFixedCosts += projFixed;
+    totalProfit += profit;
+
+    projectSummaries.push({
+      projectId: proj.id,
+      projectName: proj.name,
+      pricingModel: proj.pricingModel,
+      revenue: projRev,
+      resourceCost: projResCost,
+      fixedCost: projFixed,
+      profit,
+      marginPercentage: Math.round(margin * 10) / 10,
+    });
+  }
+
+  const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+  return {
+    portfolioFinancials: {
+      totalRevenue,
+      totalResourceCost,
+      totalFixedCosts,
+      totalProfit,
+      overallMarginPercentage: Math.round(overallMargin * 10) / 10,
+    },
+    projects: projectSummaries,
+  };
+}
+
+// 25. Query Billing Rates & Benchmarks
+export async function flowpilotQueryBillingRates(params: { projectId?: string }) {
+  if (!db) throw new Error('Database not initialized');
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  const projects = projectsSnap.docs
+    .filter((d: any) => !d.data().isDeleted)
+    .map((d: any) => ({ id: d.id, name: d.data().name }));
+
+  const resources: any[] = [];
+  const roleMap: Record<string, { count: number; totalBilled: number; totalCost: number }> = {};
+
+  for (const proj of projects) {
+    if (params.projectId && proj.id !== params.projectId) continue;
+    const empSnap = await getDocs(collection(db, 'projects', proj.id, 'employees'));
+    empSnap.docs.forEach((emp: any) => {
+      const data = emp.data();
+      const billed = data.billedRate || 0;
+      const cost = data.costRate || 0;
+      const role = data.role || 'Developer';
+
+      resources.push({
+        id: emp.id,
+        name: data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        projectId: proj.id,
+        projectName: proj.name,
+        role,
+        billedRate: billed,
+        costRate: cost,
+        margin: billed - cost,
+        marginPercentage: billed > 0 ? ((billed - cost) / billed) * 100 : 0,
+      });
+
+      if (!roleMap[role]) roleMap[role] = { count: 0, totalBilled: 0, totalCost: 0 };
+      roleMap[role].count++;
+      roleMap[role].totalBilled += billed;
+      roleMap[role].totalCost += cost;
+    });
+  }
+
+  const roleBenchmarks = Object.entries(roleMap).map(([role, metrics]) => {
+    const avgBilled = metrics.count > 0 ? metrics.totalBilled / metrics.count : 0;
+    const avgCost = metrics.count > 0 ? metrics.totalCost / metrics.count : 0;
+    return {
+      role,
+      headcount: metrics.count,
+      avgBilledRate: Math.round(avgBilled),
+      avgCostRate: Math.round(avgCost),
+      avgMarginPercentage: avgBilled > 0 ? Math.round(((avgBilled - avgCost) / avgBilled) * 100) : 0,
+    };
+  });
+
+  return {
+    totalAssignedResources: resources.length,
+    roleBenchmarks,
+    resources: resources.slice(0, 50),
+  };
+}
+
+// 26. Update Resource Billing & Cost Rate
+export async function flowpilotUpdateResourceRate(params: {
+  projectId: string;
+  employeeId: string;
+  billedRate: number;
+  costRate: number;
+}) {
+  if (!db || !params.projectId || !params.employeeId) throw new Error('Database, Project ID or Employee ID missing');
+  const empRef = doc(db, 'projects', params.projectId, 'employees', params.employeeId);
+  const now = new Date().toISOString();
+  await updateDoc(empRef, {
+    billedRate: params.billedRate,
+    costRate: params.costRate,
+    updatedAt: now,
+  });
+  return {
+    success: true,
+    projectId: params.projectId,
+    employeeId: params.employeeId,
+    billedRate: params.billedRate,
+    costRate: params.costRate,
+    url: '/billing-rate',
+  };
+}
+
+// 27. Update Specification Daily Rate (Impacted System or Horizontal)
+export async function flowpilotUpdateSpecificationRate(params: {
+  projectId: string;
+  specType: 'system' | 'horizontal';
+  itemId: string;
+  dailyBillingRate: number;
+}) {
+  if (!db || !params.projectId || !params.itemId) throw new Error('Database, Project ID or Item ID missing');
+  const collectionName = params.specType === 'system' ? 'impactedSystems' : 'horizontals';
+  const itemRef = doc(db, 'projects', params.projectId, collectionName, params.itemId);
+  const now = new Date().toISOString();
+  await updateDoc(itemRef, {
+    dailyBillingRate: params.dailyBillingRate,
+    updatedAt: now,
+  });
+  return {
+    success: true,
+    projectId: params.projectId,
+    specType: params.specType,
+    itemId: params.itemId,
+    dailyBillingRate: params.dailyBillingRate,
+    url: '/billing-rate',
+  };
+}
+
+// 28. Query Resource Utilization
+export async function flowpilotQueryResourceUtilization(params: {
+  employeeId?: string;
+  employeeName?: string;
+  month?: number;
+  year?: number;
+}) {
+  if (!db) throw new Error('Database not initialized');
+  const employeesSnap = await getDocs(collection(db, 'employees'));
+  let matchedUser: any = null;
+
+  if (params.employeeId) {
+    matchedUser = employeesSnap.docs.find((d: any) => d.id === params.employeeId || d.data().empId === params.employeeId);
+  } else if (params.employeeName) {
+    const qName = params.employeeName.toLowerCase();
+    matchedUser = employeesSnap.docs.find((d: any) => {
+      const fn = `${d.data().firstName || ''} ${d.data().lastName || ''}`.toLowerCase();
+      return fn.includes(qName);
+    });
+  }
+
+  if (!matchedUser) {
+    throw new Error(`Employee ${params.employeeId || params.employeeName} not found in workspace.`);
+  }
+
+  const userId = matchedUser.id;
+  const userData = matchedUser.data();
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  const allocatedProjects: any[] = [];
+  let totalAvailability = 0;
+  let totalPlannedHours = 0;
+  let totalLoggedHours = 0;
+
+  for (const projDoc of projectsSnap.docs) {
+    if (projDoc.data().isDeleted) continue;
+    const empRef = doc(db, 'projects', projDoc.id, 'employees', userId);
+    const empDoc = await getDoc(empRef);
+    if (empDoc.exists()) {
+      const empData = empDoc.data();
+      const avail = empData.availability || 100;
+      totalAvailability += avail;
+
+      // Planned tasks
+      const tasksSnap = await getDocs(
+        query(
+          collection(db, 'projects', projDoc.id, 'stories'),
+          where('itemType', '==', 'Task'),
+          where('assigneeId', '==', userId)
+        )
+      );
+      let plannedHours = 0;
+      tasksSnap.docs.forEach((t: any) => {
+        plannedHours += t.data().estimatedHours || 0;
+      });
+      totalPlannedHours += plannedHours;
+
+      // Actual logged work
+      const logsSnap = await getDocs(
+        query(collection(db, 'projects', projDoc.id, 'worklogs'), where('userId', '==', userId))
+      );
+      let loggedHours = 0;
+      logsSnap.docs.forEach((l: any) => {
+        loggedHours += l.data().hours || 0;
+      });
+      totalLoggedHours += loggedHours;
+
+      allocatedProjects.push({
+        projectId: projDoc.id,
+        projectName: projDoc.data().name,
+        role: empData.role || 'Developer',
+        availabilityPercentage: avail,
+        plannedTaskHours: plannedHours,
+        actualLoggedHours: loggedHours,
+      });
+    }
+  }
+
+  const standardMonthlyHours = 160;
+  const utilizationPercentage = standardMonthlyHours > 0 ? (totalLoggedHours / standardMonthlyHours) * 100 : 0;
+  const workloadStatus = utilizationPercentage > 105 ? 'Over-allocated' : utilizationPercentage < 70 ? 'Under-allocated' : 'Optimal';
+
+  return {
+    employee: {
+      id: userId,
+      empId: userData.empId,
+      name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+      email: userData.email,
+      role: userData.role,
+    },
+    totalAvailabilityPercentage: totalAvailability,
+    totalPlannedHours,
+    totalLoggedHours,
+    utilizationPercentage: Math.round(utilizationPercentage),
+    workloadStatus,
+    allocatedProjects,
+  };
+}
+
+// 29. Query Available / Bench Resources
+export async function flowpilotQueryAvailableResources(params: { role?: string; minAvailability?: number }) {
+  if (!db) throw new Error('Database not initialized');
+  const employeesSnap = await getDocs(collection(db, 'employees'));
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+
+  const allocationMap: Record<string, { totalAvailability: number; projects: string[] }> = {};
+  employeesSnap.docs.forEach((e: any) => {
+    allocationMap[e.id] = { totalAvailability: 0, projects: [] };
+  });
+
+  for (const projDoc of projectsSnap.docs) {
+    if (projDoc.data().isDeleted || projDoc.data().isArchived) continue;
+    const empSnap = await getDocs(collection(db, 'projects', projDoc.id, 'employees'));
+    empSnap.docs.forEach((emp: any) => {
+      if (allocationMap[emp.id]) {
+        const avail = emp.data().availability || 100;
+        allocationMap[emp.id].totalAvailability += avail;
+        allocationMap[emp.id].projects.push(projDoc.data().name);
+      }
+    });
+  }
+
+  const availableList: any[] = [];
+  employeesSnap.docs.forEach((e: any) => {
+    const data = e.data();
+    if (data.isDeleted || data.isEnabled === false) return;
+    if (params.role && (data.role || '').toLowerCase() !== params.role.toLowerCase()) return;
+
+    const allocated = allocationMap[e.id]?.totalAvailability || 0;
+    const freeCapacity = Math.max(0, 100 - allocated);
+    const minCap = params.minAvailability ?? 20;
+
+    if (freeCapacity >= minCap) {
+      availableList.push({
+        id: e.id,
+        empId: data.empId,
+        name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        role: data.role || 'Developer',
+        currentAllocatedPercentage: allocated,
+        freeCapacityPercentage: freeCapacity,
+        activeProjectsCount: allocationMap[e.id]?.projects.length || 0,
+      });
+    }
+  });
+
+  availableList.sort((a, b) => b.freeCapacityPercentage - a.freeCapacityPercentage);
+  return availableList;
+}
+
+// 30. Query Overallocated Resources
+export async function flowpilotQueryOverallocatedResources() {
+  if (!db) throw new Error('Database not initialized');
+  const employeesSnap = await getDocs(collection(db, 'employees'));
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+
+  const allocationMap: Record<string, { totalAvailability: number; projects: string[] }> = {};
+  employeesSnap.docs.forEach((e: any) => {
+    allocationMap[e.id] = { totalAvailability: 0, projects: [] };
+  });
+
+  for (const projDoc of projectsSnap.docs) {
+    if (projDoc.data().isDeleted || projDoc.data().isArchived) continue;
+    const empSnap = await getDocs(collection(db, 'projects', projDoc.id, 'employees'));
+    empSnap.docs.forEach((emp: any) => {
+      if (allocationMap[emp.id]) {
+        const avail = emp.data().availability || 100;
+        allocationMap[emp.id].totalAvailability += avail;
+        allocationMap[emp.id].projects.push(projDoc.data().name);
+      }
+    });
+  }
+
+  const overallocated: any[] = [];
+  employeesSnap.docs.forEach((e: any) => {
+    const data = e.data();
+    if (data.isDeleted) return;
+    const allocated = allocationMap[e.id]?.totalAvailability || 0;
+    if (allocated > 100) {
+      overallocated.push({
+        id: e.id,
+        empId: data.empId,
+        name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        role: data.role || 'Developer',
+        totalAllocatedPercentage: allocated,
+        projects: allocationMap[e.id].projects,
+      });
+    }
+  });
+
+  overallocated.sort((a, b) => b.totalAllocatedPercentage - a.totalAllocatedPercentage);
+  return overallocated;
+}
+
+// 31. Query Holidays
+export async function flowpilotQueryHolidays(params: { year?: number }) {
+  if (!db) throw new Error('Database not initialized');
+  const holsSnap = await getDocs(collection(db, 'holidays'));
+  const targetYear = params.year || new Date().getFullYear();
+
+  const holidays = holsSnap.docs
+    .map((d: any) => {
+      const data = d.data();
+      const dateStr = data.date?.toDate ? data.date.toDate().toISOString() : data.date;
+      return {
+        id: d.id,
+        description: data.description || data.name,
+        date: dateStr,
+        type: data.type || 'National',
+      };
+    })
+    .filter((h: any) => {
+      if (!h.date) return false;
+      const yr = new Date(h.date).getFullYear();
+      return yr === targetYear;
+    });
+
+  holidays.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  return {
+    year: targetYear,
+    totalHolidays: holidays.length,
+    holidays,
+  };
+}
+
+// 32. Create Holiday
+export async function flowpilotCreateHoliday(params: {
+  name: string;
+  date: string;
+  description?: string;
+  type?: 'National' | 'Regional' | 'Optional';
+}) {
+  if (!db) throw new Error('Database not initialized');
+  const holidayData: any = {
+    description: params.name,
+    date: Timestamp.fromDate(new Date(params.date)),
+    type: params.type || 'National',
+    createdAt: new Date().toISOString(),
+  };
+  const docRef = await addDoc(collection(db, 'holidays'), holidayData);
+  return {
+    success: true,
+    id: docRef.id,
+    name: params.name,
+    date: params.date,
+    type: params.type || 'National',
+    url: '/holidays/holiday-calendar',
+  };
+}
+
+// 33. Delete Holiday
+export async function flowpilotDeleteHoliday(params: { holidayId: string }) {
+  if (!db || !params.holidayId) throw new Error('Database or Holiday ID missing');
+  const holRef = doc(db, 'holidays', params.holidayId);
+  await deleteDoc(holRef);
+  return {
+    success: true,
+    holidayId: params.holidayId,
+    url: '/holidays/holiday-calendar',
+    message: 'Holiday removed from calendar.',
+  };
+}
+
+// 34. Query Leave Settings
+export async function flowpilotQueryLeaveSettings() {
+  if (!db) throw new Error('Database not initialized');
+  const settingsDoc = await getDoc(doc(db, 'settings', 'main'));
+  const data = settingsDoc.exists() ? settingsDoc.data() : {};
+  return {
+    allocatedPaidLeavesPerYear: data.allocatedPaidLeavesPerYear ?? 24,
+    allowCarryOver: data.allowCarryOver ?? false,
+    carryOverLimit: data.carryOverLimit ?? 10,
+    weeklyOffDays: data.weeklyOffDays ?? [0, 6],
+  };
+}
+
+// 35. Update Leave Settings
+export async function flowpilotUpdateLeaveSettings(params: {
+  allocatedPaidLeavesPerYear?: number;
+  allowCarryOver?: boolean;
+  carryOverLimit?: number;
+  weeklyOffDays?: number[];
+}) {
+  if (!db) throw new Error('Database not initialized');
+  const updatePayload: any = {};
+  if (params.allocatedPaidLeavesPerYear !== undefined) updatePayload.allocatedPaidLeavesPerYear = params.allocatedPaidLeavesPerYear;
+  if (params.allowCarryOver !== undefined) updatePayload.allowCarryOver = params.allowCarryOver;
+  if (params.carryOverLimit !== undefined) updatePayload.carryOverLimit = params.carryOverLimit;
+  if (params.weeklyOffDays !== undefined) updatePayload.weeklyOffDays = params.weeklyOffDays;
+
+  await setDoc(doc(db, 'settings', 'main'), updatePayload, { merge: true });
+  return {
+    success: true,
+    url: '/holidays/leave-settings',
+    settings: updatePayload,
+  };
+}
+
+// 36. Query Leave Requests
+export async function flowpilotQueryLeaveRequests(params: { employeeId?: string; type?: string }) {
+  if (!db) throw new Error('Database not initialized');
+  const employeesSnap = await getDocs(collection(db, 'employees'));
+  const allLeaves: any[] = [];
+
+  employeesSnap.docs.forEach((d: any) => {
+    const data = d.data();
+    if (params.employeeId && d.id !== params.employeeId && data.empId !== params.employeeId) return;
+    const leaves: any[] = data.leaves || [];
+    leaves.forEach((l: any) => {
+      if (!params.type || l.type === params.type) {
+        allLeaves.push({
+          leaveId: l.id,
+          employeeId: d.id,
+          empId: data.empId,
+          employeeName: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+          startDate: l.startDate,
+          endDate: l.endDate,
+          type: l.type,
+        });
+      }
+    });
+  });
+
+  return allLeaves;
+}
+
+// 37. Apply Leave
+export async function flowpilotApplyLeave(params: {
+  employeeId: string;
+  startDate: string;
+  endDate: string;
+  type: 'Paid Leave' | 'Loss of Pay';
+}) {
+  if (!db || !params.employeeId) throw new Error('Database or Employee ID missing');
+  const employeesSnap = await getDocs(collection(db, 'employees'));
+  const empDoc = employeesSnap.docs.find(
+    (d: any) => d.id === params.employeeId || d.data().empId === params.employeeId
+  );
+  if (!empDoc) throw new Error(`Employee with ID ${params.employeeId} not found.`);
+
+  const leaveId = `leave_${Date.now()}`;
+  const leaveObj = {
+    id: leaveId,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    type: params.type,
+  };
+
+  const empRef = doc(db, 'employees', empDoc.id);
+  await updateDoc(empRef, {
+    leaves: arrayUnion(leaveObj),
+  });
+
+  return {
+    success: true,
+    leaveId,
+    employeeId: empDoc.id,
+    employeeName: `${empDoc.data().firstName || ''} ${empDoc.data().lastName || ''}`.trim(),
+    startDate: params.startDate,
+    endDate: params.endDate,
+    type: params.type,
+    url: '/holidays/leave-tracker',
+  };
+}
+
+// 38. Delete / Cancel Leave
+export async function flowpilotDeleteLeave(params: { employeeId: string; leaveId: string }) {
+  if (!db || !params.employeeId || !params.leaveId) throw new Error('Database, Employee ID, or Leave ID missing');
+  const employeesSnap = await getDocs(collection(db, 'employees'));
+  const empDoc = employeesSnap.docs.find(
+    (d: any) => d.id === params.employeeId || d.data().empId === params.employeeId
+  );
+  if (!empDoc) throw new Error(`Employee with ID ${params.employeeId} not found.`);
+
+  const currentLeaves = empDoc.data().leaves || [];
+  const target = currentLeaves.find((l: any) => l.id === params.leaveId);
+  if (!target) throw new Error(`Leave record with ID ${params.leaveId} not found.`);
+
+  const empRef = doc(db, 'employees', empDoc.id);
+  await updateDoc(empRef, {
+    leaves: arrayRemove(target),
+  });
+
+  return {
+    success: true,
+    employeeId: empDoc.id,
+    leaveId: params.leaveId,
+    url: '/holidays/leave-tracker',
+    message: 'Leave period cancelled and removed.',
+  };
+}
+
 
