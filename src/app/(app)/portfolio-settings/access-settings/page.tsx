@@ -67,25 +67,6 @@ const pageSections: PageSection[] = [
         topNavName: 'Holidays',
         pages: ['Holiday Calendar', 'Leave Settings', 'Leave Tracker'],
       },
-      {
-        id: 'top_portfolio_settings',
-        name: 'Portfolio Settings',
-        topNavName: 'Portfolio Settings',
-        pages: [
-          'Access Settings',
-          'Database',
-          'Authentication',
-          'AI Config',
-          'Setup Wizard',
-          'Archive',
-        ],
-      },
-      {
-        id: 'top_portfolio_trash',
-        name: 'Portfolio Trash',
-        topNavName: 'Portfolio Trash',
-        pages: ['Portfolio Trash'],
-      },
     ],
   },
   {
@@ -206,6 +187,32 @@ const pageSections: PageSection[] = [
       },
     ],
   },
+  {
+    sectionId: 'admin_level',
+    sectionTitle: 'Admin Level Pages',
+    description: 'System administration, portfolio settings, database config, and trash management.',
+    groups: [
+      {
+        id: 'top_portfolio_settings',
+        name: 'Portfolio Settings',
+        topNavName: 'Portfolio Settings',
+        pages: [
+          'Access Settings',
+          'Database',
+          'Authentication',
+          'AI Config',
+          'Setup Wizard',
+          'Archive',
+        ],
+      },
+      {
+        id: 'top_portfolio_trash',
+        name: 'Portfolio Trash',
+        topNavName: 'Portfolio Trash',
+        pages: ['Portfolio Trash'],
+      },
+    ],
+  },
 ];
 
 const allGroups = pageSections.flatMap(s => s.groups);
@@ -284,6 +291,7 @@ export default function AccessSettingsPage() {
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
         portfolio_level: true,
         project_level: true,
+        admin_level: true,
     });
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
         const initial: Record<string, boolean> = {
@@ -368,6 +376,7 @@ export default function AccessSettingsPage() {
         setExpandedSections({
             portfolio_level: expand,
             project_level: expand,
+            admin_level: expand,
         });
         setExpandedGroups(prev => {
             const next = { ...prev };
