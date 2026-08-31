@@ -2899,6 +2899,13 @@ export async function flowpilotQueryEmployeeLeaveBalance(params: { employeeId: s
     if (l.type === 'Paid Leave' && l.status !== 'Rejected') {
       const s = new Date(l.startDate).getTime();
       const e = new Date(l.endDate || l.startDate).getTime();
+      const days = Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1);
+      usedDays += days;
+    }
+  });
+
+  const remainingBalance = Math.max(0, defaultQuota - usedDays);
+
   return {
     employeeId: empDoc.id,
     empId: empDoc.data().empId || empDoc.id,
@@ -2926,7 +2933,6 @@ export async function flowpilotUpdateInitialImpactedSystem(params: {
   estimate?: number;
   dailyBillingRate?: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const docRef = doc(db, 'projects', params.projectId, 'initialImpactedSystems', params.itemId);
   const now = new Date().toISOString();
@@ -2947,7 +2953,6 @@ export async function flowpilotUpdateInitialImpactedSystem(params: {
 }
 
 export async function flowpilotDeleteInitialImpactedSystem(params: { projectId: string; itemId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'initialImpactedSystems', params.itemId));
   return {
@@ -2965,7 +2970,6 @@ export async function flowpilotUpdateInitialHorizontal(params: {
   weightage?: number;
   dailyBillingRate?: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const docRef = doc(db, 'projects', params.projectId, 'initialHorizontals', params.itemId);
   const now = new Date().toISOString();
@@ -2984,7 +2988,6 @@ export async function flowpilotUpdateInitialHorizontal(params: {
 }
 
 export async function flowpilotDeleteInitialHorizontal(params: { projectId: string; itemId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'initialHorizontals', params.itemId));
   return {
@@ -2996,7 +2999,6 @@ export async function flowpilotDeleteInitialHorizontal(params: { projectId: stri
 }
 
 export async function flowpilotQueryInitialSpecifications(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const projSnap = await getDoc(doc(db, 'projects', params.projectId));
   const projData = projSnap.exists() ? projSnap.data() : {};
@@ -3050,7 +3052,6 @@ export async function flowpilotQueryInitialSpecifications(params: { projectId: s
 }
 
 export async function flowpilotConfirmProjectEstimation(params: { projectId: string; targetStatus?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const batch = writeBatch(db);
   const now = new Date().toISOString();
@@ -3100,7 +3101,6 @@ export async function flowpilotUpdateInitialProjectDates(params: {
   startDate: string;
   endDate: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   if (new Date(params.startDate) > new Date(params.endDate)) {
     throw new Error('Start date cannot be after end date.');
@@ -3123,7 +3123,6 @@ export async function flowpilotUpdateInitialProjectDates(params: {
 }
 
 export async function flowpilotQueryInitialProjectStatus(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const projSnap = await getDoc(doc(db, 'projects', params.projectId));
   if (!projSnap.exists()) throw new Error(`Project ${params.projectId} not found.`);
@@ -3152,7 +3151,6 @@ export async function flowpilotUpdateProjectHealth(params: {
   commentary?: string;
   authorName?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const now = new Date().toISOString();
   const historyEntry = {
@@ -3193,7 +3191,6 @@ export async function flowpilotUpdateProjectDates(params: {
   startDate: string;
   endDate: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   if (new Date(params.startDate) > new Date(params.endDate)) {
     throw new Error('Start date cannot be after end date.');
@@ -3214,7 +3211,6 @@ export async function flowpilotUpdateProjectDates(params: {
 }
 
 export async function flowpilotQueryProjectStatusDetails(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const projSnap = await getDoc(doc(db, 'projects', params.projectId));
   if (!projSnap.exists()) throw new Error(`Project ${params.projectId} not found.`);
@@ -3239,7 +3235,6 @@ export async function flowpilotQueryProjectStatusDetails(params: { projectId: st
 }
 
 export async function flowpilotQueryProjectPmDashboard(params: { projectId: string; sprintId?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   let stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
@@ -3294,7 +3289,6 @@ export async function flowpilotQueryProjectPmDashboard(params: { projectId: stri
 }
 
 export async function flowpilotQueryProjectWorkload(params: { projectId: string; sprintId?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   let stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
@@ -3328,7 +3322,6 @@ export async function flowpilotQueryProjectWorkload(params: { projectId: string;
 }
 
 export async function flowpilotQueryProjectResourceFinancials(params: { projectId: string; timeframe?: 'Overall' | 'Sprint' | 'Release' }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const resSnap = await getDocs(collection(db, 'projects', params.projectId, 'employees'));
   const resources = resSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -3367,7 +3360,6 @@ export async function flowpilotQueryProjectResourceFinancials(params: { projectI
 }
 
 export async function flowpilotQuerySwimLaneCycleTime(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
@@ -3393,7 +3385,6 @@ export async function flowpilotQuerySwimLaneCycleTime(params: { projectId: strin
 }
 
 export async function flowpilotQueryResourceBottlenecks(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
@@ -3423,7 +3414,6 @@ export async function flowpilotQueryResourceBottlenecks(params: { projectId: str
 }
 
 export async function flowpilotQueryEpicProgress(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const epicsSnap = await getDocs(collection(db, 'projects', params.projectId, 'epics'));
   const epics = epicsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((e: any) => !e.isDeleted);
@@ -3462,7 +3452,6 @@ export async function flowpilotUpdateImpactedSystem(params: {
   estimate?: number;
   dailyBillingRate?: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const docRef = doc(db, 'projects', params.projectId, 'impactedSystems', params.itemId);
   const now = new Date().toISOString();
@@ -3483,7 +3472,6 @@ export async function flowpilotUpdateImpactedSystem(params: {
 }
 
 export async function flowpilotDeleteImpactedSystem(params: { projectId: string; itemId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'impactedSystems', params.itemId));
   return {
@@ -3501,7 +3489,6 @@ export async function flowpilotUpdateHorizontal(params: {
   weightage?: number;
   dailyBillingRate?: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const docRef = doc(db, 'projects', params.projectId, 'horizontals', params.itemId);
   const now = new Date().toISOString();
@@ -3520,7 +3507,6 @@ export async function flowpilotUpdateHorizontal(params: {
 }
 
 export async function flowpilotDeleteHorizontal(params: { projectId: string; itemId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'horizontals', params.itemId));
   return {
@@ -3532,7 +3518,6 @@ export async function flowpilotDeleteHorizontal(params: { projectId: string; ite
 }
 
 export async function flowpilotQueryProjectSpecifications(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const projSnap = await getDoc(doc(db, 'projects', params.projectId));
   const projData = projSnap.exists() ? projSnap.data() : {};
@@ -3590,7 +3575,6 @@ export async function flowpilotQueryProjectSpecifications(params: { projectId: s
 }
 
 export async function flowpilotDeleteEnvironment(params: { projectId: string; envId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'environments', params.envId));
   return {
@@ -3602,7 +3586,6 @@ export async function flowpilotDeleteEnvironment(params: { projectId: string; en
 }
 
 export async function flowpilotReorderEnvironments(params: { projectId: string; orderedEnvIds: string[] }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const batch = writeBatch(db);
   params.orderedEnvIds.forEach((envId, idx) => {
@@ -3623,7 +3606,6 @@ export async function flowpilotReorderEnvironments(params: { projectId: string; 
 // --- MODULE 4: RESOURCES, WORKLOGS, WORKLOAD & GANTT ---
 
 export async function flowpilotRemoveProjectResource(params: { projectId: string; resourceId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'employees', params.resourceId));
   return {
@@ -3640,7 +3622,6 @@ export async function flowpilotUpdateProjectResourceRole(params: {
   role?: string;
   allocationPercentage?: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const p: any = { updatedAt: new Date().toISOString() };
   if (params.role) p.role = params.role;
@@ -3656,7 +3637,6 @@ export async function flowpilotUpdateProjectResourceRole(params: {
 }
 
 export async function flowpilotQueryProjectTeamMembers(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'employees'));
   const teamMembers = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -3673,7 +3653,6 @@ export async function flowpilotQueryProjectWorklogs(params: {
   startDate?: string;
   endDate?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'worklogs'));
   let worklogs = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -3699,7 +3678,6 @@ export async function flowpilotQueryProjectWorklogs(params: {
 }
 
 export async function flowpilotDeleteWorklogEntry(params: { projectId: string; worklogId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'worklogs', params.worklogId));
   return {
@@ -3717,7 +3695,6 @@ export async function flowpilotUpdateWorklogEntry(params: {
   description?: string;
   workType?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const p: any = { updatedAt: new Date().toISOString() };
   if (params.hours !== undefined) p.hours = params.hours;
@@ -3734,7 +3711,6 @@ export async function flowpilotUpdateWorklogEntry(params: {
 }
 
 export async function flowpilotQueryProjectResourceWorkloadMatrix(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const resSnap = await getDocs(collection(db, 'projects', params.projectId, 'employees'));
   const resources = resSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -3773,7 +3749,6 @@ export async function flowpilotReassignWorkload(params: {
   targetAssigneeName?: string;
   storyIds?: string[];
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   let stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
@@ -3804,7 +3779,6 @@ export async function flowpilotReassignWorkload(params: {
 }
 
 export async function flowpilotQueryProjectGanttTimeline(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const sprintsSnap = await getDocs(collection(db, 'projects', params.projectId, 'sprints'));
   const sprints = sprintsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -3829,7 +3803,6 @@ export async function flowpilotUpdateGanttTaskDependency(params: {
   storyId: string;
   predecessorStoryId: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const match = snap.docs.find((d: any) => d.id === params.storyId || d.data().storyId === params.storyId);
@@ -3860,7 +3833,6 @@ export async function flowpilotUpdateRelease(params: {
   milestoneDate?: string;
   status?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const p: any = { updatedAt: new Date().toISOString() };
   if (params.name) p.name = params.name;
@@ -3879,7 +3851,6 @@ export async function flowpilotUpdateRelease(params: {
 }
 
 export async function flowpilotDeleteRelease(params: { projectId: string; releaseId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'releases', params.releaseId));
   return {
@@ -3891,7 +3862,6 @@ export async function flowpilotDeleteRelease(params: { projectId: string; releas
 }
 
 export async function flowpilotQueryProjectReleases(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'releases'));
   const releases = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -3907,7 +3877,6 @@ export async function flowpilotAssignStoriesToRelease(params: {
   releaseId: string;
   storyIds: string[];
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const batch = writeBatch(db);
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
@@ -3931,7 +3900,6 @@ export async function flowpilotAssignStoriesToRelease(params: {
 }
 
 export async function flowpilotQueryDevDashboardSummary(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const sprintsSnap = await getDocs(collection(db, 'projects', params.projectId, 'sprints'));
   const sprints = sprintsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -3956,7 +3924,6 @@ export async function flowpilotQueryDevDashboardSummary(params: { projectId: str
 }
 
 export async function flowpilotQuerySprintBurndownData(params: { projectId: string; sprintId?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   return {
     projectId: params.projectId,
@@ -3969,7 +3936,6 @@ export async function flowpilotQuerySprintBurndownData(params: { projectId: stri
 }
 
 export async function flowpilotQueryVelocityMetrics(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const sprintsSnap = await getDocs(collection(db, 'projects', params.projectId, 'sprints'));
   const completedSprints = sprintsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => s.status === 'Completed');
@@ -3992,7 +3958,6 @@ export async function flowpilotQueryVelocityMetrics(params: { projectId: string 
 }
 
 export async function flowpilotReorderBacklogStories(params: { projectId: string; orderedStoryIds: string[] }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const batch = writeBatch(db);
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
@@ -4014,7 +3979,6 @@ export async function flowpilotReorderBacklogStories(params: { projectId: string
 }
 
 export async function flowpilotDeleteEpic(params: { projectId: string; epicId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await updateDoc(doc(db, 'projects', params.projectId, 'epics', params.epicId), {
     isDeleted: true,
@@ -4034,7 +3998,6 @@ export async function flowpilotQueryBacklogStories(params: {
   priority?: string;
   status?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   let stories = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
@@ -4057,7 +4020,6 @@ export async function flowpilotQueryBacklogStories(params: {
 }
 
 export async function flowpilotDeleteWorkItem(params: { projectId: string; storyIdOrDocId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const match = snap.docs.find((d: any) => d.id === params.storyIdOrDocId || d.data().storyId === params.storyIdOrDocId);
@@ -4081,7 +4043,6 @@ export async function flowpilotBulkEstimateStories(params: {
   projectId: string;
   estimates: Array<{ storyId: string; estimatedHours: number }>;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const batch = writeBatch(db);
@@ -4104,7 +4065,6 @@ export async function flowpilotBulkEstimateStories(params: {
 }
 
 export async function flowpilotQueryUngroomedStories(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const ungroomed = snap.docs
@@ -4123,7 +4083,6 @@ export async function flowpilotTagStoryAcceptanceCriteria(params: {
   storyId: string;
   acceptanceCriteria: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const match = snap.docs.find((d: any) => d.id === params.storyId || d.data().storyId === params.storyId);
@@ -4143,7 +4102,6 @@ export async function flowpilotTagStoryAcceptanceCriteria(params: {
 }
 
 export async function flowpilotQueryKanbanBoardState(params: { projectId: string; sprintId?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   let stories = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
@@ -4177,7 +4135,6 @@ export async function flowpilotUpdateKanbanWipLimits(params: {
   columnName: string;
   wipLimit: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const colRef = doc(db, 'projects', params.projectId, 'kanbanColumns', params.columnName.toLowerCase().replace(/\s+/g, '_'));
   await setDoc(colRef, { name: params.columnName, wipLimit: params.wipLimit, updatedAt: new Date().toISOString() }, { merge: true });
@@ -4191,7 +4148,6 @@ export async function flowpilotUpdateKanbanWipLimits(params: {
 }
 
 export async function flowpilotQuerySubTasksByStory(params: { projectId: string; parentStoryId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const subTasks = snap.docs
@@ -4207,7 +4163,6 @@ export async function flowpilotQuerySubTasksByStory(params: { projectId: string;
 }
 
 export async function flowpilotDeleteSubTask(params: { projectId: string; subTaskId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const match = snap.docs.find((d: any) => d.id === params.subTaskId || d.data().storyId === params.subTaskId);
@@ -4231,7 +4186,6 @@ export async function flowpilotBulkCreateSubTasks(params: {
   parentStoryId: string;
   subTasks: Array<{ title: string; estimatedHours?: number; assigneeId?: string }>;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   let maxNum = 0;
@@ -4287,7 +4241,6 @@ export async function flowpilotQueryProjectDefects(params: {
   status?: string;
   sprintId?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   let bugs = snap.docs
@@ -4316,7 +4269,6 @@ export async function flowpilotLinkDefectToStory(params: {
   defectId: string;
   storyId: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const match = snap.docs.find((d: any) => d.id === params.defectId || d.data().storyId === params.defectId);
@@ -4341,7 +4293,6 @@ export async function flowpilotCloseDefect(params: {
   defectId: string;
   resolutionSummary?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const match = snap.docs.find((d: any) => d.id === params.defectId || d.data().storyId === params.defectId);
@@ -4366,7 +4317,6 @@ export async function flowpilotCloseDefect(params: {
 // --- MODULE 6: TESTING LIFECYCLE ---
 
 export async function flowpilotQueryTestDashboardSummary(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const tcSnap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
   const testCases = tcSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((t: any) => !t.isDeleted);
@@ -4393,7 +4343,6 @@ export async function flowpilotQueryTestDashboardSummary(params: { projectId: st
 }
 
 export async function flowpilotQueryTestExecutionProgress(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   return {
     projectId: params.projectId,
@@ -4404,7 +4353,6 @@ export async function flowpilotQueryTestExecutionProgress(params: { projectId: s
 }
 
 export async function flowpilotQueryDefectDensity(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
@@ -4430,7 +4378,6 @@ export async function flowpilotUpdateTestCase(params: {
   expectedResult?: string;
   type?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
   const match = snap.docs.find((d: any) => d.id === params.testCaseId || d.data().testCaseId === params.testCaseId);
@@ -4453,7 +4400,6 @@ export async function flowpilotUpdateTestCase(params: {
 }
 
 export async function flowpilotDeleteTestCase(params: { projectId: string; testCaseId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
   const match = snap.docs.find((d: any) => d.id === params.testCaseId || d.data().testCaseId === params.testCaseId);
@@ -4477,7 +4423,6 @@ export async function flowpilotQueryTestCases(params: {
   storyId?: string;
   type?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
   let testCases = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((t: any) => !t.isDeleted);
@@ -4511,7 +4456,6 @@ export async function flowpilotUpdateTestPlan(params: {
   endDate?: string;
   environmentId?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const p: any = { updatedAt: new Date().toISOString() };
   if (params.name) p.name = params.name;
@@ -4530,7 +4474,6 @@ export async function flowpilotUpdateTestPlan(params: {
 }
 
 export async function flowpilotDeleteTestPlan(params: { projectId: string; planId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'testPlans', params.planId));
   return {
@@ -4542,7 +4485,6 @@ export async function flowpilotDeleteTestPlan(params: { projectId: string; planI
 }
 
 export async function flowpilotQueryTestPlans(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'testPlans'));
   const testPlans = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -4558,7 +4500,6 @@ export async function flowpilotRemoveTestCaseFromPlan(params: {
   planId: string;
   testCaseId: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const planRef = doc(db, 'projects', params.projectId, 'testPlans', params.planId);
   const planSnap = await getDoc(planRef);
@@ -4577,7 +4518,6 @@ export async function flowpilotRemoveTestCaseFromPlan(params: {
 }
 
 export async function flowpilotQueryTestExecutionList(params: { projectId: string; planId?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const tcSnap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
   let testCases = tcSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((t: any) => !t.isDeleted);
@@ -4599,7 +4539,6 @@ export async function flowpilotBulkUpdateTestExecutionStatus(params: {
   testCaseIds: string[];
   status: 'Passed' | 'Failed' | 'Blocked' | 'Skipped';
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
   const batch = writeBatch(db);
@@ -4662,7 +4601,6 @@ export async function flowpilotExportDefectsReport(params: { projectId: string }
 // --- MODULE 7: GOVERNANCE & RAID MANAGEMENT ---
 
 export async function flowpilotQueryRaidDashboardSummary(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const risksSnap = await getDocs(collection(db, 'projects', params.projectId, 'risks'));
   const risks = risksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((r: any) => !r.isDeleted);
@@ -4703,7 +4641,6 @@ export async function flowpilotExportRaidLogCsv(params: { projectId: string }) {
 }
 
 export async function flowpilotQueryProjectRisks(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'risks'));
   const risks = snap.docs
@@ -4719,7 +4656,6 @@ export async function flowpilotQueryProjectRisks(params: { projectId: string }) 
 }
 
 export async function flowpilotDeleteRisk(params: { projectId: string; riskId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'risks'));
   const match = snap.docs.find((d: any) => d.id === params.riskId || d.data().riskId === params.riskId);
@@ -4730,7 +4666,6 @@ export async function flowpilotDeleteRisk(params: { projectId: string; riskId: s
 }
 
 export async function flowpilotCloseRisk(params: { projectId: string; riskId: string; closureNotes?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'risks'));
   const match = snap.docs.find((d: any) => d.id === params.riskId || d.data().riskId === params.riskId);
@@ -4741,7 +4676,6 @@ export async function flowpilotCloseRisk(params: { projectId: string; riskId: st
 }
 
 export async function flowpilotQueryProjectAssumptions(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'assumptions'));
   const assumptions = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((a: any) => !a.isDeleted);
@@ -4749,7 +4683,6 @@ export async function flowpilotQueryProjectAssumptions(params: { projectId: stri
 }
 
 export async function flowpilotDeleteAssumption(params: { projectId: string; assumptionId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'assumptions'));
   const match = snap.docs.find((d: any) => d.id === params.assumptionId || d.data().assumptionId === params.assumptionId);
@@ -4765,7 +4698,6 @@ export async function flowpilotValidateAssumption(params: {
   status: 'Validated' | 'Invalidated';
   validationNotes?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'assumptions'));
   const match = snap.docs.find((d: any) => d.id === params.assumptionId || d.data().assumptionId === params.assumptionId);
@@ -4776,7 +4708,6 @@ export async function flowpilotValidateAssumption(params: {
 }
 
 export async function flowpilotQueryProjectIssues(params: { projectId: string; priority?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'issues'));
   let issues = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((i: any) => !i.isDeleted);
@@ -4787,7 +4718,6 @@ export async function flowpilotQueryProjectIssues(params: { projectId: string; p
 }
 
 export async function flowpilotDeleteIssue(params: { projectId: string; issueId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'issues'));
   const match = snap.docs.find((d: any) => d.id === params.issueId || d.data().issueId === params.issueId);
@@ -4802,7 +4732,6 @@ export async function flowpilotResolveIssue(params: {
   issueId: string;
   resolutionDetails?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'issues'));
   const match = snap.docs.find((d: any) => d.id === params.issueId || d.data().issueId === params.issueId);
@@ -4813,7 +4742,6 @@ export async function flowpilotResolveIssue(params: {
 }
 
 export async function flowpilotQueryProjectDependencies(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'dependencies'));
   const dependencies = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((dp: any) => !dp.isDeleted);
@@ -4821,7 +4749,6 @@ export async function flowpilotQueryProjectDependencies(params: { projectId: str
 }
 
 export async function flowpilotDeleteDependency(params: { projectId: string; dependencyId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'dependencies'));
   const match = snap.docs.find((d: any) => d.id === params.dependencyId || d.data().dependencyId === params.dependencyId);
@@ -4836,7 +4763,6 @@ export async function flowpilotUpdateDependencyStatus(params: {
   dependencyId: string;
   status: 'On Track' | 'At Risk' | 'Blocked';
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'dependencies'));
   const match = snap.docs.find((d: any) => d.id === params.dependencyId || d.data().dependencyId === params.dependencyId);
@@ -4852,7 +4778,6 @@ export async function flowpilotOverrideProjectHolidayCalendar(params: {
   projectId: string;
   isHolidayOverrideEnabled: boolean;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await updateDoc(doc(db, 'projects', params.projectId), {
     isHolidayOverrideEnabled: params.isHolidayOverrideEnabled,
@@ -4867,7 +4792,6 @@ export async function flowpilotOverrideProjectHolidayCalendar(params: {
 }
 
 export async function flowpilotQueryProjectSpecificHolidays(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'customHolidays'));
   const holidays = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -4882,7 +4806,6 @@ export async function flowpilotQueryTeamAbsenceCalendarBySprint(params: {
   projectId: string;
   sprintId: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const sprintDoc = await getDoc(doc(db, 'projects', params.projectId, 'sprints', params.sprintId));
   const sprintData = sprintDoc.exists() ? sprintDoc.data() : {};
@@ -4926,7 +4849,6 @@ export async function flowpilotUploadPmoDocument(params: {
   fileUrl: string;
   description?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const now = new Date().toISOString();
   const docRef = await addDoc(collection(db, 'projects', params.projectId, 'pmoDocuments'), {
@@ -4947,7 +4869,6 @@ export async function flowpilotUploadPmoDocument(params: {
 }
 
 export async function flowpilotDeletePmoDocument(params: { projectId: string; documentId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'pmoDocuments', params.documentId));
   return {
@@ -4959,7 +4880,6 @@ export async function flowpilotDeletePmoDocument(params: { projectId: string; do
 }
 
 export async function flowpilotQueryPmoDocuments(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'pmoDocuments'));
   const documents = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -4986,7 +4906,6 @@ export async function flowpilotAddExternalDocLink(params: {
 }
 
 export async function flowpilotQueryFbBillingSummary(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const projSnap = await getDoc(doc(db, 'projects', params.projectId));
   const projData = projSnap.exists() ? projSnap.data() : {};
@@ -5013,7 +4932,6 @@ export async function flowpilotQueryFbBillingSummary(params: { projectId: string
 }
 
 export async function flowpilotUpdateFbContractValue(params: { projectId: string; contractValue: number }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await updateDoc(doc(db, 'projects', params.projectId), {
     contractValue: params.contractValue,
@@ -5033,7 +4951,6 @@ export async function flowpilotLogFbInvoice(params: {
   invoiceNumber: string;
   invoiceAmount: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await updateDoc(doc(db, 'projects', params.projectId, 'paymentMilestones', params.milestoneId), {
     invoiceNumber: params.invoiceNumber,
@@ -5058,7 +4975,6 @@ export async function flowpilotUpdatePaymentMilestone(params: {
   amount?: number;
   status?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const p: any = { updatedAt: new Date().toISOString() };
   if (params.name) p.name = params.name;
@@ -5076,7 +4992,6 @@ export async function flowpilotUpdatePaymentMilestone(params: {
 }
 
 export async function flowpilotDeletePaymentMilestone(params: { projectId: string; milestoneId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'paymentMilestones', params.milestoneId));
   return {
@@ -5088,7 +5003,6 @@ export async function flowpilotDeletePaymentMilestone(params: { projectId: strin
 }
 
 export async function flowpilotQueryPaymentMilestones(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'paymentMilestones'));
   const milestones = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -5104,7 +5018,6 @@ export async function flowpilotMarkMilestoneInvoiceRaised(params: {
   milestoneId: string;
   invoiceNumber: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await updateDoc(doc(db, 'projects', params.projectId, 'paymentMilestones', params.milestoneId), {
     status: 'Invoice raised',
@@ -5122,7 +5035,6 @@ export async function flowpilotMarkMilestoneInvoiceRaised(params: {
 }
 
 export async function flowpilotQueryTnmBillingSummary(params: { projectId: string; month?: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const resSnap = await getDocs(collection(db, 'projects', params.projectId, 'employees'));
   const resources = resSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -5186,7 +5098,6 @@ export async function flowpilotQueryTnmMilestones(params: { projectId: string })
 }
 
 export async function flowpilotQueryBcpPlan(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const docSnap = await getDoc(doc(db, 'projects', params.projectId, 'pmoSettings', 'bcp'));
   const data = docSnap.exists() ? docSnap.data() : {};
@@ -5203,7 +5114,6 @@ export async function flowpilotUpdateBcpPrimaryContacts(params: {
   projectId: string;
   contacts: Array<{ role: string; primaryPerson: string; backupPerson: string; contactPhone?: string }>;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await setDoc(doc(db, 'projects', params.projectId, 'pmoSettings', 'bcp'), {
     primaryContacts: params.contacts,
@@ -5223,7 +5133,6 @@ export async function flowpilotLogBcpDisasterRecoveryPlan(params: {
   backupVerificationDate: string;
   offsiteLocation?: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await setDoc(doc(db, 'projects', params.projectId, 'pmoSettings', 'bcp'), {
     disasterRecoveryProcedures: params.procedures,
@@ -5247,7 +5156,6 @@ export async function flowpilotAddKanbanColumn(params: {
   wipLimit?: number;
   order?: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const id = params.columnName.toLowerCase().replace(/\s+/g, '_');
   await setDoc(doc(db, 'projects', params.projectId, 'kanbanColumns', id), {
@@ -5266,7 +5174,6 @@ export async function flowpilotAddKanbanColumn(params: {
 }
 
 export async function flowpilotDeleteKanbanColumn(params: { projectId: string; columnId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await deleteDoc(doc(db, 'projects', params.projectId, 'kanbanColumns', params.columnId));
   return {
@@ -5281,7 +5188,6 @@ export async function flowpilotUpdateKanbanColumnsOrder(params: {
   projectId: string;
   columnOrder: string[];
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const batch = writeBatch(db);
   params.columnOrder.forEach((colId, idx) => {
@@ -5300,7 +5206,6 @@ export async function flowpilotUpdateKanbanColumnsOrder(params: {
 }
 
 export async function flowpilotQueryBoardSettings(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'kanbanColumns'));
   const columns = snap.docs.map((d: any) => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
@@ -5315,7 +5220,6 @@ export async function flowpilotUpdateSprintDurationSettings(params: {
   projectId: string;
   durationWeeks: 1 | 2 | 3 | 4;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await setDoc(doc(db, 'projects', params.projectId, 'settings', 'sprint'), {
     durationWeeks: params.durationWeeks,
@@ -5333,7 +5237,6 @@ export async function flowpilotSetSprintStartDay(params: {
   projectId: string;
   startDay: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   await setDoc(doc(db, 'projects', params.projectId, 'settings', 'sprint'), {
     startDay: params.startDay,
@@ -5348,7 +5251,6 @@ export async function flowpilotSetSprintStartDay(params: {
 }
 
 export async function flowpilotQuerySprintSettings(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDoc(doc(db, 'projects', params.projectId, 'settings', 'sprint'));
   const data = snap.exists() ? snap.data() : {};
@@ -5365,7 +5267,6 @@ export async function flowpilotUpdateEffortConversionSettings(params: {
   manDayToHours?: number;
   storyPointToHours?: number;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const p: any = { updatedAt: new Date().toISOString() };
   if (params.manMonthToDays !== undefined) p.manMonthToDays = params.manMonthToDays;
@@ -5382,7 +5283,6 @@ export async function flowpilotUpdateEffortConversionSettings(params: {
 }
 
 export async function flowpilotQueryEffortSettings(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const snap = await getDoc(doc(db, 'projects', params.projectId, 'settings', 'effort'));
   const data = snap.exists() ? snap.data() : {};
@@ -5395,7 +5295,6 @@ export async function flowpilotQueryEffortSettings(params: { projectId: string }
 }
 
 export async function flowpilotQueryProjectTrashItems(params: { projectId: string }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const deletedStories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => s.isDeleted);
@@ -5416,7 +5315,6 @@ export async function flowpilotRestoreProjectTrashItem(params: {
   itemType: 'story' | 'testCase' | 'epic';
   itemId: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const coll = params.itemType === 'testCase' ? 'testCases' : params.itemType === 'epic' ? 'epics' : 'stories';
   await updateDoc(doc(db, 'projects', params.projectId, coll, params.itemId), {
@@ -5438,7 +5336,6 @@ export async function flowpilotPermanentlyDeleteProjectItem(params: {
   itemType: 'story' | 'testCase' | 'epic';
   itemId: string;
 }) {
-  const db = await getDb();
   if (!db) throw new Error('Database unavailable');
   const coll = params.itemType === 'testCase' ? 'testCases' : params.itemType === 'epic' ? 'epics' : 'stories';
   await deleteDoc(doc(db, 'projects', params.projectId, coll, params.itemId));
