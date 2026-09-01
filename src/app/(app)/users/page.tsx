@@ -58,14 +58,18 @@ const userFormSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().min(1, 'Phone number is required'),
+  phone: z.string().optional(),
   experience: z.coerce.number().optional(),
+  employmentStartDate: z.string().optional().nullable(),
+  employmentEndDate: z.string().optional().nullable(),
   accessLevel: z.enum(['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'], {
     required_error: 'Access Level is required',
   }),
-  costAmount: z.coerce.number().optional(),
+  costAmount: z.union([z.string(), z.number()]).optional().nullable(),
   costCurrency: z.string().optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+  password: z.string().optional().refine(val => !val || val.length >= 6, {
+    message: 'Password must be at least 6 characters',
+  }),
 });
 
 const autoGenFormSchema = z.object({
@@ -194,11 +198,17 @@ export default function UsersPage() {
       };
 
       if (editingUser) {
+        let initialCost = '';
+        if (editingUser.costAmount !== undefined && editingUser.costAmount !== null) {
+          const num = Number(editingUser.costAmount);
+          initialCost = isNaN(num) ? '' : String(Math.round(num * 100) / 100);
+        }
+
         form.reset({
           ...editingUser,
           employmentStartDate: formatDateStr(editingUser.employmentStartDate),
           employmentEndDate: formatDateStr(editingUser.employmentEndDate),
-          costAmount: editingUser.costAmount ?? 0,
+          costAmount: initialCost,
           costCurrency: editingUser.costCurrency ?? 'USD',
           password: '',
         });
@@ -213,7 +223,7 @@ export default function UsersPage() {
           employmentStartDate: '',
           employmentEndDate: '',
           accessLevel: undefined,
-          costAmount: 0,
+          costAmount: '',
           costCurrency: 'USD',
           password: 'P@ssw0rd',
         });
@@ -369,12 +379,21 @@ export default function UsersPage() {
     } else {
       valuesWithDates.employmentEndDate = null;
     }
+
+    if (values.costAmount !== undefined && values.costAmount !== null && String(values.costAmount).trim() !== '') {
+      const parsedCost = parseFloat(String(values.costAmount));
+      valuesWithDates.costAmount = !isNaN(parsedCost) ? Math.round(parsedCost * 100) / 100 : null;
+    } else {
+      valuesWithDates.costAmount = null;
+    }
     
     const sanitizedValues = sanitizeForFirestore(valuesWithDates);
 
     try {
       if (editingUser) {
         const updateData = { ...sanitizedValues };
+        delete updateData.password;
+        delete updateData.id;
         if (editingUser.isEnabled === false) {
           if (!isAdmin) {
             toast({ variant: "destructive", title: "Unauthorized", description: "Only Administrators can enable users." });
@@ -385,8 +404,10 @@ export default function UsersPage() {
         }
         await updateDoc(doc(db, 'employees', editingUser.id), updateData);
 
-        // Also push updates to Auth pool to ensure roles are synced
-        await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
+        // Sync role in auth pool asynchronously in background so it does not block the UI
+        if (values.accessLevel !== editingUser.accessLevel) {
+          createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
+        }
         
         toast({
           title: editingUser.isEnabled === false ? "User Enabled" : "Success",
@@ -412,10 +433,10 @@ export default function UsersPage() {
             isEnabled: true,
         });
         
-        // Push single identity to auth pool
-        await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel, values.password);
+        // Push single identity to auth pool asynchronously in background
+        createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel, values.password);
         
-        toast({ title: "Success", description: `User added to database and Authentication cache.` });
+        toast({ title: "Success", description: `User added to database.` });
       }
       setIsDialogOpen(false);
       setEditingUser(null);
@@ -697,9 +718,9 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {user.costCurrency && user.costAmount !== undefined ? (
+                      {user.costCurrency && user.costAmount !== undefined && user.costAmount !== null ? (
                         <span>
-                          {user.costCurrency} {user.costAmount.toLocaleString()}
+                          {user.costCurrency} {Number(user.costAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">N/A</span>
@@ -847,12 +868,18 @@ export default function UsersPage() {
                       <FormField control={form.control} name="costAmount" render={({ field }) => (
                         <FormControl>
                           <Input
-                            type="number"
-                            step="any"
+                            type="text"
+                            inputMode="decimal"
                             placeholder="0.00"
                             className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-l-none shadow-none h-full bg-transparent px-3 font-mono"
                             {...field}
                             value={field.value ?? ''}
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) {
+                                field.onChange(val);
+                              }
+                            }}
                           />
                         </FormControl>
                       )} />

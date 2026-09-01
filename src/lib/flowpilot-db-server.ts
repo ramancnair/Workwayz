@@ -2541,7 +2541,7 @@ export async function flowpilotCreateUser(params: {
     role: params.role || 'Developer',
     accessLevel: params.accessLevel || 'Team Member',
     experience: params.experience || 3,
-    costAmount: params.costAmount || 65000,
+    costAmount: params.costAmount !== undefined ? Math.round(Number(params.costAmount) * 100) / 100 : 65000,
     costCurrency: params.costCurrency || 'USD',
     employmentStartDate: parseDate(params.employmentStartDate),
     employmentEndDate: parseDate(params.employmentEndDate),
