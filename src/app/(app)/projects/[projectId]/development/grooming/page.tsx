@@ -93,16 +93,23 @@ const storyFormSchema = z.object({
   acceptanceCriteria: z.string().optional(),
   epicId: z.string().optional(),
   parentStoryId: z.string().optional(),
+  reporterId: z.string().optional(),
+  relatedTestCaseId: z.string().optional(),
   assigneeId: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
   priority: z.enum(['Critical', 'High', 'Medium', 'Low', 'Backburner']).optional(),
+  severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
   foundInTestPlanId: z.string().optional(),
   relatedBugId: z.string().optional(),
   impactedSystemIds: z.array(z.string()).optional(),
   releaseId: z.string().optional(),
   attachments: z.string().optional(),
+  status: z.string().optional(),
+  resolution: z.string().optional(),
   sprintId: z.string().optional(),
   predecessorId: z.string().optional(),
+  createdAt: z.date().optional(),
+  closedAt: z.date().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -277,7 +284,7 @@ function StoryItemCard({
                         </button>
                     )}
                     {showBugs && (
-                        <button onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
+                        <button onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} defects`}>
                             <Bug className="h-3 w-3" />
                             <span>{bugs.length}</span>
                         </button>
@@ -702,18 +709,25 @@ export default function GroomingPage() {
                 title: (selectedStory.title || '').slice(0, 60),
                 description: (selectedStory.description || '').slice(0, 300),
                 acceptanceCriteria: selectedStory.acceptanceCriteria || '',
-                epicId: !isSubItem ? selectedStory.epicId || 'unassigned' : undefined,
+                epicId: selectedStory.epicId || 'unassigned',
                 parentStoryId: isSubItem ? selectedStory.parentStoryId || undefined : undefined,
+                reporterId: selectedStory.reporterId || 'unassigned',
+                relatedTestCaseId: selectedStory.relatedTestCaseId || 'unassigned',
                 assigneeId: selectedStory.assigneeId || 'unassigned',
                 estimatedHours: selectedStory.estimatedHours,
                 priority: selectedStory.priority || 'Medium',
+                severity: (selectedStory.severity as any) || 'Medium',
                 foundInTestPlanId: selectedStory.foundInTestPlanId || 'unassigned',
                 relatedBugId: selectedStory.relatedBugId || 'unassigned',
                 impactedSystemIds: selectedStory.impactedSystemIds || [],
                 releaseId: selectedStory.releaseId || 'unassigned',
                 attachments: selectedStory.attachments || '',
+                status: selectedStory.status || 'To Do',
+                resolution: selectedStory.resolution || 'none',
                 sprintId: selectedStory.sprintId || 'backlog',
                 predecessorId: selectedStory.predecessorId || 'unassigned',
+                createdAt: selectedStory.createdAt ? parseISO(selectedStory.createdAt) : undefined,
+                closedAt: selectedStory.closedAt ? parseISO(selectedStory.closedAt) : undefined,
             });
             if (isSubItem && selectedStory.parentStoryId) {
                 const parent = parentStoryOptions.find(p => p.value === selectedStory.parentStoryId);
@@ -823,6 +837,7 @@ export default function GroomingPage() {
             ...values,
             priority: values.priority as Priority | undefined,
             assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
+            relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
         });
         if (success) {
             handleSetSelectedStory(null);
@@ -947,7 +962,7 @@ export default function GroomingPage() {
                                 <SelectContent>
                                     <SelectItem value="story">Stories</SelectItem>
                                     <SelectItem value="sub-task">Sub-tasks</SelectItem>
-                                    <SelectItem value="bug">Bugs</SelectItem>
+                                    <SelectItem value="bug">Defects</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -1301,6 +1316,421 @@ export default function GroomingPage() {
                     </DialogFooter>
                   </form>
                 </Form>
+              ) : selectedStory.itemType === 'Bug' ? (
+                <Form {...editStoryForm}>
+                  <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <div className="flex items-center gap-2">
+                        {selectionStack.length > 1 && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleGoBack}>
+                            <ArrowLeft className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <DialogTitle>Edit Defect</DialogTitle>
+                      </div>
+                      <DialogDescription>
+                        Make changes to the defect details here.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                      <FormField
+                        control={editStoryForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Defect title" {...field} maxLength={60} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editStoryForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description (Steps to Reproduce)</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Steps to reproduce: Nav to the affected module, perform standard actions, observe the critical issue." {...field} maxLength={300} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editStoryForm.control}
+                        name="acceptanceCriteria"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Expected Result</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Describe what should happen..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={editStoryForm.control}
+                          name="reporterId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Reporter</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select a reporter" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  {[...employees].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                    <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editStoryForm.control}
+                          name="assigneeId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Assignee</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign someone" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  {[...employees].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' })).map(emp => (
+                                    <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.empId.trim()})</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={editStoryForm.control}
+                          name="parentStoryId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Related Story</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                  <Input
+                                    list="parent-story-options-defect-edit-grooming"
+                                    placeholder="Search for a story/requirement..."
+                                    className="pl-9"
+                                    value={editParentStoryText}
+                                    onChange={(e) => {
+                                      const text = e.target.value;
+                                      setEditParentStoryText(text);
+                                      const matchingOption = parentStoryOptions.find(opt => opt.label === text);
+                                      field.onChange(matchingOption ? matchingOption.value : undefined);
+                                    }}
+                                    onBlur={() => {
+                                      const matchingOption = parentStoryOptions.find(opt => opt.label === editParentStoryText);
+                                      if (!matchingOption) {
+                                        setEditParentStoryText('');
+                                        field.onChange(undefined);
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </FormControl>
+                              <datalist id="parent-story-options-defect-edit-grooming">
+                                {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editStoryForm.control}
+                          name="relatedTestCaseId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Related Test Case</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                  <Input
+                                    list="testcase-options-defect-edit-grooming"
+                                    placeholder="Search for a test case..."
+                                    className="pl-9"
+                                    value={testCaseInputText}
+                                    onChange={(e) => {
+                                      const text = e.target.value;
+                                      setTestCaseInputText(text);
+                                      const matchingOption = testCaseOptions.find(opt => opt.label === text);
+                                      field.onChange(matchingOption ? matchingOption.value : undefined);
+                                    }}
+                                    onBlur={() => {
+                                      const matchingOption = testCaseOptions.find(opt => opt.label === testCaseInputText);
+                                      if (!matchingOption) {
+                                        setTestCaseInputText('');
+                                        field.onChange(undefined);
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </FormControl>
+                              <datalist id="testcase-options-defect-edit-grooming">
+                                {testCaseOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={editStoryForm.control}
+                          name="sprintId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sprint</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'backlog'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign to a sprint" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  <SelectItem value="backlog">Backlog</SelectItem>
+                                  {sprints.map(sprint => (
+                                    <SelectItem key={sprint.id} value={sprint.id}>{sprint.title}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editStoryForm.control}
+                          name="releaseId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Release</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  {releases.map(release => (
+                                    <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={editStoryForm.control}
+                          name="foundInTestPlanId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Found In Test Cycle</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select a Test Cycle" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">None</SelectItem>
+                                  {testPlans.map(tp => (
+                                    <SelectItem key={tp.id} value={tp.id}>{tp.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editStoryForm.control}
+                          name="relatedBugId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Related / Original Defect</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                  <Input
+                                    list="bug-options-defect-edit-grooming"
+                                    placeholder="Search for a defect..."
+                                    className="pl-9"
+                                    value={relatedBugInputText}
+                                    onChange={(e) => {
+                                      const text = e.target.value;
+                                      setRelatedBugInputText(text);
+                                      const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                      field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                    }}
+                                    onBlur={() => {
+                                      const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                      if (!matchingOption) {
+                                        setRelatedBugInputText('');
+                                        field.onChange('unassigned');
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </FormControl>
+                              <datalist id="bug-options-defect-edit-grooming">
+                                {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={editStoryForm.control}
+                          name="severity"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Severity</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'Medium'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Set severity" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {['Critical', 'High', 'Medium', 'Low'].map(s => (
+                                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editStoryForm.control}
+                          name="epicId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Epic</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Assign to an epic" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  {epics.map(epic => (
+                                    <SelectItem key={epic.id} value={epic.id}>{epic.title}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={editStoryForm.control}
+                          name="status"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Status</FormLabel>
+                              <Select
+                                onValueChange={(val) => {
+                                  field.onChange(val);
+                                  if (val === 'Closed' || val === 'Done') {
+                                    editStoryForm.setValue('closedAt', new Date());
+                                  } else {
+                                    editStoryForm.setValue('closedAt', undefined);
+                                  }
+                                }}
+                                value={field.value}
+                              >
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {['To Triage', 'Triaged', 'In Progress', 'Ready For Test', 'Closed'].map(st => (
+                                    <SelectItem key={st} value={st}>{st}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editStoryForm.control}
+                          name="resolution"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Resolution</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select resolution" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  {['Invalid', 'Need Help', 'Duplicate', "Won't Fix", 'Cannot Reproduce'].map(r => (
+                                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={editStoryForm.control}
+                        name="attachments"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Attachments</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Paste attachment URLs, one per line." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={editStoryForm.control}
+                          name="createdAt"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Created On</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  disabled
+                                  value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : (typeof field.value === 'string' && field.value ? field.value.split('T')[0] : '')}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editStoryForm.control}
+                          name="closedAt"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Closed On</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  disabled
+                                  value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().split('T')[0] : (typeof field.value === 'string' && field.value ? field.value.split('T')[0] : '')}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={isEditStorySubmitting}>
+                        {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
               ) : (
                 <Form {...editStoryForm}>
                   <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
@@ -1336,7 +1766,7 @@ export default function GroomingPage() {
                                         </Badge>
                                     </TabsTrigger>
                                     <TabsTrigger variant="folder" value="bugs">
-                                        Bugs
+                                        Defects
                                         <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
                                             {selectedStorySubItems.bugs.length}
                                         </Badge>
@@ -1486,24 +1916,65 @@ export default function GroomingPage() {
                             />
                             </div>
                             {['Feature Change', 'Bug'].includes(selectedStory.itemType) ? (
+                              <FormField
+                                control={editStoryForm.control}
+                                name="parentStoryId"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>{selectedStory.itemType === 'Feature Change' ? 'Original Requirement' : 'Related Story'}</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        list="parent-story-options-edit"
+                                        placeholder="Link to a story or feature change"
+                                        value={editParentStoryText}
+                                        onChange={(e) => {
+                                          const text = e.target.value;
+                                          setEditParentStoryText(text);
+                                          const matchingOption = parentStoryOptions.find(
+                                            (opt) => opt.label === text
+                                          );
+                                          field.onChange(
+                                            matchingOption ? matchingOption.value : undefined
+                                          );
+                                        }}
+                                        onBlur={() => {
+                                          const matchingOption = parentStoryOptions.find(
+                                            (opt) => opt.label === editParentStoryText
+                                          );
+                                          if (!matchingOption) {
+                                            setEditParentStoryText('');
+                                            field.onChange(undefined);
+                                          }
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <datalist id="parent-story-options-edit">
+                                      {parentStoryOptions.map((opt) => (
+                                        <option key={opt.value} value={opt.label} />
+                                      ))}
+                                    </datalist>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            ) : null}
+                            {selectedStory.itemType === 'Bug' && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                   control={editStoryForm.control}
-                                  name="parentStoryId"
+                                  name="relatedTestCaseId"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>{selectedStory.itemType === 'Bug' ? 'Related Test Case' : 'Parent Item'}</FormLabel>
+                                      <FormLabel>Related Test Case</FormLabel>
                                       <FormControl>
                                         <Input
-                                          list={selectedStory.itemType === 'Bug' ? "testcase-options-grooming" : "parent-story-options-edit"}
-                                          placeholder={selectedStory.itemType === 'Bug' ? "Link to a test case" : "Link to a story or feature change"}
-                                          value={selectedStory.itemType === 'Bug' ? testCaseInputText : editParentStoryText}
+                                          list="testcase-options-grooming"
+                                          placeholder="Link to a test case"
+                                          value={testCaseInputText}
                                           onChange={(e) => {
                                             const text = e.target.value;
-                                            if(selectedStory.itemType === 'Bug') setTestCaseInputText(text);
-                                            else setEditParentStoryText(text);
-                                            const options = selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions;
-                                            const matchingOption = options.find(
+                                            setTestCaseInputText(text);
+                                            const matchingOption = testCaseOptions.find(
                                               (opt) => opt.label === text
                                             );
                                             field.onChange(
@@ -1511,21 +1982,18 @@ export default function GroomingPage() {
                                             );
                                           }}
                                           onBlur={() => {
-                                            const options = selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions;
-                                            const text = selectedStory.itemType === 'Bug' ? testCaseInputText : editParentStoryText;
-                                            const matchingOption = options.find(
-                                              (opt) => opt.label === text
+                                            const matchingOption = testCaseOptions.find(
+                                              (opt) => opt.label === testCaseInputText
                                             );
                                             if (!matchingOption) {
-                                              if(selectedStory.itemType === 'Bug') setTestCaseInputText('');
-                                              else setEditParentStoryText('');
+                                              setTestCaseInputText('');
                                               field.onChange(undefined);
                                             }
                                           }}
                                         />
                                       </FormControl>
-                                      <datalist id={selectedStory.itemType === 'Bug' ? "testcase-options-grooming" : "parent-story-options-edit"}>
-                                        {(selectedStory.itemType === 'Bug' ? testCaseOptions : parentStoryOptions).map((opt) => (
+                                      <datalist id="testcase-options-grooming">
+                                        {testCaseOptions.map((opt) => (
                                           <option key={opt.value} value={opt.label} />
                                         ))}
                                       </datalist>
@@ -1533,47 +2001,45 @@ export default function GroomingPage() {
                                     </FormItem>
                                   )}
                                 />
-                                {selectedStory.itemType === 'Bug' && (
-                                  <FormField
-                                    control={editStoryForm.control}
-                                    name="relatedBugId"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Related / Original Bug</FormLabel>
-                                        <FormControl>
-                                          <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                                            <Input
-                                              list="bug-options-grooming"
-                                              placeholder="Search for a bug..."
-                                              className="pl-9"
-                                              value={relatedBugInputText}
-                                              onChange={(e) => {
-                                                const text = e.target.value;
-                                                setRelatedBugInputText(text);
-                                                const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                                field.onChange(matchingOption ? matchingOption.value : 'unassigned');
-                                              }}
-                                              onBlur={() => {
-                                                const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
-                                                if (!matchingOption) {
-                                                  setRelatedBugInputText('');
-                                                  field.onChange('unassigned');
-                                                }
-                                              }}
-                                            />
-                                          </div>
-                                        </FormControl>
-                                        <datalist id="bug-options-grooming">
-                                          {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}
-                                        </datalist>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                )}
+                                <FormField
+                                  control={editStoryForm.control}
+                                  name="relatedBugId"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Related / Original Bug</FormLabel>
+                                      <FormControl>
+                                        <div className="relative">
+                                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                          <Input
+                                            list="bug-options-grooming"
+                                            placeholder="Search for a bug..."
+                                            className="pl-9"
+                                            value={relatedBugInputText}
+                                            onChange={(e) => {
+                                              const text = e.target.value;
+                                              setRelatedBugInputText(text);
+                                              const matchingOption = relatedBugOptions.find(opt => opt.label === text);
+                                              field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                            }}
+                                            onBlur={() => {
+                                              const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
+                                              if (!matchingOption) {
+                                                setRelatedBugInputText('');
+                                                field.onChange('unassigned');
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                      </FormControl>
+                                      <datalist id="bug-options-grooming">
+                                        {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                                      </datalist>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
                               </div>
-                            ) : null}
+                            )}
                              <FormField
                                 control={editStoryForm.control}
                                 name="priority"
@@ -1771,7 +2237,7 @@ export default function GroomingPage() {
                                       })}
                                       </div>
                                   ) : (
-                                      <p className="text-sm text-muted-foreground italic px-2">No bugs linked.</p>
+                                      <p className="text-sm text-muted-foreground italic px-2">No defects linked.</p>
                                   )}
                               </div>
                           </TabsContent>

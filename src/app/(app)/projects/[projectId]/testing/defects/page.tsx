@@ -76,6 +76,7 @@ const bugFormSchema = z.object({
   title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
+  parentStoryId: z.string().optional(),
   relatedTestCaseId: z.string().optional(),
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
@@ -104,33 +105,22 @@ export default function DefectsPage() {
   const [selectedBugs, setSelectedBugs] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  const filteredBugs = useMemo(() => {
-    if (!searchQuery.trim()) return bugs;
-    const searchLower = searchQuery.toLowerCase().trim();
-    return bugs.filter(bug => {
-      const assignee = employees.find(e => e.id === bug.assigneeId);
-      const assigneeName = assignee ? `${assignee.firstName} ${assignee.lastName}` : 'unassigned';
-      return (
-        bug.storyId?.toLowerCase().includes(searchLower) ||
-        bug.title?.toLowerCase().includes(searchLower) ||
-        (bug.description && bug.description.toLowerCase().includes(searchLower)) ||
-        bug.status?.toLowerCase().includes(searchLower) ||
-        (bug.resolution && bug.resolution.toLowerCase().includes(searchLower)) ||
-        (bug.severity && bug.severity.toLowerCase().includes(searchLower)) ||
-        assigneeName.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [bugs, searchQuery, employees]);
-
-  const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
-
+  const [parentStoryInputText, setParentStoryInputText] = useState('');
   const [testCaseInputText, setTestCaseInputText] = useState('');
   const [relatedBugInputText, setRelatedBugInputText] = useState('');
-  const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'storyId', desc: false });
+  const [sorting, setSorting] = useState<{ id: string, desc: boolean } | null>({ id: 'storyId', desc: true });
 
   const form = useForm<z.infer<typeof bugFormSchema>>({
     resolver: zodResolver(bugFormSchema),
   });
+
+  const parentStoryOptions = useMemo(() => stories
+    .filter(s => ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType))
+    .sort((a, b) => (a.storyId || '').localeCompare(b.storyId || '', undefined, { numeric: true }))
+    .map(s => ({
+      value: s.id,
+      label: `[${s.storyId || 'REQ'}] ${s.title}`,
+    })), [stories]);
 
   const testCaseOptions = useMemo(() => testCases.map(tc => ({
     value: tc.id,
@@ -145,6 +135,8 @@ export default function DefectsPage() {
   useEffect(() => {
     if (isDialogOpen) {
       if (editingBug) {
+        const parentStory = stories.find(s => s.id === editingBug.parentStoryId);
+        setParentStoryInputText(parentStory ? `[${parentStory.storyId || 'REQ'}] ${parentStory.title}` : '');
         const testCase = testCases.find(tc => tc.id === editingBug.relatedTestCaseId);
         setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
         const relBug = bugs.find(b => b.id === editingBug.relatedBugId);
@@ -154,6 +146,7 @@ export default function DefectsPage() {
           title: (editingBug.title || '').slice(0, 60),
           description: (editingBug.description || '').slice(0, 300),
           acceptanceCriteria: editingBug.acceptanceCriteria || '',
+          parentStoryId: editingBug.parentStoryId || 'unassigned',
           relatedTestCaseId: editingBug.relatedTestCaseId || 'unassigned',
           reporterId: editingBug.reporterId || 'unassigned',
           assigneeId: editingBug.assigneeId || 'unassigned',
@@ -170,12 +163,14 @@ export default function DefectsPage() {
           closedAt: editingBug.closedAt ? parseISO(editingBug.closedAt) : undefined,
         });
       } else {
+         setParentStoryInputText('');
          setTestCaseInputText('');
          setRelatedBugInputText('');
          form.reset({
             title: '',
             description: '',
             acceptanceCriteria: '',
+            parentStoryId: 'unassigned',
             relatedTestCaseId: 'unassigned',
             reporterId: 'unassigned',
             assigneeId: 'unassigned',
@@ -191,7 +186,7 @@ export default function DefectsPage() {
         });
       }
     }
-  }, [isDialogOpen, editingBug, form, testCases, bugs]);
+  }, [isDialogOpen, editingBug, form, testCases, bugs, stories, currentSprint]);
   
   const handleDialogOpen = (bug: Story | null) => {
     setEditingBug(bug);
@@ -206,6 +201,7 @@ export default function DefectsPage() {
         title: values.title,
         description: values.description || '',
         acceptanceCriteria: values.acceptanceCriteria,
+        parentStoryId: values.parentStoryId === 'unassigned' ? undefined : values.parentStoryId,
         reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
         relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
@@ -266,6 +262,26 @@ export default function DefectsPage() {
       setSorting({ id: columnId, desc: false });
     }
   };
+
+  const filteredBugs = useMemo(() => {
+    if (!searchQuery.trim()) return bugs;
+    const searchLower = searchQuery.toLowerCase().trim();
+    return bugs.filter(bug => {
+      const assignee = employees.find(e => e.id === bug.assigneeId);
+      const assigneeName = assignee ? `${assignee.firstName} ${assignee.lastName}` : 'unassigned';
+      return (
+        bug.storyId?.toLowerCase().includes(searchLower) ||
+        bug.title?.toLowerCase().includes(searchLower) ||
+        (bug.description && bug.description.toLowerCase().includes(searchLower)) ||
+        bug.status?.toLowerCase().includes(searchLower) ||
+        (bug.resolution && bug.resolution.toLowerCase().includes(searchLower)) ||
+        (bug.severity && bug.severity.toLowerCase().includes(searchLower)) ||
+        assigneeName.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [bugs, searchQuery, employees]);
+
+  const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
 
   const sortedBugs = useMemo(() => {
     let sorted = [...filteredBugs];
@@ -524,6 +540,43 @@ export default function DefectsPage() {
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
+                        name="parentStoryId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Related Story</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                <Input
+                                  list="parent-story-options"
+                                  placeholder="Search for a story/requirement..."
+                                  className="pl-9"
+                                  value={parentStoryInputText}
+                                  onChange={(e) => {
+                                    const text = e.target.value;
+                                    setParentStoryInputText(text);
+                                    const matchingOption = parentStoryOptions.find(opt => opt.label === text);
+                                    field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                  }}
+                                  onBlur={() => {
+                                    const matchingOption = parentStoryOptions.find(opt => opt.label === parentStoryInputText);
+                                    if (!matchingOption) {
+                                      setParentStoryInputText('');
+                                      field.onChange('unassigned');
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </FormControl>
+                            <datalist id="parent-story-options">
+                              {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                            </datalist>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
                         name="relatedTestCaseId"
                         render={({ field }) => (
                           <FormItem>
@@ -559,6 +612,8 @@ export default function DefectsPage() {
                           </FormItem>
                         )}
                       />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                       control={form.control}
                       name="sprintId"
@@ -580,6 +635,25 @@ export default function DefectsPage() {
                           </FormItem>
                       )}
                       />
+                       <FormField
+                       control={form.control}
+                       name="releaseId"
+                       render={({ field }) => (
+                           <FormItem>
+                           <FormLabel>Release</FormLabel>
+                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                               <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
+                               <SelectContent>
+                               <SelectItem value="unassigned">Unassigned</SelectItem>
+                               {releases.map(release => (
+                                   <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                               ))}
+                               </SelectContent>
+                           </Select>
+                           <FormMessage />
+                           </FormItem>
+                       )}
+                       />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField

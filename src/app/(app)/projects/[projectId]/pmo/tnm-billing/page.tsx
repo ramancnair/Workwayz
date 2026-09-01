@@ -157,7 +157,7 @@ export default function ResourceBillingPage() {
     if (val.length > 1 && /^0[0-9]/.test(val)) {
       val = val.replace(/^0+/, '');
     }
-    const regex = /^(0|[1-9]\d*)?(\.\d{0,2})?$/;
+    const regex = /^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/;
     if (!regex.test(val)) return;
     setEditingRates(prev => ({
       ...prev,
@@ -591,7 +591,7 @@ export default function ResourceBillingPage() {
                         if (val.length > 1 && /^0[0-9]/.test(val)) {
                           val = val.replace(/^0+/, '');
                         }
-                        if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
+                        if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) {
                           setNewCostValue(val);
                         }
                       }}
@@ -650,7 +650,7 @@ export default function ResourceBillingPage() {
                         if (val.length > 1 && /^0[0-9]/.test(val)) {
                           val = val.replace(/^0+/, '');
                         }
-                        if (/^(0|[1-9]\d*)?(\.\d{0,2})?$/.test(val)) {
+                        if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) {
                           setEditCostValue(val);
                         }
                       }}

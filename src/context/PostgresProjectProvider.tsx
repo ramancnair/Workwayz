@@ -1163,17 +1163,32 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
     }
     
     try {
-      if (employee.onboardingDate && employee.offloadingDate) {
-        if (new Date(employee.offloadingDate) < new Date(employee.onboardingDate)) {
-          console.error("Postgres Error: Offboarding date cannot be earlier than onboarding date.");
-          return false;
+      const normalizeDateStr = (d: any): string | null => {
+        if (!d) return null;
+        try {
+          if (typeof d === 'string') return d.slice(0, 10);
+          if (d instanceof Date) return d.toISOString().slice(0, 10);
+          if (d?.toDate) return d.toDate().toISOString().slice(0, 10);
+          return new Date(d).toISOString().slice(0, 10);
+        } catch {
+          return null;
         }
+      };
+
+      const onDateStr = normalizeDateStr(employee.onboardingDate);
+      const offDateStr = normalizeDateStr(employee.offloadingDate);
+      const projStartStr = normalizeDateStr(project?.startDate);
+      const projEndStr = normalizeDateStr(project?.endDate);
+
+      if (onDateStr && offDateStr && offDateStr < onDateStr) {
+        console.error("Postgres Error: Offboarding date cannot be earlier than onboarding date.");
+        return false;
       }
-      if (project?.startDate && employee.onboardingDate && new Date(employee.onboardingDate) < new Date(project.startDate)) {
+      if (projStartStr && onDateStr && onDateStr < projStartStr) {
         console.error("Postgres Error: Onboarding date cannot be earlier than project start date.");
         return false;
       }
-      if (project?.endDate && employee.offloadingDate && new Date(employee.offloadingDate) > new Date(project.endDate)) {
+      if (projEndStr && offDateStr && offDateStr > projEndStr) {
         console.error("Postgres Error: Offboarding date cannot be later than project end date.");
         return false;
       }
@@ -1191,21 +1206,37 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
   const updateProjectUser = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const existingUser = employees.find(e => e.id === employeeId);
-      const newOnboarding = data.onboardingDate !== undefined ? data.onboardingDate : existingUser?.onboardingDate;
-      const newOffloading = data.offloadingDate !== undefined ? data.offloadingDate : existingUser?.offloadingDate;
+      if (data.hasOwnProperty('onboardingDate') || data.hasOwnProperty('offloadingDate')) {
+        const existingUser = employees.find(e => e.id === employeeId);
+        const normalizeDateStr = (d: any): string | null => {
+          if (!d) return null;
+          try {
+            if (typeof d === 'string') return d.slice(0, 10);
+            if (d instanceof Date) return d.toISOString().slice(0, 10);
+            if (d?.toDate) return d.toDate().toISOString().slice(0, 10);
+            return new Date(d).toISOString().slice(0, 10);
+          } catch {
+            return null;
+          }
+        };
 
-      if (newOnboarding && newOffloading && new Date(newOffloading) < new Date(newOnboarding)) {
-        console.error("Postgres Error: Offboarding date cannot be earlier than onboarding date.");
-        return false;
-      }
-      if (project?.startDate && newOnboarding && new Date(newOnboarding) < new Date(project.startDate)) {
-        console.error("Postgres Error: Onboarding date cannot be earlier than project start date.");
-        return false;
-      }
-      if (project?.endDate && newOffloading && new Date(newOffloading) > new Date(project.endDate)) {
-        console.error("Postgres Error: Offboarding date cannot be later than project end date.");
-        return false;
+        const newOnboardingStr = data.hasOwnProperty('onboardingDate') ? normalizeDateStr(data.onboardingDate) : normalizeDateStr(existingUser?.onboardingDate);
+        const newOffloadingStr = data.hasOwnProperty('offloadingDate') ? normalizeDateStr(data.offloadingDate) : normalizeDateStr(existingUser?.offloadingDate);
+        const projStartStr = normalizeDateStr(project?.startDate);
+        const projEndStr = normalizeDateStr(project?.endDate);
+
+        if (newOnboardingStr && newOffloadingStr && newOffloadingStr < newOnboardingStr) {
+          console.error("Postgres Error: Offboarding date cannot be earlier than onboarding date.");
+          return false;
+        }
+        if (projStartStr && newOnboardingStr && newOnboardingStr < projStartStr) {
+          console.error("Postgres Error: Onboarding date cannot be earlier than project start date.");
+          return false;
+        }
+        if (projEndStr && newOffloadingStr && newOffloadingStr > projEndStr) {
+          console.error("Postgres Error: Offboarding date cannot be later than project end date.");
+          return false;
+        }
       }
 
       const { onboardingDate, offloadingDate, ...rest } = data;

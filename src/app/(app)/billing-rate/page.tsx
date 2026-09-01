@@ -1430,12 +1430,19 @@ export default function BillingRatePage() {
                 <span className="absolute left-3 top-2.5 text-xs text-muted-foreground font-mono">$</span>
                 <Input
                   id="billedRateInput"
-                  type="number"
-                  step="any"
+                  type="text"
                   inputMode="decimal"
                   placeholder="0.00"
                   value={editBilledRate}
-                  onChange={(e) => setEditBilledRate(e.target.value)}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    if (val.length > 1 && /^0[0-9]/.test(val)) {
+                      val = val.replace(/^0+/, '');
+                    }
+                    if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) {
+                      setEditBilledRate(val);
+                    }
+                  }}
                   className="pl-7 font-mono text-sm"
                 />
               </div>
@@ -1449,12 +1456,19 @@ export default function BillingRatePage() {
                 <span className="absolute left-3 top-2.5 text-xs text-muted-foreground font-mono">$</span>
                 <Input
                   id="costRateInput"
-                  type="number"
-                  step="any"
+                  type="text"
                   inputMode="decimal"
                   placeholder="0.00"
                   value={editCostRate}
-                  onChange={(e) => setEditCostRate(e.target.value)}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    if (val.length > 1 && /^0[0-9]/.test(val)) {
+                      val = val.replace(/^0+/, '');
+                    }
+                    if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) {
+                      setEditCostRate(val);
+                    }
+                  }}
                   className="pl-7 font-mono text-sm"
                 />
               </div>
