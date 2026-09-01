@@ -124,6 +124,23 @@ export default function LeaveTrackerPage() {
   const addLeavePeriod = async (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>): Promise<boolean> => {
     if (!db) return false;
     try {
+      const user = allUsers.find(u => u.id === employeeId);
+      const existingLeaves = user?.leavePeriods || [];
+      const newStartStr = new Date(leavePeriod.startDate).toISOString().slice(0, 10);
+      const newEndStr = new Date(leavePeriod.endDate).toISOString().slice(0, 10);
+
+      const hasOverlap = existingLeaves.some(p => {
+        if (!p.startDate || !p.endDate) return false;
+        const pStartStr = new Date(p.startDate).toISOString().slice(0, 10);
+        const pEndStr = new Date(p.endDate).toISOString().slice(0, 10);
+        return !(newEndStr < pStartStr || newStartStr > pEndStr);
+      });
+
+      if (hasOverlap) {
+        console.error("Firebase Error: Leave period overlaps with an existing leave period.");
+        return false;
+      }
+
       const newLeavePeriod: LeavePeriod = {
         ...leavePeriod,
         id: uuidv4(),
@@ -334,6 +351,40 @@ export default function LeaveTrackerPage() {
 
     if (businessDays.length === 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'No business days in the selected leave period.' });
+      return;
+    }
+
+    // Check for duplicate / overlapping leaves with activeUser's existing leave periods
+    const existingLeavePeriods = activeUser.leavePeriods || [];
+    const conflictingDates: Date[] = [];
+
+    businessDays.forEach(bDay => {
+      const bDayStr = format(bDay, 'yyyy-MM-dd');
+      const isAlreadyOnLeave = existingLeavePeriods.some(period => {
+        if (!period.startDate || !period.endDate) return false;
+        const pStart = new Date(period.startDate);
+        const pEnd = new Date(period.endDate);
+        const pStartStr = format(pStart, 'yyyy-MM-dd');
+        const pEndStr = format(pEnd, 'yyyy-MM-dd');
+        return bDayStr >= pStartStr && bDayStr <= pEndStr;
+      });
+
+      if (isAlreadyOnLeave) {
+        conflictingDates.push(bDay);
+      }
+    });
+
+    if (conflictingDates.length > 0) {
+      const formattedConflicts = conflictingDates
+        .slice(0, 3)
+        .map(d => format(d, 'MMM d, yyyy'))
+        .join(', ');
+      const moreCount = conflictingDates.length > 3 ? ` and ${conflictingDates.length - 3} other day(s)` : '';
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Leave Entry',
+        description: `Leave is already applied for: ${formattedConflicts}${moreCount}. Please select dates that do not overlap with existing leaves.`,
+      });
       return;
     }
 

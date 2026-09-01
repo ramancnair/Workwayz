@@ -143,9 +143,13 @@ export default function ResourceBillingPage() {
   };
 
   const handleAddNewFixedCost = async () => {
+    if (!newCostName.trim()) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid Item Name.' });
+      return;
+    }
     const numericCost = Math.round((parseFloat(newCostValue) || 0) * 100) / 100;
-    if (!newCostName.trim() || isNaN(parseFloat(newCostValue)) || numericCost <= 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and a cost greater than 0.' });
+    if (isNaN(parseFloat(newCostValue)) || numericCost <= 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please provide cost greater than 0.' });
       return;
     }
     const isDuplicate = fixedCosts.some(
@@ -155,7 +159,7 @@ export default function ResourceBillingPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'A fixed cost item with this name already exists.' });
       return;
     }
-    const success = await addFixedCost({ name: newCostName, cost: numericCost, type: newCostType });
+    const success = await addFixedCost({ name: newCostName.trim(), cost: numericCost, type: newCostType });
     if (success) {
       setNewCostName('');
       setNewCostValue('');
@@ -176,9 +180,13 @@ export default function ResourceBillingPage() {
 
   const handleEditFixedCost = async () => {
     if (!editingCostItem) return;
+    if (!editCostName.trim()) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid Item Name.' });
+      return;
+    }
     const numericCost = Math.round((parseFloat(editCostValue) || 0) * 100) / 100;
-    if (!editCostName.trim() || isNaN(parseFloat(editCostValue)) || numericCost <= 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a valid name and a cost greater than 0.' });
+    if (isNaN(parseFloat(editCostValue)) || numericCost <= 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please provide cost greater than 0.' });
       return;
     }
     const isDuplicate = fixedCosts.some(
@@ -189,7 +197,7 @@ export default function ResourceBillingPage() {
       return;
     }
     const success = await updateFixedCost(editingCostItem.id, {
-      name: editCostName,
+      name: editCostName.trim(),
       cost: numericCost,
       type: editCostType,
     });

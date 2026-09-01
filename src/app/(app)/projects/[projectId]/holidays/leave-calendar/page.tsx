@@ -68,12 +68,15 @@ export default function LeaveCalendarPage() {
                  if (isWeekend || isHoliday) return;
 
                  if(leaves[dayStr]) {
-                    leaves[dayStr].push({ 
-                      id: emp.id, 
-                      firstName: emp.firstName, 
-                      lastName: emp.lastName, 
-                      leaveType: period.type || 'Paid Leave' 
-                    });
+                    const alreadyPresent = leaves[dayStr].some(item => item.id === emp.id);
+                    if (!alreadyPresent) {
+                      leaves[dayStr].push({ 
+                        id: emp.id, 
+                        firstName: emp.firstName, 
+                        lastName: emp.lastName, 
+                        leaveType: period.type || 'Paid Leave' 
+                      });
+                    }
                  }
             }
         })
@@ -123,19 +126,45 @@ export default function LeaveCalendarPage() {
     };
   }, [holidays, weeklyOffDays]);
 
-  // Compute resource leave summary totals for the selected year
+  // Compute resource leave summary totals for the selected year (deduplicating overlapping days)
   const resourcesSummary = useMemo(() => {
+    const holidayDates = holidays.map(h => parseISO(h.date));
     return employees.map(emp => {
-      let paidDays = 0;
-      let lopDays = 0;
+      const yearStart = new Date(selectedYear, 0, 1);
+      const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59);
+
+      // Track unique days to prevent duplicate counting
+      const leaveDaysMap = new Map<string, 'Paid Leave' | 'Loss of Pay'>();
 
       emp.leavePeriods?.forEach(period => {
         if (!period.startDate || !period.endDate) return;
-        const days = calculateBusinessDaysForYear(period.startDate, period.endDate, selectedYear);
-        if (period.type === 'Loss of Pay') {
-          lopDays += days;
+        const start = new Date(period.startDate);
+        const end = new Date(period.endDate);
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return;
+        if (end < yearStart || start > yearEnd) return;
+
+        const overlapStart = new Date(Math.max(start.getTime(), yearStart.getTime()));
+        const overlapEnd = new Date(Math.min(end.getTime(), yearEnd.getTime()));
+        const interval = eachDayOfInterval({ start: overlapStart, end: overlapEnd });
+
+        interval.forEach(day => {
+          const isWeekend = weeklyOffDays.includes(day.getDay());
+          const isHoliday = holidayDates.some(h => isSameDay(day, h));
+          if (isWeekend || isHoliday) return;
+          const dayStr = format(day, 'yyyy-MM-dd');
+          if (!leaveDaysMap.has(dayStr)) {
+            leaveDaysMap.set(dayStr, (period.type as any) || 'Paid Leave');
+          }
+        });
+      });
+
+      let paidDays = 0;
+      let lopDays = 0;
+      leaveDaysMap.forEach(type => {
+        if (type === 'Loss of Pay') {
+          lopDays += 1;
         } else {
-          paidDays += days;
+          paidDays += 1;
         }
       });
 
@@ -146,7 +175,7 @@ export default function LeaveCalendarPage() {
         totalDays: paidDays + lopDays,
       };
     });
-  }, [employees, selectedYear, calculateBusinessDaysForYear]);
+  }, [employees, selectedYear, holidays, weeklyOffDays]);
 
   // Compute aggregate statistics
   const aggregateMetrics = useMemo(() => {

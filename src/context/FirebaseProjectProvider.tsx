@@ -1270,6 +1270,23 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   const addLeavePeriod = async (employeeId: string, leavePeriod: Omit<LeavePeriod, 'id'>): Promise<boolean> => {
     if (!db) return false;
     try {
+      const globalUser = allUsers.find(u => u.id === employeeId);
+      const existingLeaves = globalUser?.leavePeriods || [];
+      const newStartStr = new Date(leavePeriod.startDate).toISOString().slice(0, 10);
+      const newEndStr = new Date(leavePeriod.endDate).toISOString().slice(0, 10);
+
+      const hasOverlap = existingLeaves.some(p => {
+        if (!p.startDate || !p.endDate) return false;
+        const pStartStr = new Date(p.startDate).toISOString().slice(0, 10);
+        const pEndStr = new Date(p.endDate).toISOString().slice(0, 10);
+        return !(newEndStr < pStartStr || newStartStr > pEndStr);
+      });
+
+      if (hasOverlap) {
+        console.error("Firebase Error: Leave period overlaps with an existing leave period.");
+        return false;
+      }
+
       const newLeavePeriod: LeavePeriod = {
         ...leavePeriod,
         id: uuidv4(),
