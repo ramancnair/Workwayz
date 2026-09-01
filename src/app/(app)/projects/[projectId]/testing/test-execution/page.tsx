@@ -46,13 +46,13 @@ const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Bloc
 
 export default function TestExecutionPage() {
   const {
-    testPlans,
-    testPlanTestCases,
+    testCycles,
+    testCycleTestCases,
     employees,
     stories,
     testCases,
-    subscribeToTestPlanTestCases,
-    updateTestPlanTestCase,
+    subscribeToTestCycleTestCases,
+    updateTestCycleTestCase,
   } = useProject();
 
   const { toast } = useToast();
@@ -86,32 +86,32 @@ export default function TestExecutionPage() {
   const [editingExecAttachmentIndices, setEditingExecAttachmentIndices] = useState<Record<number, boolean>>({});
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Auto-select first test plan if none selected
+  // Auto-select first test cycle if none selected
   useEffect(() => {
-    if (!selectedPlanId && testPlans && testPlans.length > 0) {
-      setSelectedPlanId(testPlans[0].id);
+    if (!selectedPlanId && testCycles && testCycles.length > 0) {
+      setSelectedPlanId(testCycles[0].id);
     }
-  }, [testPlans, selectedPlanId]);
+  }, [testCycles, selectedPlanId]);
 
-  // Subscribe to plan test cases
+  // Subscribe to cycle test cases
   useEffect(() => {
     if (selectedPlanId) {
-      const unsubscribe = subscribeToTestPlanTestCases(selectedPlanId);
+      const unsubscribe = subscribeToTestCycleTestCases(selectedPlanId);
       return () => {
         if (unsubscribe) unsubscribe();
       };
     }
-  }, [selectedPlanId, subscribeToTestPlanTestCases]);
+  }, [selectedPlanId, subscribeToTestCycleTestCases]);
 
   const selectedPlan = useMemo(() => {
-    return testPlans.find(p => p.id === selectedPlanId) || null;
-  }, [testPlans, selectedPlanId]);
+    return testCycles.find(p => p.id === selectedPlanId) || null;
+  }, [testCycles, selectedPlanId]);
 
   // Get test cases for current cycle
   const planTestCases = useMemo(() => {
     if (!selectedPlanId) return [];
-    return testPlanTestCases[selectedPlanId] || [];
-  }, [selectedPlanId, testPlanTestCases]);
+    return testCycleTestCases[selectedPlanId] || [];
+  }, [selectedPlanId, testCycleTestCases]);
 
   // Selected Test Case Object
   const selectedTC = useMemo(() => {
@@ -341,7 +341,7 @@ export default function TestExecutionPage() {
     const updatedTotal = Math.round((currentActual + sessionHours) * 100) / 100;
 
     setIsSaving(true);
-    const success = await updateTestPlanTestCase(selectedPlanId, targetTC.id, {
+    const success = await updateTestCycleTestCase(selectedPlanId, targetTC.id, {
       actualEffortHours: updatedTotal,
     });
     setIsSaving(false);
@@ -389,7 +389,7 @@ export default function TestExecutionPage() {
       .map(a => ({ name: (a.name || '').trim(), url: a.url && a.url.trim() !== '' ? formatUrl(a.url) : '' }))
       .filter(a => a.name !== '' || a.url !== '');
 
-    const payload: Partial<TestPlanTestCase> = {
+    const payload: Partial<TestCycleTestCase> = {
       status: formStatus,
       assigneeId: formAssigneeId === 'unassigned' ? undefined : formAssigneeId,
       executionDate: formExecutionDate ? new Date(formExecutionDate).toISOString() : undefined,
@@ -399,7 +399,7 @@ export default function TestExecutionPage() {
       attachments: cleanedAttachments,
     };
 
-    const success = await updateTestPlanTestCase(selectedPlanId, selectedTC.id, payload);
+    const success = await updateTestCycleTestCase(selectedPlanId, selectedTC.id, payload);
     setIsSaving(false);
 
     if (success) {

@@ -766,7 +766,7 @@ export const addTestCasesToTestPlanTool = ai.defineTool(
         planId: input.planId,
         planName: input.planName,
         projectId: input.projectId,
-        url: `/projects/${input.projectId}/testing/test-plan`,
+        url: `/projects/${input.projectId}/testing/test-cycle`,
         needsClientExecution: true,
         params: input,
       };
@@ -2435,7 +2435,7 @@ export const setDefaultRoleBenchmarkRatesTool = ai.defineTool(
 export const createUserTool = ai.defineTool(
   {
     name: 'createUser',
-    description: 'Adds a new team member/user to the workspace directory with email, role, access level, and Emp ID.',
+    description: 'Adds a new team member/user to the workspace directory with email, role, access level, joining date, leaving date, and Emp ID.',
     inputSchema: z.object({
       email: z.string().email().describe('User work email address.'),
       firstName: z.string().describe('First name.'),
@@ -2447,6 +2447,8 @@ export const createUserTool = ai.defineTool(
       experience: z.number().optional().describe('Years of experience.'),
       costAmount: z.number().optional().describe('Annual cost salary amount.'),
       costCurrency: z.string().optional().default('USD'),
+      employmentStartDate: z.string().optional().describe('Company joining date in YYYY-MM-DD or ISO format.'),
+      employmentEndDate: z.string().optional().describe('Company leaving/relieving date in YYYY-MM-DD or ISO format.'),
     }),
     outputSchema: z.object({
       success: z.boolean(),
@@ -2487,12 +2489,14 @@ export const createUserTool = ai.defineTool(
 export const updateUserRoleTool = ai.defineTool(
   {
     name: 'updateUserRole',
-    description: 'Modifies an existing user\'s organization role, access level, or department in User List.',
+    description: 'Modifies an existing user\'s organization role, access level, department, joining date, or leaving date in User List.',
     inputSchema: z.object({
       userIdOrEmpId: z.string().describe('User document ID or Emp ID (e.g. "E001").'),
       role: z.string().optional().describe('Updated role name.'),
       accessLevel: z.enum(['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO']).optional(),
       department: z.string().optional(),
+      employmentStartDate: z.string().optional().describe('Company joining date in YYYY-MM-DD or ISO format.'),
+      employmentEndDate: z.string().optional().describe('Company leaving/relieving date in YYYY-MM-DD or ISO format.'),
     }),
     outputSchema: z.object({
       success: z.boolean(),
@@ -4166,7 +4170,7 @@ export const updateTestPlanTool = ai.defineTool(
     try {
       result = await flowpilotUpdateTestPlan(input);
     } catch (err: any) {
-      result = { success: true, ...input, needsClientExecution: true, params: input };
+      result = { success: true, ...input, url: `/projects/${input.projectId}/testing/test-cycle`, needsClientExecution: true, params: input };
     }
     recordExecutedAction('updateTestPlan', result, input);
     return result;
@@ -4188,7 +4192,7 @@ export const deleteTestPlanTool = ai.defineTool(
     try {
       result = await flowpilotDeleteTestPlan(input);
     } catch (err: any) {
-      result = { success: true, ...input, needsClientExecution: true, params: input };
+      result = { success: true, ...input, url: `/projects/${input.projectId}/testing/test-cycle`, needsClientExecution: true, params: input };
     }
     recordExecutedAction('deleteTestPlan', result, input);
     return result;

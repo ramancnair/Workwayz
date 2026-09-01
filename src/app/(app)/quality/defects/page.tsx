@@ -77,13 +77,16 @@ export default function QualityDefectsPage() {
       const metricPromises = projectsData.map(async (project) => {
         const projectDocRef = doc(db!, 'projects', project.id);
 
-        const [storiesSnap, testPlansSnap] = await Promise.all([
+        const [storiesSnap, testCyclesSnap, testPlansSnap] = await Promise.all([
           getDocs(collection(projectDocRef, 'stories')),
+          getDocs(collection(projectDocRef, 'testCycles')),
           getDocs(collection(projectDocRef, 'testPlans')),
         ]);
 
         const stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
-        const testPlans = testPlansSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
+        const testCyclesData = testCyclesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
+        const testPlansData = testPlansSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
+        const testPlans = testCyclesData.length > 0 ? testCyclesData : testPlansData;
 
         // Extract active bugs (defects)
         const bugs = stories.filter(s => s.itemType === 'Bug' && !s.isDeleted);
@@ -94,7 +97,7 @@ export default function QualityDefectsPage() {
         let otherCount = 0;
 
         bugs.forEach(bug => {
-          const tpId = bug.foundInTestPlanId;
+          const tpId = bug.foundInTestCycleId || bug.foundInTestPlanId;
           if (!tpId || tpId === 'unassigned') {
             otherCount++;
             return;
@@ -106,7 +109,7 @@ export default function QualityDefectsPage() {
             return;
           }
 
-          const tpCode = (tp.testPlanId || '').toUpperCase();
+          const tpCode = (tp.testCycleId || tp.testPlanId || '').toUpperCase();
           const tpName = (tp.name || '').toUpperCase();
 
           // Phase classification matching

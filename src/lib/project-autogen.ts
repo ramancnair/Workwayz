@@ -586,8 +586,9 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const tpRefs: { id: string; name: string; start: Date; end: Date; ref: ReturnType<typeof doc> }[] = [];
 
   // SIT Cycle
-  const sitTpRef = doc(col('testPlans'));
+  const sitTpRef = doc(col('testCycles'));
   batch.set(sitTpRef, {
+    testCycleId: 'TC-SIT',
     testPlanId: 'TC-SIT',
     name: 'SIT Execution Cycle',
     planType: 'Release',
@@ -598,8 +599,9 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   tpRefs.push({ id: sitTpRef.id, name: 'SIT', start: testingStart, end: sitEnd, ref: sitTpRef });
 
   // UAT Cycle
-  const uatTpRef = doc(col('testPlans'));
+  const uatTpRef = doc(col('testCycles'));
   batch.set(uatTpRef, {
+    testCycleId: 'TC-UAT',
     testPlanId: 'TC-UAT',
     name: 'UAT Sign-off Cycle',
     planType: 'Release',
@@ -610,8 +612,9 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   tpRefs.push({ id: uatTpRef.id, name: 'UAT', start: uatStart, end: uatEnd, ref: uatTpRef });
 
   // Prod Cycle
-  const prodTpRef = doc(col('testPlans'));
+  const prodTpRef = doc(col('testCycles'));
   batch.set(prodTpRef, {
+    testCycleId: 'TC-PROD',
     testPlanId: 'TC-PROD',
     name: 'Production Sanity Cycle',
     planType: 'Release',
@@ -644,9 +647,9 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       deletedAt: null,
     }));
 
-    // Create a copy in each test plan's subcollection
+    // Create a copy in each test cycle's subcollection
     tpRefs.forEach(tp => {
-      const planTcRef = doc(collection(db, 'projects', projectId, 'testPlans', tp.id, 'testCases'));
+      const planTcRef = doc(collection(db, 'projects', projectId, 'testCycles', tp.id, 'testCases'));
       const generatedStatus = rand(['Passed', 'Passed', 'Failed', 'Not Run']);
       
       const planDays = differenceInDays(tp.end, tp.start);

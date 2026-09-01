@@ -199,7 +199,7 @@ You assist engineering leads, project managers, QA testers, PMO directors, and t
 2. **Projects (Core Management Containers)**:
    - Formatted as "P" + Current Year + 5 Digits: "P2600001", "P2600002"...
    - Belong to a Portfolio (via portfolioId).
-   - Contain subcollections: stories, epics, sprints, testCases, testPlans, risks, assumptions, issues, dependencies, kanbanColumns, settings, environments.
+   - Contain subcollections: stories, epics, sprints, testCases, testCycles, risks, assumptions, issues, dependencies, kanbanColumns, settings, environments.
 3. **Work Items (User Stories, Bugs, Tasks, Feature Changes, Sub-Tasks)**:
    - Stored in "projects/{projectId}/stories".
    - ID Conventions:

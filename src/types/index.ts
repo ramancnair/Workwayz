@@ -68,7 +68,8 @@ export type Story = {
   parentStoryId?: string;
   relatedTestCaseId?: string; // For Bug
   attachments?: string;
-  foundInTestPlanId?: string; // For Bug tracking
+  foundInTestPlanId?: string; // Legacy
+  foundInTestCycleId?: string; // For Bug tracking
   relatedBugId?: string;      // Trace regression bugs across environments
   developmentStartDate?: string; // ISO String
   completionDate?: string; // ISO String
@@ -88,9 +89,10 @@ export type Sprint = {
 export type TestCaseStatus = 'Not Run' | 'Passed' | 'Failed' | 'Blocked' | 'Skipped';
 export type TestCaseType = 'Functional' | 'Non-functional';
 
-export type TestPlan = {
+export type TestCycle = {
   id: string;
-  testPlanId: string;
+  testPlanId?: string;
+  testCycleId?: string;
   name: string;
   startDate: string; // ISO String
   endDate: string; // ISO String
@@ -101,18 +103,22 @@ export type TestPlan = {
   testCaseIds?: string[]; // Legacy: kept for migration only
 };
 
+export type TestPlan = TestCycle;
+
 export type AttachmentItem = {
   id?: string;
   name: string;
   url: string;
 };
 
-export type TestPlanTestCase = {
-  id: string;                    // Firestore doc ID (within the plan subcollection)
+export type TestCycleTestCase = {
+  id: string;                    // Firestore doc ID (within the cycle subcollection)
   originalTestCaseId: string;    // Reference back to the backlog TestCase
   testCaseId: string;            // Unique ID relating to cycle (e.g. "TP-SIT-TC-5")
-  testPlanId?: string;           // Parent Test Cycle ID
-  testPlanName?: string;         // Parent Test Cycle Name
+  testPlanId?: string;           // Parent Test Cycle ID (legacy)
+  testPlanName?: string;         // Parent Test Cycle Name (legacy)
+  testCycleId?: string;          // Parent Test Cycle ID
+  testCycleName?: string;        // Parent Test Cycle Name
   title: string;
   type: TestCaseType;
   description: string;
@@ -125,11 +131,15 @@ export type TestPlanTestCase = {
   executionDate?: string;        // ISO string
   closeDate?: string;            // Auto-set when status = 'Passed'
   statusHistory?: StatusHistoryItem[];
+  actualResult?: string;
+  defectId?: string;
   effortHours?: number;
   actualEffortHours?: number;
   attachment?: string;
   attachments?: AttachmentItem[];
 };
+
+export type TestPlanTestCase = TestCycleTestCase;
 
 export type TestCase = {
   id: string;

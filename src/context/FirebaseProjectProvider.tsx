@@ -105,19 +105,19 @@ const standardDocs = [
   'QA Approval',
 ];
 
-type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans' | 'weeklyOffDays' | 'projectSettings';
+type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans' | 'testCycles' | 'weeklyOffDays' | 'projectSettings';
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
   '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
   '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
-  '/testing/defect-tracker': ['stories', 'epics', 'sprints', 'employees', 'environments', 'releases', 'testCases', 'testPlans'],
+  '/testing/defect-tracker': ['stories', 'epics', 'sprints', 'employees', 'environments', 'releases', 'testCases', 'testCycles'],
   '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
   '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'testCases'],
   '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
-  '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testPlans'],
-  '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints', 'environments'],
-  '/testing/test-cycle': ['testCases', 'employees', 'releases', 'stories', 'testPlans', 'sprints', 'environments'],
-  '/testing/test-backlog': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testPlans'],
+  '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testCycles'],
+  '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testCycles', 'sprints', 'environments'],
+  '/testing/test-cycle': ['testCases', 'employees', 'releases', 'stories', 'testCycles', 'sprints', 'environments'],
+  '/testing/test-backlog': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testCycles'],
   '/testing/defects': ['stories', 'employees', 'sprints', 'environments', 'releases', 'testCases'],
   '/project-details/pm-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
   '/project-details/specifications': ['environments', 'impactedSystems', 'horizontals'],
@@ -176,8 +176,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [codeRepositories, setCodeRepositories] = useState<CodeRepository[]>([]);
-  const [testPlans, setTestPlans] = useState<TestPlan[]>([]);
-  const [testPlanTestCases, setTestPlanTestCases] = useState<Record<string, TestPlanTestCase[]>>({});
+  const [testCycles, setTestCycles] = useState<TestCycle[]>([]);
+  const [testCycleTestCases, setTestCycleTestCases] = useState<Record<string, TestCycleTestCase[]>>({});
   const [worklogs, setWorklogs] = useState<Worklog[]>([]);
   const [worklogSubmissions, setWorklogSubmissions] = useState<WorklogSubmission[]>([]);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
@@ -254,7 +254,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       { name: 'fixedCosts', setState: setFixedCosts, isDoc: false },
       { name: 'environments', setState: setEnvironments, isDoc: false },
       { name: 'codeRepositories', setState: setCodeRepositories, isDoc: false },
-      { name: 'testPlans', setState: setTestPlans, isDoc: false },
+      { name: 'testCycles', setState: setTestCycles, isDoc: false },
+      { name: 'testPlans', setState: setTestCycles, isDoc: false },
       { name: 'worklogs', setState: setWorklogs, isDoc: false },
       { name: 'worklogSubmissions', setState: setWorklogSubmissions, isDoc: false },
       { name: 'settings', setState: setProjectSettings, isDoc: true },
@@ -323,6 +324,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
           const dateFields: Record<string, string[]> = {
             stories: ['startDate', 'endDate', 'deletedAt', 'updatedAt', 'developmentStartDate', 'completionDate', 'createdAt', 'closedAt'],
             testCases: ['deletedAt', 'executionDate', 'closeDate'],
+            testCycles: ['startDate', 'endDate'],
             testPlans: ['startDate', 'endDate'],
             risks: ['deletedAt'],
             assumptions: ['validationDate', 'deletedAt'],
@@ -1422,15 +1424,15 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     }
   };
 
-  const addTestPlan = async (plan: Omit<TestPlan, 'id' | 'testPlanId'>): Promise<boolean> => {
+  const addTestCycle = async (cycle: Omit<TestCycle, 'id' | 'testCycleId' | 'testPlanId'>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const testPlansSnapshot = await getDocs(collection(db, 'projects', projectId, 'testPlans'));
-      const newIdNumber = testPlansSnapshot.size > 0
-        ? Math.max(0, ...testPlansSnapshot.docs
-          .map((doc: any) => doc.data().testPlanId)
+      const testCyclesSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCycles'));
+      const newIdNumber = testCyclesSnapshot.size > 0
+        ? Math.max(0, ...testCyclesSnapshot.docs
+          .map((doc: any) => doc.data().testCycleId || doc.data().testPlanId)
           .filter((id: string | undefined) => id && typeof id === 'string')
-          .map((id: string) => parseInt(id.replace('TP-', ''), 10) || 0)
+          .map((id: string) => parseInt(id.replace(/^(TC|TP)-/, ''), 10) || 0)
         ) + 1
         : 1;
 
@@ -1441,20 +1443,21 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       };
 
       const payload = {
-        ...plan,
-        testPlanId: `TP-${newIdNumber}`,
-        startDate: parseDate(plan.startDate),
-        endDate: parseDate(plan.endDate),
+        ...cycle,
+        testCycleId: `TC-${newIdNumber}`,
+        testPlanId: `TC-${newIdNumber}`,
+        startDate: parseDate(cycle.startDate),
+        endDate: parseDate(cycle.endDate),
       };
-      await addDoc(collection(db, 'projects', projectId, 'testPlans'), sanitizeForFirestore(payload));
+      await addDoc(collection(db, 'projects', projectId, 'testCycles'), sanitizeForFirestore(payload));
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to add test plan.", e);
+      console.error("Firebase Error: Failed to add test cycle.", e);
       return false;
     }
   };
 
-  const updateTestPlan = async (id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId'>>) => {
+  const updateTestCycle = async (id: string, data: Partial<Omit<TestCycle, 'id' | 'testCycleId' | 'testPlanId'>>) => {
     if (!db || !projectId) return false;
     try {
       const parseDate = (dStr: any) => {
@@ -1465,66 +1468,68 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       const payload = { ...data };
       if (data.startDate !== undefined) payload.startDate = parseDate(data.startDate);
       if (data.endDate !== undefined) payload.endDate = parseDate(data.endDate);
-      await updateDoc(doc(db, 'projects', projectId, 'testPlans', id), sanitizeForFirestore(payload));
+      await updateDoc(doc(db, 'projects', projectId, 'testCycles', id), sanitizeForFirestore(payload));
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to update test plan.", e);
+      console.error("Firebase Error: Failed to update test cycle.", e);
       return false;
     }
   };
 
-  const deleteTestPlan = async (id: string): Promise<boolean> => {
+  const deleteTestCycle = async (id: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
-      // Delete the plan document
-      batch.delete(doc(db, 'projects', projectId, 'testPlans', id));
+      // Delete the cycle document
+      batch.delete(doc(db, 'projects', projectId, 'testCycles', id));
 
-      // Delete all test case copies in this plan's subcollection
-      const planTCsSnapshot = await getDocs(collection(db, 'projects', projectId, 'testPlans', id, 'testCases'));
-      planTCsSnapshot.docs.forEach((tcDoc: any) => {
+      // Delete all test case copies in this cycle's subcollection
+      const cycleTCsSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCycles', id, 'testCases'));
+      cycleTCsSnapshot.docs.forEach((tcDoc: any) => {
         batch.delete(tcDoc.ref);
       });
 
       await batch.commit();
       // Clean up local state
-      setTestPlanTestCases(prev => {
+      setTestCycleTestCases(prev => {
         const next = { ...prev };
         delete next[id];
         return next;
       });
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to delete test plan.", e);
+      console.error("Firebase Error: Failed to delete test cycle.", e);
       return false;
     }
   };
 
-  // Test Plan Test Case Actions (copies in subcollection)
-  const addTestCasesToPlan = async (planId: string, testCaseIds: string[], executionDate?: string): Promise<boolean> => {
+  // Test Cycle Test Case Actions (copies in subcollection)
+  const addTestCasesToCycle = async (cycleId: string, testCaseIds: string[], executionDate?: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
-      const existingPlanTCs = testPlanTestCases[planId] || [];
-      const existingOrigIds = new Set(existingPlanTCs.map(tc => tc.originalTestCaseId));
-      const plan = testPlans.find(p => p.id === planId);
-      const planPrefix = plan?.testPlanId || 'TP';
+      const existingCycleTCs = testCycleTestCases[cycleId] || [];
+      const existingOrigIds = new Set(existingCycleTCs.map(tc => tc.originalTestCaseId));
+      const cycle = testCycles.find(p => p.id === cycleId);
+      const cyclePrefix = cycle?.testCycleId || cycle?.testPlanId || 'TC';
 
       for (const tcId of testCaseIds) {
-        if (existingOrigIds.has(tcId)) continue; // Already in plan
+        if (existingOrigIds.has(tcId)) continue; // Already in cycle
         const originalTC = testCases.find(tc => tc.id === tcId);
         if (!originalTC) continue;
 
-        const uniqueTestCaseId = originalTC.testCaseId.startsWith(planPrefix)
+        const uniqueTestCaseId = originalTC.testCaseId.startsWith(cyclePrefix)
           ? originalTC.testCaseId
-          : `${planPrefix}-${originalTC.testCaseId}`;
+          : `${cyclePrefix}-${originalTC.testCaseId}`;
 
-        const newRef = doc(collection(db, 'projects', projectId, 'testPlans', planId, 'testCases'));
-        const copy: Omit<TestPlanTestCase, 'id'> = {
+        const newRef = doc(collection(db, 'projects', projectId, 'testCycles', cycleId, 'testCases'));
+        const copy: Omit<TestCycleTestCase, 'id'> = {
           originalTestCaseId: originalTC.id,
           testCaseId: uniqueTestCaseId,
-          testPlanId: planId,
-          testPlanName: plan?.name,
+          testCycleId: cycleId,
+          testCycleName: cycle?.name,
+          testPlanId: cycleId,
+          testPlanName: cycle?.name,
           title: originalTC.title,
           type: originalTC.type,
           description: originalTC.description,
@@ -1541,16 +1546,16 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       await batch.commit();
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to add test cases to plan.", e);
+      console.error("Firebase Error: Failed to add test cases to cycle.", e);
       return false;
     }
   };
 
-  const updateTestPlanTestCase = async (planId: string, tcId: string, data: Partial<Omit<TestPlanTestCase, 'id' | 'originalTestCaseId' | 'testCaseId'>>): Promise<boolean> => {
+  const updateTestCycleTestCase = async (cycleId: string, tcId: string, data: Partial<Omit<TestCycleTestCase, 'id' | 'originalTestCaseId' | 'testCaseId'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
-      const tcRef = doc(db, 'projects', projectId, 'testPlans', planId, 'testCases', tcId);
-      const existingTC = (testPlanTestCases[planId] || []).find(tc => tc.id === tcId);
+      const tcRef = doc(db, 'projects', projectId, 'testCycles', cycleId, 'testCases', tcId);
+      const existingTC = (testCycleTestCases[cycleId] || []).find(tc => tc.id === tcId);
 
       const payload: any = { ...data };
 
@@ -1574,29 +1579,29 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       await updateDoc(tcRef, sanitizeForFirestore(payload));
       return true;
     } catch (e: any) {
-      console.error("Firebase Error: Failed to update test plan test case.", { planId, tcId, code: e.code, message: e.message });
+      console.error("Firebase Error: Failed to update test cycle test case.", { cycleId, tcId, code: e.code, message: e.message });
       return false;
     }
   };
 
-  const removeTestCasesFromPlan = async (planId: string, tcIds: string[]): Promise<boolean> => {
+  const removeTestCasesFromCycle = async (cycleId: string, tcIds: string[]): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const batch = writeBatch(db);
       for (const tcId of tcIds) {
-        batch.delete(doc(db, 'projects', projectId, 'testPlans', planId, 'testCases', tcId));
+        batch.delete(doc(db, 'projects', projectId, 'testCycles', cycleId, 'testCases', tcId));
       }
       await batch.commit();
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to remove test cases from plan.", e);
+      console.error("Firebase Error: Failed to remove test cases from cycle.", e);
       return false;
     }
   };
 
-  const subscribeToTestPlanTestCases = useCallback((planId: string): (() => void) => {
-    if (!db || !projectId || !planId) return () => { };
-    const colRef = collection(db, 'projects', projectId, 'testPlans', planId, 'testCases');
+  const subscribeToTestCycleTestCases = useCallback((cycleId: string): (() => void) => {
+    if (!db || !projectId || !cycleId) return () => { };
+    const colRef = collection(db, 'projects', projectId, 'testCycles', cycleId, 'testCases');
     const unsubscribe = onSnapshot(colRef, (snapshot: any) => {
       const convertTimestamp = (field: any) => field?.toDate ? field.toDate().toISOString() : field;
       const data = snapshot.docs.map((d: any) => {
@@ -1611,12 +1616,21 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
             date: convertTimestamp(sh.date),
           }));
         }
-        return { id: d.id, ...docData } as TestPlanTestCase;
+        return { id: d.id, ...docData } as TestCycleTestCase;
       });
-      setTestPlanTestCases(prev => ({ ...prev, [planId]: data }));
+      setTestCycleTestCases(prev => ({ ...prev, [cycleId]: data }));
     });
     return unsubscribe;
   }, [db, projectId]);
+
+  // Backwards compatibility aliases
+  const addTestPlan = addTestCycle;
+  const updateTestPlan = updateTestCycle;
+  const deleteTestPlan = deleteTestCycle;
+  const addTestCasesToPlan = addTestCasesToCycle;
+  const updateTestPlanTestCase = updateTestCycleTestCase;
+  const removeTestCasesFromPlan = removeTestCasesFromCycle;
+  const subscribeToTestPlanTestCases = subscribeToTestCycleTestCases;
 
   // Risk Actions
   const addRisk = async (risk: Omit<Risk, 'id' | 'riskId'>): Promise<boolean> => {
@@ -2638,7 +2652,10 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     fixedCosts,
     environments,
     codeRepositories,
-    testPlans,
+    testCycles,
+    testCycleTestCases,
+    testPlans: testCycles,
+    testPlanTestCases: testCycleTestCases,
     testDate,
     setTestDate,
     isLoading,
@@ -2670,10 +2687,16 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     updateTestCase,
     autoGenerateTestCases,
     deleteTestCase,
+    addTestCycle,
+    updateTestCycle,
+    deleteTestCycle,
+    addTestCasesToCycle,
+    updateTestCycleTestCase,
+    removeTestCasesFromCycle,
+    subscribeToTestCycleTestCases,
     addTestPlan,
     updateTestPlan,
     deleteTestPlan,
-    testPlanTestCases,
     addTestCasesToPlan,
     updateTestPlanTestCase,
     removeTestCasesFromPlan,

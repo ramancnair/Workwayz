@@ -183,27 +183,41 @@ export default function UsersPage() {
 
   useEffect(() => {
     if (isDialogOpen) {
-        if (editingUser) {
-        form.reset({
-            ...editingUser,
-            costAmount: editingUser.costAmount ?? 0,
-            costCurrency: editingUser.costCurrency ?? 'USD',
-            password: '',
-        });
-        } else {
-        form.reset({
-            empId: '',
-            firstName: '',
-            lastName: '',
-            email: '',
-            phone: '',
-            experience: 0,
-            accessLevel: undefined,
-            costAmount: 0,
-            costCurrency: 'USD',
-            password: 'P@ssw0rd',
-        });
+      const formatDateStr = (dStr: any) => {
+        if (!dStr) return '';
+        try {
+          const d = typeof dStr === 'string' ? parseISO(dStr) : new Date(dStr);
+          return isNaN(d.getTime()) ? '' : format(d, 'yyyy-MM-dd');
+        } catch {
+          return '';
         }
+      };
+
+      if (editingUser) {
+        form.reset({
+          ...editingUser,
+          employmentStartDate: formatDateStr(editingUser.employmentStartDate),
+          employmentEndDate: formatDateStr(editingUser.employmentEndDate),
+          costAmount: editingUser.costAmount ?? 0,
+          costCurrency: editingUser.costCurrency ?? 'USD',
+          password: '',
+        });
+      } else {
+        form.reset({
+          empId: '',
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          experience: 0,
+          employmentStartDate: '',
+          employmentEndDate: '',
+          accessLevel: undefined,
+          costAmount: 0,
+          costCurrency: 'USD',
+          password: 'P@ssw0rd',
+        });
+      }
     }
   }, [isDialogOpen, editingUser, form]);
 
@@ -213,18 +227,18 @@ export default function UsersPage() {
   };
   
   const createIdentityInAuthPool = async (email: string, firstName?: string, lastName?: string, accessLevel?: string, password?: string) => {
-      try {
-          const res = await fetch('/api/users', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, firstName, lastName, accessLevel, password })
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Failed to create identity');
-      } catch (e) {
-          console.error("Identity push failed", e);
-          toast({ variant: "destructive", title: "Auth Sync Warning", description: "User saved to DB but identity creation failed. See console." });
-      }
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, firstName, lastName, accessLevel, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create identity');
+    } catch (e) {
+      console.error("Identity push failed", e);
+      toast({ variant: "destructive", title: "Auth Sync Warning", description: "User saved to DB but identity creation failed. See console." });
+    }
   };
   
   const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
@@ -256,6 +270,11 @@ export default function UsersPage() {
                 const lastName = 'User';
                 const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@nair.com`;
                 
+                const is2025 = Math.random() < 0.75;
+                const startDate = is2025
+                  ? new Date(new Date('2025-01-10T00:00:00Z').getTime() + Math.random() * (new Date('2025-12-15T23:59:59Z').getTime() - new Date('2025-01-10T00:00:00Z').getTime())).toISOString()
+                  : new Date(new Date('2026-01-05T00:00:00Z').getTime() + Math.random() * (new Date('2026-05-25T23:59:59Z').getTime() - new Date('2026-01-05T00:00:00Z').getTime())).toISOString();
+
                 const newUser: Omit<User, 'id'> = {
                     empId,
                     firstName,
@@ -263,6 +282,7 @@ export default function UsersPage() {
                     email,
                     phone: '555-555-5555',
                     experience: Math.floor(Math.random() * 10) + 1,
+                    employmentStartDate: startDate,
                     accessLevel: level,
                     avatar: '',
                     isDeleted: false,
@@ -339,6 +359,16 @@ export default function UsersPage() {
     }
     
     const valuesWithDates: any = { ...values };
+    if (values.employmentStartDate && values.employmentStartDate.trim() !== '') {
+      valuesWithDates.employmentStartDate = new Date(values.employmentStartDate).toISOString();
+    } else {
+      valuesWithDates.employmentStartDate = null;
+    }
+    if (values.employmentEndDate && values.employmentEndDate.trim() !== '') {
+      valuesWithDates.employmentEndDate = new Date(values.employmentEndDate).toISOString();
+    } else {
+      valuesWithDates.employmentEndDate = null;
+    }
     
     const sanitizedValues = sanitizeForFirestore(valuesWithDates);
 
@@ -354,7 +384,7 @@ export default function UsersPage() {
           updateData.isEnabled = true;
         }
         await updateDoc(doc(db, 'employees', editingUser.id), updateData);
-        
+
         // Also push updates to Auth pool to ensure roles are synced
         await createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
         
@@ -624,6 +654,7 @@ export default function UsersPage() {
                   <SortableHeader columnId="name">Name</SortableHeader>
                   <SortableHeader columnId="email">Email</SortableHeader>
                   <SortableHeader columnId="accessLevel">Access Level</SortableHeader>
+                  <SortableHeader columnId="employmentStartDate">Joining Date</SortableHeader>
                   <SortableHeader columnId="isEnabled">Enabled</SortableHeader>
                   <SortableHeader columnId="costAmount">Annual Cost</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
@@ -649,6 +680,9 @@ export default function UsersPage() {
                     <TableCell className="max-w-[150px] truncate" title={`${user.firstName} ${user.lastName}`}>{user.firstName} {user.lastName}</TableCell>
                     <TableCell className="max-w-[220px] truncate" title={user.email}>{user.email}</TableCell>
                     <TableCell>{user.accessLevel || 'N/A'}</TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+                      {user.employmentStartDate ? format(parseISO(user.employmentStartDate), 'MMM d, yyyy') : '-'}
+                    </TableCell>
                     <TableCell>
                       {user.isEnabled === false ? (
                         <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 dark:text-amber-300 dark:border-amber-700 dark:bg-amber-900/30">
@@ -743,6 +777,20 @@ export default function UsersPage() {
                     <FormItem>
                       <FormLabel>Experience (years)</FormLabel>
                       <FormControl><Input type="number" placeholder="5" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="employmentStartDate" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Joining Date</FormLabel>
+                      <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="employmentEndDate" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Leaving Date</FormLabel>
+                      <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />

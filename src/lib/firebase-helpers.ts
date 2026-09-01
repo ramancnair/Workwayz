@@ -7,7 +7,7 @@ const SUBCOLLECTIONS = [
   'assumptions', 'issues', 'dependencies', 'kanbanColumns', 'holidays', 
   'releases', 'impactedSystems', 'worklogs', 'worklogSubmissions', 'settings',
   'horizontals', 'initialImpactedSystems', 'initialHorizontals', 'fixedCosts',
-  'environments', 'codeRepositories', 'testPlans', 'documents', 'paymentMilestones'
+  'environments', 'codeRepositories', 'testPlans', 'testCycles', 'documents', 'paymentMilestones'
 ];
 
 async function deleteCollection(collectionPath: string, batch: any) {

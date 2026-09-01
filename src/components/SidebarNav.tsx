@@ -192,7 +192,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: ClipboardCheck,
     },
     {
-      href: `${basePath}/testing/test-plan`,
+      href: `${basePath}/testing/test-cycle`,
       label: "Test Cycles",
       icon: FileText,
     },

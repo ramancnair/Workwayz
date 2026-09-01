@@ -16,7 +16,7 @@ import {
 import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { eachDayOfInterval, format, parseISO, startOfDay } from 'date-fns';
-import { Story, BugSeverity, TestPlanTestCase } from '@/types';
+import { Story, BugSeverity, TestCycleTestCase } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
@@ -160,23 +160,23 @@ const storyCoverageConfig = {
 } satisfies ChartConfig;
 
 export default function TestingDashboard() {
-  const { testCases, stories, testPlans: rawTestPlans, testPlanTestCases, subscribeToTestPlanTestCases } = useProject();
-  const testPlans = useMemo(() => rawTestPlans.filter(tp => tp && tp.id && typeof tp.id === 'string' && tp.id.trim() !== ''), [rawTestPlans]);
+  const { testCases, stories, testCycles: rawTestPlans, testCycleTestCases, subscribeToTestCycleTestCases } = useProject();
+  const testPlans = useMemo(() => (rawTestPlans || []).filter(tp => tp && tp.id && typeof tp.id === 'string' && tp.id.trim() !== ''), [rawTestPlans]);
   const [selectedTestPlanId, setSelectedTestPlanId] = useState('all');
 
-  // Subscribe to all test plan subcollections for dashboard metrics
+  // Subscribe to all test cycle subcollections for dashboard metrics
   useEffect(() => {
-    const unsubscribers = testPlans.map(plan => subscribeToTestPlanTestCases(plan.id));
+    const unsubscribers = testPlans.map(plan => subscribeToTestCycleTestCases(plan.id));
     return () => unsubscribers.forEach(unsub => unsub());
-  }, [testPlans, subscribeToTestPlanTestCases]);
+  }, [testPlans, subscribeToTestCycleTestCases]);
 
-  // Get all plan test cases (flattened) or filtered by selected plan
-  const allPlanTestCases = useMemo((): TestPlanTestCase[] => {
+  // Get all cycle test cases (flattened) or filtered by selected cycle
+  const allPlanTestCases = useMemo((): TestCycleTestCase[] => {
     if (selectedTestPlanId !== 'all') {
-      return testPlanTestCases[selectedTestPlanId] || [];
+      return testCycleTestCases[selectedTestPlanId] || [];
     }
-    return Object.values(testPlanTestCases).flat();
-  }, [selectedTestPlanId, testPlanTestCases]);
+    return Object.values(testCycleTestCases).flat();
+  }, [selectedTestPlanId, testCycleTestCases]);
 
   const filteredSummaryData = useMemo(() => {
     let relatedBugs: Story[] = [];
@@ -185,7 +185,8 @@ export default function TestingDashboard() {
       const planTCOrigIds = new Set(allPlanTestCases.map(tc => tc.originalTestCaseId));
       relatedBugs = stories.filter(story =>
         story.itemType === 'Bug' &&
-        (story.foundInTestPlanId === selectedTestPlanId ||
+        (story.foundInTestCycleId === selectedTestPlanId ||
+          story.foundInTestPlanId === selectedTestPlanId ||
           (story.relatedTestCaseId && planTCOrigIds.has(story.relatedTestCaseId)))
       );
     } else {

@@ -106,6 +106,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     weeklyOffDays,
     projectSettings,
     testCases,
+    testCycles,
     testPlans,
   } = useProject();
 

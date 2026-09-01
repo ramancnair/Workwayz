@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type PropsWithChildren } from 'react';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, DependencyType, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan, TestPlanTestCase } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, DependencyType, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan, TestPlanTestCase, TestCycle, TestCycleTestCase } from '@/types';
 import { FirebaseProjectProvider } from './FirebaseProjectProvider';
 import { PostgresProjectProvider } from './PostgresProjectProvider';
 
@@ -35,6 +35,8 @@ export interface ProjectContextType {
   codeRepositories: CodeRepository[];
   testPlans: TestPlan[];
   testPlanTestCases: Record<string, TestPlanTestCase[]>;
+  testCycles: TestCycle[];
+  testCycleTestCases: Record<string, TestCycleTestCase[]>;
   testDate: Date | null;
   setTestDate: (date: Date | null) => void;
   
@@ -79,11 +81,18 @@ export interface ProjectContextType {
   addTestPlan: (plan: Omit<TestPlan, 'id' | 'testPlanId'>) => Promise<boolean>;
   updateTestPlan: (id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId'>>) => Promise<boolean>;
   deleteTestPlan: (id: string, deleteTestCases?: boolean) => Promise<boolean>;
-  // Test Plan Test Case actions (copies)
   addTestCasesToPlan: (planId: string, testCaseIds: string[], executionDate?: string) => Promise<boolean>;
   updateTestPlanTestCase: (planId: string, tcId: string, data: Partial<Omit<TestPlanTestCase, 'id' | 'originalTestCaseId' | 'testCaseId'>>) => Promise<boolean>;
   removeTestCasesFromPlan: (planId: string, tcIds: string[]) => Promise<boolean>;
   subscribeToTestPlanTestCases: (planId: string) => () => void;
+  // Test Cycle actions
+  addTestCycle: (cycle: Omit<TestCycle, 'id' | 'testCycleId' | 'testPlanId'>) => Promise<boolean>;
+  updateTestCycle: (id: string, data: Partial<Omit<TestCycle, 'id' | 'testCycleId' | 'testPlanId'>>) => Promise<boolean>;
+  deleteTestCycle: (id: string, deleteTestCases?: boolean) => Promise<boolean>;
+  addTestCasesToCycle: (cycleId: string, testCaseIds: string[], executionDate?: string) => Promise<boolean>;
+  updateTestCycleTestCase: (cycleId: string, tcId: string, data: Partial<Omit<TestCycleTestCase, 'id' | 'originalTestCaseId' | 'testCaseId'>>) => Promise<boolean>;
+  removeTestCasesFromCycle: (cycleId: string, tcIds: string[]) => Promise<boolean>;
+  subscribeToTestCycleTestCases: (cycleId: string) => () => void;
 
   // Risk actions
   addRisk: (risk: Omit<Risk, 'id' | 'riskId'>) => Promise<boolean>;

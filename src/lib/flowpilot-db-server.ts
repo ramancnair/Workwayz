@@ -527,15 +527,15 @@ export async function flowpilotCreateTestPlan(params: {
   if (!db || !projectId) throw new Error('Database or Project ID is missing');
 
   const projectDocRef = doc(db, 'projects', projectId);
-  const planSnapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+  const planSnapshot = await getDocs(collection(projectDocRef, 'testCycles'));
 
   const existingNumbers = planSnapshot.docs
-    .map((d: any) => d.data().testPlanId)
-    .filter((id: string | undefined) => id && typeof id === 'string' && id.startsWith('TP-'))
-    .map((id: string) => parseInt(id.replace('TP-', ''), 10) || 0);
+    .map((d: any) => d.data().testCycleId || d.data().testPlanId)
+    .filter((id: string | undefined) => id && typeof id === 'string' && (id.startsWith('TC-') || id.startsWith('TP-')))
+    .map((id: string) => parseInt(id.replace(/^(TC|TP)-/, ''), 10) || 0);
 
   const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-  const testPlanId = `TP-${nextNumber}`;
+  const testCycleId = `TC-${nextNumber}`;
 
   const parseDate = (dStr: any) => {
     if (!dStr) return null;
@@ -544,7 +544,8 @@ export async function flowpilotCreateTestPlan(params: {
   };
 
   const payload = sanitizeData({
-    testPlanId,
+    testCycleId,
+    testPlanId: testCycleId,
     name,
     planType,
     startDate: parseDate(startDate),
@@ -555,11 +556,12 @@ export async function flowpilotCreateTestPlan(params: {
     createdAt: new Date().toISOString(),
   });
 
-  const docRef = await addDoc(collection(projectDocRef, 'testPlans'), payload);
+  const docRef = await addDoc(collection(projectDocRef, 'testCycles'), payload);
 
   return {
     success: true,
     id: docRef.id,
+    testCycleId,
     testPlanId,
     name,
     planType,
@@ -568,11 +570,14 @@ export async function flowpilotCreateTestPlan(params: {
   };
 }
 
+export const flowpilotCreateTestCycle = flowpilotCreateTestPlan;
+
 // 6d. Add Test Cases to Test Plan / Cycle
 export async function flowpilotAddTestCasesToTestPlan(params: {
   projectId: string;
   planId?: string;
   testPlanId?: string;
+  testCycleId?: string;
   planName?: string;
   testCaseIds?: string[];
   executionDate?: string;
@@ -582,23 +587,27 @@ export async function flowpilotAddTestCasesToTestPlan(params: {
 
   const projectDocRef = doc(db, 'projects', projectId);
 
-  // Find target test plan
-  const plansSnapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+  // Find target test cycle
+  let plansSnapshot = await getDocs(collection(projectDocRef, 'testCycles'));
+  if (plansSnapshot.empty) {
+    plansSnapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+  }
+
   const planDoc = plansSnapshot.docs.find((d: any) => {
     const data = d.data();
-    if (params.planId && (d.id === params.planId || data.testPlanId === params.planId)) return true;
-    if (params.testPlanId && data.testPlanId === params.testPlanId) return true;
+    const targetId = params.testCycleId || params.testPlanId || params.planId;
+    if (targetId && (d.id === targetId || data.testCycleId === targetId || data.testPlanId === targetId)) return true;
     if (params.planName && data.name?.toLowerCase().includes(params.planName.toLowerCase())) return true;
     return false;
   }) || plansSnapshot.docs[0];
 
   if (!planDoc) {
-    throw new Error('No test plan found in this project. Please create a test cycle/plan first.');
+    throw new Error('No test cycle found in this project. Please create a test cycle first.');
   }
 
   const planId = planDoc.id;
   const planData = planDoc.data();
-  const planPrefix = planData.testPlanId || 'TP-1';
+  const planPrefix = planData.testCycleId || planData.testPlanId || 'TC-1';
 
   // Load project test cases
   const tcsSnapshot = await getDocs(collection(projectDocRef, 'testCases'));
@@ -606,8 +615,8 @@ export async function flowpilotAddTestCasesToTestPlan(params: {
     .map((d: any) => ({ id: d.id, ...d.data() }))
     .filter((tc: any) => !tc.isDeleted);
 
-  // Load existing test cases in plan to prevent duplicates
-  const existingInPlanSnapshot = await getDocs(collection(projectDocRef, 'testPlans', planId, 'testCases'));
+  // Load existing test cases in cycle to prevent duplicates
+  const existingInPlanSnapshot = await getDocs(collection(projectDocRef, 'testCycles', planId, 'testCases'));
   const existingOrigIds = new Set(existingInPlanSnapshot.docs.map((d: any) => d.data().originalTestCaseId));
 
   let targetTCs = allTestCases;
@@ -628,10 +637,12 @@ export async function flowpilotAddTestCasesToTestPlan(params: {
       ? originalTC.testCaseId
       : `${planPrefix}-${originalTC.testCaseId}`;
 
-    const newRef = doc(collection(projectDocRef, 'testPlans', planId, 'testCases'));
+    const newRef = doc(collection(projectDocRef, 'testCycles', planId, 'testCases'));
     const copy = sanitizeData({
       originalTestCaseId: originalTC.id,
       testCaseId: uniqueTestCaseId,
+      testCycleId: planId,
+      testCycleName: planData.name,
       testPlanId: planId,
       testPlanName: planData.name,
       title: originalTC.title,
@@ -659,9 +670,11 @@ export async function flowpilotAddTestCasesToTestPlan(params: {
     planName: planData.name,
     addedCount,
     projectId,
-    url: `/projects/${projectId}/testing/test-plan`,
+    url: `/projects/${projectId}/testing/test-cycle`,
   };
 }
+
+export const flowpilotAddTestCasesToTestCycle = flowpilotAddTestCasesToTestPlan;
 
 // 6e. Update Test Case Execution Status in Test Cycle
 export async function flowpilotUpdateTestCaseStatus(params: {
@@ -676,21 +689,27 @@ export async function flowpilotUpdateTestCaseStatus(params: {
   if (!db || !projectId) throw new Error('Database or Project ID is missing');
 
   const projectDocRef = doc(db, 'projects', projectId);
-  const plansSnapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+  let plansSnapshot = await getDocs(collection(projectDocRef, 'testCycles'));
+  let collectionName = 'testCycles';
+  if (plansSnapshot.empty) {
+    plansSnapshot = await getDocs(collection(projectDocRef, 'testPlans'));
+    collectionName = 'testPlans';
+  }
 
   let foundDocRef: any = null;
   let targetPlanId = params.planId || '';
 
   for (const planDoc of plansSnapshot.docs) {
-    if (targetPlanId && planDoc.id !== targetPlanId && planDoc.data().testPlanId !== targetPlanId) continue;
-    const planTCs = await getDocs(collection(projectDocRef, 'testPlans', planDoc.id, 'testCases'));
+    const data = planDoc.data();
+    if (targetPlanId && planDoc.id !== targetPlanId && data.testCycleId !== targetPlanId && data.testPlanId !== targetPlanId) continue;
+    const planTCs = await getDocs(collection(projectDocRef, collectionName, planDoc.id, 'testCases'));
     const match = planTCs.docs.find((d: any) => {
-      const data = d.data();
+      const dData = d.data();
       return (
         d.id === testCaseId ||
-        data.testCaseId?.toLowerCase() === testCaseId.toLowerCase() ||
-        data.originalTestCaseId === testCaseId ||
-        data.testCaseId?.endsWith(`-${testCaseId}`)
+        dData.testCaseId?.toLowerCase() === testCaseId.toLowerCase() ||
+        dData.originalTestCaseId === testCaseId ||
+        dData.testCaseId?.endsWith(`-${testCaseId}`)
       );
     });
     if (match) {
@@ -2479,6 +2498,8 @@ export async function flowpilotCreateUser(params: {
   experience?: number;
   costAmount?: number;
   costCurrency?: string;
+  employmentStartDate?: string;
+  employmentEndDate?: string;
 }) {
   if (!db || !params.email || !params.firstName || !params.lastName) {
     throw new Error('Database, email, firstName, and lastName are required');
@@ -2505,6 +2526,12 @@ export async function flowpilotCreateUser(params: {
     empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
   }
 
+  const parseDate = (dStr: any) => {
+    if (!dStr) return undefined;
+    const d = new Date(dStr);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+
   const userPayload = sanitizeData({
     empId,
     firstName: params.firstName,
@@ -2516,6 +2543,8 @@ export async function flowpilotCreateUser(params: {
     experience: params.experience || 3,
     costAmount: params.costAmount || 65000,
     costCurrency: params.costCurrency || 'USD',
+    employmentStartDate: parseDate(params.employmentStartDate),
+    employmentEndDate: parseDate(params.employmentEndDate),
     avatar: '',
     isEnabled: true,
     isDeleted: false,
@@ -2543,6 +2572,8 @@ export async function flowpilotUpdateUserRole(params: {
   role?: string;
   accessLevel?: 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
   department?: string;
+  employmentStartDate?: string;
+  employmentEndDate?: string;
 }) {
   if (!db || !params.userIdOrEmpId) throw new Error('Database or User ID missing');
   const employeesSnap = await getDocs(collection(db, 'employees'));
@@ -2551,10 +2582,18 @@ export async function flowpilotUpdateUserRole(params: {
   );
   if (!empDoc) throw new Error(`User "${params.userIdOrEmpId}" not found.`);
 
+  const parseDate = (dStr: any) => {
+    if (!dStr) return undefined;
+    const d = new Date(dStr);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+
   const updatePayload: any = { updatedAt: new Date().toISOString() };
   if (params.role) updatePayload.role = params.role;
   if (params.accessLevel) updatePayload.accessLevel = params.accessLevel;
   if (params.department) updatePayload.department = params.department;
+  if (params.employmentStartDate !== undefined) updatePayload.employmentStartDate = parseDate(params.employmentStartDate);
+  if (params.employmentEndDate !== undefined) updatePayload.employmentEndDate = parseDate(params.employmentEndDate);
 
   await updateDoc(doc(db, 'employees', empDoc.id), sanitizeData(updatePayload));
 
@@ -4320,7 +4359,10 @@ export async function flowpilotQueryTestDashboardSummary(params: { projectId: st
   const tcSnap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
   const testCases = tcSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((t: any) => !t.isDeleted);
 
-  const tpSnap = await getDocs(collection(db, 'projects', params.projectId, 'testPlans'));
+  let tpSnap = await getDocs(collection(db, 'projects', params.projectId, 'testCycles'));
+  if (tpSnap.empty) {
+    tpSnap = await getDocs(collection(db, 'projects', params.projectId, 'testPlans'));
+  }
   const testPlans = tpSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 
   const statusCount: Record<string, number> = { Passed: 0, Failed: 0, Blocked: 0, Skipped: 0, 'Not Run': 0 };
@@ -4458,11 +4500,22 @@ export async function flowpilotUpdateTestPlan(params: {
   if (!db) throw new Error('Database unavailable');
   const p: any = { updatedAt: new Date().toISOString() };
   if (params.name) p.name = params.name;
-  if (params.startDate) p.startDate = params.startDate;
-  if (params.endDate) p.endDate = params.endDate;
+
+  const parseDate = (dStr: any) => {
+    if (!dStr) return undefined;
+    const d = new Date(dStr);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+
+  if (params.startDate !== undefined) p.startDate = parseDate(params.startDate);
+  if (params.endDate !== undefined) p.endDate = parseDate(params.endDate);
   if (params.environmentId) p.environmentId = params.environmentId;
 
-  await updateDoc(doc(db, 'projects', params.projectId, 'testPlans', params.planId), p);
+  try {
+    await updateDoc(doc(db, 'projects', params.projectId, 'testCycles', params.planId), p);
+  } catch {
+    await updateDoc(doc(db, 'projects', params.projectId, 'testPlans', params.planId), p);
+  }
   return {
     success: true,
     projectId: params.projectId,
@@ -4472,9 +4525,15 @@ export async function flowpilotUpdateTestPlan(params: {
   };
 }
 
+export const flowpilotUpdateTestCycle = flowpilotUpdateTestPlan;
+
 export async function flowpilotDeleteTestPlan(params: { projectId: string; planId: string }) {
   if (!db) throw new Error('Database unavailable');
-  await deleteDoc(doc(db, 'projects', params.projectId, 'testPlans', params.planId));
+  try {
+    await deleteDoc(doc(db, 'projects', params.projectId, 'testCycles', params.planId));
+  } catch {
+    await deleteDoc(doc(db, 'projects', params.projectId, 'testPlans', params.planId));
+  }
   return {
     success: true,
     projectId: params.projectId,
@@ -4483,16 +4542,25 @@ export async function flowpilotDeleteTestPlan(params: { projectId: string; planI
   };
 }
 
+export const flowpilotDeleteTestCycle = flowpilotDeleteTestPlan;
+
 export async function flowpilotQueryTestPlans(params: { projectId: string }) {
   if (!db) throw new Error('Database unavailable');
-  const snap = await getDocs(collection(db, 'projects', params.projectId, 'testPlans'));
+  let snap = await getDocs(collection(db, 'projects', params.projectId, 'testCycles'));
+  if (snap.empty) {
+    snap = await getDocs(collection(db, 'projects', params.projectId, 'testPlans'));
+  }
   const testPlans = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
   return {
     projectId: params.projectId,
     totalTestPlans: testPlans.length,
+    totalTestCycles: testPlans.length,
     testPlans,
+    testCycles: testPlans,
   };
 }
+
+export const flowpilotQueryTestCycles = flowpilotQueryTestPlans;
 
 export async function flowpilotRemoveTestCaseFromPlan(params: {
   projectId: string;
@@ -4500,12 +4568,10 @@ export async function flowpilotRemoveTestCaseFromPlan(params: {
   testCaseId: string;
 }) {
   if (!db) throw new Error('Database unavailable');
-  const planRef = doc(db, 'projects', params.projectId, 'testPlans', params.planId);
-  const planSnap = await getDoc(planRef);
-  if (planSnap.exists()) {
-    const existing = planSnap.data().testCases || [];
-    const updated = existing.filter((t: any) => t.id !== params.testCaseId && t.testCaseId !== params.testCaseId);
-    await updateDoc(planRef, { testCases: updated, updatedAt: new Date().toISOString() });
+  try {
+    await deleteDoc(doc(db, 'projects', params.projectId, 'testCycles', params.planId, 'testCases', params.testCaseId));
+  } catch {
+    await deleteDoc(doc(db, 'projects', params.projectId, 'testPlans', params.planId, 'testCases', params.testCaseId));
   }
   return {
     success: true,
@@ -4515,6 +4581,8 @@ export async function flowpilotRemoveTestCaseFromPlan(params: {
     url: `/projects/${params.projectId}/testing/test-cycle`,
   };
 }
+
+export const flowpilotRemoveTestCaseFromCycle = flowpilotRemoveTestCaseFromPlan;
 
 export async function flowpilotQueryTestExecutionList(params: { projectId: string; planId?: string }) {
   if (!db) throw new Error('Database unavailable');

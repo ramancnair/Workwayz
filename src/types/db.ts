@@ -4,10 +4,10 @@ import type {
     Release, Worklog, WorklogSubmission, LeavePeriod, Project, 
     Horizontal, User, Environment, WorkItemType, ProjectDocument, 
     PaymentMilestone, CodeRepository, SprintStatus, 
-    FixedCost, TestPlan, TestPlanTestCase
+    FixedCost, TestPlan, TestPlanTestCase, TestCycle, TestCycleTestCase
 } from '@/types';
 
-export type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans';
+export type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases' | 'risks' | 'assumptions' | 'issues' | 'dependencies' | 'kanbanColumns' | 'holidays' | 'releases' | 'impactedSystems' | 'horizontals' | 'initialImpactedSystems' | 'initialHorizontals' | 'fixedCosts' | 'environments' | 'worklogs' | 'worklogSubmissions' | 'settings' | 'project' | 'allUsers' | 'documents' | 'paymentMilestones' | 'codeRepositories' | 'testPlans' | 'testCycles';
 
 export interface DatabaseAdapter {
     // Initialization / Subscriptions
@@ -56,13 +56,20 @@ export interface DatabaseAdapter {
     updateTestCase(projectId: string, testCaseId: string, data: Partial<Omit<TestCase, 'id' | 'testCaseId'>>): Promise<boolean>;
     autoGenerateTestCases(projectId: string, counts: Record<string, number>, stories?: Story[], testDate?: Date | null): Promise<boolean>;
     deleteTestCase(projectId: string, testCaseId: string): Promise<boolean>;
-    addTestPlan(projectId: string, plan: Omit<TestPlan, 'id' | 'testPlanId'>): Promise<boolean>;
-    updateTestPlan(projectId: string, id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId'>>): Promise<boolean>;
+    addTestPlan(projectId: string, plan: Omit<TestPlan, 'id' | 'testPlanId' | 'testCycleId'>): Promise<boolean>;
+    updateTestPlan(projectId: string, id: string, data: Partial<Omit<TestPlan, 'id' | 'testPlanId' | 'testCycleId'>>): Promise<boolean>;
     deleteTestPlan(projectId: string, id: string, deleteTestCases?: boolean): Promise<boolean>;
     addTestCasesToPlan(projectId: string, planId: string, testCaseIds: string[], executionDate?: string, allTestCases?: TestCase[]): Promise<boolean>;
     updateTestPlanTestCase(projectId: string, planId: string, tcId: string, data: Partial<Omit<TestPlanTestCase, 'id' | 'originalTestCaseId' | 'testCaseId'>>, testDate?: Date | null): Promise<boolean>;
     removeTestCasesFromPlan(projectId: string, planId: string, tcIds: string[]): Promise<boolean>;
     subscribeToTestPlanTestCases(projectId: string, planId: string, callback: (data: TestPlanTestCase[]) => void): () => void;
+    addTestCycle(projectId: string, cycle: Omit<TestCycle, 'id' | 'testCycleId' | 'testPlanId'>): Promise<boolean>;
+    updateTestCycle(projectId: string, id: string, data: Partial<Omit<TestCycle, 'id' | 'testCycleId' | 'testPlanId'>>): Promise<boolean>;
+    deleteTestCycle(projectId: string, id: string, deleteTestCases?: boolean): Promise<boolean>;
+    addTestCasesToCycle(projectId: string, cycleId: string, testCaseIds: string[], executionDate?: string, allTestCases?: TestCase[]): Promise<boolean>;
+    updateTestCycleTestCase(projectId: string, cycleId: string, tcId: string, data: Partial<Omit<TestCycleTestCase, 'id' | 'originalTestCaseId' | 'testCaseId'>>, testDate?: Date | null): Promise<boolean>;
+    removeTestCasesFromCycle(projectId: string, cycleId: string, tcIds: string[]): Promise<boolean>;
+    subscribeToTestCycleTestCases(projectId: string, cycleId: string, callback: (data: TestCycleTestCase[]) => void): () => void;
 
     // Risk actions
     addRisk(projectId: string, risk: Omit<Risk, 'id' | 'riskId'>): Promise<boolean>;
