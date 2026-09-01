@@ -1429,6 +1429,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                 <FormLabel>Effort (hours)</FormLabel>
                                 <FormControl>
                                     <Input type="number" step="any" placeholder="0.00" {...field} value={field.value || ''} className="font-mono" />
+                                </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -1813,6 +1814,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                         <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                             <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
                                         )}/>
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
                                             <FormItem>
@@ -2452,10 +2454,13 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                  <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                                      <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
                                                  )}/>
-                                                <div className='flex justify-end gap-2'>
-                                                  <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
-                                                  <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
-                                    </div>
+                                                 <div className='flex justify-end gap-2'>
+                                                   <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
+                                                   <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
+                                                 </div>
+                                             </div>
+                                         </Form>
+                                     </div>
                                 ) : (
                                     <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Sub-Task</Button>
                                 )}

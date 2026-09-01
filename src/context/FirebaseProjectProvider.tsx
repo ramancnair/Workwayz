@@ -1166,6 +1166,21 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     }
 
     try {
+      if (employee.onboardingDate && employee.offloadingDate) {
+        if (new Date(employee.offloadingDate) < new Date(employee.onboardingDate)) {
+          console.error("Firebase Error: Offboarding date cannot be earlier than onboarding date.");
+          return false;
+        }
+      }
+      if (project?.startDate && employee.onboardingDate && new Date(employee.onboardingDate) < new Date(project.startDate)) {
+        console.error("Firebase Error: Onboarding date cannot be earlier than project start date.");
+        return false;
+      }
+      if (project?.endDate && employee.offloadingDate && new Date(employee.offloadingDate) > new Date(project.endDate)) {
+        console.error("Firebase Error: Offboarding date cannot be later than project end date.");
+        return false;
+      }
+
       // Add the employee document to the project's subcollection
       // We use setDoc with the global employee ID to keep them in sync
       await setDoc(doc(db, 'projects', projectId, 'employees', employee.id), sanitizeForFirestore(employee));
@@ -1179,6 +1194,23 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   const updateProjectUser = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
+      const existingUser = employees.find(e => e.id === employeeId);
+      const newOnboarding = data.onboardingDate !== undefined ? data.onboardingDate : existingUser?.onboardingDate;
+      const newOffloading = data.offloadingDate !== undefined ? data.offloadingDate : existingUser?.offloadingDate;
+
+      if (newOnboarding && newOffloading && new Date(newOffloading) < new Date(newOnboarding)) {
+        console.error("Firebase Error: Offboarding date cannot be earlier than onboarding date.");
+        return false;
+      }
+      if (project?.startDate && newOnboarding && new Date(newOnboarding) < new Date(project.startDate)) {
+        console.error("Firebase Error: Onboarding date cannot be earlier than project start date.");
+        return false;
+      }
+      if (project?.endDate && newOffloading && new Date(newOffloading) > new Date(project.endDate)) {
+        console.error("Firebase Error: Offboarding date cannot be later than project end date.");
+        return false;
+      }
+
       const { onboardingDate, offloadingDate, ...rest } = data;
       const payload: any = { ...rest };
       if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(new Date(onboardingDate)) : null;

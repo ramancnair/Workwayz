@@ -406,12 +406,10 @@ function SprintColumn({
     return (
         <div className="bg-muted/50 rounded-lg p-4 h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
-                <div className="flex flex-col">
-                     <span className="text-xs font-mono text-muted-foreground">{getSprintDisplayId(sprint)}</span>
-                     <div className="flex items-center gap-2">
-                       <h3 className="text-lg font-semibold">{sprint.title}</h3>
-                       {sprint.status === 'Current' && <Badge>Current</Badge>}
-                     </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-muted-foreground">{getSprintDisplayId(sprint)}</span>
+                    <h3 className="text-lg font-semibold">{sprint.title}</h3>
+                    {sprint.status === 'Current' && <Badge>Current</Badge>}
                 </div>
                 <div className="flex items-center gap-1">
                     {showNav && (

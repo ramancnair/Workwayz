@@ -68,12 +68,12 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
-const resourceSchema = z.object({
+const baseResourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
   role: z.string().optional(),
-  availability: z.coerce.number().min(0).max(100).optional(),
-  onboardingDate: z.string().optional(),
-  offloadingDate: z.string().optional(),
+  availability: z.coerce.number().min(0, 'Availability must be between 0 and 100%').max(100, 'Availability must be between 0 and 100%').optional(),
+  onboardingDate: z.string().min(1, 'Onboarding date is required.'),
+  offloadingDate: z.string().min(1, 'Offboarding date is required.'),
   clientEmpId: z.string().optional(),
   clientEmail: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
   capabilities: z.array(z.string()).optional(),
@@ -107,19 +107,74 @@ function ResourceDialog({
   const { toast } = useToast();
   const [userInputText, setUserInputText] = useState('');
 
-  const form = useForm<z.infer<typeof resourceSchema>>({
-    resolver: zodResolver(resourceSchema),
+  const dynamicResourceSchema = useMemo(() => {
+    const projStart = project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : null;
+    const projEnd = project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : null;
+
+    return baseResourceSchema.superRefine((data, ctx) => {
+      const onDate = data.onboardingDate;
+      const offDate = data.offloadingDate;
+
+      if (onDate && projStart && onDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['onboardingDate'],
+          message: `Onboarding date cannot be earlier than project start date (${format(parseISO(project!.startDate!), 'dd MMM yyyy')}).`,
+        });
+      }
+
+      if (onDate && projEnd && onDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['onboardingDate'],
+          message: `Onboarding date cannot be later than project end date (${format(parseISO(project!.endDate!), 'dd MMM yyyy')}).`,
+        });
+      }
+
+      if (offDate && projStart && offDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['offloadingDate'],
+          message: `Offboarding date cannot be earlier than project start date (${format(parseISO(project!.startDate!), 'dd MMM yyyy')}).`,
+        });
+      }
+
+      if (offDate && projEnd && offDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['offloadingDate'],
+          message: `Offboarding date cannot be later than project end date (${format(parseISO(project!.endDate!), 'dd MMM yyyy')}).`,
+        });
+      }
+
+      if (onDate && offDate && offDate < onDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['offloadingDate'],
+          message: 'Offboarding date cannot be earlier than onboarding date.',
+        });
+      }
+    });
+  }, [project]);
+
+  const form = useForm<z.infer<typeof baseResourceSchema>>({
+    resolver: zodResolver(dynamicResourceSchema),
+    mode: 'onChange',
   });
 
   useEffect(() => {
     if (isOpen) {
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const projStartStr = project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : '';
+      const projEndStr = project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '';
+
       if (editingUser) {
         form.reset({
           employeeId: editingUser.id,
           role: editingUser.role,
-          availability: editingUser.availability,
-          onboardingDate: editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : '',
-          offloadingDate: editingUser.offloadingDate ? format(new Date(editingUser.offloadingDate), 'yyyy-MM-dd') : '',
+          availability: editingUser.availability ?? 100,
+          onboardingDate: editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : (projStartStr || todayStr),
+          offloadingDate: editingUser.offloadingDate ? format(new Date(editingUser.offloadingDate), 'yyyy-MM-dd') : (projEndStr || todayStr),
           clientEmpId: editingUser.clientEmpId || '',
           clientEmail: editingUser.clientEmail || '',
           capabilities: editingUser.capabilities || [],
@@ -130,12 +185,21 @@ function ResourceDialog({
           setUserInputText(`${user.firstName} ${user.lastName} (${user.empId})`);
         }
       } else {
+        let initialOnboarding = projStartStr || todayStr;
+        if (projStartStr && projEndStr) {
+          if (todayStr >= projStartStr && todayStr <= projEndStr) {
+            initialOnboarding = todayStr;
+          } else {
+            initialOnboarding = projStartStr;
+          }
+        }
+
         form.reset({
           employeeId: '',
           role: undefined,
           availability: 100,
-          onboardingDate: format(new Date(), 'yyyy-MM-dd'),
-          offloadingDate: project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
+          onboardingDate: initialOnboarding,
+          offloadingDate: projEndStr || initialOnboarding,
           clientEmpId: '',
           clientEmail: '',
           capabilities: [],
@@ -146,7 +210,7 @@ function ResourceDialog({
     }
   }, [isOpen, editingUser, form, project, allUsers]);
 
-  const handleFormSubmit = async (values: z.infer<typeof resourceSchema>) => {
+  const handleFormSubmit = async (values: z.infer<typeof baseResourceSchema>) => {
     if (editingUser) {
       const success = await updateProjectUser(editingUser.id, {
         role: values.role as UserRole,
@@ -355,18 +419,39 @@ function ResourceDialog({
               <FormField control={form.control} name="onboardingDate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Onboarding Date</FormLabel>
-                  <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      value={field.value || ''}
+                      min={project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : undefined}
+                      max={form.watch('offloadingDate') || (project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : undefined)}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="offloadingDate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Offloading Date</FormLabel>
-                  <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                  <FormLabel>Offboarding Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      value={field.value || ''}
+                      min={form.watch('onboardingDate') || (project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : undefined)}
+                      max={project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : undefined}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
             </div>
+            {project?.startDate && (
+              <p className="text-[11px] text-muted-foreground -mt-2">
+                Project timeline: {format(parseISO(project.startDate), 'dd MMM yyyy')}{project.endDate ? ` — ${format(parseISO(project.endDate), 'dd MMM yyyy')}` : ''}
+              </p>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="clientEmpId" render={({ field }) => (
@@ -690,7 +775,7 @@ export default function ResourcesPage() {
                 <TableHead>Capabilities</TableHead>
                 <TableHead>Availability</TableHead>
                 <TableHead>Onboarding Date</TableHead>
-                <TableHead>Offloading Date</TableHead>
+                <TableHead>Offboarding Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

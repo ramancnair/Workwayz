@@ -2905,7 +2905,6 @@ export async function flowpilotQueryEmployeeLeaveBalance(params: { employeeId: s
   });
 
   const remainingBalance = Math.max(0, defaultQuota - usedDays);
-
   return {
     employeeId: empDoc.id,
     empId: empDoc.data().empId || empDoc.id,

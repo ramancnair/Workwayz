@@ -1047,14 +1047,7 @@ export default function TestExecutionPage() {
 
                 {/* Execution Date */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold text-muted-foreground">Execution Date</Label>
-                    {selectedTC.closeDate && (
-                      <span className="text-[11px] text-green-600 dark:text-green-400">
-                        Passed: {format(parseISO(selectedTC.closeDate), 'dd-MM-yyyy')}
-                      </span>
-                    )}
-                  </div>
+                  <Label className="text-xs font-semibold text-muted-foreground">Execution Date</Label>
                   <Input
                     type="date"
                     value={formExecutionDate}

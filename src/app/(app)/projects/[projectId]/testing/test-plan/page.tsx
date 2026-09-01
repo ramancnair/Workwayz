@@ -1175,7 +1175,7 @@ export default function TestPlanPage() {
                     />
                   </FormItem>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={testCaseForm.control} name="executionDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Execution Date</FormLabel>
@@ -1185,18 +1185,6 @@ export default function TestPlanPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  {/* Close Date — read-only, auto-set when status = Passed */}
-                  <FormItem>
-                    <FormLabel>Close Date</FormLabel>
-                    <Input
-                      type="date"
-                      readOnly
-                      value={editingTestCase?.closeDate ? format(parseISO(editingTestCase.closeDate), 'yyyy-MM-dd') : ''}
-                      className="bg-muted"
-                      placeholder="Auto-set when Passed"
-                    />
-                    <p className="text-[11px] text-muted-foreground">Auto-set when status is &quot;Passed&quot;</p>
-                  </FormItem>
                   <FormField control={testCaseForm.control} name="effortHours" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Effort (Hours)</FormLabel>
