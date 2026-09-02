@@ -1130,7 +1130,9 @@ export default function TestExecutionPage() {
                     size="sm"
                     className="h-7 text-xs gap-1.5 border-dashed"
                     onClick={() => {
+                      const nextIndex = formAttachments.length;
                       setFormAttachments(prev => [...prev, { name: '', url: '' }]);
+                      setEditingExecAttachmentIndices(prev => ({ ...prev, [nextIndex]: true }));
                     }}
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -1145,9 +1147,26 @@ export default function TestExecutionPage() {
                 ) : (
                   <div className="space-y-3">
                     {formAttachments.map((att, index) => {
-                      const isEditing = editingExecAttachmentIndices[index] ?? (att.name === '' && att.url === '');
+                      const isEditing = !!editingExecAttachmentIndices[index];
 
-                      if (!isEditing && (att.name || att.url)) {
+                      const handleRemoveAttachment = () => {
+                        setFormAttachments(prev => prev.filter((_, i) => i !== index));
+                        setEditingExecAttachmentIndices(prev => {
+                          const next: Record<number, boolean> = {};
+                          let newIdx = 0;
+                          for (let i = 0; i < formAttachments.length; i++) {
+                            if (i !== index) {
+                              if (prev[i] !== undefined) {
+                                next[newIdx] = prev[i];
+                              }
+                              newIdx++;
+                            }
+                          }
+                          return next;
+                        });
+                      };
+
+                      if (!isEditing) {
                         return (
                           <div key={index} className="p-3 rounded-md border bg-background/80 flex items-center justify-between gap-3 shadow-xs">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 min-w-0 flex-1">
@@ -1190,14 +1209,7 @@ export default function TestExecutionPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                onClick={() => {
-                                  setFormAttachments(prev => prev.filter((_, i) => i !== index));
-                                  setEditingExecAttachmentIndices(prev => {
-                                    const next = { ...prev };
-                                    delete next[index];
-                                    return next;
-                                  });
-                                }}
+                                onClick={handleRemoveAttachment}
                                 title="Remove attachment"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -1239,14 +1251,7 @@ export default function TestExecutionPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                onClick={() => {
-                                  setFormAttachments(prev => prev.filter((_, i) => i !== index));
-                                  setEditingExecAttachmentIndices(prev => {
-                                    const next = { ...prev };
-                                    delete next[index];
-                                    return next;
-                                  });
-                                }}
+                                onClick={handleRemoveAttachment}
                                 title="Remove attachment"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />

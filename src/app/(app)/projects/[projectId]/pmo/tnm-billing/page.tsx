@@ -29,10 +29,11 @@ import {
   subMonths 
 } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Printer, Calendar, Edit } from 'lucide-react';
+import { PlusCircle, Trash2, Printer, Calendar, Edit, Check, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -168,6 +169,54 @@ export default function ResourceBillingPage() {
     }));
   };
   
+  const handleSaveField = async (userId: string, field: 'billedRate' | 'costRate') => {
+    const user = employees.find(e => e.id === userId);
+    const rateVal = editingRates[userId]?.[field];
+
+    if (!user || rateVal === undefined) return;
+
+    const parsedVal = rateVal === '' ? 0 : parseFloat(rateVal);
+    if (isNaN(parsedVal)) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid numeric rate.' });
+      return;
+    }
+
+    const payload: Partial<User> = {
+      [field]: parsedVal,
+    };
+
+    setEditingRates(prev => {
+      const userRates = { ...prev[userId] };
+      delete userRates[field];
+      if (Object.keys(userRates).length === 0) {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      }
+      return { ...prev, [userId]: userRates };
+    });
+
+    const success = await updateProjectUser(userId, payload);
+    if (success) {
+      toast({ title: 'Success', description: `${field === 'billedRate' ? 'Billed' : 'Cost'} rate updated successfully.` });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update rate.' });
+    }
+  };
+
+  const handleCancelField = (userId: string, field: 'billedRate' | 'costRate') => {
+    setEditingRates(prev => {
+      const userRates = { ...prev[userId] };
+      delete userRates[field];
+      if (Object.keys(userRates).length === 0) {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      }
+      return { ...prev, [userId]: userRates };
+    });
+  };
+
   const handleSaveChanges = async (userId: string, customRates?: { billedRate?: string; costRate?: string }) => {
     const user = employees.find(e => e.id === userId);
     const rates = customRates || editingRates[userId];
@@ -455,55 +504,99 @@ export default function ResourceBillingPage() {
                       <TableCell className="font-medium pl-6">{user.firstName} {user.lastName}</TableCell>
                       <TableCell>{user.role || 'N/A'}</TableCell>
                       <TableCell>{user.availability || 100}%</TableCell>
-                      <TableCell>
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          value={editingRates[user.id]?.billedRate ?? (user.billedRate !== undefined ? user.billedRate.toString() : '')}
-                          onChange={(e) => handleRateChange(user.id, 'billedRate', e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleSaveChanges(user.id, editingRates[user.id]);
-                              e.currentTarget.blur();
-                            } else if (e.key === 'Tab') {
-                              handleSaveChanges(user.id, editingRates[user.id]);
-                            }
-                          }}
-                          onBlur={() => {
-                            setEditingRates(prev => {
-                              const next = { ...prev };
-                              delete next[user.id];
-                              return next;
-                            });
-                          }}
-                          className="w-28 font-mono"
-                        />
+                      <TableCell className="min-w-[150px]">
+                        {(() => {
+                          const currentBilledRateStr = user.billedRate !== undefined ? user.billedRate.toString() : '';
+                          const editingBilledVal = editingRates[user.id]?.billedRate;
+                          const hasBilledChanged = editingBilledVal !== undefined && editingBilledVal !== currentBilledRateStr;
+
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="0.00"
+                                value={editingBilledVal ?? currentBilledRateStr}
+                                onChange={(e) => handleRateChange(user.id, 'billedRate', e.target.value)}
+                                className={cn(
+                                  "w-24 font-mono h-8 text-xs transition-colors",
+                                  hasBilledChanged && "border-primary ring-1 ring-primary/30"
+                                )}
+                              />
+                              {hasBilledChanged && (
+                                <div className="flex items-center gap-1 shrink-0 animate-in fade-in duration-200">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 border border-emerald-500/30"
+                                    onClick={() => handleSaveField(user.id, 'billedRate')}
+                                    title="Save Billed Rate"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleCancelField(user.id, 'billedRate')}
+                                    title="Cancel"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
-                      <TableCell>
-                         <Input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          value={editingRates[user.id]?.costRate ?? (user.costRate !== undefined ? user.costRate.toString() : '')}
-                          onChange={(e) => handleRateChange(user.id, 'costRate', e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleSaveChanges(user.id, editingRates[user.id]);
-                              e.currentTarget.blur();
-                            } else if (e.key === 'Tab') {
-                              handleSaveChanges(user.id, editingRates[user.id]);
-                            }
-                          }}
-                          onBlur={() => {
-                            setEditingRates(prev => {
-                              const next = { ...prev };
-                              delete next[user.id];
-                              return next;
-                            });
-                          }}
-                          className="w-28"
-                        />
+                      <TableCell className="min-w-[150px]">
+                        {(() => {
+                          const currentCostRateStr = user.costRate !== undefined ? user.costRate.toString() : '';
+                          const editingCostVal = editingRates[user.id]?.costRate;
+                          const hasCostChanged = editingCostVal !== undefined && editingCostVal !== currentCostRateStr;
+
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="0.00"
+                                value={editingCostVal ?? currentCostRateStr}
+                                onChange={(e) => handleRateChange(user.id, 'costRate', e.target.value)}
+                                className={cn(
+                                  "w-24 font-mono h-8 text-xs transition-colors",
+                                  hasCostChanged && "border-primary ring-1 ring-primary/30"
+                                )}
+                              />
+                              {hasCostChanged && (
+                                <div className="flex items-center gap-1 shrink-0 animate-in fade-in duration-200">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 border border-emerald-500/30"
+                                    onClick={() => handleSaveField(user.id, 'costRate')}
+                                    title="Save Cost Rate"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleCancelField(user.id, 'costRate')}
+                                    title="Cancel"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-center font-medium text-red-500">
                         {lopDays > 0 ? (

@@ -1248,7 +1248,9 @@ export default function TestCyclePage() {
                       className="h-7 text-xs gap-1.5 border-dashed"
                       onClick={() => {
                         const current = testCaseForm.getValues('attachments') || [];
+                        const nextIndex = current.length;
                         testCaseForm.setValue('attachments', [...current, { name: '', url: '' }]);
+                        setEditingAttachmentIndices(prev => ({ ...prev, [nextIndex]: true }));
                       }}
                     >
                       <Plus className="h-3.5 w-3.5" />
@@ -1264,9 +1266,30 @@ export default function TestCyclePage() {
                   ) : (
                     <div className="space-y-3">
                       {testCaseForm.watch('attachments')!.map((att, index) => {
-                        const isEditing = editingAttachmentIndices[index] ?? (att.name === '' && att.url === '');
+                        const isEditing = !!editingAttachmentIndices[index];
 
-                        if (!isEditing && (att.name || att.url)) {
+                        const handleRemoveAttachment = () => {
+                          const current = testCaseForm.getValues('attachments') || [];
+                          testCaseForm.setValue(
+                            'attachments',
+                            current.filter((_, i) => i !== index)
+                          );
+                          setEditingAttachmentIndices(prev => {
+                            const next: Record<number, boolean> = {};
+                            let newIdx = 0;
+                            for (let i = 0; i < current.length; i++) {
+                              if (i !== index) {
+                                if (prev[i] !== undefined) {
+                                  next[newIdx] = prev[i];
+                                }
+                                newIdx++;
+                              }
+                            }
+                            return next;
+                          });
+                        };
+
+                        if (!isEditing) {
                           return (
                             <div key={index} className="p-3 rounded-md border bg-background/80 flex items-center justify-between gap-3 shadow-xs">
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 min-w-0 flex-1">
@@ -1309,18 +1332,7 @@ export default function TestCyclePage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                  onClick={() => {
-                                    const current = testCaseForm.getValues('attachments') || [];
-                                    testCaseForm.setValue(
-                                      'attachments',
-                                      current.filter((_, i) => i !== index)
-                                    );
-                                    setEditingAttachmentIndices(prev => {
-                                      const next = { ...prev };
-                                      delete next[index];
-                                      return next;
-                                    });
-                                  }}
+                                  onClick={handleRemoveAttachment}
                                   title="Remove attachment"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -1360,18 +1372,7 @@ export default function TestCyclePage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                  onClick={() => {
-                                    const current = testCaseForm.getValues('attachments') || [];
-                                    testCaseForm.setValue(
-                                      'attachments',
-                                      current.filter((_, i) => i !== index)
-                                    );
-                                    setEditingAttachmentIndices(prev => {
-                                      const next = { ...prev };
-                                      delete next[index];
-                                      return next;
-                                    });
-                                  }}
+                                  onClick={handleRemoveAttachment}
                                   title="Remove attachment"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
