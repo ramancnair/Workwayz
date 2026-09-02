@@ -117,7 +117,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
       case 'testing':
         if (hasAccess('Test Dashboard')) return `${basePath}/testing/dashboard`;
-        if (hasAccess('Test Backlog') || hasAccess('Test Backlogs')) return `${basePath}/testing/test-backlog`;
+        if (hasAccess('Test Cases') || hasAccess('Test Backlog') || hasAccess('Test Backlogs')) return `${basePath}/testing/test-cases`;
         if (hasAccess('Test Cycle') || hasAccess('Test Cycles') || hasAccess('Test Plan')) return `${basePath}/testing/test-cycle`;
         if (hasAccess('Test Execution') || hasAccess('Test Executions')) return `${basePath}/testing/test-execution`;
         if (hasAccess('Defects')) return `${basePath}/testing/defects`;

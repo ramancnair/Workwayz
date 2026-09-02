@@ -117,6 +117,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
   '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testCycles'],
   '/testing/test-plan': ['testCases', 'employees', 'releases', 'stories', 'testCycles', 'sprints', 'environments'],
   '/testing/test-cycle': ['testCases', 'employees', 'releases', 'stories', 'testCycles', 'sprints', 'environments'],
+  '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testCycles'],
   '/testing/test-backlog': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testCycles'],
   '/testing/defects': ['stories', 'employees', 'sprints', 'environments', 'releases', 'testCases'],
   '/project-details/pm-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
@@ -1276,12 +1277,30 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       const existingLeaves = globalUser?.leavePeriods || [];
       const newStartStr = new Date(leavePeriod.startDate).toISOString().slice(0, 10);
       const newEndStr = new Date(leavePeriod.endDate).toISOString().slice(0, 10);
+      const newIsHalfDay = !!leavePeriod.isHalfDay;
+      const newSession = leavePeriod.halfDaySession;
 
       const hasOverlap = existingLeaves.some(p => {
         if (!p.startDate || !p.endDate) return false;
         const pStartStr = new Date(p.startDate).toISOString().slice(0, 10);
         const pEndStr = new Date(p.endDate).toISOString().slice(0, 10);
-        return !(newEndStr < pStartStr || newStartStr > pEndStr);
+        const dateOverlap = !(newEndStr < pStartStr || newStartStr > pEndStr);
+        if (!dateOverlap) return false;
+
+        const pIsHalfDay = !!p.isHalfDay;
+        const pSession = p.halfDaySession;
+
+        if (newIsHalfDay && pIsHalfDay) {
+          if (newStartStr === pStartStr) {
+            if (!newSession || !pSession || newSession === pSession) {
+              return true;
+            }
+            return false;
+          }
+          return true;
+        }
+
+        return true;
       });
 
       if (hasOverlap) {
@@ -1294,6 +1313,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         id: uuidv4(),
         startDate: new Date(leavePeriod.startDate).toISOString(),
         endDate: new Date(leavePeriod.endDate).toISOString(),
+        isHalfDay: !!leavePeriod.isHalfDay,
+        ...(leavePeriod.halfDaySession ? { halfDaySession: leavePeriod.halfDaySession } : {}),
       };
 
       const globalEmployeeRef = doc(db, 'employees', employeeId);

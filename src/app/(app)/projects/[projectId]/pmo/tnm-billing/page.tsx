@@ -318,7 +318,12 @@ export default function ResourceBillingPage() {
           const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
           return !isWeekend && !isHoliday;
         });
-        count += businessDays.length;
+
+        if (period.isHalfDay) {
+          count += businessDays.length > 0 ? 0.5 : 0;
+        } else {
+          count += businessDays.length;
+        }
       }
     });
     

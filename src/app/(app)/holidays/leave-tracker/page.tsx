@@ -42,11 +42,16 @@ import { onSnapshot, doc, collection, query, where, updateDoc, arrayUnion, array
 import { v4 as uuidv4 } from 'uuid';
 
 const leaveSchema = z.object({
+  duration: z.enum(['Full Day', 'Half Day']),
   startDate: z.string().min(1, 'Start date is required.'),
-  endDate: z.string().min(1, 'End date is required.'),
+  endDate: z.string().optional(),
+  halfDaySession: z.enum(['First Half', 'Second Half']).optional(),
   type: z.enum(['Paid Leave', 'Loss of Pay'], { required_error: 'Leave type is required.' }),
 }).refine(data => {
-  if (!data.startDate || !data.endDate) return true;
+  if (data.duration === 'Half Day') {
+    return !!data.startDate;
+  }
+  if (!data.startDate || !data.endDate) return false;
   return new Date(data.endDate) >= new Date(data.startDate);
 }, {
   message: 'End date cannot be before start date.',
@@ -128,12 +133,30 @@ export default function LeaveTrackerPage() {
       const existingLeaves = user?.leavePeriods || [];
       const newStartStr = new Date(leavePeriod.startDate).toISOString().slice(0, 10);
       const newEndStr = new Date(leavePeriod.endDate).toISOString().slice(0, 10);
+      const newIsHalfDay = !!leavePeriod.isHalfDay;
+      const newSession = leavePeriod.halfDaySession;
 
       const hasOverlap = existingLeaves.some(p => {
         if (!p.startDate || !p.endDate) return false;
         const pStartStr = new Date(p.startDate).toISOString().slice(0, 10);
         const pEndStr = new Date(p.endDate).toISOString().slice(0, 10);
-        return !(newEndStr < pStartStr || newStartStr > pEndStr);
+        const dateOverlap = !(newEndStr < pStartStr || newStartStr > pEndStr);
+        if (!dateOverlap) return false;
+
+        const pIsHalfDay = !!p.isHalfDay;
+        const pSession = p.halfDaySession;
+
+        if (newIsHalfDay && pIsHalfDay) {
+          if (newStartStr === pStartStr) {
+            if (!newSession || !pSession || newSession === pSession) {
+              return true;
+            }
+            return false;
+          }
+          return true;
+        }
+
+        return true;
       });
 
       if (hasOverlap) {
@@ -146,6 +169,8 @@ export default function LeaveTrackerPage() {
         id: uuidv4(),
         startDate: new Date(leavePeriod.startDate).toISOString(),
         endDate: new Date(leavePeriod.endDate).toISOString(),
+        isHalfDay: !!leavePeriod.isHalfDay,
+        ...(leavePeriod.halfDaySession ? { halfDaySession: leavePeriod.halfDaySession } : {}),
       };
       
       const globalEmployeeRef = doc(db, 'employees', employeeId);
@@ -180,10 +205,11 @@ export default function LeaveTrackerPage() {
   };
 
   const calculateBusinessDaysForYear = useMemo(() => {
-    return (startDateStr: string, endDateStr: string, year: number): number => {
+    return (period: LeavePeriod, year: number): number => {
       try {
-        const start = new Date(startDateStr);
-        const end = new Date(endDateStr);
+        if (!period.startDate || !period.endDate) return 0;
+        const start = new Date(period.startDate);
+        const end = new Date(period.endDate);
 
         if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
           return 0;
@@ -209,6 +235,10 @@ export default function LeaveTrackerPage() {
           return !isWeekend && !isHoliday;
         });
 
+        if (period.isHalfDay) {
+          return businessDays.length > 0 ? 0.5 : 0;
+        }
+
         return businessDays.length;
       } catch (e) {
         console.error("Error calculating business days", e);
@@ -220,11 +250,15 @@ export default function LeaveTrackerPage() {
   const form = useForm<z.infer<typeof leaveSchema>>({
     resolver: zodResolver(leaveSchema),
     defaultValues: {
+      duration: 'Full Day',
       startDate: '',
       endDate: '',
+      halfDaySession: 'First Half',
       type: 'Paid Leave'
     }
   });
+
+  const durationValue = form.watch('duration');
 
   useEffect(() => {
     const userStr = localStorage.getItem('projectflow_user');
@@ -248,17 +282,17 @@ export default function LeaveTrackerPage() {
     return null;
   }, [allUsers, currentUser]);
 
-  const calculateBusinessDays = (startDateStr: string, endDateStr: string): number => {
+  const calculateBusinessDays = (period: LeavePeriod): number => {
     try {
-      const start = new Date(startDateStr);
-      const end = new Date(endDateStr);
+      if (!period.startDate || !period.endDate) return 0;
+      const start = new Date(period.startDate);
+      const end = new Date(period.endDate);
 
       if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
         return 0;
       }
 
       const holidayDates = holidays.map(h => new Date(h.date));
-
       const interval = eachDayOfInterval({ start, end });
 
       const businessDays = interval.filter(day => {
@@ -267,6 +301,10 @@ export default function LeaveTrackerPage() {
         const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
         return !isWeekend && !isHoliday;
       });
+
+      if (period.isHalfDay) {
+        return businessDays.length > 0 ? 0.5 : 0;
+      }
 
       return businessDays.length;
     } catch (e) {
@@ -283,7 +321,7 @@ export default function LeaveTrackerPage() {
     // Previous year paid taken
     const prevYearPaidTaken = (user.leavePeriods || [])
       .filter(p => p.type === 'Paid Leave' || !p.type)
-      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p.startDate, p.endDate, prevYear), 0);
+      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, prevYear), 0);
 
     const remainingPrev = Math.max(0, allocated - prevYearPaidTaken);
 
@@ -303,11 +341,11 @@ export default function LeaveTrackerPage() {
     // Calculate taken leaves so far in the active year
     const activeYearPaidTaken = (user.leavePeriods || [])
       .filter(p => p.type === 'Paid Leave' || !p.type)
-      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p.startDate, p.endDate, year), 0);
+      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, year), 0);
 
     const activeYearLopTaken = (user.leavePeriods || [])
       .filter(p => p.type === 'Loss of Pay')
-      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p.startDate, p.endDate, year), 0);
+      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, year), 0);
 
     const remainingPaid = Math.max(0, totalAvailable - activeYearPaidTaken);
 
@@ -335,8 +373,9 @@ export default function LeaveTrackerPage() {
       return;
     }
 
+    const isHalfDay = values.duration === 'Half Day';
     const start = new Date(values.startDate);
-    const end = new Date(values.endDate);
+    const end = isHalfDay ? new Date(values.startDate) : new Date(values.endDate || values.startDate);
     const year = start.getFullYear();
 
     const holidayDates = holidays.map(h => new Date(h.date));
@@ -350,12 +389,105 @@ export default function LeaveTrackerPage() {
     });
 
     if (businessDays.length === 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No business days in the selected leave period.' });
+      toast({ variant: 'destructive', title: 'Error', description: isHalfDay ? 'Selected date is a holiday or weekly off day.' : 'No business days in the selected leave period.' });
       return;
     }
 
     // Check for duplicate / overlapping leaves with activeUser's existing leave periods
     const existingLeavePeriods = activeUser.leavePeriods || [];
+    const newSession = isHalfDay ? (values.halfDaySession || 'First Half') : undefined;
+
+    if (isHalfDay) {
+      const bDayStr = format(start, 'yyyy-MM-dd');
+      const hasConflict = existingLeavePeriods.some(period => {
+        if (!period.startDate || !period.endDate) return false;
+        const pStart = new Date(period.startDate);
+        const pEnd = new Date(period.endDate);
+        const pStartStr = format(pStart, 'yyyy-MM-dd');
+        const pEndStr = format(pEnd, 'yyyy-MM-dd');
+
+        if (bDayStr >= pStartStr && bDayStr <= pEndStr) {
+          if (period.isHalfDay) {
+            // Conflict if same half-day session or unspecified session
+            if (!period.halfDaySession || !newSession || period.halfDaySession === newSession) {
+              return true;
+            }
+            return false;
+          }
+          // Existing is full day
+          return true;
+        }
+        return false;
+      });
+
+      if (hasConflict) {
+        toast({
+          variant: 'destructive',
+          title: 'Duplicate Leave Entry',
+          description: `Leave is already applied for ${format(start, 'MMM d, yyyy')}${newSession ? ` (${newSession})` : ''}. Please select a different session or date.`,
+        });
+        return;
+      }
+
+      if (values.type === 'Paid Leave') {
+        const stats = getLeaveQuotaStatsForYear(activeUser as any, year);
+        const remainingPaid = stats.remainingPaid;
+
+        if (remainingPaid < 0.5) {
+          // Convert to Loss of Pay
+          const newLeavePeriod: Omit<LeavePeriod, 'id'> = {
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
+            type: 'Loss of Pay',
+            isHalfDay: true,
+            halfDaySession: newSession,
+          };
+          const success = await addLeavePeriod(activeUser.id, newLeavePeriod);
+          if (success) {
+            toast({
+              title: 'Converted to Loss of Pay',
+              description: 'This half-day leave was automatically converted to Loss of Pay (LOP) because you have 0 remaining paid leaves.'
+            });
+            form.reset({ duration: 'Full Day', startDate: '', endDate: '', halfDaySession: 'First Half', type: 'Paid Leave' });
+          } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not apply leave.' });
+          }
+        } else {
+          const newLeavePeriod: Omit<LeavePeriod, 'id'> = {
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
+            type: 'Paid Leave',
+            isHalfDay: true,
+            halfDaySession: newSession,
+          };
+          const success = await addLeavePeriod(activeUser.id, newLeavePeriod);
+          if (success) {
+            toast({ title: 'Success', description: `Half-day Paid Leave (${newSession}) applied successfully.` });
+            form.reset({ duration: 'Full Day', startDate: '', endDate: '', halfDaySession: 'First Half', type: 'Paid Leave' });
+          } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not apply leave.' });
+          }
+        }
+      } else {
+        const newLeavePeriod: Omit<LeavePeriod, 'id'> = {
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          type: 'Loss of Pay',
+          isHalfDay: true,
+          halfDaySession: newSession,
+        };
+        const success = await addLeavePeriod(activeUser.id, newLeavePeriod);
+        if (success) {
+          toast({ title: 'Success', description: `Half-day Loss of Pay (${newSession}) applied successfully.` });
+          form.reset({ duration: 'Full Day', startDate: '', endDate: '', halfDaySession: 'First Half', type: 'Paid Leave' });
+        } else {
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not apply leave.' });
+        }
+      }
+      return;
+    }
+
+    // Full day flow
     const conflictingDates: Date[] = [];
 
     businessDays.forEach(bDay => {
@@ -398,6 +530,7 @@ export default function LeaveTrackerPage() {
           startDate: start.toISOString(),
           endDate: end.toISOString(),
           type: 'Loss of Pay',
+          isHalfDay: false,
         };
         const success = await addLeavePeriod(activeUser.id, newLeavePeriod);
         if (success) {
@@ -405,40 +538,93 @@ export default function LeaveTrackerPage() {
             title: 'Converted to Loss of Pay',
             description: 'This leave was automatically converted to Loss of Pay (LOP) because you have 0 remaining paid leaves.'
           });
-          form.reset({ startDate: '', endDate: '', type: 'Paid Leave' });
+          form.reset({ duration: 'Full Day', startDate: '', endDate: '', halfDaySession: 'First Half', type: 'Paid Leave' });
         } else {
           toast({ variant: 'destructive', title: 'Error', description: 'Could not apply leave.' });
         }
       } else if (remainingPaid < businessDays.length) {
         // Split leave period!
-        const paidCount = remainingPaid;
-        const paidEndDate = businessDays[paidCount - 1];
-        const lopStartDate = businessDays[paidCount];
+        if (remainingPaid % 1 !== 0) {
+          // Fractional remaining (e.g. 1.5 days)
+          const wholePaidDays = Math.floor(remainingPaid);
+          const hasHalfDay = remainingPaid - wholePaidDays >= 0.5;
 
-        const paidPeriod: Omit<LeavePeriod, 'id'> = {
-          startDate: start.toISOString(),
-          endDate: paidEndDate.toISOString(),
-          type: 'Paid Leave',
-        };
+          if (wholePaidDays > 0) {
+            const paidEndDate = businessDays[wholePaidDays - 1];
+            await addLeavePeriod(activeUser.id, {
+              startDate: start.toISOString(),
+              endDate: paidEndDate.toISOString(),
+              type: 'Paid Leave',
+              isHalfDay: false,
+            });
+          }
 
-        const lopPeriod: Omit<LeavePeriod, 'id'> = {
-          startDate: lopStartDate.toISOString(),
-          endDate: end.toISOString(),
-          type: 'Loss of Pay',
-        };
+          if (hasHalfDay) {
+            const halfDayDate = businessDays[wholePaidDays];
+            await addLeavePeriod(activeUser.id, {
+              startDate: halfDayDate.toISOString(),
+              endDate: halfDayDate.toISOString(),
+              type: 'Paid Leave',
+              isHalfDay: true,
+              halfDaySession: 'First Half',
+            });
+            await addLeavePeriod(activeUser.id, {
+              startDate: halfDayDate.toISOString(),
+              endDate: halfDayDate.toISOString(),
+              type: 'Loss of Pay',
+              isHalfDay: true,
+              halfDaySession: 'Second Half',
+            });
+          }
 
-        // Write both segments
-        const successPaid = await addLeavePeriod(activeUser.id, paidPeriod);
-        const successLop = await addLeavePeriod(activeUser.id, lopPeriod);
+          const lopStartIndex = wholePaidDays + (hasHalfDay ? 1 : 0);
+          if (lopStartIndex < businessDays.length) {
+            const lopStartDate = businessDays[lopStartIndex];
+            await addLeavePeriod(activeUser.id, {
+              startDate: lopStartDate.toISOString(),
+              endDate: end.toISOString(),
+              type: 'Loss of Pay',
+              isHalfDay: false,
+            });
+          }
 
-        if (successPaid && successLop) {
           toast({
             title: 'Applied Split Leave',
-            description: `Applied ${paidCount} days of Paid Leave. The remaining ${businessDays.length - paidCount} days were automatically converted to Loss of Pay (LOP).`
+            description: `Applied ${remainingPaid} days of Paid Leave. The remaining days were automatically converted to Loss of Pay (LOP).`
           });
-          form.reset({ startDate: '', endDate: '', type: 'Paid Leave' });
+          form.reset({ duration: 'Full Day', startDate: '', endDate: '', halfDaySession: 'First Half', type: 'Paid Leave' });
         } else {
-          toast({ variant: 'destructive', title: 'Error', description: 'Could not apply split leaves.' });
+          const paidCount = remainingPaid;
+          const paidEndDate = businessDays[paidCount - 1];
+          const lopStartDate = businessDays[paidCount];
+
+          const paidPeriod: Omit<LeavePeriod, 'id'> = {
+            startDate: start.toISOString(),
+            endDate: paidEndDate.toISOString(),
+            type: 'Paid Leave',
+            isHalfDay: false,
+          };
+
+          const lopPeriod: Omit<LeavePeriod, 'id'> = {
+            startDate: lopStartDate.toISOString(),
+            endDate: end.toISOString(),
+            type: 'Loss of Pay',
+            isHalfDay: false,
+          };
+
+          // Write both segments
+          const successPaid = await addLeavePeriod(activeUser.id, paidPeriod);
+          const successLop = await addLeavePeriod(activeUser.id, lopPeriod);
+
+          if (successPaid && successLop) {
+            toast({
+              title: 'Applied Split Leave',
+              description: `Applied ${paidCount} days of Paid Leave. The remaining ${businessDays.length - paidCount} days were automatically converted to Loss of Pay (LOP).`
+            });
+            form.reset({ duration: 'Full Day', startDate: '', endDate: '', halfDaySession: 'First Half', type: 'Paid Leave' });
+          } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not apply split leaves.' });
+          }
         }
       } else {
         // Normal add
@@ -446,11 +632,12 @@ export default function LeaveTrackerPage() {
           startDate: start.toISOString(),
           endDate: end.toISOString(),
           type: 'Paid Leave',
+          isHalfDay: false,
         };
         const success = await addLeavePeriod(activeUser.id, newLeavePeriod);
         if (success) {
           toast({ title: 'Success', description: 'Paid Leave applied successfully.' });
-          form.reset({ startDate: '', endDate: '', type: 'Paid Leave' });
+          form.reset({ duration: 'Full Day', startDate: '', endDate: '', halfDaySession: 'First Half', type: 'Paid Leave' });
         } else {
           toast({ variant: 'destructive', title: 'Error', description: 'Could not apply leave.' });
         }
@@ -461,11 +648,12 @@ export default function LeaveTrackerPage() {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
         type: 'Loss of Pay',
+        isHalfDay: false,
       };
       const success = await addLeavePeriod(activeUser.id, newLeavePeriod);
       if (success) {
         toast({ title: 'Success', description: 'Loss of Pay applied successfully.' });
-        form.reset({ startDate: '', endDate: '', type: 'Paid Leave' });
+        form.reset({ duration: 'Full Day', startDate: '', endDate: '', halfDaySession: 'First Half', type: 'Paid Leave' });
       } else {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not apply leave.' });
       }
@@ -595,39 +783,102 @@ export default function LeaveTrackerPage() {
           <Card>
             <CardHeader>
               <CardTitle>Add New Leave Period</CardTitle>
-              <CardDescription>Select a start and end date for your leave.</CardDescription>
+              <CardDescription>Select leave duration, dates, and session.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="flex items-start gap-4">
-                    <FormField
-                      control={form.control}
-                      name="startDate"
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Start Date</FormLabel>
+                  {/* Duration Selector */}
+                  <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select duration" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="endDate"
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>End Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                          <SelectContent>
+                            <SelectItem value="Full Day">Full Day</SelectItem>
+                            <SelectItem value="Half Day">Half Day</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {durationValue === 'Half Day' ? (
+                    <div className="flex items-start gap-4">
+                      <FormField
+                        control={form.control}
+                        name="startDate"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel>Leave Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="halfDaySession"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel>Session</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'First Half'}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select session" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="First Half">First Half (Morning)</SelectItem>
+                                <SelectItem value="Second Half">Second Half (Afternoon)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-4">
+                      <FormField
+                        control={form.control}
+                        name="startDate"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel>Start Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="endDate"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel>End Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
                   <FormField
                     control={form.control}
                     name="type"
@@ -679,13 +930,23 @@ export default function LeaveTrackerPage() {
                   {sortedLeavePeriods.length > 0 ? sortedLeavePeriods.map(period => (
                     <TableRow key={period.id} className="hover:bg-transparent cursor-default select-none">
                       <TableCell>{format(new Date(period.startDate), 'PPP')}</TableCell>
-                      <TableCell>{format(new Date(period.endDate), 'PPP')}</TableCell>
+                      <TableCell>{period.isHalfDay ? '-' : format(new Date(period.endDate), 'PPP')}</TableCell>
                       <TableCell>
-                        <Badge variant={period.type === 'Loss of Pay' ? 'destructive' : 'secondary'}>
-                          {period.type || 'Paid Leave'}
-                        </Badge>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge variant={period.type === 'Loss of Pay' ? 'destructive' : 'secondary'}>
+                            {period.type || 'Paid Leave'}
+                          </Badge>
+                          {period.isHalfDay && (
+                            <Badge variant="outline" className="text-[10px] font-semibold border-amber-500/40 text-amber-500 bg-amber-500/10">
+                              {period.halfDaySession || 'Half Day'}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell>{calculateBusinessDays(period.startDate, period.endDate)}</TableCell>
+                      <TableCell>
+                        <span className="font-semibold">{calculateBusinessDays(period)}</span>
+                        <span className="text-muted-foreground text-xs ml-0.5">d</span>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => setDeletingLeavePeriod(period)}>
                           <Trash2 className="h-4 w-4" />

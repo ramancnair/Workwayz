@@ -443,7 +443,7 @@ export async function flowpilotCreateTestCase(params: {
     title,
     type,
     projectId,
-    url: `/projects/${projectId}/testing/test-backlog`,
+    url: `/projects/${projectId}/testing/test-cases`,
   };
 }
 
@@ -508,7 +508,7 @@ export async function flowpilotBulkCreateTestCases(params: {
     count: createdItems.length,
     testCases: createdItems,
     projectId,
-    url: `/projects/${projectId}/testing/test-backlog`,
+    url: `/projects/${projectId}/testing/test-cases`,
   };
 }
 
@@ -4436,7 +4436,7 @@ export async function flowpilotUpdateTestCase(params: {
     projectId: params.projectId,
     testCaseId: params.testCaseId,
     ...p,
-    url: `/projects/${params.projectId}/testing/test-backlog`,
+    url: `/projects/${params.projectId}/testing/test-cases`,
   };
 }
 
@@ -4455,7 +4455,7 @@ export async function flowpilotDeleteTestCase(params: { projectId: string; testC
     success: true,
     projectId: params.projectId,
     testCaseId: params.testCaseId,
-    url: `/projects/${params.projectId}/testing/test-backlog`,
+    url: `/projects/${params.projectId}/testing/test-cases`,
   };
 }
 

@@ -1093,7 +1093,14 @@ export default function KanbanPage() {
                                 </div>
                               </FormControl>
                               <datalist id="parent-story-options-defect-edit-kanban-page">
-                                {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                                {parentStoryOptions
+                                  .filter(opt => {
+                                    const q = editParentStoryText.toLowerCase().trim();
+                                    if (!q) return true;
+                                    const tokens = q.split(/\s+/).filter(Boolean);
+                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                  })
+                                  .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
                             </FormItem>
@@ -1130,7 +1137,14 @@ export default function KanbanPage() {
                                 </div>
                               </FormControl>
                               <datalist id="testcase-options-defect-edit-kanban-page">
-                                {testCaseOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                                {testCaseOptions
+                                  .filter(opt => {
+                                    const q = testCaseInputText.toLowerCase().trim();
+                                    if (!q) return true;
+                                    const tokens = q.split(/\s+/).filter(Boolean);
+                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                  })
+                                  .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
                             </FormItem>
@@ -1228,7 +1242,15 @@ export default function KanbanPage() {
                                 </div>
                               </FormControl>
                               <datalist id="bug-options-defect-edit-kanban-page">
-                                {relatedBugOptions.filter(opt => opt.value !== selectedStory?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                                {relatedBugOptions
+                                  .filter(opt => opt.value !== selectedStory?.id)
+                                  .filter(opt => {
+                                    const q = relatedBugInputText.toLowerCase().trim();
+                                    if (!q) return true;
+                                    const tokens = q.split(/\s+/).filter(Boolean);
+                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                  })
+                                  .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
                             </FormItem>
@@ -1598,9 +1620,16 @@ export default function KanbanPage() {
                                                    }}
                                                />
                                            </FormControl>
-                                           <datalist id="parent-story-options">
-                                               {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
-                                           </datalist>
+                                            <datalist id="parent-story-options">
+                                                {parentStoryOptions
+                                                  .filter(opt => {
+                                                    const q = editParentStoryText.toLowerCase().trim();
+                                                    if (!q) return true;
+                                                    const tokens = q.split(/\s+/).filter(Boolean);
+                                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                                  })
+                                                  .map(opt => <option key={opt.value} value={opt.label} />)}
+                                            </datalist>
                                            <FormMessage />
                                            </FormItem>
                                        )}

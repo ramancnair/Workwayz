@@ -59,7 +59,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.includes('/development/development-tasks')) return 'Sub-Tasks';
   if (pathname.includes('/development/defect-tracker')) return 'Defect Tracker';
   if (pathname.includes('/testing/dashboard')) return 'Test Dashboard';
-  if (pathname.includes('/testing/test-backlog')) return 'Test Backlog';
+  if (pathname.includes('/testing/test-cases') || pathname.includes('/testing/test-backlog')) return 'Test Cases';
   if (pathname.includes('/testing/test-plan') || pathname.includes('/testing/test-cycle')) return 'Test Cycle';
   if (pathname.includes('/testing/test-execution')) return 'Test Execution';
   if (pathname.includes('/testing/defects')) return 'Defects';
@@ -147,6 +147,7 @@ export const allProjectPageNames = [
   'Sub-Tasks',
   'Defect Tracker',
   'Test Dashboard',
+  'Test Cases',
   'Test Backlog',
   'Test Cycle',
   'Test Plan',
@@ -206,7 +207,8 @@ export function getProjectLandingPage(
         { name: 'Sub-Tasks', path: `${basePath}/development/development-tasks` },
         { name: 'Defect Tracker', path: `${basePath}/development/defect-tracker` },
         { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
-        { name: 'Test Backlog', path: `${basePath}/testing/test-backlog` },
+        { name: 'Test Cases', path: `${basePath}/testing/test-cases` },
+        { name: 'Test Backlog', path: `${basePath}/testing/test-cases` },
         { name: 'Test Cycle', path: `${basePath}/testing/test-cycle` },
         { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
         { name: 'Defects', path: `${basePath}/testing/defects` },
@@ -244,7 +246,8 @@ export function getProjectLandingPage(
         { name: 'Specifications', path: `${basePath}/project-details/specifications` },
         { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
         { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
-        { name: 'Test Backlog', path: `${basePath}/testing/test-backlog` },
+        { name: 'Test Cases', path: `${basePath}/testing/test-cases` },
+        { name: 'Test Backlog', path: `${basePath}/testing/test-cases` },
         { name: 'Test Cycle', path: `${basePath}/testing/test-cycle` },
         { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
         { name: 'Defects', path: `${basePath}/testing/defects` },
@@ -324,9 +327,9 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/testing`,
         candidates: [
           { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
-          { name: 'Test Cases', path: `${basePath}/testing/test-backlog` },
-          { name: 'Test Backlogs', path: `${basePath}/testing/test-backlog` },
-          { name: 'Test Backlog', path: `${basePath}/testing/test-backlog` },
+          { name: 'Test Cases', path: `${basePath}/testing/test-cases` },
+          { name: 'Test Backlogs', path: `${basePath}/testing/test-cases` },
+          { name: 'Test Backlog', path: `${basePath}/testing/test-cases` },
           { name: 'Test Cycles', path: `${basePath}/testing/test-cycle` },
           { name: 'Test Cycle', path: `${basePath}/testing/test-cycle` },
           { name: 'Test Executions', path: `${basePath}/testing/test-execution` },

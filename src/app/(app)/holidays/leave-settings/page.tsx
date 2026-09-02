@@ -117,10 +117,11 @@ export default function AllocatedLeavesPage() {
 
   // Helper to calculate business days clamped to a specific year
   const calculateBusinessDaysForYear = useMemo(() => {
-    return (startDateStr: string, endDateStr: string, year: number): number => {
+    return (period: { startDate?: string; endDate?: string; isHalfDay?: boolean }, year: number): number => {
       try {
-        const start = new Date(startDateStr);
-        const end = new Date(endDateStr);
+        if (!period.startDate || !period.endDate) return 0;
+        const start = new Date(period.startDate);
+        const end = new Date(period.endDate);
         
         if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
             return 0;
@@ -146,6 +147,10 @@ export default function AllocatedLeavesPage() {
             return !isWeekend && !isHoliday;
         });
 
+        if (period.isHalfDay) {
+          return businessDays.length > 0 ? 0.5 : 0;
+        }
+
         return businessDays.length;
       } catch(e) {
         console.error("Error calculating business days", e);
@@ -162,7 +167,7 @@ export default function AllocatedLeavesPage() {
     return employees.map(emp => {
       const paidTakenPrev = (emp.leavePeriods || [])
         .filter(p => p.type === 'Paid Leave' || !p.type)
-        .reduce((sum, p) => sum + calculateBusinessDaysForYear(p.startDate, p.endDate, prevYear), 0);
+        .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, prevYear), 0);
 
       const remainingPrev = Math.max(0, allocatedPaidLeaves - paidTakenPrev);
 
@@ -178,7 +183,7 @@ export default function AllocatedLeavesPage() {
 
       const paidTakenCurrent = (emp.leavePeriods || [])
         .filter(p => p.type === 'Paid Leave' || !p.type)
-        .reduce((sum, p) => sum + calculateBusinessDaysForYear(p.startDate, p.endDate, currentYear), 0);
+        .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, currentYear), 0);
 
       const remainingCurrent = Math.max(0, totalAvailable - paidTakenCurrent);
 

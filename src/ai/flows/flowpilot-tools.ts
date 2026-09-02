@@ -625,8 +625,7 @@ export const createTestCaseTool = ai.defineTool(
         title: input.title,
         type: input.type,
         projectId: input.projectId,
-        url: `/projects/${input.projectId}/testing/test-backlog`,
-        needsClientExecution: true,
+        url: `/projects/${input.projectId}/testing/test-cases`,
         params: input,
       };
     }
@@ -676,9 +675,8 @@ export const bulkCreateTestCasesTool = ai.defineTool(
         count: input.testCases.length,
         testCases: input.testCases,
         projectId: input.projectId,
-        url: `/projects/${input.projectId}/testing/test-backlog`,
+        url: `/projects/${input.projectId}/testing/test-cases`,
         needsClientExecution: true,
-        params: input,
       };
     }
     recordExecutedAction('bulkCreateTestCases', result, input);

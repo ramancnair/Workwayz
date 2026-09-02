@@ -166,6 +166,8 @@ export type LeavePeriod = {
   startDate: string; // ISO String
   endDate: string; // ISO String
   type?: 'Paid Leave' | 'Loss of Pay';
+  isHalfDay?: boolean;
+  halfDaySession?: 'First Half' | 'Second Half';
 };
 
 export type User = {

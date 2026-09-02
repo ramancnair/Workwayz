@@ -726,7 +726,14 @@ export default function DefectTrackerPage() {
                           </div>
                         </FormControl>
                         <datalist id="parent-story-options-tracker">
-                          {parentStoryOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                          {parentStoryOptions
+                            .filter(opt => {
+                              const q = parentStoryInputText.toLowerCase().trim();
+                              if (!q) return true;
+                              const tokens = q.split(/\s+/).filter(Boolean);
+                              return tokens.every(token => opt.label.toLowerCase().includes(token));
+                            })
+                            .map(opt => <option key={opt.value} value={opt.label} />)}
                         </datalist>
                         <FormMessage />
                       </FormItem>
@@ -763,7 +770,14 @@ export default function DefectTrackerPage() {
                           </div>
                         </FormControl>
                         <datalist id="testcase-options-tracker">
-                          {testCaseOptions.map(opt => <option key={opt.value} value={opt.label} />)}
+                          {testCaseOptions
+                            .filter(opt => {
+                              const q = testCaseInputText.toLowerCase().trim();
+                              if (!q) return true;
+                              const tokens = q.split(/\s+/).filter(Boolean);
+                              return tokens.every(token => opt.label.toLowerCase().includes(token));
+                            })
+                            .map(opt => <option key={opt.value} value={opt.label} />)}
                         </datalist>
                         <FormMessage />
                       </FormItem>
@@ -867,7 +881,15 @@ export default function DefectTrackerPage() {
                           </div>
                         </FormControl>
                         <datalist id="bug-options-tracker">
-                          {relatedBugOptions.filter(opt => opt.value !== selectedBug?.id).map(opt => <option key={opt.value} value={opt.label} />)}
+                          {relatedBugOptions
+                            .filter(opt => opt.value !== selectedBug?.id)
+                            .filter(opt => {
+                              const q = relatedBugInputText.toLowerCase().trim();
+                              if (!q) return true;
+                              const tokens = q.split(/\s+/).filter(Boolean);
+                              return tokens.every(token => opt.label.toLowerCase().includes(token));
+                            })
+                            .map(opt => <option key={opt.value} value={opt.label} />)}
                         </datalist>
                         <FormMessage />
                       </FormItem>

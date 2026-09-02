@@ -83,7 +83,7 @@ function WorklogDetailModal({ open, onClose, worklog, employee, dateLabel, daySt
 
   const getStatusBadgeClass = (status: string) => {
     if (status.includes('Overtime') || status.includes('Work on')) return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
-    if (status === 'Leave') return 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30';
+    if (status.includes('Leave')) return 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30';
     if (status === 'Holiday' || status === 'Weekend') return 'bg-red-500/15 text-red-400 border-red-500/30';
     return 'bg-green-500/15 text-green-400 border-green-500/30';
   };
@@ -185,12 +185,14 @@ export default function ResourceWorkloadPage() {
         const worklog = worklogs.find(w => w.employeeId === employee.id && format(parseISO(w.date), 'yyyy-MM-dd') === dateStr);
         const loggedHours = worklog?.totalHours || 0;
 
-        const isLeave = employee.leavePeriods?.some(p => {
+        const matchingLeave = employee.leavePeriods?.find(p => {
           if (!p.startDate || !p.endDate) return false;
           const leaveStart = startOfDay(parseISO(p.startDate));
           const leaveEnd = endOfDay(parseISO(p.endDate));
           return isSameDay(day, leaveStart) || isSameDay(day, leaveEnd) || (day > leaveStart && day < leaveEnd);
         });
+        const isLeave = !!matchingLeave;
+        const isHalfDayLeave = matchingLeave?.isHalfDay;
 
         const isHoliday = holidaySet.has(dateStr);
         const isWeekend = weeklyOffDays.includes(dayOfWeek);
@@ -202,7 +204,8 @@ export default function ResourceWorkloadPage() {
 
         if (loggedHours > 0) {
             if (isNonWorkingDay) {
-                status = `Work on ${isLeave ? 'Leave' : (isHoliday ? 'Holiday' : 'Weekend')}`;
+                const leaveLabel = isHalfDayLeave ? `Half-Day Leave (${matchingLeave?.halfDaySession || 'Half Day'})` : 'Leave';
+                status = `Work on ${isLeave ? leaveLabel : (isHoliday ? 'Holiday' : 'Weekend')}`;
                 color = '#3b82f6'; // Blue
             } else if (loggedHours > 8) {
                 status = 'Overtime';
@@ -210,7 +213,7 @@ export default function ResourceWorkloadPage() {
             }
         } else {
             if (isLeave) {
-              status = 'Leave';
+              status = isHalfDayLeave ? `Half Day Leave (${matchingLeave?.halfDaySession || '0.5d'})` : 'Leave';
               color = '#facc15'; // Yellow
               opacity = 0.5;
             } else if (isHoliday) {
@@ -224,8 +227,8 @@ export default function ResourceWorkloadPage() {
             }
         }
         
-        // Use loggedHours for bar height if work was done, otherwise use a full bar for non-working day indication
-        const displayHours = (loggedHours === 0 && isNonWorkingDay) ? 8 : loggedHours;
+        // Use loggedHours for bar height if work was done, otherwise use a bar for non-working day indication
+        const displayHours = (loggedHours === 0 && isNonWorkingDay) ? (isHalfDayLeave ? 4 : 8) : loggedHours;
 
         return {
           date: format(day, 'd'),

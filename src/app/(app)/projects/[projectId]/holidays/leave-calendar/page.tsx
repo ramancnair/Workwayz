@@ -46,7 +46,7 @@ export default function LeaveCalendarPage() {
   }, [holidays]);
 
   const leavesByDay = useMemo(() => {
-    const leaves: Record<string, { id: string; firstName: string; lastName: string; leaveType?: string }[]> = {};
+    const leaves: Record<string, { id: string; firstName: string; lastName: string; leaveType?: string; isHalfDay?: boolean; halfDaySession?: 'First Half' | 'Second Half' }[]> = {};
     const daysInView = eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
     daysInView.forEach(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
@@ -68,13 +68,19 @@ export default function LeaveCalendarPage() {
                  if (isWeekend || isHoliday) return;
 
                  if(leaves[dayStr]) {
-                    const alreadyPresent = leaves[dayStr].some(item => item.id === emp.id);
+                    const alreadyPresent = leaves[dayStr].some(item => 
+                      item.id === emp.id &&
+                      item.isHalfDay === period.isHalfDay &&
+                      item.halfDaySession === period.halfDaySession
+                    );
                     if (!alreadyPresent) {
                       leaves[dayStr].push({ 
                         id: emp.id, 
                         firstName: emp.firstName, 
                         lastName: emp.lastName, 
-                        leaveType: period.type || 'Paid Leave' 
+                        leaveType: period.type || 'Paid Leave',
+                        isHalfDay: period.isHalfDay,
+                        halfDaySession: period.halfDaySession,
                       });
                     }
                  }
@@ -87,10 +93,11 @@ export default function LeaveCalendarPage() {
 
   // Premium business days calculator strictly clamped to a specific year
   const calculateBusinessDaysForYear = useMemo(() => {
-    return (startDateStr: string, endDateStr: string, year: number): number => {
+    return (period: { startDate?: string; endDate?: string; isHalfDay?: boolean }, year: number): number => {
       try {
-        const start = new Date(startDateStr);
-        const end = new Date(endDateStr);
+        if (!period.startDate || !period.endDate) return 0;
+        const start = new Date(period.startDate);
+        const end = new Date(period.endDate);
         
         if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
             return 0;
@@ -118,6 +125,10 @@ export default function LeaveCalendarPage() {
             return !isWeekend && !isHoliday;
         });
 
+        if (period.isHalfDay) {
+          return businessDays.length > 0 ? 0.5 : 0;
+        }
+
         return businessDays.length;
       } catch(e) {
         console.error("Error calculating business days", e);
@@ -133,8 +144,9 @@ export default function LeaveCalendarPage() {
       const yearStart = new Date(selectedYear, 0, 1);
       const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59);
 
-      // Track unique days to prevent duplicate counting
-      const leaveDaysMap = new Map<string, 'Paid Leave' | 'Loss of Pay'>();
+      let paidDays = 0;
+      let lopDays = 0;
+      const leaveEntriesMap = new Map<string, 'Paid Leave' | 'Loss of Pay'>();
 
       emp.leavePeriods?.forEach(period => {
         if (!period.startDate || !period.endDate) return;
@@ -152,19 +164,27 @@ export default function LeaveCalendarPage() {
           const isHoliday = holidayDates.some(h => isSameDay(day, h));
           if (isWeekend || isHoliday) return;
           const dayStr = format(day, 'yyyy-MM-dd');
-          if (!leaveDaysMap.has(dayStr)) {
-            leaveDaysMap.set(dayStr, (period.type as any) || 'Paid Leave');
+          const type = (period.type as any) || 'Paid Leave';
+
+          if (period.isHalfDay) {
+            const sessionKey = `${dayStr}_${period.halfDaySession || 'First Half'}`;
+            if (!leaveEntriesMap.has(sessionKey)) {
+              leaveEntriesMap.set(sessionKey, type);
+            }
+          } else {
+            const s1 = `${dayStr}_First Half`;
+            const s2 = `${dayStr}_Second Half`;
+            leaveEntriesMap.set(s1, type);
+            leaveEntriesMap.set(s2, type);
           }
         });
       });
 
-      let paidDays = 0;
-      let lopDays = 0;
-      leaveDaysMap.forEach(type => {
+      leaveEntriesMap.forEach(type => {
         if (type === 'Loss of Pay') {
-          lopDays += 1;
+          lopDays += 0.5;
         } else {
-          paidDays += 1;
+          paidDays += 0.5;
         }
       });
 
@@ -264,16 +284,34 @@ export default function LeaveCalendarPage() {
                                 </div>
                                 {holidayInfo && <Badge variant="outline" className="mt-2 bg-yellow-100 text-yellow-800">{holidayInfo}</Badge>}
                                 <div className="mt-4 space-y-2">
-                                    {leavesByDay[dayStr]?.map(emp => (
-                                        <div key={emp.id} className="flex items-center gap-1.5 bg-background p-1 rounded-md border text-xs justify-between">
+                                    {leavesByDay[dayStr]?.map((emp, empIdx) => {
+                                      const isLOP = emp.leaveType === 'Loss of Pay';
+                                      const halfBadge = emp.isHalfDay 
+                                        ? (emp.halfDaySession === 'First Half' ? '1st H' : (emp.halfDaySession === 'Second Half' ? '2nd H' : '0.5'))
+                                        : null;
+
+                                      return (
+                                        <div key={`${emp.id}-${empIdx}`} className="flex items-center gap-1.5 bg-background p-1 rounded-md border text-xs justify-between">
                                             <span className="truncate font-medium">{emp.firstName} {emp.lastName}</span>
-                                            {emp.leaveType === 'Loss of Pay' ? (
-                                              <Badge variant="destructive" className="px-1 py-0 h-4 text-[9px] font-semibold leading-none flex-shrink-0">LOP</Badge>
-                                            ) : (
-                                              <Badge variant="secondary" className="px-1 py-0 h-4 text-[9px] font-semibold leading-none flex-shrink-0 bg-blue-500/10 text-blue-500 hover:bg-blue-500/10 border-0">PL</Badge>
-                                            )}
+                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                              <Badge 
+                                                variant={isLOP ? 'destructive' : 'secondary'} 
+                                                className={cn(
+                                                  "px-1 py-0 h-4 text-[9px] font-semibold leading-none flex-shrink-0",
+                                                  !isLOP && "bg-blue-500/10 text-blue-500 hover:bg-blue-500/10 border-0"
+                                                )}
+                                              >
+                                                {isLOP ? 'LOP' : 'PL'}
+                                              </Badge>
+                                              {halfBadge && (
+                                                <Badge variant="outline" className="px-1 py-0 h-4 text-[8px] font-medium leading-none flex-shrink-0 border-amber-500/30 text-amber-500 bg-amber-500/5">
+                                                  {halfBadge}
+                                                </Badge>
+                                              )}
+                                            </div>
                                         </div>
-                                    ))}
+                                      );
+                                    })}
                                 </div>
                             </div>
                         )

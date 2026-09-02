@@ -482,7 +482,7 @@ export async function executeClientCreateTestCase(params: {
     title,
     type,
     projectId,
-    url: `/projects/${projectId}/testing/test-backlog`,
+    url: `/projects/${projectId}/testing/test-cases`,
   };
 }
 
@@ -547,7 +547,7 @@ export async function executeClientBulkCreateTestCases(params: {
     count: createdItems.length,
     testCases: createdItems,
     projectId,
-    url: `/projects/${projectId}/testing/test-backlog`,
+    url: `/projects/${projectId}/testing/test-cases`,
   };
 }
 
@@ -1954,7 +1954,7 @@ export async function executeFlowPilotActionOnClient(action: any) {
           if (params.type) p.type = params.type;
           await updateDoc(match.ref, p);
         }
-        return { success: true, ...params, url: `/projects/${params.projectId}/testing/test-backlog` };
+        return { success: true, ...params, url: `/projects/${params.projectId}/testing/test-cases` };
       }
       case 'deleteTestCase': {
         const snap = await getDocs(collection(db, 'projects', params.projectId, 'testCases'));
@@ -1962,7 +1962,7 @@ export async function executeFlowPilotActionOnClient(action: any) {
         if (match) {
           await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
         }
-        return { success: true, ...params, url: `/projects/${params.projectId}/testing/test-backlog` };
+        return { success: true, ...params, url: `/projects/${params.projectId}/testing/test-cases` };
       }
       case 'updateTestCycle':
       case 'updateTestPlan': {
