@@ -24,6 +24,13 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.output = config.output || {};
+      config.output.chunkLoadTimeout = 300000; // 5 minutes
+    }
+    return config;
+  },
 
   images: {
     remotePatterns: [

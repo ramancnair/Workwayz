@@ -26,7 +26,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import type { FlowPilotActionItem } from '@/ai/flows/flowpilot-agent';
 import { collection, getDocs, doc, getDoc, db } from '@/lib/db-provider';
-import { executeFlowPilotActionOnClient } from '@/lib/flowpilot-client-executor';
 
 import { useToast } from '@/hooks/use-toast';
 
@@ -354,6 +353,7 @@ export function FlowPilotChatWidget() {
           if (controller.signal.aborted) break;
           if (action.needsClientExecution) {
             try {
+              const { executeFlowPilotActionOnClient } = await import('@/lib/flowpilot-client-executor');
               const clientResult = await executeFlowPilotActionOnClient(action);
               processedActions.push({
                 ...action,
