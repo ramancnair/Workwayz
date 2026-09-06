@@ -18,6 +18,9 @@ import {
   Lightbulb,
   Cpu,
   Square,
+  Shield,
+  Zap,
+  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,7 +37,91 @@ interface ChatMessage {
   role: 'user' | 'model';
   content: string;
   executedActions?: FlowPilotActionItem[];
+  tokenUsage?: {
+    totalTokens: number;
+    promptTokens: number;
+    completionTokens: number;
+    costUsd?: number;
+    modelCalls?: number;
+    toolCalls?: number;
+    toolsUsed?: string[];
+  };
   timestamp: Date;
+}
+
+interface RateStats {
+  currentRpm: number;
+  limitRpm: number;
+  percentRpm: number;
+  currentTpm: number;
+  limitTpm: number;
+  percentTpm: number;
+  lastPromptTokens: number;
+  lastCompletionTokens: number;
+  lastTotalTokens: number;
+  lastCostUsd: number;
+  lastModelCalls?: number;
+  lastToolCalls?: number;
+  lastToolsUsed?: string[];
+  status: 'safe' | 'warning' | 'critical';
+}
+
+const ROLE_PERMISSIONS: Record<string, { desc: string; crud: string }> = {
+  Administrator: {
+    desc: 'Full Unrestricted Organization Access',
+    crud: 'Full CRUD across all modules, settings, projects, and users',
+  },
+  'Senior Management': {
+    desc: 'Executive Governance Scope',
+    crud: 'Create/Read/Update across all modules; deletion is restricted',
+  },
+  'Project Manager': {
+    desc: 'Project Delivery & Execution Lead',
+    crud: 'Full CRUD on active Project, Stories, Sprints, Test Cases, and Trash',
+  },
+  Lead: {
+    desc: 'Technical & Team Lead Scope',
+    crud: 'Full CRUD on Stories, Subtasks, Test Cases, and RAID items',
+  },
+  'Team Member': {
+    desc: 'Individual Contributor Scope',
+    crud: 'View backlog, update assigned tasks/bugs on Kanban, log work',
+  },
+  PMO: {
+    desc: 'PMO & Financial Governance Scope',
+    crud: 'Full CRUD on Portfolios, Projects, Billing, Milestones, and BCP',
+  },
+};
+
+export function getUserAccessLevel(user: any): string {
+  if (!user) return 'Team Member';
+  const raw = String(user.accessLevel || user.role || user.roleName || '').trim();
+  const lower = raw.toLowerCase();
+
+  if (lower === 'administrator' || lower === 'admin' || lower === 'superuser') {
+    return 'Administrator';
+  }
+  if (lower === 'senior management' || lower === 'seniormanagement' || lower === 'senior_management' || lower === 'executive') {
+    return 'Senior Management';
+  }
+  if (lower === 'project manager' || lower === 'projectmanager' || lower === 'pm') {
+    return 'Project Manager';
+  }
+  if (lower === 'lead' || lower === 'tech lead' || lower === 'team lead') {
+    return 'Lead';
+  }
+  if (lower === 'pmo') {
+    return 'PMO';
+  }
+  if (lower === 'team member' || lower === 'teammember' || lower === 'developer' || lower === 'dev' || lower === 'qa') {
+    return 'Team Member';
+  }
+
+  if (user.email && typeof user.email === 'string' && (user.email.toLowerCase().includes('admin') || user.isAdmin === true)) {
+    return 'Administrator';
+  }
+
+  return raw || 'Team Member';
 }
 
 interface ProjectOption {
@@ -85,6 +172,34 @@ export function FlowPilotChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [rateStats, setRateStats] = useState<RateStats>({
+    currentRpm: 0,
+    limitRpm: 15,
+    percentRpm: 0,
+    currentTpm: 0,
+    limitTpm: 1000000,
+    percentTpm: 0,
+    lastPromptTokens: 0,
+    lastCompletionTokens: 0,
+    lastTotalTokens: 0,
+    lastCostUsd: 0,
+    status: 'safe',
+  });
+  const [isRatePopoverOpen, setIsRatePopoverOpen] = useState(false);
+  const [isAccessPopoverOpen, setIsAccessPopoverOpen] = useState(false);
+
+  const effectiveAccessLevel = getUserAccessLevel(currentUser);
+
+  const refreshRateStats = () => {
+    fetch('/api/agent/rate-utilization')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && typeof data.currentRpm === 'number') {
+          setRateStats(data);
+        }
+      })
+      .catch((err) => console.warn('Could not fetch rate stats', err));
+  };
 
   // Fetch active AI details & live model list from backend
   const refreshAiDetails = () => {
@@ -105,6 +220,9 @@ export function FlowPilotChatWidget() {
 
   useEffect(() => {
     refreshAiDetails();
+    if (isOpen) {
+      refreshRateStats();
+    }
   }, [isOpen]);
 
   const handleSelectModel = async (provider: string, model: string) => {
@@ -324,11 +442,49 @@ export function FlowPilotChatWidget() {
                 firstName: currentUser.firstName,
                 lastName: currentUser.lastName,
                 email: currentUser.email,
-                accessLevel: currentUser.accessLevel,
+                accessLevel: effectiveAccessLevel,
+                role: effectiveAccessLevel,
               }
-            : undefined,
+            : {
+                accessLevel: effectiveAccessLevel,
+                role: effectiveAccessLevel,
+              },
         }),
       });
+
+      // Capture rate utilization headers
+      const rpm = res.headers.get('x-rate-rpm');
+      const rpmLimit = res.headers.get('x-rate-rpm-limit');
+      const rpmPct = res.headers.get('x-rate-percent-rpm');
+      const tpm = res.headers.get('x-rate-tpm');
+      const tpmLimit = res.headers.get('x-rate-tpm-limit');
+      const tpmPct = res.headers.get('x-rate-percent-tpm');
+      const lastPrompt = res.headers.get('x-rate-last-prompt-tokens');
+      const lastCompletion = res.headers.get('x-rate-last-completion-tokens');
+      const lastTotal = res.headers.get('x-rate-last-total-tokens');
+      const lastCost = res.headers.get('x-rate-last-cost-usd');
+      const lastModelCallsHeader = res.headers.get('x-rate-last-model-calls');
+      const lastToolCallsHeader = res.headers.get('x-rate-last-tool-calls');
+      const rateStatus = (res.headers.get('x-rate-status') || 'safe') as any;
+
+      if (rpm !== null && tpm !== null) {
+        setRateStats((prev) => ({
+          ...prev,
+          currentRpm: parseInt(rpm, 10) || prev.currentRpm,
+          limitRpm: parseInt(rpmLimit || '15', 10),
+          percentRpm: parseFloat(rpmPct || '0'),
+          currentTpm: parseInt(tpm, 10) || prev.currentTpm,
+          limitTpm: parseInt(tpmLimit || '1000000', 10),
+          percentTpm: parseFloat(tpmPct || '0'),
+          lastPromptTokens: lastPrompt ? parseInt(lastPrompt, 10) : prev.lastPromptTokens,
+          lastCompletionTokens: lastCompletion ? parseInt(lastCompletion, 10) : prev.lastCompletionTokens,
+          lastTotalTokens: lastTotal ? parseInt(lastTotal, 10) : prev.lastTotalTokens,
+          lastCostUsd: lastCost ? parseFloat(lastCost) : prev.lastCostUsd,
+          lastModelCalls: lastModelCallsHeader ? parseInt(lastModelCallsHeader, 10) : prev.lastModelCalls,
+          lastToolCalls: lastToolCallsHeader ? parseInt(lastToolCallsHeader, 10) : prev.lastToolCalls,
+          status: rateStatus,
+        }));
+      }
 
       let data: any = {};
       try {
@@ -336,6 +492,27 @@ export function FlowPilotChatWidget() {
       } catch (e) {
         data = {};
       }
+
+      if (data.rateUtilization) {
+        setRateStats(data.rateUtilization);
+      }
+
+      const rawTokenUsage = data.tokenUsage || (data.rateUtilization ? {
+        promptTokens: data.rateUtilization.lastPromptTokens,
+        completionTokens: data.rateUtilization.lastCompletionTokens,
+        totalTokens: data.rateUtilization.lastTotalTokens,
+        costUsd: data.rateUtilization.lastCostUsd,
+        modelCalls: data.rateUtilization.lastModelCalls,
+        toolCalls: data.rateUtilization.lastToolCalls,
+        toolsUsed: data.rateUtilization.lastToolsUsed,
+      } : (lastTotal ? {
+        promptTokens: parseInt(lastPrompt || '0', 10),
+        completionTokens: parseInt(lastCompletion || '0', 10),
+        totalTokens: parseInt(lastTotal || '0', 10),
+        costUsd: lastCost ? parseFloat(lastCost) : undefined,
+        modelCalls: lastModelCallsHeader ? parseInt(lastModelCallsHeader, 10) : 1,
+        toolCalls: lastToolCallsHeader ? parseInt(lastToolCallsHeader, 10) : 0,
+      } : undefined));
 
       if (data.aiDetails) {
         setAiDetails(data.aiDetails);
@@ -378,6 +555,7 @@ export function FlowPilotChatWidget() {
         role: 'model',
         content: data.reply || data.error || 'Request completed.',
         executedActions: finalActions.length > 0 ? finalActions : undefined,
+        tokenUsage: rawTokenUsage,
         timestamp: new Date(),
       };
 
@@ -697,6 +875,207 @@ export function FlowPilotChatWidget() {
             </div>
           </div>
 
+          {/* Sub-Header Status Ribbon: Access Level & Quota Utilization Meter */}
+          <div className="px-3 py-1.5 bg-muted/40 border-b border-border flex items-center justify-between gap-2 text-[11px] shrink-0 select-none">
+            {/* Access Level Pill with Popover */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAccessPopoverOpen(!isAccessPopoverOpen);
+                  setIsRatePopoverOpen(false);
+                }}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background border border-border/80 hover:border-primary/50 text-muted-foreground hover:text-foreground font-medium transition-all shadow-xs cursor-pointer"
+                title="Click to view permissions for your active access level"
+              >
+                <Shield className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span className="font-semibold text-foreground text-[10px]">
+                  Role: {effectiveAccessLevel}
+                </span>
+                <ChevronDown className="w-2.5 h-2.5 opacity-60 shrink-0" />
+              </button>
+
+              {isAccessPopoverOpen && (
+                <div className="absolute top-7 left-0 z-50 w-72 p-3 bg-popover border border-border rounded-lg shadow-2xl text-xs space-y-2 text-popover-foreground animate-in fade-in-50 zoom-in-95">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-border">
+                    <span className="font-bold flex items-center gap-1.5 text-foreground text-xs">
+                      <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                      Active Access Level
+                    </span>
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono px-1.5 py-0 bg-primary/10 text-primary border-primary/30">
+                      {effectiveAccessLevel}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="text-muted-foreground font-medium">
+                      {ROLE_PERMISSIONS[effectiveAccessLevel]?.desc || 'User Role'}
+                    </div>
+                    <div className="p-2 rounded bg-muted/50 border border-border/50 text-[10px] space-y-1">
+                      <div className="font-semibold text-foreground">Permitted Operations:</div>
+                      <div className="text-muted-foreground leading-relaxed">
+                        {ROLE_PERMISSIONS[effectiveAccessLevel]?.crud || 'Standard permissions'}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic leading-tight">
+                      FlowPilot enforces these activity restrictions matching Portfolio Access & CRUD settings.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Live Token & Request Utilization (TPM / RPM) Meter */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRatePopoverOpen(!isRatePopoverOpen);
+                  setIsAccessPopoverOpen(false);
+                }}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-0.5 rounded-md border font-mono text-[10px] transition-all shadow-xs cursor-pointer',
+                  rateStats.status === 'critical'
+                    ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
+                    : rateStats.status === 'warning'
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                    : 'bg-background border-border/80 hover:border-primary/50 text-muted-foreground hover:text-foreground'
+                )}
+                title="Click to view real-time TPM / RPM quota utilization"
+              >
+                <span
+                  className={cn(
+                    'w-1.5 h-1.5 rounded-full shrink-0',
+                    rateStats.status === 'critical'
+                      ? 'bg-red-500 animate-ping'
+                      : rateStats.status === 'warning'
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500'
+                  )}
+                />
+                <Zap className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+                <span>
+                  {rateStats.currentTpm >= 1000 ? `${(rateStats.currentTpm / 1000).toFixed(1)}k` : rateStats.currentTpm} TPM
+                </span>
+                <span className="text-muted-foreground font-normal">·</span>
+                <span>
+                  {rateStats.currentRpm}/{rateStats.limitRpm} Calls
+                </span>
+              </button>
+
+              {isRatePopoverOpen && (
+                <div className="absolute top-7 right-0 z-50 w-72 p-3 bg-popover border border-border rounded-lg shadow-2xl text-xs space-y-2.5 text-popover-foreground animate-in fade-in-50 zoom-in-95">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-border">
+                    <span className="font-bold flex items-center gap-1.5 text-foreground text-xs">
+                      <Activity className="w-3.5 h-3.5 text-primary" />
+                      Live Quota Utilization (60s)
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[9px] font-bold uppercase px-1.5 py-0.5 rounded',
+                        rateStats.status === 'critical'
+                          ? 'bg-red-500/20 text-red-500'
+                          : rateStats.status === 'warning'
+                          ? 'bg-amber-500/20 text-amber-500'
+                          : 'bg-emerald-500/20 text-emerald-500'
+                      )}
+                    >
+                      {rateStats.status}
+                    </span>
+                  </div>
+
+                  {/* TPM Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground font-medium">Tokens Per Minute (TPM):</span>
+                      <span className="font-mono font-semibold">
+                        {rateStats.currentTpm.toLocaleString()} / {rateStats.limitTpm.toLocaleString()} ({rateStats.percentTpm}%)
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all duration-300',
+                          rateStats.percentTpm >= 85
+                            ? 'bg-red-500'
+                            : rateStats.percentTpm >= 60
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        )}
+                        style={{ width: `${Math.min(100, Math.max(2, rateStats.percentTpm))}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Calls / RPM Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground font-medium">Subagent & Model Calls (60s):</span>
+                      <span className="font-mono font-semibold">
+                        {rateStats.currentRpm} / {rateStats.limitRpm} ({rateStats.percentRpm}%)
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all duration-300',
+                          rateStats.percentRpm >= 85
+                            ? 'bg-red-500'
+                            : rateStats.percentRpm >= 60
+                            ? 'bg-amber-500'
+                            : 'bg-primary'
+                        )}
+                        style={{ width: `${Math.min(100, Math.max(2, rateStats.percentRpm))}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Last Query Execution Tokens & Calls */}
+                  {rateStats.lastTotalTokens > 0 && (
+                    <div className="p-2 bg-muted/40 border border-border/60 rounded-md space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
+                        <span className="flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-amber-500" />
+                          Last Query Execution:
+                        </span>
+                        <span className="font-mono text-primary font-bold">
+                          {rateStats.lastTotalTokens.toLocaleString()} tokens
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] bg-background/60 px-1.5 py-1 rounded border border-border/40 font-mono">
+                        <span className="text-muted-foreground">Actual Calls:</span>
+                        <span className="text-foreground font-semibold">
+                          {rateStats.lastModelCalls || 1} model call{(rateStats.lastModelCalls || 1) > 1 ? 's' : ''}
+                          {rateStats.lastToolCalls ? ` (${rateStats.lastToolCalls} tool execution${rateStats.lastToolCalls > 1 ? 's' : ''})` : ''}
+                        </span>
+                      </div>
+                      {rateStats.lastToolsUsed && rateStats.lastToolsUsed.length > 0 && (
+                        <div className="text-[9px] text-muted-foreground space-y-0.5">
+                          <div className="font-semibold text-foreground">Tools Invoked:</div>
+                          <div className="flex flex-wrap gap-1">
+                            {rateStats.lastToolsUsed.map((t) => (
+                              <span key={t} className="px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded font-mono text-[9px]">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-1 text-[9px] text-muted-foreground pt-0.5 border-t border-border/30">
+                        <div>Input: <span className="font-mono font-medium text-foreground">{rateStats.lastPromptTokens.toLocaleString()}</span></div>
+                        <div>Output: <span className="font-mono font-medium text-foreground">{rateStats.lastCompletionTokens.toLocaleString()}</span></div>
+                        <div className="col-span-2">Cost: <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">${rateStats.lastCostUsd.toFixed(5)} USD</span></div>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[9px] text-muted-foreground leading-tight pt-1 border-t border-border">
+                    Limits based on AI quota window. Complete execution includes system ontology, domain tools, and reasoning.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Messages Scroll Area */}
           <div className="flex-1 p-3.5 overflow-y-auto space-y-3.5 text-xs bg-background/50">
             {messages.length === 0 ? (
@@ -751,9 +1130,38 @@ export function FlowPilotChatWidget() {
                   >
                     {msg.role === 'model' ? renderFormattedText(msg.content) : msg.content}
                   </div>
-                  <span className="text-[10px] text-muted-foreground/60 px-1 mt-1 font-mono">
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <div className="flex items-center gap-2 px-1 mt-1">
+                    <span className="text-[10px] text-muted-foreground/60 font-mono">
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {msg.tokenUsage && msg.tokenUsage.totalTokens > 0 && (
+                      <div
+                        className="inline-flex items-center gap-1.5 font-mono text-[9px] text-muted-foreground bg-muted/60 px-2 py-0.5 rounded border border-border/50 shadow-2xs flex-wrap"
+                        title={`Execution Metrics:\n• Total Model Calls: ${msg.tokenUsage.modelCalls ?? 1} call(s)\n• Subagent Tool Invocations: ${msg.tokenUsage.toolCalls ?? 0}${msg.tokenUsage.toolsUsed && msg.tokenUsage.toolsUsed.length > 0 ? ` (${msg.tokenUsage.toolsUsed.join(', ')})` : ''}\n• Input: ${msg.tokenUsage.promptTokens.toLocaleString()} tokens (ontology + tools + context)\n• Output: ${msg.tokenUsage.completionTokens.toLocaleString()} tokens\n• Total: ${msg.tokenUsage.totalTokens.toLocaleString()} tokens\n• Cost: $${(msg.tokenUsage.costUsd ?? 0).toFixed(5)} USD`}
+                      >
+                        <span className="flex items-center gap-1 text-foreground font-medium">
+                          <Zap className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+                          <span>{msg.tokenUsage.totalTokens.toLocaleString()} tokens</span>
+                        </span>
+                        <span className="text-muted-foreground/50">·</span>
+                        <span className="px-1 py-0.2 rounded bg-primary/10 text-primary font-bold">
+                          {(msg.tokenUsage.modelCalls ?? 1) > 1
+                            ? `${msg.tokenUsage.modelCalls} calls (${msg.tokenUsage.toolCalls ?? ((msg.tokenUsage.modelCalls ?? 1) - 1)} tools)`
+                            : (msg.tokenUsage.toolCalls && msg.tokenUsage.toolCalls > 0)
+                            ? `${msg.tokenUsage.toolCalls} tool calls`
+                            : `1 call`}
+                        </span>
+                        {msg.tokenUsage.costUsd !== undefined && (
+                          <>
+                            <span className="text-muted-foreground/50">·</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                              ${msg.tokenUsage.costUsd < 0.001 ? msg.tokenUsage.costUsd.toFixed(5) : msg.tokenUsage.costUsd.toFixed(4)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             )}
@@ -764,7 +1172,7 @@ export function FlowPilotChatWidget() {
                 <div className="bg-muted/70 border border-border/50 rounded-lg rounded-bl-none px-3.5 py-2 shadow-sm flex items-center justify-between gap-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                    <span>FlowPilot is executing actions...</span>
+                    <span>FlowPilot is executing subagent actions & tool calls...</span>
                   </div>
                   <Button
                     size="sm"
