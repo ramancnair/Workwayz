@@ -5608,4 +5608,22 @@ export const allFlowPilotTools = [
   permanentlyDeleteProjectItemTool,
 ];
 
+// Import and re-export deferred searchTools meta-tool
+import { searchToolsTool } from '@/ai/tools/tool-search';
+export { searchToolsTool };
+
+// Tool lookup map indexed by canonical name for fast O(1) retrieval
+export const flowpilotToolMap = new Map<string, any>(
+  allFlowPilotTools.map((t: any) => [t.__action?.name || t.name, t])
+);
+flowpilotToolMap.set('searchTools', searchToolsTool);
+flowpilotToolMap.set('queryProjectContext', queryProjectContextTool);
+
+// Anchor tools always provided in context to ensure baseline grounding & discovery
+export const flowpilotAnchorTools = [
+  queryProjectContextTool,
+  searchToolsTool,
+];
+
+
 

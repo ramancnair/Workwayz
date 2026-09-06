@@ -1,0 +1,1985 @@
+[
+  {
+    "varName": "createWorkItemTool",
+    "name": "createWorkItem",
+    "description": "Creates a new work item (User Story, Bug, Task, Feature Change, or Sub Task) in a project. Automatically assigns the next sequential ID (e.g. BUG-1, ST-5) and stores it in the database.",
+    "params": [
+      "projectId",
+      "title",
+      "description",
+      "estimatedHours",
+      "acceptanceCriteria"
+    ]
+  },
+  {
+    "varName": "updateWorkItemTool",
+    "name": "updateWorkItem",
+    "description": "Updates an existing work item (story, bug, task) status (e.g. move to",
+    "params": [
+      "projectId",
+      "storyIdOrDocId",
+      "updates",
+      "status",
+      "priority",
+      "severity",
+      "estimatedHours",
+      "title",
+      "description"
+    ]
+  },
+  {
+    "varName": "createPortfolioTool",
+    "name": "createPortfolio",
+    "description": "Creates a new Portfolio in the workspace to group and organize projects.",
+    "params": [
+      "name",
+      "description"
+    ]
+  },
+  {
+    "varName": "listPortfoliosTool",
+    "name": "listPortfolios",
+    "description": "Lists all portfolios available in the workspace.",
+    "params": []
+  },
+  {
+    "varName": "createProjectTool",
+    "name": "createProject",
+    "description": "Creates a new project in ProjectFlow workspace under a portfolio, initializing default Kanban columns, settings, and environments. WARNING: DO NOT call this tool when the user is already working inside an active project and providing project specifications, platform summary, or domain details — use updateProjectSpecifications or updateProjectDetails instead.",
+    "params": [
+      "name",
+      "portfolioId",
+      "pricingModel",
+      "summary",
+      "description"
+    ]
+  },
+  {
+    "varName": "createEpicTool",
+    "name": "createEpic",
+    "description": "Creates a new Agile Epic in a project to group related user stories.",
+    "params": [
+      "projectId",
+      "title",
+      "description"
+    ]
+  },
+  {
+    "varName": "createSprintTool",
+    "name": "createSprint",
+    "description": "Creates a new sprint timebox in a project.",
+    "params": [
+      "projectId",
+      "title",
+      "goal",
+      "startDate",
+      "endDate"
+    ]
+  },
+  {
+    "varName": "updateSprintTool",
+    "name": "updateSprint",
+    "description": "Updates a sprint status (e.g. start sprint by setting to",
+    "params": [
+      "projectId",
+      "sprintId",
+      "status",
+      "goal",
+      "startDate",
+      "endDate"
+    ]
+  },
+  {
+    "varName": "assignStoryToSprintTool",
+    "name": "assignStoryToSprint",
+    "description": "Assigns a work item (story, bug, task) to a sprint, or removes it to backlog by passing sprintId=null.",
+    "params": [
+      "projectId",
+      "storyId",
+      "sprintId"
+    ]
+  },
+  {
+    "varName": "createTestCaseTool",
+    "name": "createTestCase",
+    "description": "Creates a QA test case in a project with auto-generated TC-X sequential ID.",
+    "params": [
+      "projectId",
+      "title",
+      "description",
+      "expectedResult",
+      "type",
+      "storyId",
+      "assigneeId"
+    ]
+  },
+  {
+    "varName": "bulkCreateTestCasesTool",
+    "name": "bulkCreateTestCases",
+    "description": "Creates multiple QA test cases in a single batch operation. Highly recommended when generating test cases for user stories, features, or system specifications.",
+    "params": [
+      "projectId",
+      "title",
+      "description",
+      "expectedResult",
+      "type",
+      "storyId",
+      "assigneeId"
+    ]
+  },
+  {
+    "varName": "createTestPlanTool",
+    "name": "createTestPlan",
+    "description": "Creates a QA test cycle or test plan in a project with TP-X ID.",
+    "params": [
+      "projectId",
+      "name",
+      "planType",
+      "startDate",
+      "endDate",
+      "environmentId",
+      "sprintId",
+      "releaseId"
+    ]
+  },
+  {
+    "varName": "addTestCasesToTestPlanTool",
+    "name": "addTestCasesToTestPlan",
+    "description": "Adds existing project test cases into a specific Test Plan or Test Cycle for execution.",
+    "params": [
+      "projectId",
+      "planId",
+      "planName",
+      "testCaseIds",
+      "executionDate"
+    ]
+  },
+  {
+    "varName": "updateTestCaseStatusTool",
+    "name": "updateTestCaseStatus",
+    "description": "Updates the execution status of a test case in a test cycle (Passed, Failed, Blocked, Skipped, Not Run).",
+    "params": [
+      "projectId",
+      "testCaseId",
+      "planId",
+      "status",
+      "actualEffortHours",
+      "comments"
+    ]
+  },
+  {
+    "varName": "createRaidItemTool",
+    "name": "createRaidItem",
+    "description": "Logs a governance item (Risk, Assumption, Issue, or Dependency) in the RAID log with RSK-X, ASM-X, ISS-X, or DEP-X ID.",
+    "params": [
+      "projectId",
+      "raidType",
+      "description",
+      "severity",
+      "probability",
+      "mitigationPlan",
+      "category",
+      "assumptionStatus",
+      "priority",
+      "issueStatus",
+      "dependencyType",
+      "dependencyOn",
+      "expectedByDate",
+      "dependencyStatus"
+    ]
+  },
+  {
+    "varName": "updateRaidItemTool",
+    "name": "updateRaidItem",
+    "description": "Updates an existing RAID item (e.g. close an issue, update risk mitigation).",
+    "params": [
+      "projectId",
+      "raidType",
+      "itemId",
+      "updates",
+      "status",
+      "mitigationPlan",
+      "contingencyPlan",
+      "priority"
+    ]
+  },
+  {
+    "varName": "updateProjectDetailsTool",
+    "name": "updateProjectDetails",
+    "description": "Updates project summary, scope description, pricing model, overall health status, name, or portfolio assignment.",
+    "params": [
+      "projectId",
+      "portfolioId",
+      "summary",
+      "description",
+      "name",
+      "pricingModel",
+      "status",
+      "overallStatus"
+    ]
+  },
+  {
+    "varName": "moveProjectToPortfolioTool",
+    "name": "moveProjectToPortfolio",
+    "description": "Moves or reassigns an existing project to a different portfolio folder (e.g.",
+    "params": [
+      "projectId",
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "addImpactedSystemTool",
+    "name": "addImpactedSystem",
+    "description": "Adds an architectural component / module impacted by the project to specifications with estimation.",
+    "params": [
+      "projectId",
+      "name",
+      "description",
+      "category",
+      "estimate",
+      "dailyBillingRate"
+    ]
+  },
+  {
+    "varName": "addHorizontalTool",
+    "name": "addHorizontal",
+    "description": "Adds a cross-cutting capability (e.g.",
+    "params": [
+      "projectId",
+      "name",
+      "weightage",
+      "dailyBillingRate",
+      "isEnabled"
+    ]
+  },
+  {
+    "varName": "updateProjectSpecificationsTool",
+    "name": "updateProjectSpecifications",
+    "description": "Bulk sets the project summary, impacted systems, and horizontals in project specifications.",
+    "params": [
+      "projectId",
+      "summary",
+      "name",
+      "description",
+      "category",
+      "estimate",
+      "dailyBillingRate"
+    ]
+  },
+  {
+    "varName": "createReleaseTool",
+    "name": "createRelease",
+    "description": "Creates a project Release, Stage, or Milestone in the project schedule.",
+    "params": [
+      "projectId",
+      "name",
+      "itemType",
+      "description",
+      "startDate",
+      "endDate",
+      "milestoneDate"
+    ]
+  },
+  {
+    "varName": "createPaymentMilestoneTool",
+    "name": "createPaymentMilestone",
+    "description": "Creates a commercial payment milestone with billing percentage and amount.",
+    "params": [
+      "projectId",
+      "name",
+      "billingPercentage",
+      "amount"
+    ]
+  },
+  {
+    "varName": "assignProjectResourceTool",
+    "name": "assignProjectResource",
+    "description": "Assigns an employee/resource to the project team with role and daily billing rate.",
+    "params": [
+      "projectId",
+      "name",
+      "role",
+      "billingRate",
+      "onboardingDate"
+    ]
+  },
+  {
+    "varName": "logWorkTool",
+    "name": "logWork",
+    "description": "Logs work hours against a user story or task for a specific date in timesheets.",
+    "params": [
+      "projectId",
+      "storyId",
+      "hours",
+      "description",
+      "date",
+      "workType"
+    ]
+  },
+  {
+    "varName": "addEnvironmentTool",
+    "name": "addEnvironment",
+    "description": "Adds an environment (Dev, SIT, UAT, Staging, Production) to project configurations.",
+    "params": [
+      "projectId",
+      "name"
+    ]
+  },
+  {
+    "varName": "addCodeRepositoryTool",
+    "name": "addCodeRepository",
+    "description": "Links a GitHub, GitLab, or Bitbucket repository URL to the project.",
+    "params": [
+      "projectId",
+      "repoUrl",
+      "service",
+      "branch"
+    ]
+  },
+  {
+    "varName": "addFixedCostTool",
+    "name": "addFixedCost",
+    "description": "Adds a fixed financial cost item (software license, infrastructure, third-party API) to project finances.",
+    "params": [
+      "projectId",
+      "description",
+      "costType",
+      "amount",
+      "frequency"
+    ]
+  },
+  {
+    "varName": "queryProjectContextTool",
+    "name": "queryProjectContext",
+    "description": "Queries project information: stories count, epics, sprints, risks, issues, environments, specifications.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "listProjectsTool",
+    "name": "listProjects",
+    "description": "Lists all projects currently in the workspace with ID, name, portfolio, and status.",
+    "params": []
+  },
+  {
+    "varName": "archiveProjectTool",
+    "name": "archiveProject",
+    "description": "Archives an active project, moving it to the Archived Projects tab on Project Home.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "unarchiveProjectTool",
+    "name": "unarchiveProject",
+    "description": "Restores an archived project back to Active status on Project Home.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "deleteProjectTool",
+    "name": "deleteProject",
+    "description": "Moves a project to trash / deletes a project from Project Home.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updatePortfolioTool",
+    "name": "updatePortfolio",
+    "description": "Updates a portfolio folder name or description on Project Home.",
+    "params": [
+      "portfolioId",
+      "name",
+      "description"
+    ]
+  },
+  {
+    "varName": "deletePortfolioTool",
+    "name": "deletePortfolio",
+    "description": "Deletes an empty portfolio folder from Project Home (fails if active projects belong to it).",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "setProjectManagerTool",
+    "name": "setProjectManager",
+    "description": "Assigns or updates the primary Project Manager for a project on Project Home.",
+    "params": [
+      "projectId",
+      "projectManagerId",
+      "projectManagerName"
+    ]
+  },
+  {
+    "varName": "autogenProjectTool",
+    "name": "autogenProject",
+    "description": "Scaffolds an entire turnkey project with epics, stories, tasks, test cycles, test cases, and RAID items.",
+    "params": [
+      "projectName",
+      "portfolioId",
+      "pricingModel"
+    ]
+  },
+  {
+    "varName": "getPortfolioDashboardSummaryTool",
+    "name": "getPortfolioDashboardSummary",
+    "description": "Retrieves executive RAG health distribution (Red, Amber, Green), high potential risks, and critical issues across the portfolio.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "queryPortfolioRisksTool",
+    "name": "queryPortfolioRisks",
+    "description": "Queries and ranks high-potential risks across all active projects in the portfolio.",
+    "params": [
+      "portfolioId",
+      "minPotential"
+    ]
+  },
+  {
+    "varName": "queryPortfolioIssuesTool",
+    "name": "queryPortfolioIssues",
+    "description": "Queries open critical and high priority issues/blockers across all active projects.",
+    "params": [
+      "portfolioId",
+      "priority",
+      "status"
+    ]
+  },
+  {
+    "varName": "queryQualityEstimationsTool",
+    "name": "queryQualityEstimations",
+    "description": "Queries initial man-days vs planned man-days, variance, actual effort, and conformance rates across projects.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "queryQualityDefectsTool",
+    "name": "queryQualityDefects",
+    "description": "Queries cross-project defect counts (SIT, UAT, Production) and production defect leakage rate percentages.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "queryBillingOverviewTool",
+    "name": "queryBillingOverview",
+    "description": "Queries revenue, resource costs, fixed costs, gross profit, and profit margin % across all projects.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "queryBillingRatesTool",
+    "name": "queryBillingRates",
+    "description": "Queries master resource rate directory, role benchmarks (avg billed rate, avg cost rate, avg margin %), and assigned rates.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateResourceRateTool",
+    "name": "updateResourceRate",
+    "description": "Updates daily billed rate and internal cost rate for an assigned resource in a project.",
+    "params": [
+      "projectId",
+      "employeeId",
+      "billedRate",
+      "costRate"
+    ]
+  },
+  {
+    "varName": "updateSpecificationRateTool",
+    "name": "updateSpecificationRate",
+    "description": "Updates the daily billing rate on an impacted system or horizontal capability.",
+    "params": [
+      "projectId",
+      "specType",
+      "itemId",
+      "dailyBillingRate"
+    ]
+  },
+  {
+    "varName": "queryResourceUtilizationTool",
+    "name": "queryResourceUtilization",
+    "description": "Queries resource workload: active project allocations, availability %, planned task hours, actual logged hours, and over/under-allocation status.",
+    "params": [
+      "employeeId",
+      "employeeName"
+    ]
+  },
+  {
+    "varName": "queryAvailableResourcesTool",
+    "name": "queryAvailableResources",
+    "description": "Searches for employees with available/free capacity (< 100% allocated across projects) filtered by role.",
+    "params": [
+      "role",
+      "minAvailability"
+    ]
+  },
+  {
+    "varName": "queryOverallocatedResourcesTool",
+    "name": "queryOverallocatedResources",
+    "description": "Identifies team members allocated > 100% across multiple simultaneous active projects.",
+    "params": []
+  },
+  {
+    "varName": "queryHolidaysTool",
+    "name": "queryHolidays",
+    "description": "Queries organization calendar holidays for the specified year.",
+    "params": [
+      "year"
+    ]
+  },
+  {
+    "varName": "createHolidayTool",
+    "name": "createHoliday",
+    "description": "Adds a new holiday to the organization Holiday Calendar.",
+    "params": [
+      "name",
+      "date",
+      "type"
+    ]
+  },
+  {
+    "varName": "deleteHolidayTool",
+    "name": "deleteHoliday",
+    "description": "Deletes a holiday from the organization Holiday Calendar.",
+    "params": [
+      "holidayId"
+    ]
+  },
+  {
+    "varName": "queryLeaveSettingsTool",
+    "name": "queryLeaveSettings",
+    "description": "Queries global leave policy quotas (allocated annual paid leaves, carryover limit, weekly off days).",
+    "params": []
+  },
+  {
+    "varName": "updateLeaveSettingsTool",
+    "name": "updateLeaveSettings",
+    "description": "Updates organization leave quotas, carryover permissions, or weekly off days in Leave Settings.",
+    "params": [
+      "allocatedPaidLeavesPerYear",
+      "allowCarryOver",
+      "carryOverLimit",
+      "weeklyOffDays"
+    ]
+  },
+  {
+    "varName": "queryLeaveRequestsTool",
+    "name": "queryLeaveRequests",
+    "description": "Queries employee leave requests and planned absences across the portfolio.",
+    "params": [
+      "employeeId",
+      "type"
+    ]
+  },
+  {
+    "varName": "applyLeaveTool",
+    "name": "applyLeave",
+    "description": "Submits a leave request for an employee in Leave Tracker.",
+    "params": [
+      "employeeId",
+      "startDate",
+      "endDate",
+      "type"
+    ]
+  },
+  {
+    "varName": "deleteLeaveTool",
+    "name": "deleteLeave",
+    "description": "Cancels and deletes an employee leave record in Leave Tracker.",
+    "params": [
+      "employeeId",
+      "leaveId"
+    ]
+  },
+  {
+    "varName": "getProjectHomeMetricsTool",
+    "name": "getProjectHomeMetrics",
+    "description": "Queries workspace metrics for Project Home: total project count, active vs archived vs completed, health distributions (Red/Amber/Green), and portfolio counts.",
+    "params": []
+  },
+  {
+    "varName": "duplicateProjectTool",
+    "name": "duplicateProject",
+    "description": "Clones an existing project with its Kanban columns, settings, testing environments, and epics/specifications into a new project.",
+    "params": [
+      "sourceProjectId",
+      "newProjectName",
+      "targetPortfolioId"
+    ]
+  },
+  {
+    "varName": "filterPortfolioDashboardByDateTool",
+    "name": "filterPortfolioDashboardByDate",
+    "description": "Filters the portfolio executive dashboard by a specific start date and end date range.",
+    "params": [
+      "portfolioId",
+      "startDate",
+      "endDate"
+    ]
+  },
+  {
+    "varName": "exportPortfolioDashboardReportTool",
+    "name": "exportPortfolioDashboardReport",
+    "description": "Generates structured executive portfolio status and health summary report data.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "exportQualityEstimationsReportTool",
+    "name": "exportQualityEstimationsReport",
+    "description": "Exports cross-project initial ballpark man-days vs planned man-days, variance, and actual effort data for CSV export.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "setQualityVarianceAlertThresholdTool",
+    "name": "setQualityVarianceAlertThreshold",
+    "description": "Configures threshold percentage to trigger alerts when project planned effort exceeds initial estimation.",
+    "params": [
+      "thresholdPercent"
+    ]
+  },
+  {
+    "varName": "queryDefectTrendByMonthTool",
+    "name": "queryDefectTrendByMonth",
+    "description": "Analyzes monthly defect creation, resolution, and open trends across the portfolio over the past N months.",
+    "params": [
+      "portfolioId",
+      "months"
+    ]
+  },
+  {
+    "varName": "queryDefectRootCauseSummaryTool",
+    "name": "queryDefectRootCauseSummary",
+    "description": "Aggregates defect classification by root cause category (Coding Logic, Requirements, UI/Design, Environment) and phase containment.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "exportBillingOverviewCsvTool",
+    "name": "exportBillingOverviewCsv",
+    "description": "Exports consolidated portfolio financial breakdown (revenue, cost, fixed cost, profit, margin %) to CSV-ready format.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "queryProjectProfitabilityForecastTool",
+    "name": "queryProjectProfitabilityForecast",
+    "description": "Generates future profit margin projections and health status based on planned sprint allocations and milestone schedules.",
+    "params": [
+      "portfolioId"
+    ]
+  },
+  {
+    "varName": "bulkUpdateResourceRatesTool",
+    "name": "bulkUpdateResourceRates",
+    "description": "Batch updates daily billed and cost rates for multiple resources across projects in a single operation.",
+    "params": [
+      "updates",
+      "employeeId",
+      "projectId",
+      "billedRate",
+      "costRate"
+    ]
+  },
+  {
+    "varName": "setDefaultRoleBenchmarkRatesTool",
+    "name": "setDefaultRoleBenchmarkRates",
+    "description": "Sets standard organization baseline billed and cost rates for standard roles (Developer, Tester, Architect, BA, PM).",
+    "params": [
+      "role",
+      "defaultBilledRate",
+      "defaultCostRate"
+    ]
+  },
+  {
+    "varName": "createUserTool",
+    "name": "createUser",
+    "description": "Adds a new team member/user to the workspace directory with email, role, access level, joining date, leaving date, and Emp ID.",
+    "params": [
+      "email",
+      "firstName",
+      "lastName",
+      "empId",
+      "phone",
+      "role",
+      "accessLevel",
+      "experience",
+      "costAmount",
+      "costCurrency",
+      "employmentStartDate",
+      "employmentEndDate"
+    ]
+  },
+  {
+    "varName": "updateUserRoleTool",
+    "name": "updateUserRole",
+    "description": "Modifies an existing user\\",
+    "params": [
+      "userIdOrEmpId",
+      "role",
+      "accessLevel",
+      "department",
+      "employmentStartDate",
+      "employmentEndDate"
+    ]
+  },
+  {
+    "varName": "toggleUserStatusTool",
+    "name": "toggleUserStatus",
+    "description": "Enables or disables user account login access in User List.",
+    "params": [
+      "userIdOrEmpId",
+      "isEnabled"
+    ]
+  },
+  {
+    "varName": "listAllUsersTool",
+    "name": "listAllUsers",
+    "description": "Retrieves the complete organization user directory with roles, access levels, enabled status, and employee IDs.",
+    "params": [
+      "role",
+      "accessLevel",
+      "isEnabled"
+    ]
+  },
+  {
+    "varName": "queryDepartmentUtilizationTrendsTool",
+    "name": "queryDepartmentUtilizationTrends",
+    "description": "Aggregates team capacity utilization percentages grouped by department and skill role in Utilization view.",
+    "params": [
+      "department"
+    ]
+  },
+  {
+    "varName": "exportResourceUtilizationReportTool",
+    "name": "exportResourceUtilizationReport",
+    "description": "Exports complete organization resource utilization sheet with allocation %, free capacity %, active projects, and workload status.",
+    "params": []
+  },
+  {
+    "varName": "bulkImportHolidaysTool",
+    "name": "bulkImportHolidays",
+    "description": "Batch uploads a list of national/regional holidays to the Holiday Calendar in a single operation.",
+    "params": [
+      "holidays",
+      "name",
+      "date",
+      "type"
+    ]
+  },
+  {
+    "varName": "updateHolidayTool",
+    "name": "updateHoliday",
+    "description": "Modifies an existing holiday name, date, or category in the Holiday Calendar.",
+    "params": [
+      "holidayId",
+      "name",
+      "date",
+      "type"
+    ]
+  },
+  {
+    "varName": "resetAnnualLeaveBalancesTool",
+    "name": "resetAnnualLeaveBalances",
+    "description": "Executes annual leave quota rollover and applies carryover limit quotas for all employees.",
+    "params": [
+      "year",
+      "carryOverLimit"
+    ]
+  },
+  {
+    "varName": "approveLeaveRequestTool",
+    "name": "approveLeaveRequest",
+    "description": "Approves a pending employee leave request in Leave Tracker.",
+    "params": [
+      "employeeId",
+      "leaveId",
+      "approverNotes"
+    ]
+  },
+  {
+    "varName": "rejectLeaveRequestTool",
+    "name": "rejectLeaveRequest",
+    "description": "Rejects a pending employee leave request in Leave Tracker with reason.",
+    "params": [
+      "employeeId",
+      "leaveId",
+      "reason"
+    ]
+  },
+  {
+    "varName": "queryEmployeeLeaveBalanceTool",
+    "name": "queryEmployeeLeaveBalance",
+    "description": "Checks allocated annual leave quota, used leave days, and real-time remaining leave balance for a specific employee.",
+    "params": [
+      "employeeId",
+      "year"
+    ]
+  },
+  {
+    "varName": "updateInitialImpactedSystemTool",
+    "name": "updateInitialImpactedSystem",
+    "description": "Updates an initial impacted system estimate or daily rate in the initial estimation phase.",
+    "params": [
+      "projectId",
+      "itemId",
+      "name",
+      "description",
+      "category",
+      "estimate",
+      "dailyBillingRate"
+    ]
+  },
+  {
+    "varName": "deleteInitialImpactedSystemTool",
+    "name": "deleteInitialImpactedSystem",
+    "description": "Deletes an initial impacted system from estimation.",
+    "params": [
+      "projectId",
+      "itemId"
+    ]
+  },
+  {
+    "varName": "updateInitialHorizontalTool",
+    "name": "updateInitialHorizontal",
+    "description": "Updates an initial horizontal capability weightage % or billing rate.",
+    "params": [
+      "projectId",
+      "itemId",
+      "name",
+      "weightage",
+      "dailyBillingRate"
+    ]
+  },
+  {
+    "varName": "deleteInitialHorizontalTool",
+    "name": "deleteInitialHorizontal",
+    "description": "Deletes an initial horizontal capability.",
+    "params": [
+      "projectId",
+      "itemId"
+    ]
+  },
+  {
+    "varName": "queryInitialSpecificationsTool",
+    "name": "queryInitialSpecifications",
+    "description": "Queries full initial estimation specifications, dev effort/cost rollups, and horizontals.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "confirmProjectEstimationTool",
+    "name": "confirmProjectEstimation",
+    "description": "Promotes initial estimation specifications to active project baseline and moves project status to Active.",
+    "params": [
+      "projectId",
+      "targetStatus"
+    ]
+  },
+  {
+    "varName": "updateInitialProjectDatesTool",
+    "name": "updateInitialProjectDates",
+    "description": "Sets planned start and end dates during initial estimation phase.",
+    "params": [
+      "projectId",
+      "startDate",
+      "endDate"
+    ]
+  },
+  {
+    "varName": "queryInitialProjectStatusTool",
+    "name": "queryInitialProjectStatus",
+    "description": "Retrieves estimation phase metadata, PM assignment, and timeline.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateProjectHealthTool",
+    "name": "updateProjectHealth",
+    "description": "Updates Scope, Cost, Time, and Overall RAG health indicators with commentary.",
+    "params": [
+      "projectId",
+      "overallStatus",
+      "scopeHealth",
+      "costHealth",
+      "timeHealth",
+      "commentary",
+      "authorName"
+    ]
+  },
+  {
+    "varName": "updateProjectDatesTool",
+    "name": "updateProjectDates",
+    "description": "Updates active project start and end dates with validation.",
+    "params": [
+      "projectId",
+      "startDate",
+      "endDate"
+    ]
+  },
+  {
+    "varName": "queryProjectStatusDetailsTool",
+    "name": "queryProjectStatusDetails",
+    "description": "Retrieves complete project status info, RAG health indicators, PM assignment, and status audit history.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryProjectPmDashboardTool",
+    "name": "queryProjectPmDashboard",
+    "description": "Retrieves PM dashboard metrics: task distribution, epic progress %, planned vs logged hours.",
+    "params": [
+      "projectId",
+      "sprintId"
+    ]
+  },
+  {
+    "varName": "queryProjectWorkloadTool",
+    "name": "queryProjectWorkload",
+    "description": "Queries sub-task effort vs bug effort allocated to each team member by sprint.",
+    "params": [
+      "projectId",
+      "sprintId"
+    ]
+  },
+  {
+    "varName": "queryProjectResourceFinancialsTool",
+    "name": "queryProjectResourceFinancials",
+    "description": "Computes project billed revenue vs internal cost and margins by role.",
+    "params": [
+      "projectId",
+      "timeframe"
+    ]
+  },
+  {
+    "varName": "querySwimLaneCycleTimeTool",
+    "name": "querySwimLaneCycleTime",
+    "description": "Calculates average duration spent by items in each Kanban status lane.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryResourceBottlenecksTool",
+    "name": "queryResourceBottlenecks",
+    "description": "Analyzes cycle times and active WIP per resource with bottleneck risk rankings.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryEpicProgressTool",
+    "name": "queryEpicProgress",
+    "description": "Queries epics with completed stories count and progress percentage.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateImpactedSystemTool",
+    "name": "updateImpactedSystem",
+    "description": "Updates active impacted system details and man-days.",
+    "params": [
+      "projectId",
+      "itemId",
+      "name",
+      "description",
+      "category",
+      "estimate",
+      "dailyBillingRate"
+    ]
+  },
+  {
+    "varName": "deleteImpactedSystemTool",
+    "name": "deleteImpactedSystem",
+    "description": "Deletes active impacted system from project.",
+    "params": [
+      "projectId",
+      "itemId"
+    ]
+  },
+  {
+    "varName": "updateHorizontalTool",
+    "name": "updateHorizontal",
+    "description": "Updates active horizontal capability weightage % or billing rate.",
+    "params": [
+      "projectId",
+      "itemId",
+      "name",
+      "weightage",
+      "dailyBillingRate"
+    ]
+  },
+  {
+    "varName": "deleteHorizontalTool",
+    "name": "deleteHorizontal",
+    "description": "Deletes active horizontal capability from project.",
+    "params": [
+      "projectId",
+      "itemId"
+    ]
+  },
+  {
+    "varName": "queryProjectSpecificationsTool",
+    "name": "queryProjectSpecifications",
+    "description": "Retrieves active project specifications, impacted systems, horizontals, and environments.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "deleteEnvironmentTool",
+    "name": "deleteEnvironment",
+    "description": "Removes a testing/deployment environment from the project.",
+    "params": [
+      "projectId",
+      "envId"
+    ]
+  },
+  {
+    "varName": "reorderEnvironmentsTool",
+    "name": "reorderEnvironments",
+    "description": "Updates the display order sequence of project testing environments.",
+    "params": [
+      "projectId",
+      "orderedEnvIds"
+    ]
+  },
+  {
+    "varName": "removeProjectResourceTool",
+    "name": "removeProjectResource",
+    "description": "De-allocates and removes a team member resource from the project.",
+    "params": [
+      "projectId",
+      "resourceId"
+    ]
+  },
+  {
+    "varName": "updateProjectResourceRoleTool",
+    "name": "updateProjectResourceRole",
+    "description": "Updates a project resource role or allocation percentage.",
+    "params": [
+      "projectId",
+      "resourceId",
+      "role",
+      "allocationPercentage"
+    ]
+  },
+  {
+    "varName": "queryProjectTeamMembersTool",
+    "name": "queryProjectTeamMembers",
+    "description": "Lists all allocated team members on the project with roles and billing rates.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryProjectWorklogsTool",
+    "name": "queryProjectWorklogs",
+    "description": "Queries timesheet worklogs filtered by employee, date range, or sprint.",
+    "params": [
+      "projectId",
+      "employeeId",
+      "startDate",
+      "endDate"
+    ]
+  },
+  {
+    "varName": "deleteWorklogEntryTool",
+    "name": "deleteWorklogEntry",
+    "description": "Deletes a timesheet worklog entry.",
+    "params": [
+      "projectId",
+      "worklogId"
+    ]
+  },
+  {
+    "varName": "updateWorklogEntryTool",
+    "name": "updateWorklogEntry",
+    "description": "Modifies logged hours, description, or work type for a timesheet entry.",
+    "params": [
+      "projectId",
+      "worklogId",
+      "hours",
+      "description",
+      "workType"
+    ]
+  },
+  {
+    "varName": "queryProjectResourceWorkloadMatrixTool",
+    "name": "queryProjectResourceWorkloadMatrix",
+    "description": "Returns workload matrix comparing team member capacity against planned hours with overallocation flags.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "reassignWorkloadTool",
+    "name": "reassignWorkload",
+    "description": "Reallocates work items or sub-tasks between resources.",
+    "params": [
+      "projectId",
+      "sourceAssigneeId",
+      "targetAssigneeId",
+      "targetAssigneeName",
+      "storyIds"
+    ]
+  },
+  {
+    "varName": "queryProjectGanttTimelineTool",
+    "name": "queryProjectGanttTimeline",
+    "description": "Returns chronological Gantt timeline with sprint dates, release milestones, and story schedules.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateGanttTaskDependencyTool",
+    "name": "updateGanttTaskDependency",
+    "description": "Creates predecessor dependency link between tasks for Gantt charting.",
+    "params": [
+      "projectId",
+      "storyId",
+      "predecessorStoryId"
+    ]
+  },
+  {
+    "varName": "updateReleaseTool",
+    "name": "updateRelease",
+    "description": "Modifies release schedule dates, milestone date, name, or status.",
+    "params": [
+      "projectId",
+      "releaseId",
+      "name",
+      "startDate",
+      "endDate",
+      "milestoneDate",
+      "status"
+    ]
+  },
+  {
+    "varName": "deleteReleaseTool",
+    "name": "deleteRelease",
+    "description": "Deletes a release from project schedule.",
+    "params": [
+      "projectId",
+      "releaseId"
+    ]
+  },
+  {
+    "varName": "queryProjectReleasesTool",
+    "name": "queryProjectReleases",
+    "description": "Lists all project releases, stages, and milestones.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "assignStoriesToReleaseTool",
+    "name": "assignStoriesToRelease",
+    "description": "Associates user stories or defects with a specific project release.",
+    "params": [
+      "projectId",
+      "releaseId",
+      "storyIds"
+    ]
+  },
+  {
+    "varName": "queryDevDashboardSummaryTool",
+    "name": "queryDevDashboardSummary",
+    "description": "Retrieves agile sprint completion rate, velocity points, and open defect counts.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "querySprintBurndownDataTool",
+    "name": "querySprintBurndownData",
+    "description": "Fetches ideal vs actual remaining effort points across active sprint days.",
+    "params": [
+      "projectId",
+      "sprintId"
+    ]
+  },
+  {
+    "varName": "queryVelocityMetricsTool",
+    "name": "queryVelocityMetrics",
+    "description": "Computes historical sprint velocity metrics and average velocity points.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "reorderBacklogStoriesTool",
+    "name": "reorderBacklogStories",
+    "description": "Updates backlog priority ranking order of user stories.",
+    "params": [
+      "projectId",
+      "orderedStoryIds"
+    ]
+  },
+  {
+    "varName": "deleteEpicTool",
+    "name": "deleteEpic",
+    "description": "Deletes an Agile Epic and unlinks stories.",
+    "params": [
+      "projectId",
+      "epicId"
+    ]
+  },
+  {
+    "varName": "queryBacklogStoriesTool",
+    "name": "queryBacklogStories",
+    "description": "Queries backlog stories filtered by epic, priority, or status.",
+    "params": [
+      "projectId",
+      "epicId",
+      "priority",
+      "status"
+    ]
+  },
+  {
+    "varName": "deleteWorkItemTool",
+    "name": "deleteWorkItem",
+    "description": "Soft-deletes a work item moving it to project trash.",
+    "params": [
+      "projectId",
+      "storyIdOrDocId"
+    ]
+  },
+  {
+    "varName": "bulkEstimateStoriesTool",
+    "name": "bulkEstimateStories",
+    "description": "Applies estimated hours to multiple backlog items in batch.",
+    "params": [
+      "projectId",
+      "estimates",
+      "storyId",
+      "estimatedHours"
+    ]
+  },
+  {
+    "varName": "queryUngroomedStoriesTool",
+    "name": "queryUngroomedStories",
+    "description": "Filters backlog items lacking estimation hours or acceptance criteria.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "tagStoryAcceptanceCriteriaTool",
+    "name": "tagStoryAcceptanceCriteria",
+    "description": "Adds structured Gherkin (Given/When/Then) acceptance criteria to a user story.",
+    "params": [
+      "projectId",
+      "storyId",
+      "acceptanceCriteria"
+    ]
+  },
+  {
+    "varName": "queryKanbanBoardStateTool",
+    "name": "queryKanbanBoardState",
+    "description": "Retrieves all active work items grouped into Kanban status columns.",
+    "params": [
+      "projectId",
+      "sprintId"
+    ]
+  },
+  {
+    "varName": "updateKanbanWipLimitsTool",
+    "name": "updateKanbanWipLimits",
+    "description": "Sets WIP limits on a Kanban status column.",
+    "params": [
+      "projectId",
+      "columnName",
+      "wipLimit"
+    ]
+  },
+  {
+    "varName": "querySubTasksByStoryTool",
+    "name": "querySubTasksByStory",
+    "description": "Retrieves all sub-tasks linked under a parent user story.",
+    "params": [
+      "projectId",
+      "parentStoryId"
+    ]
+  },
+  {
+    "varName": "deleteSubTaskTool",
+    "name": "deleteSubTask",
+    "description": "Deletes a sub-task from parent story.",
+    "params": [
+      "projectId",
+      "subTaskId"
+    ]
+  },
+  {
+    "varName": "bulkCreateSubTasksTool",
+    "name": "bulkCreateSubTasks",
+    "description": "Generates standard sub-tasks (Frontend, Backend, Unit Tests, Code Review) for a story in batch.",
+    "params": [
+      "projectId",
+      "parentStoryId",
+      "subTasks",
+      "title",
+      "estimatedHours",
+      "assigneeId"
+    ]
+  },
+  {
+    "varName": "queryProjectDefectsTool",
+    "name": "queryProjectDefects",
+    "description": "Lists project bugs filtered by severity, status, or sprint.",
+    "params": [
+      "projectId",
+      "severity",
+      "status",
+      "sprintId"
+    ]
+  },
+  {
+    "varName": "linkDefectToStoryTool",
+    "name": "linkDefectToStory",
+    "description": "Associates a defect/bug with the parent story.",
+    "params": [
+      "projectId",
+      "defectId",
+      "storyId"
+    ]
+  },
+  {
+    "varName": "closeDefectTool",
+    "name": "closeDefect",
+    "description": "Marks defect as verified and closed with resolution summary.",
+    "params": [
+      "projectId",
+      "defectId",
+      "resolutionSummary"
+    ]
+  },
+  {
+    "varName": "queryTestDashboardSummaryTool",
+    "name": "queryTestDashboardSummary",
+    "description": "Retrieves total test cases, execution pass/fail rates, and cycle completion status.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryTestExecutionProgressTool",
+    "name": "queryTestExecutionProgress",
+    "description": "Returns test execution burn-up metrics across active cycles.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryDefectDensityTool",
+    "name": "queryDefectDensity",
+    "description": "Computes defect density per story and QA leakage rate.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateTestCaseTool",
+    "name": "updateTestCase",
+    "description": "Updates test case title, step description, expected outcome, or type.",
+    "params": [
+      "projectId",
+      "testCaseId",
+      "title",
+      "description",
+      "expectedResult",
+      "type"
+    ]
+  },
+  {
+    "varName": "deleteTestCaseTool",
+    "name": "deleteTestCase",
+    "description": "Soft-deletes test case from QA backlog.",
+    "params": [
+      "projectId",
+      "testCaseId"
+    ]
+  },
+  {
+    "varName": "queryTestCasesTool",
+    "name": "queryTestCases",
+    "description": "Queries QA test cases in project filtered by story ID or test type.",
+    "params": [
+      "projectId",
+      "storyId",
+      "type"
+    ]
+  },
+  {
+    "varName": "bulkImportTestCasesTool",
+    "name": "bulkImportTestCases",
+    "description": "Imports test cases from structured JSON datasets in batch.",
+    "params": [
+      "projectId",
+      "testCases",
+      "title",
+      "description",
+      "expectedResult",
+      "type",
+      "storyId"
+    ]
+  },
+  {
+    "varName": "updateTestPlanTool",
+    "name": "updateTestPlan",
+    "description": "Modifies test cycle dates, environment, or target release.",
+    "params": [
+      "projectId",
+      "planId",
+      "name",
+      "startDate",
+      "endDate",
+      "environmentId"
+    ]
+  },
+  {
+    "varName": "deleteTestPlanTool",
+    "name": "deleteTestPlan",
+    "description": "Deletes test cycle and its execution records.",
+    "params": [
+      "projectId",
+      "planId"
+    ]
+  },
+  {
+    "varName": "queryTestPlansTool",
+    "name": "queryTestPlans",
+    "description": "Lists all test plans and cycles created in project.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "removeTestCaseFromPlanTool",
+    "name": "removeTestCaseFromPlan",
+    "description": "Removes test case from specific test plan.",
+    "params": [
+      "projectId",
+      "planId",
+      "testCaseId"
+    ]
+  },
+  {
+    "varName": "queryTestExecutionListTool",
+    "name": "queryTestExecutionList",
+    "description": "Retrieves test cases assigned to a cycle with current execution status.",
+    "params": [
+      "projectId",
+      "planId"
+    ]
+  },
+  {
+    "varName": "bulkUpdateTestExecutionStatusTool",
+    "name": "bulkUpdateTestExecutionStatus",
+    "description": "Batch marks multiple test cases as Passed, Failed, Blocked, or Skipped.",
+    "params": [
+      "projectId",
+      "testCaseIds",
+      "status"
+    ]
+  },
+  {
+    "varName": "logDefectFromTestExecutionTool",
+    "name": "logDefectFromTestExecution",
+    "description": "Automatically creates a Bug linked directly to a failed test case execution.",
+    "params": [
+      "projectId",
+      "testCaseId",
+      "bugTitle",
+      "severity",
+      "description"
+    ]
+  },
+  {
+    "varName": "queryQaDefectsTool",
+    "name": "queryQaDefects",
+    "description": "Queries defects logged during active test cycles filtered by environment.",
+    "params": [
+      "projectId",
+      "environment"
+    ]
+  },
+  {
+    "varName": "exportDefectsReportTool",
+    "name": "exportDefectsReport",
+    "description": "Exports testing defects summary to structured report format.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryRaidDashboardSummaryTool",
+    "name": "queryRaidDashboardSummary",
+    "description": "Executive breakdown of high-impact risks, open issues, unvalidated assumptions, and blocked dependencies.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "exportRaidLogCsvTool",
+    "name": "exportRaidLogCsv",
+    "description": "Exports complete RAID register to CSV format.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryProjectRisksTool",
+    "name": "queryProjectRisks",
+    "description": "Returns project risks ranked by risk score (Severity x Probability).",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "deleteRiskTool",
+    "name": "deleteRisk",
+    "description": "Deletes risk entry from RAID log.",
+    "params": [
+      "projectId",
+      "riskId"
+    ]
+  },
+  {
+    "varName": "closeRiskTool",
+    "name": "closeRisk",
+    "description": "Marks risk as mitigated and closed.",
+    "params": [
+      "projectId",
+      "riskId",
+      "closureNotes"
+    ]
+  },
+  {
+    "varName": "queryProjectAssumptionsTool",
+    "name": "queryProjectAssumptions",
+    "description": "Lists active and validated project assumptions.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "deleteAssumptionTool",
+    "name": "deleteAssumption",
+    "description": "Deletes assumption entry from RAID log.",
+    "params": [
+      "projectId",
+      "assumptionId"
+    ]
+  },
+  {
+    "varName": "validateAssumptionTool",
+    "name": "validateAssumption",
+    "description": "Changes assumption status to Validated or Invalidated with validation notes.",
+    "params": [
+      "projectId",
+      "assumptionId",
+      "status",
+      "validationNotes"
+    ]
+  },
+  {
+    "varName": "queryProjectIssuesTool",
+    "name": "queryProjectIssues",
+    "description": "Returns open project blockers filtered by priority.",
+    "params": [
+      "projectId",
+      "priority"
+    ]
+  },
+  {
+    "varName": "deleteIssueTool",
+    "name": "deleteIssue",
+    "description": "Deletes issue entry from RAID log.",
+    "params": [
+      "projectId",
+      "issueId"
+    ]
+  },
+  {
+    "varName": "resolveIssueTool",
+    "name": "resolveIssue",
+    "description": "Marks blocker issue as resolved with resolution details.",
+    "params": [
+      "projectId",
+      "issueId",
+      "resolutionDetails"
+    ]
+  },
+  {
+    "varName": "queryProjectDependenciesTool",
+    "name": "queryProjectDependencies",
+    "description": "Lists project dependencies categorized by incoming/outgoing and status.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "deleteDependencyTool",
+    "name": "deleteDependency",
+    "description": "Deletes dependency entry from RAID log.",
+    "params": [
+      "projectId",
+      "dependencyId"
+    ]
+  },
+  {
+    "varName": "updateDependencyStatusTool",
+    "name": "updateDependencyStatus",
+    "description": "Sets dependency status to On Track, At Risk, or Blocked.",
+    "params": [
+      "projectId",
+      "dependencyId",
+      "status"
+    ]
+  },
+  {
+    "varName": "overrideProjectHolidayCalendarTool",
+    "name": "overrideProjectHolidayCalendar",
+    "description": "Toggles whether project inherits global holidays or custom project calendar.",
+    "params": [
+      "projectId",
+      "isHolidayOverrideEnabled"
+    ]
+  },
+  {
+    "varName": "queryProjectSpecificHolidaysTool",
+    "name": "queryProjectSpecificHolidays",
+    "description": "Retrieves custom project holidays when override is enabled.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryTeamAbsenceCalendarBySprintTool",
+    "name": "queryTeamAbsenceCalendarBySprint",
+    "description": "Returns planned team absences overlapping with active sprint date ranges.",
+    "params": [
+      "projectId",
+      "sprintId"
+    ]
+  },
+  {
+    "varName": "uploadPmoDocumentTool",
+    "name": "uploadPmoDocument",
+    "description": "Records project charter, architecture diagram, SOW, or signoff deliverables in project PMO documents.",
+    "params": [
+      "projectId",
+      "name",
+      "category",
+      "fileUrl",
+      "description"
+    ]
+  },
+  {
+    "varName": "deletePmoDocumentTool",
+    "name": "deletePmoDocument",
+    "description": "Deletes document attachment from project PMO documents.",
+    "params": [
+      "projectId",
+      "documentId"
+    ]
+  },
+  {
+    "varName": "queryPmoDocumentsTool",
+    "name": "queryPmoDocuments",
+    "description": "Lists uploaded project documents with categories and dates.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "addExternalDocLinkTool",
+    "name": "addExternalDocLink",
+    "description": "Links external SharePoint, Google Drive, or Confluence URLs in PMO repository.",
+    "params": [
+      "projectId",
+      "title",
+      "url",
+      "provider"
+    ]
+  },
+  {
+    "varName": "queryFbBillingSummaryTool",
+    "name": "queryFbBillingSummary",
+    "description": "Retrieves fixed bid contract value, billed amount, and billing schedule.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateFbContractValueTool",
+    "name": "updateFbContractValue",
+    "description": "Updates total contracted fixed bid revenue amount.",
+    "params": [
+      "projectId",
+      "contractValue"
+    ]
+  },
+  {
+    "varName": "logFbInvoiceTool",
+    "name": "logFbInvoice",
+    "description": "Records an invoice raised against fixed bid milestones.",
+    "params": [
+      "projectId",
+      "milestoneId",
+      "invoiceNumber",
+      "invoiceAmount"
+    ]
+  },
+  {
+    "varName": "updatePaymentMilestoneTool",
+    "name": "updatePaymentMilestone",
+    "description": "Modifies milestone name, billing percentage, dollar amount, or status.",
+    "params": [
+      "projectId",
+      "milestoneId",
+      "name",
+      "billingPercentage",
+      "amount",
+      "status"
+    ]
+  },
+  {
+    "varName": "deletePaymentMilestoneTool",
+    "name": "deletePaymentMilestone",
+    "description": "Deletes payment milestone from commercial schedule.",
+    "params": [
+      "projectId",
+      "milestoneId"
+    ]
+  },
+  {
+    "varName": "queryPaymentMilestonesTool",
+    "name": "queryPaymentMilestones",
+    "description": "Returns payment milestones with billing status.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "markMilestoneInvoiceRaisedTool",
+    "name": "markMilestoneInvoiceRaised",
+    "description": "Transitions milestone to Invoice Raised with invoice reference.",
+    "params": [
+      "projectId",
+      "milestoneId",
+      "invoiceNumber"
+    ]
+  },
+  {
+    "varName": "queryTnmBillingSummaryTool",
+    "name": "queryTnmBillingSummary",
+    "description": "Monthly hours logged across all roles multiplied by daily billed rates.",
+    "params": [
+      "projectId",
+      "month"
+    ]
+  },
+  {
+    "varName": "generateMonthlyTnmInvoiceTool",
+    "name": "generateMonthlyTnmInvoice",
+    "description": "Calculates monthly billing invoice amount from approved timesheets.",
+    "params": [
+      "projectId",
+      "month"
+    ]
+  },
+  {
+    "varName": "updateTnmMilestoneTool",
+    "name": "updateTnmMilestone",
+    "description": "Modifies T&M milestone target amount or status.",
+    "params": [
+      "projectId",
+      "milestoneId",
+      "name",
+      "targetAmount",
+      "status"
+    ]
+  },
+  {
+    "varName": "deleteTnmMilestoneTool",
+    "name": "deleteTnmMilestone",
+    "description": "Deletes T&M milestone.",
+    "params": [
+      "projectId",
+      "milestoneId"
+    ]
+  },
+  {
+    "varName": "queryTnmMilestonesTool",
+    "name": "queryTnmMilestones",
+    "description": "Retrieves all periodic T&M milestone checkpoints.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryBcpPlanTool",
+    "name": "queryBcpPlan",
+    "description": "Retrieves project Business Continuity Plan (BCP), key role backups, and emergency procedures.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateBcpPrimaryContactsTool",
+    "name": "updateBcpPrimaryContacts",
+    "description": "Configures primary and secondary successor backups for key project roles.",
+    "params": [
+      "projectId",
+      "contacts",
+      "role",
+      "primaryPerson",
+      "backupPerson",
+      "contactPhone"
+    ]
+  },
+  {
+    "varName": "logBcpDisasterRecoveryPlanTool",
+    "name": "logBcpDisasterRecoveryPlan",
+    "description": "Updates disaster recovery procedures, backup verification dates, and offsite contacts.",
+    "params": [
+      "projectId",
+      "procedures",
+      "backupVerificationDate",
+      "offsiteLocation"
+    ]
+  },
+  {
+    "varName": "addKanbanColumnTool",
+    "name": "addKanbanColumn",
+    "description": "Adds custom workflow column (e.g. Code Review, Blocked) to Kanban board.",
+    "params": [
+      "projectId",
+      "columnName",
+      "wipLimit",
+      "order"
+    ]
+  },
+  {
+    "varName": "deleteKanbanColumnTool",
+    "name": "deleteKanbanColumn",
+    "description": "Deletes custom Kanban column from board.",
+    "params": [
+      "projectId",
+      "columnId"
+    ]
+  },
+  {
+    "varName": "updateKanbanColumnsOrderTool",
+    "name": "updateKanbanColumnsOrder",
+    "description": "Reorders sequence of Kanban workflow columns.",
+    "params": [
+      "projectId",
+      "columnOrder"
+    ]
+  },
+  {
+    "varName": "queryBoardSettingsTool",
+    "name": "queryBoardSettings",
+    "description": "Retrieves all configured Kanban columns and workflow properties.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateSprintDurationSettingsTool",
+    "name": "updateSprintDurationSettings",
+    "description": "Configures default sprint duration in weeks (1, 2, 3, or 4 weeks).",
+    "params": [
+      "projectId",
+      "durationWeeks"
+    ]
+  },
+  {
+    "varName": "setSprintStartDayTool",
+    "name": "setSprintStartDay",
+    "description": "Configures default sprint start day of week (Monday, Tuesday, etc.).",
+    "params": [
+      "projectId",
+      "startDay"
+    ]
+  },
+  {
+    "varName": "querySprintSettingsTool",
+    "name": "querySprintSettings",
+    "description": "Retrieves configured default sprint duration and start day.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "updateEffortConversionSettingsTool",
+    "name": "updateEffortConversionSettings",
+    "description": "Updates project conversion units: manMonthToDays, manDayToHours, storyPointToHours.",
+    "params": [
+      "projectId",
+      "manMonthToDays",
+      "manDayToHours",
+      "storyPointToHours"
+    ]
+  },
+  {
+    "varName": "queryEffortSettingsTool",
+    "name": "queryEffortSettings",
+    "description": "Retrieves configured effort conversion ratios.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "queryProjectTrashItemsTool",
+    "name": "queryProjectTrashItems",
+    "description": "Lists deleted work items, test cases, and sprints in project trash.",
+    "params": [
+      "projectId"
+    ]
+  },
+  {
+    "varName": "restoreProjectTrashItemTool",
+    "name": "restoreProjectTrashItem",
+    "description": "Restores soft-deleted work item, test case, or epic back to active project.",
+    "params": [
+      "projectId",
+      "itemType",
+      "itemId"
+    ]
+  },
+  {
+    "varName": "permanentlyDeleteProjectItemTool",
+    "name": "permanentlyDeleteProjectItem",
+    "description": "Permanently purges an item from project database.",
+    "params": [
+      "projectId",
+      "itemType",
+      "itemId"
+    ]
+  }
+]
