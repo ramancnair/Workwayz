@@ -28,7 +28,26 @@ export async function POST(request: Request) {
     }
 
     const result = await runFlowPilotAgent(body);
-    return NextResponse.json(result);
+    const response = NextResponse.json(result);
+
+    if (result.rateUtilization) {
+      const r = result.rateUtilization;
+      response.headers.set('x-rate-rpm', String(r.currentRpm));
+      response.headers.set('x-rate-rpm-limit', String(r.limitRpm));
+      response.headers.set('x-rate-percent-rpm', String(r.percentRpm));
+      response.headers.set('x-rate-tpm', String(r.currentTpm));
+      response.headers.set('x-rate-tpm-limit', String(r.limitTpm));
+      response.headers.set('x-rate-percent-tpm', String(r.percentTpm));
+      response.headers.set('x-rate-last-prompt-tokens', String(r.lastPromptTokens));
+      response.headers.set('x-rate-last-completion-tokens', String(r.lastCompletionTokens));
+      response.headers.set('x-rate-last-total-tokens', String(r.lastTotalTokens));
+      response.headers.set('x-rate-last-cost-usd', String(r.lastCostUsd));
+      response.headers.set('x-rate-status', r.status);
+      if (r.lastModelCalls !== undefined) response.headers.set('x-rate-last-model-calls', String(r.lastModelCalls));
+      if (r.lastToolCalls !== undefined) response.headers.set('x-rate-last-tool-calls', String(r.lastToolCalls));
+    }
+
+    return response;
   } catch (error: any) {
     console.error('FlowPilot Chat API error:', error);
     const aiDetails = await getActiveAiDetails().catch(() => undefined);

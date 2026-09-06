@@ -52,6 +52,7 @@ import {
   Bug,
   ClipboardList,
   CalendarCheck,
+  Sparkles,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -152,6 +153,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: `/portfolio-dashboard`,
       label: "Portfolio Dashboard",
       icon: LayoutDashboard,
+      group: 'projects'
+    },
+    {
+      id: 'fp-dashboard',
+      href: `/fp-dashboard`,
+      label: "FP Dashboard",
+      icon: Sparkles,
       group: 'projects'
     },
     {

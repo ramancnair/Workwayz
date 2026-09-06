@@ -1533,6 +1533,45 @@ export async function executeFlowPilotActionOnClient(action: any) {
         await updateDoc(portfolioRef, { isDeleted: true, deletedAt: now, updatedAt: now });
         return { success: true, portfolioId: params.portfolioId, url: '/project-home' };
       }
+      case 'moveProjectToPortfolio': {
+        if (!db || !params.projectId || !params.portfolioId) throw new Error('Project ID or Portfolio ID missing');
+        const portSnap = await getDocs(collection(db, 'portfolios'));
+        const trimmedPort = params.portfolioId.trim().toLowerCase();
+        const matchedPort = portSnap.docs.find(
+          (d: any) =>
+            !d.data().isDeleted &&
+            (d.id.toLowerCase() === trimmedPort || d.data().name?.trim().toLowerCase() === trimmedPort)
+        );
+        const targetPortfolioId = matchedPort ? matchedPort.id : params.portfolioId;
+        const targetPortfolioName = matchedPort ? matchedPort.data().name : targetPortfolioId;
+
+        const projectsSnap = await getDocs(collection(db, 'projects'));
+        const trimmedProj = params.projectId.trim().toLowerCase();
+        const matchedProj = projectsSnap.docs.find(
+          (d: any) =>
+            !d.data().isDeleted &&
+            (d.id.toLowerCase() === trimmedProj || d.data().name?.trim().toLowerCase() === trimmedProj)
+        );
+        const targetProjectId = matchedProj ? matchedProj.id : params.projectId;
+        const targetProjectName = matchedProj ? matchedProj.data().name : targetProjectId;
+
+        const projectRef = doc(db, 'projects', targetProjectId);
+        const now = new Date().toISOString();
+        await updateDoc(projectRef, {
+          portfolioId: targetPortfolioId,
+          updatedAt: now,
+        });
+
+        return {
+          success: true,
+          projectId: targetProjectId,
+          projectName: targetProjectName,
+          portfolioId: targetPortfolioId,
+          portfolioName: targetPortfolioName,
+          message: `Moved project "${targetProjectName}" (${targetProjectId}) to portfolio "${targetPortfolioName}" (${targetPortfolioId}).`,
+          url: '/project-home',
+        };
+      }
       case 'setProjectManager': {
         const projectRef = doc(db, 'projects', params.projectId);
         const now = new Date().toISOString();

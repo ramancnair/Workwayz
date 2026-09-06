@@ -5,8 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
-
-import { FlowPilotChatWidget } from "@/components/flowpilot/FlowPilotChatWidget";
+import { FlowPilotWidgetClient } from "@/components/flowpilot/FlowPilotWidgetClient";
 
 export const metadata: Metadata = {
   title: 'ProjectFlow',
@@ -36,7 +35,7 @@ export default function RootLayout({
           <SupabaseBootstrap />
           <SetupInterceptor />
           {children}
-          <FlowPilotChatWidget />
+          <FlowPilotWidgetClient />
           <Toaster />
         </ThemeProvider>
       </body>

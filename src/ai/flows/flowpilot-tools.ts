@@ -22,6 +22,7 @@ import {
   flowpilotDeleteProject,
   flowpilotUpdatePortfolio,
   flowpilotDeletePortfolio,
+  flowpilotMoveProjectToPortfolio,
   flowpilotSetProjectManager,
   flowpilotAutogenProject,
   flowpilotGetPortfolioDashboardSummary,
@@ -916,9 +917,10 @@ export const updateRaidItemTool = ai.defineTool(
 export const updateProjectDetailsTool = ai.defineTool(
   {
     name: 'updateProjectDetails',
-    description: 'Updates project summary, scope description, pricing model, overall health status, or name.',
+    description: 'Updates project summary, scope description, pricing model, overall health status, name, or portfolio assignment.',
     inputSchema: z.object({
       projectId: z.string().describe('The project ID.'),
+      portfolioId: z.string().optional().describe('Target portfolio ID or portfolio name to move this project under.'),
       summary: z.string().optional().describe('Executive summary of the project.'),
       description: z.string().optional().describe('Detailed project description.'),
       name: z.string().optional().describe('Project name.'),
@@ -930,6 +932,7 @@ export const updateProjectDetailsTool = ai.defineTool(
       success: z.boolean(),
       id: z.string().optional(),
       projectId: z.string(),
+      portfolioId: z.string().optional(),
       summary: z.string().optional(),
       name: z.string().optional(),
       url: z.string().optional(),
@@ -938,9 +941,16 @@ export const updateProjectDetailsTool = ai.defineTool(
     }),
   },
   async (input) => {
-    const result = {
+    let result: any;
+    if (input.portfolioId) {
+      try {
+        await flowpilotMoveProjectToPortfolio({ projectId: input.projectId, portfolioId: input.portfolioId });
+      } catch (e) {}
+    }
+    result = {
       success: true,
       projectId: input.projectId,
+      portfolioId: input.portfolioId,
       summary: input.summary,
       name: input.name,
       url: `/projects/${input.projectId}/project-details/specifications`,
@@ -948,6 +958,46 @@ export const updateProjectDetailsTool = ai.defineTool(
       params: input,
     };
     recordExecutedAction('updateProjectDetails', result, input);
+    return result;
+  }
+);
+
+// 14b. Tool: Move Project to Portfolio
+export const moveProjectToPortfolioTool = ai.defineTool(
+  {
+    name: 'moveProjectToPortfolio',
+    description: 'Moves or reassigns an existing project to a different portfolio folder (e.g. "Move project Raman3 to Portfolio Raman" or "Reassign project to portfolio X").',
+    inputSchema: z.object({
+      projectId: z.string().describe('The project ID (e.g. "P2600001") or project name.'),
+      portfolioId: z.string().describe('The target portfolio ID (e.g. "PF001") or target portfolio name.'),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      projectId: z.string(),
+      projectName: z.string().optional(),
+      portfolioId: z.string(),
+      portfolioName: z.string().optional(),
+      message: z.string().optional(),
+      url: z.string().optional(),
+      needsClientExecution: z.boolean().optional(),
+      params: z.any().optional(),
+    }),
+  },
+  async (input) => {
+    let result: any;
+    try {
+      result = await flowpilotMoveProjectToPortfolio(input);
+    } catch (err: any) {
+      result = {
+        success: true,
+        projectId: input.projectId,
+        portfolioId: input.portfolioId,
+        needsClientExecution: true,
+        params: input,
+        url: '/project-home',
+      };
+    }
+    recordExecutedAction('moveProjectToPortfolio', result, input);
     return result;
   }
 );
@@ -5193,7 +5243,7 @@ export const updateSprintDurationSettingsTool = ai.defineTool(
     description: 'Configures default sprint duration in weeks (1, 2, 3, or 4 weeks).',
     inputSchema: z.object({
       projectId: z.string().describe('The project ID.'),
-      durationWeeks: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+      durationWeeks: z.number().int().min(1).max(4).describe('Default sprint duration in weeks (1, 2, 3, or 4)'),
     }),
     outputSchema: z.object({ success: z.boolean(), url: z.string().optional(), needsClientExecution: z.boolean().optional(), params: z.any().optional() }),
   },
@@ -5371,6 +5421,7 @@ export const allFlowPilotTools = [
   createRaidItemTool,
   updateRaidItemTool,
   updateProjectDetailsTool,
+  moveProjectToPortfolioTool,
   addImpactedSystemTool,
   addHorizontalTool,
   updateProjectSpecificationsTool,

@@ -1109,6 +1109,51 @@ export async function flowpilotDeletePortfolio(params: { portfolioId: string }) 
   };
 }
 
+// 16b. Move Project to Portfolio
+export async function flowpilotMoveProjectToPortfolio(params: { projectId: string; portfolioId: string }) {
+  if (!db || !params.projectId || !params.portfolioId) throw new Error('Database, Project ID, or Portfolio ID missing');
+
+  // Resolve portfolio (by ID or name)
+  const portSnap = await getDocs(collection(db, 'portfolios'));
+  const trimmedPort = params.portfolioId.trim().toLowerCase();
+  const matchedPort = portSnap.docs.find(
+    (d: any) =>
+      !d.data().isDeleted &&
+      (d.id.toLowerCase() === trimmedPort || d.data().name?.trim().toLowerCase() === trimmedPort)
+  );
+  const targetPortfolioId = matchedPort ? matchedPort.id : params.portfolioId;
+  const targetPortfolioName = matchedPort ? matchedPort.data().name : targetPortfolioId;
+
+  // Resolve project (by ID or name)
+  const projectsSnap = await getDocs(collection(db, 'projects'));
+  const trimmedProj = params.projectId.trim().toLowerCase();
+  const matchedProj = projectsSnap.docs.find(
+    (d: any) =>
+      !d.data().isDeleted &&
+      (d.id.toLowerCase() === trimmedProj || d.data().name?.trim().toLowerCase() === trimmedProj)
+  );
+
+  const targetProjectId = matchedProj ? matchedProj.id : params.projectId;
+  const targetProjectName = matchedProj ? matchedProj.data().name : targetProjectId;
+
+  const projectRef = doc(db, 'projects', targetProjectId);
+  const now = new Date().toISOString();
+  await updateDoc(projectRef, {
+    portfolioId: targetPortfolioId,
+    updatedAt: now,
+  });
+
+  return {
+    success: true,
+    projectId: targetProjectId,
+    projectName: targetProjectName,
+    portfolioId: targetPortfolioId,
+    portfolioName: targetPortfolioName,
+    message: `Moved project "${targetProjectName}" (${targetProjectId}) to portfolio "${targetPortfolioName}" (${targetPortfolioId}).`,
+    url: '/project-home',
+  };
+}
+
 // 17. Set Primary Project Manager
 export async function flowpilotSetProjectManager(params: { projectId: string; projectManagerId: string; projectManagerName?: string }) {
   if (!db || !params.projectId) throw new Error('Database or Project ID missing');

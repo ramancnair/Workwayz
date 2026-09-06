@@ -1,6 +1,8 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { allFlowPilotTools, toolExecutionStore } from './flowpilot-tools';
+import { recordRequestUsage } from '@/lib/ai/rate-tracker';
+import { calculateStepCost } from '@/lib/ai/cost-calculator';
 
 export const FlowPilotMessageSchema = z.object({
   role: z.enum(['user', 'model', 'system']),
@@ -52,10 +54,42 @@ export const AiDetailsSchema = z.object({
 });
 export type AiDetails = z.infer<typeof AiDetailsSchema>;
 
+export const TokenUsageSchema = z.object({
+  promptTokens: z.number().optional(),
+  completionTokens: z.number().optional(),
+  totalTokens: z.number().optional(),
+  costUsd: z.number().optional(),
+  modelCalls: z.number().optional(),
+  toolCalls: z.number().optional(),
+  toolsUsed: z.array(z.string()).optional(),
+});
+export type TokenUsage = z.infer<typeof TokenUsageSchema>;
+
+export const RateUtilizationSchema = z.object({
+  currentRpm: z.number(),
+  limitRpm: z.number(),
+  percentRpm: z.number(),
+  currentTpm: z.number(),
+  limitTpm: z.number(),
+  percentTpm: z.number(),
+  lastPromptTokens: z.number(),
+  lastCompletionTokens: z.number(),
+  lastTotalTokens: z.number(),
+  lastCostUsd: z.number(),
+  lastModelCalls: z.number().optional(),
+  lastToolCalls: z.number().optional(),
+  lastToolsUsed: z.array(z.string()).optional(),
+  status: z.enum(['safe', 'warning', 'critical']),
+  updatedAt: z.string(),
+});
+export type RateUtilization = z.infer<typeof RateUtilizationSchema>;
+
 export const FlowPilotAgentOutputSchema = z.object({
   reply: z.string(),
   executedActions: z.array(FlowPilotActionItemSchema).optional(),
   aiDetails: AiDetailsSchema.optional(),
+  tokenUsage: TokenUsageSchema.optional(),
+  rateUtilization: RateUtilizationSchema.optional(),
 });
 export type FlowPilotAgentOutput = z.infer<typeof FlowPilotAgentOutputSchema>;
 
@@ -274,7 +308,8 @@ ${liveSnapshotContext}
    - To start or complete a sprint, call "updateSprint" with status="Current" or status="Completed".
 6. **Portfolio & Project Hierarchy**:
    - If the user explicitly asks to create a Project inside a Portfolio (e.g. "Create project Raman in Fintech portfolio" or "Add a project under Mobile Apps"), call "createProject" with name="Raman" and pass the portfolio ID.
-   - NEVER call "createPortfolio" if the user only requested to create a project in an existing portfolio.
+   - If the user asks to move or reassign a project to another portfolio (e.g. "Move this to Portfolio Raman", "Move project Raman3 to Portfolio Raman"), call "moveProjectToPortfolio" with projectId and portfolioId.
+   - NEVER call "createPortfolio" if the user only requested to create or move a project in an existing portfolio.
 7. **Portfolio Dashboards, Billing, Utilization & Leaves**:
    - Executive & Project Home: Use "getProjectHomeMetrics" to query total projects, active/archived/health breakdown; "duplicateProject" to clone projects; "filterPortfolioDashboardByDate" to filter trends by date range; "exportPortfolioDashboardReport" to generate executive summary reports.
    - Quality Estimations & Defects: Use "exportQualityEstimationsReport" for man-day variance data; "setQualityVarianceAlertThreshold" to set variance alert thresholds; "queryDefectTrendByMonth" for monthly defect trends; "queryDefectRootCauseSummary" for root cause breakdown.
@@ -316,6 +351,7 @@ ${liveSnapshotContext}
       system: systemInstruction,
       prompt: lastUserMessage,
       tools: allFlowPilotTools,
+      maxTurns: 15,
     };
 
     if (historyMessages.length > 0) {
@@ -340,6 +376,21 @@ ${liveSnapshotContext}
           console.warn(`Model ${genkitModel} is busy (${genErr.message}). Retrying with gemini-2.5-flash fallback...`);
           generateOptions.model = 'googleai/gemini-2.5-flash';
           return await ai.generate(generateOptions);
+        } else if (errMsg.includes('exceeded maximum tool call iterations')) {
+          console.warn(`Hit tool iteration limit (${genErr.message}). Generating best-effort response...`);
+          if (executedActions.length > 0) {
+            const actionSummaries = executedActions
+              .map((a) => a.message || `${a.toolName}: completed`)
+              .join('; ');
+            return {
+              text: `I executed the following actions: ${actionSummaries}. Please let me know if you would like me to proceed with further updates.`,
+              usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+            };
+          }
+          return {
+            text: `I performed several multi-step lookups but reached the tool iteration safety threshold. Could you please specify the exact project name/ID and portfolio name/ID so I can complete your request directly?`,
+            usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+          };
         } else {
           throw genErr;
         }
@@ -371,10 +422,89 @@ ${liveSnapshotContext}
       }
     }
 
+    // Extract token usage metrics from Genkit GenerationResponse
+    const promptTokens =
+      response?.usage?.inputTokens ??
+      (response?.usage as any)?.promptTokens ??
+      0;
+    const completionTokens =
+      response?.usage?.outputTokens ??
+      (response?.usage as any)?.completionTokens ??
+      0;
+    const totalTokens =
+      response?.usage?.totalTokens ??
+      (promptTokens + completionTokens);
+
+    const cost = calculateStepCost(
+      { promptTokens, completionTokens, totalTokens },
+      aiDetails.model
+    );
+
+    // Count model calls, subagent tool calls, and distinct tools used
+    let modelCallCount = 1;
+    let toolCallCount = 0;
+    const toolsUsed: string[] = [];
+
+    if (response?.messages && Array.isArray(response.messages)) {
+      const modelMessages = response.messages.filter((m: any) => m.role === 'model');
+      if (modelMessages.length > 0) {
+        modelCallCount = modelMessages.length;
+      }
+      for (const msg of response.messages) {
+        if (msg.content && Array.isArray(msg.content)) {
+          for (const part of msg.content as any[]) {
+            if (part.toolRequest) {
+              toolCallCount++;
+              if (part.toolRequest.name && !toolsUsed.includes(part.toolRequest.name)) {
+                toolsUsed.push(part.toolRequest.name);
+              }
+            }
+            if (part.toolResponse) {
+              if (part.toolResponse.name && !toolsUsed.includes(part.toolResponse.name)) {
+                toolsUsed.push(part.toolResponse.name);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (toolCallCount === 0 && executedActions.length > 0) {
+      toolCallCount = executedActions.length;
+      for (const a of executedActions) {
+        if (a.toolName && !toolsUsed.includes(a.toolName)) {
+          toolsUsed.push(a.toolName);
+        }
+      }
+    }
+
+    if (modelCallCount < toolCallCount + 1) {
+      modelCallCount = toolCallCount + 1;
+    }
+
+    const rateUtilization = recordRequestUsage(
+      promptTokens,
+      completionTokens,
+      aiDetails.model,
+      modelCallCount,
+      toolCallCount,
+      toolsUsed
+    );
+
     return {
       reply: response?.text || 'I have completed your request.',
       executedActions: executedActions.length > 0 ? executedActions : undefined,
       aiDetails,
+      tokenUsage: {
+        promptTokens,
+        completionTokens,
+        totalTokens,
+        costUsd: cost.totalCostUsd,
+        modelCalls: modelCallCount,
+        toolCalls: toolCallCount,
+        toolsUsed,
+      },
+      rateUtilization,
     };
   } catch (error: any) {
     console.error('FlowPilot Agent Flow Error:', error);
