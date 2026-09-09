@@ -183,6 +183,10 @@ export default function PortfolioTrashPage() {
         }
     };
 
+    useEffect(() => {
+        setSelectedItems(prev => prev.filter(item => trashedItems.some(ti => ti.id === item.id)));
+    }, [trashedItems]);
+
     const isAllSelected = trashedItems.length > 0 && selectedItems.length === trashedItems.length;
 
     const dialogTitle = actionType === 'restore' ? 'Restore Items?' : 'Delete Forever?';

@@ -283,6 +283,10 @@ export default function DevelopmentTasksPage() {
 
 
 
+  useEffect(() => {
+    setSelectedSubTasks(prev => prev.filter(id => stories.some(s => s.id === id && !s.isDeleted)));
+  }, [stories]);
+
   const handleDialogOpen = (task: Story | null) => {
     setEditingSubTask(task);
     setIsDialogOpen(true);
@@ -290,8 +294,10 @@ export default function DevelopmentTasksPage() {
   
   const handleDeleteConfirm = async () => {
     if (!deletingSubTask) return;
-    const success = await deleteStory(deletingSubTask.id);
+    const idToDelete = deletingSubTask.id;
+    const success = await deleteStory(idToDelete);
     if (success) {
+      setSelectedSubTasks(prev => prev.filter(id => id !== idToDelete));
       toast({ title: "Success", description: "Sub-task moved to trash." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not delete sub-task." });

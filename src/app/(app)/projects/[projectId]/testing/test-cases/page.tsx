@@ -288,6 +288,10 @@ export default function TestCasesPage() {
     }
   }, [isDialogOpen, editingTestCase, form, storyOptions]);
 
+  useEffect(() => {
+    setSelectedTestCases(prev => prev.filter(id => testCases.some(tc => tc.id === id && !tc.isDeleted)));
+  }, [testCases]);
+
   const handleDialogOpen = (testCase: TestCase | null) => {
     setEditingTestCase(testCase);
     setIsDialogOpen(true);
@@ -295,8 +299,10 @@ export default function TestCasesPage() {
   
   const handleDeleteConfirm = async () => {
     if (!deletingTestCase) return;
-    const success = await deleteTestCase(deletingTestCase.id);
+    const idToDelete = deletingTestCase.id;
+    const success = await deleteTestCase(idToDelete);
     if (success) {
+      setSelectedTestCases(prev => prev.filter(id => id !== idToDelete));
       toast({ title: "Success", description: "Test case moved to trash." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not delete test case." });

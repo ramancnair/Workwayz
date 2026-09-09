@@ -1,0 +1,162 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: ProjectFlow
+              - generic:
+                - button:
+                  - generic: Toggle Sidebar
+                - generic:
+                  - button:
+                    - generic: Toggle theme
+          - generic:
+            - list:
+              - listitem:
+                - link:
+                  - /url: /my-projects
+                  - generic: My Projects
+          - generic:
+            - list:
+              - listitem:
+                - link:
+                  - /url: /projects/P2600003/raid-dashboard
+                  - generic: RAID Dashboard
+              - listitem:
+                - link:
+                  - /url: /projects/P2600003/risks
+                  - generic: Risks
+              - listitem:
+                - link:
+                  - /url: /projects/P2600003/assumptions
+                  - generic: Assumptions
+              - listitem:
+                - link:
+                  - /url: /projects/P2600003/issues
+                  - generic: Issues
+              - listitem:
+                - link:
+                  - /url: /projects/P2600003/dependencies
+                  - generic: Dependencies
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Project Simulation
+                  - generic:
+                    - combobox:
+                      - generic: 100%
+                    - button: Run
+                - text: Test Date
+                - generic:
+                  - textbox: 20:02
+                  - textbox: 2026-09-09
+            - generic:
+              - generic: RN
+              - generic:
+                - generic: Raman Nair
+                - generic: Administrator
+                - generic: admin@zopcode.com
+    - main:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - tablist:
+                - tab: Initial Estimation
+                - tab: Project Details
+                - tab: Resources
+                - tab: Releases
+                - tab: Development
+                - tab: Testing
+                - tab [selected]: Governance
+                - tab: Holidays
+                - tab: PMO
+                - tab:
+                  - generic: Project Settings
+                - tab:
+                  - generic: Project Trash
+          - generic:
+            - heading [level=1]: Autogen Project 3
+            - paragraph: P2600003
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=2]: Assumptions
+                - paragraph: Manage and track all project assumptions.
+              - generic:
+                - button: Delete Selected (3)
+                - button: AI Gen Assumptions
+                - button: Add Assumption
+            - generic:
+              - generic:
+                - table:
+                  - rowgroup:
+                    - row:
+                      - columnheader:
+                        - checkbox [checked]
+                      - columnheader: ID
+                      - columnheader: Description
+                      - columnheader: Category
+                      - columnheader: Status
+                      - columnheader: Owner
+                      - columnheader: Actions
+                  - rowgroup:
+                    - row:
+                      - cell:
+                        - checkbox [checked]
+                      - cell: A-4
+                      - cell: Test Assumption
+                      - cell:
+                        - generic: Technical
+                      - cell:
+                        - generic: Active
+                      - cell: N/A
+                      - cell:
+                        - generic:
+                          - button
+                          - button
+                    - row:
+                      - cell:
+                        - checkbox [checked]
+                      - cell: A-2
+                      - cell: Business stakeholders will be available for weekly review and sign-off sessions.
+                      - cell:
+                        - generic: Business
+                      - cell:
+                        - generic: Active
+                      - cell: SeniorManagement1 User
+                      - cell:
+                        - generic:
+                          - button
+                          - button
+                    - row:
+                      - cell:
+                        - checkbox [checked]
+                      - cell: A-6
+                      - cell: All third-party integrations will be available for the duration of the project.
+                      - cell:
+                        - generic: Technical
+                      - cell:
+                        - generic: Active
+                      - cell: N/A
+                      - cell:
+                        - generic:
+                          - button
+                          - button
+  - generic [aria-hidden]:
+    - button
+  - list
+  - button "Open Next.js Dev Tools" [ref=f2e9] [cursor=pointer]
+  - alert
+  - alertdialog [ref=f2e342]:
+    - generic [ref=f2e343]:
+      - heading "Are you absolutely sure?" [level=2] [ref=f2e344]
+      - paragraph [ref=f2e345]: This will move the assumption to the trash. It will be permanently deleted after 30 days.
+    - generic [ref=f2e346]:
+      - button "Cancel" [active] [ref=f2e347] [cursor=pointer]
+      - button "Move to Trash" [ref=f2e348] [cursor=pointer]

@@ -230,6 +230,10 @@ export default function UsersPage() {
     }
   }, [isDialogOpen, editingUser, form]);
 
+  useEffect(() => {
+    setSelectedUsers(prev => prev.filter(id => users.some(u => u.id === id && !u.isDeleted)));
+  }, [users]);
+
   const handleDialogOpen = (user: User | null) => {
     setEditingUser(user);
     setIsDialogOpen(true);
@@ -323,9 +327,11 @@ export default function UsersPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deletingUser || !db) return;
+    const idToDelete = deletingUser.id;
     try {
-      const userRef = doc(db, 'employees', deletingUser.id);
+      const userRef = doc(db, 'employees', idToDelete);
       await updateDoc(userRef, { isDeleted: true, deletedAt: Timestamp.now() });
+      setSelectedUsers(prev => prev.filter(id => id !== idToDelete));
       toast({ title: "Success", description: "User moved to Trash." });
     } catch (error) {
       console.error("Error deleting user:", error)

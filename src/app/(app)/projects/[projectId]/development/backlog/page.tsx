@@ -386,6 +386,10 @@ export default function BacklogPage() {
   const [storiesToDelete, setStoriesToDelete] = useState<string[]>([]);
   const [storiesToMove, setStoriesToMove] = useState<string[]>([]);
 
+  useEffect(() => {
+    setSelectedStories(prev => prev.filter(id => stories.some(s => s.id === id && !s.isDeleted)));
+  }, [stories]);
+
   const [addParentStoryText, setAddParentStoryText] = useState('');
   const [editParentStoryText, setEditParentStoryText] = useState('');
   const [testCaseInputText, setTestCaseInputText] = useState('');

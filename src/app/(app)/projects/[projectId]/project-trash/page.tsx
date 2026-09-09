@@ -154,7 +154,11 @@ export default function ProjectTrashPage() {
       checked ? [...prev, item] : prev.filter(i => i.id !== item.id)
     );
   };
-  
+
+  useEffect(() => {
+    setSelectedItems(prev => prev.filter(item => trashedItems.some(ti => ti.id === item.id)));
+  }, [trashedItems]);
+
   const handleAction = async () => {
     if (selectedItems.length === 0 || !actionType) return;
     

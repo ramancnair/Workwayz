@@ -187,7 +187,11 @@ export default function DefectsPage() {
       }
     }
   }, [isDialogOpen, editingBug, form, testCases, bugs, stories, currentSprint]);
-  
+
+  useEffect(() => {
+    setSelectedBugs(prev => prev.filter(id => stories.some(s => s.id === id && !s.isDeleted)));
+  }, [stories]);
+
   const handleDialogOpen = (bug: Story | null) => {
     setEditingBug(bug);
     setIsDialogOpen(true);

@@ -106,6 +106,10 @@ export default function DependenciesPage() {
     }
   }, [isDialogOpen, editingDependency, form]);
 
+  useEffect(() => {
+    setSelectedDependencies(prev => prev.filter(id => dependencies.some(d => d.id === id && !d.isDeleted)));
+  }, [dependencies]);
+
   const onAiGenSubmit = async () => {
     if (!project?.summary && stories.length === 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'A project summary or at least one story is required to generate dependencies.' });
@@ -148,8 +152,10 @@ export default function DependenciesPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deletingDependency) return;
-    const success = await deleteDependency(deletingDependency.id);
+    const idToDelete = deletingDependency.id;
+    const success = await deleteDependency(idToDelete);
     if (success) {
+      setSelectedDependencies(prev => prev.filter(id => id !== idToDelete));
       toast({ title: "Success", description: "Dependency moved to trash." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not move dependency to trash." });

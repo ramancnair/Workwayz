@@ -112,6 +112,10 @@ export default function IssuesPage() {
   }, [isDialogOpen, editingIssue, form]);
 
 
+  useEffect(() => {
+    setSelectedIssues(prev => prev.filter(id => issues.some(i => i.id === id && !i.isDeleted)));
+  }, [issues]);
+
   const handleDialogOpen = (issue: Issue | null) => {
     setEditingIssue(issue);
     setIsDialogOpen(true);
@@ -119,8 +123,10 @@ export default function IssuesPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deletingIssue) return;
-    const success = await deleteIssue(deletingIssue.id);
+    const idToDelete = deletingIssue.id;
+    const success = await deleteIssue(idToDelete);
     if (success) {
+      setSelectedIssues(prev => prev.filter(id => id !== idToDelete));
       toast({ title: "Success", description: "Issue moved to trash." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not move issue to trash." });

@@ -123,6 +123,10 @@ export default function RisksPage() {
     }
   }, [isDialogOpen, editingRisk, form]);
   
+  useEffect(() => {
+    setSelectedRisks(prev => prev.filter(id => risks.some(r => r.id === id && !r.isDeleted)));
+  }, [risks]);
+
   const onAiGenSubmit = async () => {
     if (!project?.summary) {
       toast({ variant: 'destructive', title: 'Error', description: 'A project summary is required to generate risks.' });
@@ -154,8 +158,10 @@ export default function RisksPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deletingRisk) return;
-    const success = await deleteRisk(deletingRisk.id);
+    const idToDelete = deletingRisk.id;
+    const success = await deleteRisk(idToDelete);
     if (success) {
+      setSelectedRisks(prev => prev.filter(id => id !== idToDelete));
       toast({ title: "Success", description: "Risk moved to trash." });
     } else {
       toast({ variant: "destructive", title: "Error", description: "Could not move risk to trash." });
