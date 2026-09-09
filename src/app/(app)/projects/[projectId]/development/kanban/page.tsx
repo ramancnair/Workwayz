@@ -1407,7 +1407,7 @@ export default function KanbanPage() {
                   <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
                       <div className="flex items-center gap-2">
-                        {history.length > 1 && (
+                        {selectionStack.length > 1 && (
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleGoBack}>
                             <ArrowLeft className="h-4 w-4" />
                           </Button>
@@ -1758,32 +1758,68 @@ export default function KanbanPage() {
                             </TabsContent>
                             <TabsContent value="subTasks">
                                <div className="space-y-4 pt-4">
-                                    <div className="space-y-2 rounded-md border p-2">
-                                    {selectedStorySubItems.subTasks.length > 0 ? (
-                                      selectedStorySubItems.subTasks.map(item => {
+                                     {selectedStorySubItems.subTasks.length > 0 ? (
+                                       <div className="space-y-2 rounded-md border p-2">
+                                       {selectedStorySubItems.subTasks.map(item => {
+                                           const ItemIcon = workItemIcons[item.itemType];
+                                           const system = impactedSystems.find(s => s.id === item.impactedSystemId);
+                                           return (
+                                               <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
+                                                   <ItemIcon className="h-4 w-4 text-muted-foreground" />
+                                                   <span className="font-medium cursor-pointer hover:underline truncate" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
+                                                   <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
+                                                   <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
+                                                   <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
+                                               </div>
+                                           )
+                                       })}
+                                       </div>
+                                     ) : (
+                                       <p className="text-sm text-muted-foreground italic px-2">No sub-tasks linked.</p>
+                                     )}
+                               </div>
+                           </TabsContent>
+                           <TabsContent value="bugs">
+                              <div className="space-y-4 pt-4">
+                                  {selectedStorySubItems.bugs.length > 0 ? (
+                                      <div className="space-y-2 rounded-md border p-2">
+                                      {selectedStorySubItems.bugs.map(item => {
                                           const ItemIcon = workItemIcons[item.itemType];
-                                          const system = impactedSystems.find(s => s.id === item.impactedSystemId);
                                           return (
-                                              <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
-                                                  <ItemIcon className="h-4 w-4 text-muted-foreground" />
-                                                  <span className="font-medium cursor-pointer hover:underline truncate" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
-                                                  <Badge variant="outline" className="w-24 justify-center truncate">{system?.name || 'N/A'}</Badge>
-                                                  <Badge variant="secondary" className="justify-center">{item.estimatedHours || 0}h</Badge>
-                                                  <Badge variant="outline" className="w-24 justify-center">{item.status}</Badge>
+                                              <div key={item.id} className="flex items-center justify-between text-sm">
+                                                  <div className='flex items-center gap-2'>
+                                                      {ItemIcon && <ItemIcon className="h-4 w-4 text-muted-foreground" />}
+                                                      <span className="cursor-pointer hover:underline" onClick={() => handleDrillDown(item)}>[{item.storyId}] {item.title}</span>
+                                                  </div>
+                                                  <Badge variant="outline">{item.status}</Badge>
                                               </div>
                                           )
-                                                  <Badge variant="secondary" className="shrink-0">{tc.testCaseId}</Badge>
-                                                  <span className="font-medium truncate cursor-pointer hover:underline text-primary" onClick={() => setEditingTestCase(tc)}>{tc.title}</span>
-                                              </div>
-                                              <Badge variant="outline" className="ml-2 shrink-0">{tc.type}</Badge>
-                                          </div>
-                                      ))}
+                                      })}
                                       </div>
                                   ) : (
-                                      <p className="text-sm text-muted-foreground italic px-2 text-center py-4">No test cases linked.</p>
+                                      <p className="text-sm text-muted-foreground italic px-2">No defects linked.</p>
                                   )}
                               </div>
                           </TabsContent>
+                          <TabsContent value="testCases">
+                              <div className="space-y-4 pt-4">
+                                   {selectedStoryTestCases.length > 0 ? (
+                                       <div className="space-y-2 rounded-md border p-2">
+                                        {selectedStoryTestCases.map(tc => (
+                                            <div key={tc.id} className="flex items-center justify-between text-sm p-2 hover:bg-muted/50 rounded-md">
+                                                <div className='flex items-center gap-2 min-w-0 flex-1'>
+                                                    <Badge variant="secondary" className="shrink-0">{tc.testCaseId}</Badge>
+                                                    <span className="font-medium truncate cursor-pointer hover:underline text-primary" onClick={() => setEditingTestCase(tc)}>{tc.title}</span>
+                                                </div>
+                                                <Badge variant="outline" className="ml-2 shrink-0">{tc.type}</Badge>
+                                            </div>
+                                        ))}
+                                       </div>
+                                   ) : (
+                                       <p className="text-sm text-muted-foreground italic px-2 text-center py-4">No test cases linked.</p>
+                                   )}
+                               </div>
+                           </TabsContent>
                           <TabsContent value="logs">
                             <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
                                 {selectedStorySubItems.logs.length > 0 ? (
