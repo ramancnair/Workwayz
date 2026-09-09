@@ -1,6 +1,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { allFlowPilotTools, toolExecutionStore } from './flowpilot-tools';
+import { allFlowPilotTools, toolExecutionStore, flowpilotToolMap, flowpilotAnchorTools } from './flowpilot-tools';
+import { retrieveCandidateTools } from '@/ai/tools/tool-retriever';
 import { recordRequestUsage } from '@/lib/ai/rate-tracker';
 import { calculateStepCost } from '@/lib/ai/cost-calculator';
 
@@ -41,6 +42,7 @@ export const FlowPilotActionItemSchema = z.object({
   status: z.string().optional(),
   projectId: z.string().optional(),
   url: z.string().optional(),
+  message: z.string().optional(),
   needsClientExecution: z.boolean().optional(),
   params: z.any().optional(),
 });
@@ -62,6 +64,8 @@ export const TokenUsageSchema = z.object({
   modelCalls: z.number().optional(),
   toolCalls: z.number().optional(),
   toolsUsed: z.array(z.string()).optional(),
+  retrievedTools: z.array(z.string()).optional(),
+  retrievalMode: z.string().optional(),
 });
 export type TokenUsage = z.infer<typeof TokenUsageSchema>;
 
@@ -310,24 +314,9 @@ ${liveSnapshotContext}
    - If the user explicitly asks to create a Project inside a Portfolio (e.g. "Create project Raman in Fintech portfolio" or "Add a project under Mobile Apps"), call "createProject" with name="Raman" and pass the portfolio ID.
    - If the user asks to move or reassign a project to another portfolio (e.g. "Move this to Portfolio Raman", "Move project Raman3 to Portfolio Raman"), call "moveProjectToPortfolio" with projectId and portfolioId.
    - NEVER call "createPortfolio" if the user only requested to create or move a project in an existing portfolio.
-7. **Portfolio Dashboards, Billing, Utilization & Leaves**:
-   - Executive & Project Home: Use "getProjectHomeMetrics" to query total projects, active/archived/health breakdown; "duplicateProject" to clone projects; "filterPortfolioDashboardByDate" to filter trends by date range; "exportPortfolioDashboardReport" to generate executive summary reports.
-   - Quality Estimations & Defects: Use "exportQualityEstimationsReport" for man-day variance data; "setQualityVarianceAlertThreshold" to set variance alert thresholds; "queryDefectTrendByMonth" for monthly defect trends; "queryDefectRootCauseSummary" for root cause breakdown.
-   - Billing & Rates: Use "exportBillingOverviewCsv" for financial overview; "queryProjectProfitabilityForecast" for margin forecasting; "bulkUpdateResourceRates" to update multiple resource rates; "setDefaultRoleBenchmarkRates" for role benchmarks.
-   - User Directory & Utilization: Use "createUser", "updateUserRole", "toggleUserStatus", "listAllUsers" for employee directory management; "queryDepartmentUtilizationTrends" and "exportResourceUtilizationReport" for utilization sheets.
-   - Holidays & Leaves: Use "bulkImportHolidays", "updateHoliday" for calendar; "resetAnnualLeaveBalances" for annual rollovers; "approveLeaveRequest", "rejectLeaveRequest", "queryEmployeeLeaveBalance" for leave management.
-8. **Project Level Tools (Modules 1-10)**:
-   - Initial Estimation: "updateInitialImpactedSystem", "deleteInitialImpactedSystem", "updateInitialHorizontal", "deleteInitialHorizontal", "queryInitialSpecifications", "confirmProjectEstimation", "updateInitialProjectDates", "queryInitialProjectStatus".
-   - Status & PM Dashboard: "updateProjectHealth", "updateProjectDates", "queryProjectStatusDetails", "queryProjectPmDashboard", "queryProjectWorkload", "queryProjectResourceFinancials", "querySwimLaneCycleTime", "queryResourceBottlenecks", "queryEpicProgress".
-   - Specifications & Environments: "updateImpactedSystem", "deleteImpactedSystem", "updateHorizontal", "deleteHorizontal", "queryProjectSpecifications", "deleteEnvironment", "reorderEnvironments".
-   - Resources, Worklogs & Gantt: "removeProjectResource", "updateProjectResourceRole", "queryProjectTeamMembers", "queryProjectWorklogs", "deleteWorklogEntry", "updateWorklogEntry", "queryProjectResourceWorkloadMatrix", "reassignWorkload", "queryProjectGanttTimeline", "updateGanttTaskDependency".
-   - Releases & Agile Development: "updateRelease", "deleteRelease", "queryProjectReleases", "assignStoriesToRelease", "queryDevDashboardSummary", "querySprintBurndownData", "queryVelocityMetrics", "reorderBacklogStories", "deleteEpic", "queryBacklogStories", "deleteWorkItem", "bulkEstimateStories", "queryUngroomedStories", "tagStoryAcceptanceCriteria", "queryKanbanBoardState", "updateKanbanWipLimits", "querySubTasksByStory", "deleteSubTask", "bulkCreateSubTasks", "queryProjectDefects", "linkDefectToStory", "closeDefect".
-   - Testing Lifecycle: "queryTestDashboardSummary", "queryTestExecutionProgress", "queryDefectDensity", "updateTestCase", "deleteTestCase", "queryTestCases", "bulkImportTestCases", "updateTestPlan", "deleteTestPlan", "queryTestPlans", "removeTestCaseFromPlan", "queryTestExecutionList", "bulkUpdateTestExecutionStatus", "logDefectFromTestExecution", "queryQaDefects", "exportDefectsReport".
-   - Governance & RAID: "queryRaidDashboardSummary", "exportRaidLogCsv", "queryProjectRisks", "deleteRisk", "closeRisk", "queryProjectAssumptions", "deleteAssumption", "validateAssumption", "queryProjectIssues", "deleteIssue", "resolveIssue", "queryProjectDependencies", "deleteDependency", "updateDependencyStatus".
-   - Holidays & Leaves: "overrideProjectHolidayCalendar", "queryProjectSpecificHolidays", "queryTeamAbsenceCalendarBySprint".
-   - PMO Financials & Documents: "uploadPmoDocument", "deletePmoDocument", "queryPmoDocuments", "addExternalDocLink", "queryFbBillingSummary", "updateFbContractValue", "logFbInvoice", "updatePaymentMilestone", "deletePaymentMilestone", "queryPaymentMilestones", "markMilestoneInvoiceRaised", "queryTnmBillingSummary", "generateMonthlyTnmInvoice", "updateTnmMilestone", "deleteTnmMilestone", "queryTnmMilestones", "queryBcpPlan", "updateBcpPrimaryContacts", "logBcpDisasterRecoveryPlan".
-   - Project Settings & Trash: "addKanbanColumn", "deleteKanbanColumn", "updateKanbanColumnsOrder", "queryBoardSettings", "updateSprintDurationSettings", "setSprintStartDay", "querySprintSettings", "updateEffortConversionSettings", "queryEffortSettings", "queryProjectTrashItems", "restoreProjectTrashItem", "permanentlyDeleteProjectItem".
-9. **Tool Execution**:
+7. **Tool Selection & Execution**:
+   - Relevant candidate tools have been dynamically retrieved and loaded into your tool definition context for this request.
+   - If you need a specialized capability that is not present in your active tools, invoke the "searchTools" tool with your search query to discover it.
    - Execute the appropriate tool immediately when an action is requested.
    - Return a crisp, professional confirmation summarizing the created/updated item with its ID and attributes.`;
 
@@ -346,11 +335,33 @@ ${liveSnapshotContext}
     if (aiDetails.provider === 'openai') genkitModel = `openai/${modelId}`;
     if (aiDetails.provider === 'ollama') genkitModel = `ollama/${modelId}`;
 
+    // Stage 1: Retrieval-based tool selection (RAG over tools)
+    const retrievalResult = await retrieveCandidateTools({
+      lastUserMessage,
+      recentMessages: messages.slice(-4),
+      currentProjectName,
+      currentProjectId,
+      maxResults: 14,
+    });
+
+    const activeToolNames = new Set<string>(retrievalResult.candidateToolNames);
+    // Guarantee anchor tools
+    activeToolNames.add('queryProjectContext');
+    activeToolNames.add('searchTools');
+
+    const selectedTools: any[] = [];
+    for (const toolName of Array.from(activeToolNames)) {
+      const toolInstance = flowpilotToolMap.get(toolName);
+      if (toolInstance) {
+        selectedTools.push(toolInstance);
+      }
+    }
+
     const generateOptions: any = {
       model: genkitModel,
       system: systemInstruction,
       prompt: lastUserMessage,
-      tools: allFlowPilotTools,
+      tools: selectedTools,
       maxTurns: 15,
     };
 
@@ -372,10 +383,16 @@ ${liveSnapshotContext}
           errMsg.includes('overloaded') ||
           errMsg.includes('resource exhausted');
 
-        if (isOverloadedOr503 && aiDetails.provider === 'google' && genkitModel !== 'googleai/gemini-2.5-flash') {
-          console.warn(`Model ${genkitModel} is busy (${genErr.message}). Retrying with gemini-2.5-flash fallback...`);
-          generateOptions.model = 'googleai/gemini-2.5-flash';
-          return await ai.generate(generateOptions);
+        if (isOverloadedOr503 && aiDetails.provider === 'google') {
+          if (genkitModel !== 'googleai/gemini-2.5-flash') {
+            console.warn(`Model ${genkitModel} is busy (${genErr.message}). Retrying with gemini-2.5-flash fallback...`);
+            generateOptions.model = 'googleai/gemini-2.5-flash';
+            return await ai.generate(generateOptions);
+          } else {
+            console.warn(`Gemini 2.5 Flash is experiencing a brief high-demand spike. Retrying after 1.5s...`);
+            await new Promise((r) => setTimeout(r, 1500));
+            return await ai.generate(generateOptions);
+          }
         } else if (errMsg.includes('exceeded maximum tool call iterations')) {
           console.warn(`Hit tool iteration limit (${genErr.message}). Generating best-effort response...`);
           if (executedActions.length > 0) {
@@ -503,6 +520,8 @@ ${liveSnapshotContext}
         modelCalls: modelCallCount,
         toolCalls: toolCallCount,
         toolsUsed,
+        retrievedTools: Array.from(activeToolNames),
+        retrievalMode: retrievalResult.retrievalMode,
       },
       rateUtilization,
     };

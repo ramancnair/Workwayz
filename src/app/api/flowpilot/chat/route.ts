@@ -47,6 +47,13 @@ export async function POST(request: Request) {
       if (r.lastToolCalls !== undefined) response.headers.set('x-rate-last-tool-calls', String(r.lastToolCalls));
     }
 
+    if (result.tokenUsage?.retrievalMode) {
+      response.headers.set('x-rate-retrieval-mode', result.tokenUsage.retrievalMode);
+    }
+    if (result.tokenUsage?.retrievedTools) {
+      response.headers.set('x-rate-tools-retrieved-count', String(result.tokenUsage.retrievedTools.length));
+    }
+
     return response;
   } catch (error: any) {
     console.error('FlowPilot Chat API error:', error);
