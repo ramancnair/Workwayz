@@ -118,3 +118,38 @@ export function formatRateInput(value: number | string | null | undefined, fallb
   }
   return num.toFixed(2);
 }
+
+/**
+ * Matches a target label against a user search query.
+ * - If query is empty or whitespace, returns true.
+ * - If label is empty/missing, returns false.
+ * - If target label contains the full query as a contiguous substring, returns true.
+ * - Otherwise, splits the query into tokens and checks that every token matches at a word
+ *   boundary (or start of word/token). For purely numeric tokens, matches whole numbers to prevent
+ *   a token like "1" from falsely matching "11".
+ * This prevents single letters like "e" from matching internal letters of words that already
+ * matched earlier tokens.
+ */
+export function matchSearchQuery(label: string | undefined | null, query: string | undefined | null): boolean {
+  if (!query || !query.trim()) return true;
+  if (!label) return false;
+
+  const q = query.toLowerCase().trim();
+  const lowerLabel = label.toLowerCase();
+  if (lowerLabel.includes(q)) return true;
+
+  const tokens = q.split(/\s+/).filter(Boolean);
+  return tokens.every(token => {
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const isNumeric = /^\d+$/.test(token);
+    let pattern: RegExp;
+    if (isNumeric) {
+      pattern = new RegExp(`(?:^|[^a-zA-Z0-9])${escaped}(?![0-9])`, 'i');
+    } else if (/^[a-z0-9]/i.test(token)) {
+      pattern = new RegExp(`(?:^|[^a-zA-Z0-9])${escaped}`, 'i');
+    } else {
+      pattern = new RegExp(escaped, 'i');
+    }
+    return pattern.test(label);
+  });
+}

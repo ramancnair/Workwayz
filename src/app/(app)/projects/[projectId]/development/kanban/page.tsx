@@ -49,7 +49,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
-import { cn, getSprintDisplayId, getUserInitials } from '@/lib/utils';
+import { cn, getSprintDisplayId, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -1094,12 +1094,7 @@ export default function KanbanPage() {
                               </FormControl>
                               <datalist id="parent-story-options-defect-edit-kanban-page">
                                 {parentStoryOptions
-                                  .filter(opt => {
-                                    const q = editParentStoryText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, editParentStoryText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -1138,12 +1133,7 @@ export default function KanbanPage() {
                               </FormControl>
                               <datalist id="testcase-options-defect-edit-kanban-page">
                                 {testCaseOptions
-                                  .filter(opt => {
-                                    const q = testCaseInputText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, testCaseInputText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -1244,12 +1234,7 @@ export default function KanbanPage() {
                               <datalist id="bug-options-defect-edit-kanban-page">
                                 {relatedBugOptions
                                   .filter(opt => opt.value !== selectedStory?.id)
-                                  .filter(opt => {
-                                    const q = relatedBugInputText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, relatedBugInputText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -1622,12 +1607,7 @@ export default function KanbanPage() {
                                            </FormControl>
                                             <datalist id="parent-story-options">
                                                 {parentStoryOptions
-                                                  .filter(opt => {
-                                                    const q = editParentStoryText.toLowerCase().trim();
-                                                    if (!q) return true;
-                                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                                  })
+                                                  .filter(opt => matchSearchQuery(opt.label, editParentStoryText))
                                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                                             </datalist>
                                            <FormMessage />

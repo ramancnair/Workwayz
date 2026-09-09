@@ -43,7 +43,7 @@ import { type TestCase, type TestCaseStatus, type TestCaseType, type Story } fro
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn, matchSearchQuery } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
@@ -633,12 +633,7 @@ export default function TestCasesPage() {
                                 </FormControl>
                                 <datalist id="story-options-tc">
                                   {storyOptions
-                                    .filter(option => {
-                                      const q = relatedStoryInputText.toLowerCase().trim();
-                                      if (!q) return true;
-                                      const tokens = q.split(/\s+/).filter(Boolean);
-                                      return tokens.every(token => option.label.toLowerCase().includes(token));
-                                    })
+                                    .filter(option => matchSearchQuery(option.label, relatedStoryInputText))
                                     .map(option => (
                                       <option key={option.value} value={option.label}>
                                         {option.label}

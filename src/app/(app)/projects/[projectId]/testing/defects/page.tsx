@@ -41,7 +41,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Story, StoryStatus, Release, TestCase, BugSeverity } from '@/types';
-import { cn, getUserInitials } from '@/lib/utils';
+import { cn, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2, ArrowUpDown, Search, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -574,12 +574,7 @@ export default function DefectsPage() {
                             </FormControl>
                             <datalist id="parent-story-options">
                               {parentStoryOptions
-                                .filter(opt => {
-                                  const q = parentStoryInputText.toLowerCase().trim();
-                                  if (!q) return true;
-                                  const tokens = q.split(/\s+/).filter(Boolean);
-                                  return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                })
+                                .filter(opt => matchSearchQuery(opt.label, parentStoryInputText))
                                 .map(opt => <option key={opt.value} value={opt.label} />)}
                             </datalist>
                             <FormMessage />
@@ -618,12 +613,7 @@ export default function DefectsPage() {
                             </FormControl>
                             <datalist id="testcase-options">
                               {testCaseOptions
-                                .filter(opt => {
-                                  const q = testCaseInputText.toLowerCase().trim();
-                                  if (!q) return true;
-                                  const tokens = q.split(/\s+/).filter(Boolean);
-                                  return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                })
+                                .filter(opt => matchSearchQuery(opt.label, testCaseInputText))
                                 .map(opt => <option key={opt.value} value={opt.label} />)}
                             </datalist>
                             <FormMessage />
@@ -730,12 +720,7 @@ export default function DefectsPage() {
                             <datalist id="bug-options">
                               {relatedBugOptions
                                 .filter(opt => opt.value !== editingBug?.id)
-                                .filter(opt => {
-                                  const q = relatedBugInputText.toLowerCase().trim();
-                                  if (!q) return true;
-                                  const tokens = q.split(/\s+/).filter(Boolean);
-                                  return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                })
+                                .filter(opt => matchSearchQuery(opt.label, relatedBugInputText))
                                 .map(opt => <option key={opt.value} value={opt.label} />)}
                             </datalist>
                             <FormMessage />

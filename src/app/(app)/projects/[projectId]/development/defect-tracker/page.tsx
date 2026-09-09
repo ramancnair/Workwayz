@@ -66,7 +66,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { Story, StoryStatus, Priority, BugSeverity, User } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, matchSearchQuery } from '@/lib/utils';
 
 // Swimlanes config with requested styling
 const BUG_COLUMNS = [
@@ -590,12 +590,7 @@ export default function DefectTrackerPage() {
                         </FormControl>
                         <datalist id="parent-story-options-dev-tracker">
                           {parentStoryOptions
-                            .filter(opt => {
-                              const q = parentStoryInputText.toLowerCase().trim();
-                              if (!q) return true;
-                              const tokens = q.split(/\s+/).filter(Boolean);
-                              return tokens.every(token => opt.label.toLowerCase().includes(token));
-                            })
+                            .filter(opt => matchSearchQuery(opt.label, parentStoryInputText))
                             .map(opt => <option key={opt.value} value={opt.label} />)}
                         </datalist>
                         <FormMessage />
@@ -634,12 +629,7 @@ export default function DefectTrackerPage() {
                         </FormControl>
                         <datalist id="testcase-options-dev-tracker">
                           {testCaseOptions
-                            .filter(opt => {
-                              const q = testCaseInputText.toLowerCase().trim();
-                              if (!q) return true;
-                              const tokens = q.split(/\s+/).filter(Boolean);
-                              return tokens.every(token => opt.label.toLowerCase().includes(token));
-                            })
+                            .filter(opt => matchSearchQuery(opt.label, testCaseInputText))
                             .map(opt => <option key={opt.value} value={opt.label} />)}
                         </datalist>
                         <FormMessage />
@@ -746,12 +736,7 @@ export default function DefectTrackerPage() {
                         <datalist id="bug-options-dev-tracker">
                           {relatedBugOptions
                             .filter(opt => opt.value !== selectedBug?.id)
-                            .filter(opt => {
-                              const q = relatedBugInputText.toLowerCase().trim();
-                              if (!q) return true;
-                              const tokens = q.split(/\s+/).filter(Boolean);
-                              return tokens.every(token => opt.label.toLowerCase().includes(token));
-                            })
+                            .filter(opt => matchSearchQuery(opt.label, relatedBugInputText))
                             .map(opt => <option key={opt.value} value={opt.label} />)}
                         </datalist>
                         <FormMessage />

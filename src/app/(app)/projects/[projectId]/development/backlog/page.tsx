@@ -60,7 +60,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, getUserInitials } from '@/lib/utils';
+import { cn, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
@@ -1269,12 +1269,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               </FormControl>
                               <datalist id="parent-story-options-add">
                                 {parentStoryOptions
-                                  .filter(opt => {
-                                    const q = addParentStoryText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, addParentStoryText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -1311,12 +1306,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               </FormControl>
                               <datalist id="testcase-options-add">
                                   {testCaseOptions
-                                    .filter(opt => {
-                                      const q = testCaseInputText.toLowerCase().trim();
-                                      if (!q) return true;
-                                      const tokens = q.split(/\s+/).filter(Boolean);
-                                      return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                    })
+                                    .filter(opt => matchSearchQuery(opt.label, testCaseInputText))
                                     .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -1408,12 +1398,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                       </FormControl>
                                       <datalist id="bug-options-add">
                                         {relatedBugOptions
-                                          .filter(opt => {
-                                            const q = relatedBugInputText.toLowerCase().trim();
-                                            if (!q) return true;
-                                            const tokens = q.split(/\s+/).filter(Boolean);
-                                            return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                          })
+                                          .filter(opt => matchSearchQuery(opt.label, relatedBugInputText))
                                           .map(opt => <option key={opt.value} value={opt.label} />)}
                                       </datalist>
                                       <FormMessage />
@@ -2078,12 +2063,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               </FormControl>
                               <datalist id="parent-story-options-defect-edit-backlog">
                                 {parentStoryOptions
-                                  .filter(opt => {
-                                    const q = editParentStoryText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, editParentStoryText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -2122,12 +2102,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               </FormControl>
                               <datalist id="testcase-options-defect-edit-backlog">
                                 {testCaseOptions
-                                  .filter(opt => {
-                                    const q = testCaseInputText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, testCaseInputText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -2228,12 +2203,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               <datalist id="bug-options-defect-edit-backlog">
                                 {relatedBugOptions
                                   .filter(opt => opt.value !== selectedStory?.id)
-                                  .filter(opt => {
-                                    const q = relatedBugInputText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, relatedBugInputText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -2607,12 +2577,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               </FormControl>
                               <datalist id="parent-story-options-edit">
                                   {parentStoryOptions
-                                    .filter(opt => {
-                                      const q = editParentStoryText.toLowerCase().trim();
-                                      if (!q) return true;
-                                      const tokens = q.split(/\s+/).filter(Boolean);
-                                      return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                    })
+                                    .filter(opt => matchSearchQuery(opt.label, editParentStoryText))
                                     .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -2737,12 +2702,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     </FormControl>
                                     <datalist id="predecessor-options-edit">
                                         {predecessorOptions
-                                          .filter(opt => {
-                                            const q = editPredecessorText.toLowerCase().trim();
-                                            if (!q) return true;
-                                            const tokens = q.split(/\s+/).filter(Boolean);
-                                            return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                          })
+                                          .filter(opt => matchSearchQuery(opt.label, editPredecessorText))
                                           .map(opt => <option key={opt.value} value={opt.label} />)}
                                     </datalist>
                                     <FormMessage />

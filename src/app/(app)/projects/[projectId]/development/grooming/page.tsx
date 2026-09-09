@@ -32,7 +32,7 @@ import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown,
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
 import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase } from '@/types';
-import { cn, getSprintDisplayId, generateNextSprintId, getUserInitials } from '@/lib/utils';
+import { cn, getSprintDisplayId, generateNextSprintId, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -1445,12 +1445,7 @@ export default function GroomingPage() {
                               </FormControl>
                               <datalist id="parent-story-options-defect-edit-grooming">
                                 {parentStoryOptions
-                                  .filter(opt => {
-                                    const q = editParentStoryText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, editParentStoryText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -1489,12 +1484,7 @@ export default function GroomingPage() {
                               </FormControl>
                               <datalist id="testcase-options-defect-edit-grooming">
                                 {testCaseOptions
-                                  .filter(opt => {
-                                    const q = testCaseInputText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, testCaseInputText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -1595,12 +1585,7 @@ export default function GroomingPage() {
                               <datalist id="bug-options-defect-edit-grooming">
                                 {relatedBugOptions
                                   .filter(opt => opt.value !== selectedStory?.id)
-                                  .filter(opt => {
-                                    const q = relatedBugInputText.toLowerCase().trim();
-                                    if (!q) return true;
-                                    const tokens = q.split(/\s+/).filter(Boolean);
-                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                  })
+                                  .filter(opt => matchSearchQuery(opt.label, relatedBugInputText))
                                   .map(opt => <option key={opt.value} value={opt.label} />)}
                               </datalist>
                               <FormMessage />
@@ -2016,12 +2001,7 @@ export default function GroomingPage() {
                                       </FormControl>
                                       <datalist id="testcase-options-grooming">
                                         {testCaseOptions
-                                          .filter(opt => {
-                                            const q = testCaseInputText.toLowerCase().trim();
-                                            if (!q) return true;
-                                            const tokens = q.split(/\s+/).filter(Boolean);
-                                            return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                          })
+                                          .filter(opt => matchSearchQuery(opt.label, testCaseInputText))
                                           .map((opt) => (
                                             <option key={opt.value} value={opt.label} />
                                           ))}
@@ -2063,12 +2043,7 @@ export default function GroomingPage() {
                                       <datalist id="bug-options-grooming">
                                         {relatedBugOptions
                                           .filter(opt => opt.value !== selectedStory?.id)
-                                          .filter(opt => {
-                                            const q = relatedBugInputText.toLowerCase().trim();
-                                            if (!q) return true;
-                                            const tokens = q.split(/\s+/).filter(Boolean);
-                                            return tokens.every(token => opt.label.toLowerCase().includes(token));
-                                          })
+                                          .filter(opt => matchSearchQuery(opt.label, relatedBugInputText))
                                           .map(opt => <option key={opt.value} value={opt.label} />)}
                                       </datalist>
                                       <FormMessage />
