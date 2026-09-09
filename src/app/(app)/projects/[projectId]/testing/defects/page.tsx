@@ -96,7 +96,6 @@ const bugFormSchema = z.object({
 export default function DefectsPage() {
   const { stories, epics, employees, sprints, addStory, updateStory, deleteStory, environments, releasesAndMilestones, testCases, testPlans } = useProject();
   const { toast } = useToast();
-  const currentSprint = useMemo(() => sprints.find(s => s.status === 'Current' || s.isCurrent), [sprints]);
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -177,7 +176,7 @@ export default function DefectsPage() {
             status: 'To Triage',
             resolution: 'none',
             severity: 'Medium',
-            sprintId: currentSprint?.id || 'backlog',
+            sprintId: 'backlog',
             foundInTestPlanId: 'unassigned',
             relatedBugId: 'unassigned',
             attachments: '',
@@ -186,7 +185,7 @@ export default function DefectsPage() {
         });
       }
     }
-  }, [isDialogOpen, editingBug, form, testCases, bugs, stories, currentSprint]);
+  }, [isDialogOpen, editingBug, form, testCases, bugs, stories]);
 
   useEffect(() => {
     setSelectedBugs(prev => prev.filter(id => stories.some(s => s.id === id && !s.isDeleted)));

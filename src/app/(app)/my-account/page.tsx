@@ -28,12 +28,12 @@ export default function MyAccountPage() {
     authProvider: string;
     needsPasswordReset?: boolean;
   }>({ name: '', email: '', id: '', role: '', accessLevel: '', empId: '', avatar: '', authProvider: '' });
-  
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  
+
   // Password change states
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -82,7 +82,7 @@ export default function MyAccountPage() {
     try {
       const { changeUserPassword } = await import('@/lib/auth-utils');
       const res = await changeUserPassword(newPassword, user.authProvider || 'firebase');
-      
+
       if (res.success) {
         setPasswordSuccess('Your password has been changed successfully.');
         setNewPassword('');
@@ -91,7 +91,7 @@ export default function MyAccountPage() {
           title: "Password Changed",
           description: "Your password has been updated successfully.",
         });
-        
+
         // Also update local storage needsPasswordReset flag if it was true
         const storedUser = localStorage.getItem('projectflow_user');
         if (storedUser) {
@@ -117,7 +117,7 @@ export default function MyAccountPage() {
       try {
         const parsed = JSON.parse(storedUser);
         setUser(parsed);
-        
+
         // Split name into first and last name if not explicitly set
         const parts = (parsed.name || '').trim().split(' ');
         const initialFirst = parsed.firstName || parts[0] || '';
@@ -249,14 +249,14 @@ export default function MyAccountPage() {
 
       toast({
         title: "Profile Updated",
-        description: "Your name has been updated successfully.",
+        description: "Your profile has been updated successfully.",
       });
     } catch (error: any) {
-      console.error("Error updating profile name:", error);
+      console.error("Error updating profile:", error);
       toast({
         variant: "destructive",
         title: "Update Failed",
-        description: "Could not save your name changes. Please try again.",
+        description: "Could not save your profile changes. Please try again.",
       });
     } finally {
       setIsSavingProfile(false);
@@ -272,7 +272,7 @@ export default function MyAccountPage() {
       });
       return;
     }
-    
+
     setIsUpdating(true);
     try {
       let targetDocId = user.empId;
@@ -365,7 +365,7 @@ export default function MyAccountPage() {
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <PageHeader title="My Account" description="Manage your personal profile." />
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Profile Details</CardTitle>
@@ -387,9 +387,9 @@ export default function MyAccountPage() {
                 <p className="text-sm font-medium text-primary mt-0.5">{user.accessLevel || user.role || 'Team Member'}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button 
-                  size="sm" 
-                  onClick={handleTriggerUpload} 
+                <Button
+                  size="sm"
+                  onClick={handleTriggerUpload}
                   disabled={isUpdating}
                   className="h-8"
                 >
@@ -397,10 +397,10 @@ export default function MyAccountPage() {
                   Upload Photo
                 </Button>
                 {user.avatar && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={handleRemoveAvatar} 
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRemoveAvatar}
                     disabled={isUpdating}
                     className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                   >
@@ -408,17 +408,17 @@ export default function MyAccountPage() {
                     Remove
                   </Button>
                 )}
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
                 />
               </div>
             </div>
           </div>
-          
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
@@ -524,8 +524,8 @@ export default function MyAccountPage() {
         </CardContent>
         {user.authProvider !== 'keycloak' && (
           <CardFooter className="border-t px-6 py-4 flex justify-end">
-            <Button 
-              onClick={handleChangePassword} 
+            <Button
+              onClick={handleChangePassword}
               disabled={isPasswordUpdating || (user.authProvider === 'firebase' && !isFirebaseLoaded)}
             >
               {isPasswordUpdating ? 'Updating...' : (user.authProvider === 'firebase' && !isFirebaseLoaded) ? 'Connecting session...' : 'Change Password'}

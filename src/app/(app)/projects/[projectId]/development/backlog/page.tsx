@@ -1664,8 +1664,8 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
                 return (
                     <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
-                      <div className="flex items-center">
-                        <AccordionTrigger className="flex-1 p-2 group" hideChevron>
+                      <div className="flex items-center justify-between w-full [&>h3]:flex-1 [&>h3]:min-w-0">
+                        <AccordionTrigger className="w-full p-2 group" hideChevron>
                             <div className="flex items-center gap-3 md:gap-4 flex-1 flex-wrap">
                                 <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                                 <span className="font-semibold">{epic.title}</span>
@@ -1684,12 +1684,24 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </div>
                         </AccordionTrigger>
                         {!isUnassignedEpic && (
-                        <div className="flex items-center gap-1 flex-shrink-0 pr-2">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}>
-                            <Edit className="h-4 w-4" />
+                        <div className="flex items-center gap-1 flex-shrink-0 pr-3 ml-auto">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground" 
+                              onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}
+                              title="Edit Epic"
+                            >
+                              <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic as Epic); }}>
-                            <Trash2 className="h-4 w-4" />
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive" 
+                              onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic as Epic); }}
+                              title="Delete Epic"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                         </div>
                         )}
@@ -1892,6 +1904,55 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
           )}
         </div>
       </div>
+
+      <Dialog open={!!editingEpic} onOpenChange={(isOpen) => !isOpen && setEditingEpic(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Epic</DialogTitle>
+            <DialogDescription>
+              Make changes to your epic here. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editEpicForm}>
+            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
+              <FormField
+                control={editEpicForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Epic title" {...field} maxLength={60} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editEpicForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the epic..." {...field} maxLength={300} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditingEpic(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isEditEpicSubmitting}>
+                  {isEditEpicSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!epicToDelete} onOpenChange={(isOpen) => !isOpen && setEpicToDelete(null)}>
         <AlertDialogContent>

@@ -1,0 +1,973 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e13]:
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - heading "ProjectFlow" [level=1] [ref=e25]
+        - generic [ref=e26]:
+          - button "Toggle Sidebar" [ref=e27] [cursor=pointer]
+          - button "Toggle theme" [ref=e30] [cursor=pointer]
+      - list [ref=e33]:
+        - listitem [ref=e34]:
+          - link "My Projects" [ref=e35] [cursor=pointer]:
+            - /url: /my-projects
+      - list [ref=e41]:
+        - listitem [ref=e42]:
+          - link "Development Dashboard" [ref=e43] [cursor=pointer]:
+            - /url: /projects/P2600003/development/dashboard
+        - listitem [ref=e50]:
+          - link "Product Backlog" [ref=e51] [cursor=pointer]:
+            - /url: /projects/P2600003/development/backlog
+        - listitem [ref=e57]:
+          - link "Sub-Tasks" [ref=e58] [cursor=pointer]:
+            - /url: /projects/P2600003/development/development-tasks
+        - listitem [ref=e65]:
+          - link "Grooming" [ref=e66] [cursor=pointer]:
+            - /url: /projects/P2600003/development/grooming
+        - listitem [ref=e71]:
+          - link "Kanban Board" [ref=e72] [cursor=pointer]:
+            - /url: /projects/P2600003/development/kanban
+      - generic [ref=e76]:
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: Project Simulation
+            - generic [ref=e81]:
+              - combobox [ref=e82] [cursor=pointer]:
+                - generic: 100%
+              - button "Run" [ref=e85] [cursor=pointer]
+          - text: Test Date
+          - generic [ref=e86]:
+            - textbox [ref=e87]: 21:55
+            - textbox [ref=e88]: 2026-09-09
+        - generic [ref=e89] [cursor=pointer]:
+          - generic [ref=e90]: RN
+          - generic [ref=e92]:
+            - generic [ref=e93]: Raman Nair
+            - generic [ref=e94]: Administrator
+            - generic [ref=e95]: admin@zopcode.com
+    - main [ref=e96]:
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - tablist [ref=e101]:
+            - tab "Initial Estimation" [ref=e102] [cursor=pointer]
+            - tab "Project Details" [ref=e103] [cursor=pointer]
+            - tab "Resources" [ref=e104] [cursor=pointer]
+            - tab "Releases" [ref=e105] [cursor=pointer]
+            - tab "Development" [selected]
+            - tab "Testing" [ref=e106] [cursor=pointer]
+            - tab "Governance" [ref=e107] [cursor=pointer]
+            - tab "Holidays" [ref=e108] [cursor=pointer]
+            - tab "PMO" [ref=e109] [cursor=pointer]
+            - tab "Project Settings" [ref=e110] [cursor=pointer]
+            - tab "Project Trash" [ref=e115] [cursor=pointer]
+          - generic [ref=e120]:
+            - heading "Autogen Project 3" [level=1] [ref=e121]
+            - paragraph [ref=e122]: P2600003
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - generic [ref=e126]:
+              - heading "Product Backlog" [level=2] [ref=e127]
+              - paragraph [ref=e128]: Manage your epics and stories.
+            - generic [ref=e129]:
+              - button "AI Req Gen" [ref=e130] [cursor=pointer]
+              - button "Add Epic" [ref=e131] [cursor=pointer]
+              - button "Add Requirement" [ref=e132] [cursor=pointer]
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]: "Group by:"
+              - tablist [ref=e137]:
+                - tab "By Epic" [selected]
+                - tab "By Sprint" [ref=e138] [cursor=pointer]
+            - generic [ref=e142]:
+              - generic [ref=e143]:
+                - text: "Total:"
+                - generic [ref=e144]: "57"
+              - generic [ref=e145]:
+                - text: "In Sprints:"
+                - generic [ref=e146]: "56"
+              - generic [ref=e147]:
+                - text: "Backlog:"
+                - generic [ref=e148]: "1"
+          - generic [ref=e150]:
+            - generic [ref=e152]:
+              - heading [level=3] [ref=e153]:
+                - button "Core Platform Features 7 items (6 in sprint, 1 backlog) 100%" [ref=e154] [cursor=pointer]:
+                  - generic [ref=e155]:
+                    - generic [ref=e158]: Core Platform Features
+                    - generic [ref=e159]: 7 items
+                    - generic [ref=e160]: (6 in sprint, 1 backlog)
+                    - generic "22 of 22 stories completed" [ref=e161]:
+                      - progressbar [ref=e162]
+                      - generic [ref=e164]: 100%
+              - generic [ref=e165]:
+                - button "Edit Epic" [ref=e166] [cursor=pointer]
+                - button "Delete Epic" [ref=e167] [cursor=pointer]
+            - generic [ref=e527]:
+              - generic [ref=e528]:
+                - heading [level=3] [ref=e529]:
+                  - button "User Experience Enhancements 7 items (7 in sprint, 0 backlog) 100%" [expanded] [ref=e530] [cursor=pointer]:
+                    - generic [ref=e531]:
+                      - generic [ref=e534]: User Experience Enhancements
+                      - generic [ref=e535]: 7 items
+                      - generic [ref=e536]: (7 in sprint, 0 backlog)
+                      - generic "22 of 22 stories completed" [ref=e537]:
+                        - progressbar [ref=e538]
+                        - generic [ref=e540]: 100%
+                - generic [ref=e541]:
+                  - button "Edit Epic" [ref=e542] [cursor=pointer]
+                  - button "Delete Epic" [ref=e543] [cursor=pointer]
+              - region "User Experience Enhancements 7 items (7 in sprint, 0 backlog) 100%" [ref=e544]:
+                - generic [ref=e545]:
+                  - generic [ref=e547]:
+                    - checkbox "Select All" [ref=e548] [cursor=pointer]
+                    - generic [ref=e549]: Select All
+                  - generic [ref=e550]:
+                    - generic [ref=e553] [cursor=pointer]:
+                      - generic [ref=e555]:
+                        - generic [ref=e556]:
+                          - checkbox [ref=e557]
+                          - generic [ref=e558]:
+                            - generic [ref=e559]:
+                              - button [ref=e562]
+                              - paragraph [ref=e565]: ST-21
+                            - paragraph [ref=e569]: Search & Filter Functionality
+                        - generic [ref=e570]:
+                          - button "TU" [ref=e571]
+                          - button [ref=e574]
+                      - generic [ref=e576]:
+                        - generic [ref=e577]:
+                          - generic [ref=e578]: User Experience Enhancements
+                          - generic [ref=e579]: Sprint 2
+                          - generic [ref=e583]: REL-1
+                          - generic [ref=e588]: Done
+                        - generic [ref=e592]:
+                          - generic "3 sub-tasks" [ref=e594]: "3"
+                          - generic "Development effort" [ref=e599]: 21h
+                    - generic [ref=e606] [cursor=pointer]:
+                      - generic [ref=e608]:
+                        - generic [ref=e609]:
+                          - checkbox [ref=e610]
+                          - generic [ref=e611]:
+                            - generic [ref=e612]:
+                              - button [ref=e615]
+                              - paragraph [ref=e618]: ST-5
+                            - paragraph [ref=e622]: Dashboard Overview Widget
+                        - generic [ref=e623]:
+                          - button "TU" [ref=e624]
+                          - button [ref=e627]
+                      - generic [ref=e629]:
+                        - generic [ref=e630]:
+                          - generic [ref=e631]: User Experience Enhancements
+                          - generic [ref=e632]: Sprint 2
+                          - generic [ref=e636]: REL-1
+                          - generic [ref=e641]: Done
+                        - generic [ref=e645]:
+                          - generic "3 sub-tasks" [ref=e647]: "3"
+                          - generic "Development effort" [ref=e652]: 24h
+                    - generic [ref=e659] [cursor=pointer]:
+                      - generic [ref=e661]:
+                        - generic [ref=e662]:
+                          - checkbox [ref=e663]
+                          - generic [ref=e664]:
+                            - generic [ref=e665]:
+                              - button [ref=e669]
+                              - paragraph [ref=e672]: TASK-44
+                            - paragraph [ref=e673]: Configure CI/CD pipeline
+                        - generic [ref=e674]:
+                          - button "TU" [ref=e675]
+                          - button [ref=e678]
+                      - generic [ref=e680]:
+                        - generic [ref=e681]:
+                          - generic [ref=e682]: User Experience Enhancements
+                          - generic [ref=e683]: Sprint 2
+                          - generic [ref=e687]: REL-1
+                          - generic [ref=e692]: Done
+                        - generic "Development effort" [ref=e697]: 9h
+                    - generic [ref=e704] [cursor=pointer]:
+                      - generic [ref=e706]:
+                        - generic [ref=e707]:
+                          - checkbox [ref=e708]
+                          - generic [ref=e709]:
+                            - generic [ref=e710]:
+                              - button [ref=e713]
+                              - paragraph [ref=e716]: ST-13
+                            - paragraph [ref=e720]: Data Export to CSV/Excel
+                        - generic [ref=e721]:
+                          - button "TU" [ref=e722]
+                          - button [ref=e725]
+                      - generic [ref=e727]:
+                        - generic [ref=e728]:
+                          - generic [ref=e729]: User Experience Enhancements
+                          - generic [ref=e730]: Sprint 2
+                          - generic [ref=e734]: REL-1
+                          - generic [ref=e739]: Done
+                        - generic [ref=e743]:
+                          - generic "3 sub-tasks" [ref=e745]: "3"
+                          - generic "Development effort" [ref=e750]: 21h
+                    - generic [ref=e757] [cursor=pointer]:
+                      - generic [ref=e759]:
+                        - generic [ref=e760]:
+                          - checkbox [ref=e761]
+                          - generic [ref=e762]:
+                            - generic [ref=e763]:
+                              - button [ref=e766]
+                              - paragraph [ref=e769]: ST-29
+                            - paragraph [ref=e773]: Audit Logging
+                        - generic [ref=e774]:
+                          - button "TU" [ref=e775]
+                          - button [ref=e778]
+                      - generic [ref=e780]:
+                        - generic [ref=e781]:
+                          - generic [ref=e782]: User Experience Enhancements
+                          - generic [ref=e783]: Sprint 2
+                          - generic [ref=e787]: REL-1
+                          - generic [ref=e792]: Done
+                        - generic [ref=e796]:
+                          - generic "3 sub-tasks" [ref=e798]: "3"
+                          - generic "Development effort" [ref=e803]: 24h
+                    - generic [ref=e810] [cursor=pointer]:
+                      - generic [ref=e812]:
+                        - generic [ref=e813]:
+                          - checkbox [ref=e814]
+                          - generic [ref=e815]:
+                            - generic [ref=e816]:
+                              - button [ref=e820]
+                              - paragraph [ref=e823]: TASK-43
+                            - paragraph [ref=e824]: Upgrade Node.js runtime
+                        - generic [ref=e825]:
+                          - button "TU" [ref=e826]
+                          - button [ref=e829]
+                      - generic [ref=e831]:
+                        - generic [ref=e832]:
+                          - generic [ref=e833]: User Experience Enhancements
+                          - generic [ref=e834]: Sprint 2
+                          - generic [ref=e838]: REL-1
+                          - generic [ref=e843]: Done
+                        - generic "Development effort" [ref=e848]: 16h
+                    - generic [ref=e855] [cursor=pointer]:
+                      - generic [ref=e857]:
+                        - generic [ref=e858]:
+                          - checkbox [ref=e859]
+                          - generic [ref=e860]:
+                            - generic [ref=e861]:
+                              - button [ref=e864]
+                              - paragraph [ref=e867]: ST-37
+                            - paragraph [ref=e871]: Settings & Configuration Page
+                        - generic [ref=e872]:
+                          - button "TU" [ref=e873]
+                          - button [ref=e876]
+                      - generic [ref=e878]:
+                        - generic [ref=e879]:
+                          - generic [ref=e880]: User Experience Enhancements
+                          - generic [ref=e881]: Sprint 2
+                          - generic [ref=e885]: REL-1
+                          - generic [ref=e890]: Done
+                        - generic [ref=e894]:
+                          - generic "3 sub-tasks" [ref=e896]: "3"
+                          - generic "Development effort" [ref=e901]: 16h
+            - generic [ref=e906]:
+              - heading [level=3] [ref=e908]:
+                - button "Unassigned 43 items (43 in sprint, 0 backlog)" [expanded] [ref=e909] [cursor=pointer]:
+                  - generic [ref=e910]:
+                    - generic [ref=e913]: Unassigned
+                    - generic [ref=e914]: 43 items
+                    - generic [ref=e915]: (43 in sprint, 0 backlog)
+              - region "Unassigned 43 items (43 in sprint, 0 backlog)" [ref=e916]:
+                - generic [ref=e917]:
+                  - generic [ref=e919]:
+                    - checkbox "Select All" [ref=e920] [cursor=pointer]
+                    - generic [ref=e921]: Select All
+                  - generic [ref=e922]:
+                    - generic [ref=e925] [cursor=pointer]:
+                      - generic [ref=e927]:
+                        - generic [ref=e928]:
+                          - checkbox [ref=e929]
+                          - generic [ref=e930]:
+                            - generic [ref=e931]:
+                              - button [ref=e941]
+                              - paragraph [ref=e944]: BUG-47
+                            - paragraph [ref=e945]: "SIT: Authentication token expires prematurely on refresh (#3"
+                        - generic [ref=e946]:
+                          - button "TU" [ref=e947]
+                          - button [ref=e950]
+                      - generic [ref=e953]:
+                        - generic [ref=e954]: Sprint 2
+                        - generic [ref=e958]: REL-1
+                        - generic [ref=e963]: Done
+                    - generic [ref=e969] [cursor=pointer]:
+                      - generic [ref=e971]:
+                        - generic [ref=e972]:
+                          - checkbox [ref=e973]
+                          - generic [ref=e974]:
+                            - generic [ref=e975]:
+                              - button [ref=e985]
+                              - paragraph [ref=e988]: BUG-80
+                            - paragraph [ref=e989]: "UAT: Missing confirmation prompt before archiving a project"
+                        - generic [ref=e990]:
+                          - button "TU" [ref=e991]
+                          - button [ref=e994]
+                      - generic [ref=e997]:
+                        - generic [ref=e998]: Sprint 2
+                        - generic [ref=e1002]: REL-1
+                        - generic [ref=e1007]: Done
+                    - generic [ref=e1013] [cursor=pointer]:
+                      - generic [ref=e1015]:
+                        - generic [ref=e1016]:
+                          - checkbox [ref=e1017]
+                          - generic [ref=e1018]:
+                            - generic [ref=e1019]:
+                              - button [ref=e1029]
+                              - paragraph [ref=e1032]: BUG-69
+                            - paragraph [ref=e1033]: "UAT: Expected payment milestones format doesn't match invoic"
+                        - generic [ref=e1034]:
+                          - button "TU" [ref=e1035]
+                          - button [ref=e1038]
+                      - generic [ref=e1041]:
+                        - generic [ref=e1042]: Sprint 1
+                        - generic [ref=e1046]: REL-1
+                        - generic [ref=e1051]: Done
+                    - generic [ref=e1057] [cursor=pointer]:
+                      - generic [ref=e1059]:
+                        - generic [ref=e1060]:
+                          - checkbox [ref=e1061]
+                          - generic [ref=e1062]:
+                            - generic [ref=e1063]:
+                              - button [ref=e1073]
+                              - paragraph [ref=e1076]: BUG-60
+                            - paragraph [ref=e1077]: "SIT: File upload fails for attachments larger than 2MB (#16)"
+                        - generic [ref=e1078]:
+                          - button "TU" [ref=e1079]
+                          - button [ref=e1082]
+                      - generic [ref=e1085]:
+                        - generic [ref=e1086]: Sprint 1
+                        - generic [ref=e1090]: REL-1
+                        - generic [ref=e1095]: Done
+                    - generic [ref=e1101] [cursor=pointer]:
+                      - generic [ref=e1103]:
+                        - generic [ref=e1104]:
+                          - checkbox [ref=e1105]
+                          - generic [ref=e1106]:
+                            - generic [ref=e1107]:
+                              - button [ref=e1117]
+                              - paragraph [ref=e1120]: BUG-56
+                            - paragraph [ref=e1121]: "SIT: Database lock deadlock when saving story status (#12)"
+                        - generic [ref=e1122]:
+                          - button "TU" [ref=e1123]
+                          - button [ref=e1126]
+                      - generic [ref=e1129]:
+                        - generic [ref=e1130]: Sprint 2
+                        - generic [ref=e1134]: REL-1
+                        - generic [ref=e1139]: Done
+                    - generic [ref=e1145] [cursor=pointer]:
+                      - generic [ref=e1147]:
+                        - generic [ref=e1148]:
+                          - checkbox [ref=e1149]
+                          - generic [ref=e1150]:
+                            - generic [ref=e1151]:
+                              - button [ref=e1161]
+                              - paragraph [ref=e1164]: BUG-54
+                            - paragraph [ref=e1165]: "SIT: Thread exhaustion on parallel background sync tasks (#1"
+                        - generic [ref=e1166]:
+                          - button "TU" [ref=e1167]
+                          - button [ref=e1170]
+                      - generic [ref=e1173]:
+                        - generic [ref=e1174]: Sprint 2
+                        - generic [ref=e1178]: REL-1
+                        - generic [ref=e1183]: Done
+                    - generic [ref=e1189] [cursor=pointer]:
+                      - generic [ref=e1191]:
+                        - generic [ref=e1192]:
+                          - checkbox [ref=e1193]
+                          - generic [ref=e1194]:
+                            - generic [ref=e1195]:
+                              - button [ref=e1205]
+                              - paragraph [ref=e1208]: BUG-49
+                            - paragraph [ref=e1209]: "SIT: Component layout shift when resizing employee sidebar ("
+                        - generic [ref=e1210]:
+                          - button "TU" [ref=e1211]
+                          - button [ref=e1214]
+                      - generic [ref=e1217]:
+                        - generic [ref=e1218]: Sprint 2
+                        - generic [ref=e1222]: REL-1
+                        - generic [ref=e1227]: Done
+                    - generic [ref=e1233] [cursor=pointer]:
+                      - generic [ref=e1235]:
+                        - generic [ref=e1236]:
+                          - checkbox [ref=e1237]
+                          - generic [ref=e1238]:
+                            - generic [ref=e1239]:
+                              - button [ref=e1249]
+                              - paragraph [ref=e1252]: BUG-58
+                            - paragraph [ref=e1253]: "SIT: Memory leak observed in real-time chart re-rendering (#"
+                        - generic [ref=e1254]:
+                          - button "TU" [ref=e1255]
+                          - button [ref=e1258]
+                      - generic [ref=e1261]:
+                        - generic [ref=e1262]: Sprint 1
+                        - generic [ref=e1266]: REL-1
+                        - generic [ref=e1271]: Done
+                    - generic [ref=e1277] [cursor=pointer]:
+                      - generic [ref=e1279]:
+                        - generic [ref=e1280]:
+                          - checkbox [ref=e1281]
+                          - generic [ref=e1282]:
+                            - generic [ref=e1283]:
+                              - button [ref=e1293]
+                              - paragraph [ref=e1296]: BUG-83
+                            - paragraph [ref=e1297]: "Production: Supabase auth rate limit exceeded under high loa"
+                        - generic [ref=e1298]:
+                          - button "TU" [ref=e1299]
+                          - button [ref=e1302]
+                      - generic [ref=e1305]:
+                        - generic [ref=e1306]: Sprint 2
+                        - generic [ref=e1310]: REL-1
+                        - generic [ref=e1315]: Done
+                    - generic [ref=e1321] [cursor=pointer]:
+                      - generic [ref=e1323]:
+                        - generic [ref=e1324]:
+                          - checkbox [ref=e1325]
+                          - generic [ref=e1326]:
+                            - generic [ref=e1327]:
+                              - button [ref=e1337]
+                              - paragraph [ref=e1340]: BUG-59
+                            - paragraph [ref=e1341]: "SIT: Component layout shift when resizing employee sidebar ("
+                        - generic [ref=e1342]:
+                          - button "TU" [ref=e1343]
+                          - button [ref=e1346]
+                      - generic [ref=e1349]:
+                        - generic [ref=e1350]: Sprint 2
+                        - generic [ref=e1354]: REL-1
+                        - generic [ref=e1359]: Done
+                    - generic [ref=e1365] [cursor=pointer]:
+                      - generic [ref=e1367]:
+                        - generic [ref=e1368]:
+                          - checkbox [ref=e1369]
+                          - generic [ref=e1370]:
+                            - generic [ref=e1371]:
+                              - button [ref=e1381]
+                              - paragraph [ref=e1384]: BUG-71
+                            - paragraph [ref=e1385]: "UAT: Text overlap in resource Gantt chart headers (#5)"
+                        - generic [ref=e1386]:
+                          - button "TU" [ref=e1387]
+                          - button [ref=e1390]
+                      - generic [ref=e1393]:
+                        - generic [ref=e1394]: Sprint 1
+                        - generic [ref=e1398]: REL-1
+                        - generic [ref=e1403]: Done
+                    - generic [ref=e1409] [cursor=pointer]:
+                      - generic [ref=e1411]:
+                        - generic [ref=e1412]:
+                          - checkbox [ref=e1413]
+                          - generic [ref=e1414]:
+                            - generic [ref=e1415]:
+                              - button [ref=e1425]
+                              - paragraph [ref=e1428]: BUG-63
+                            - paragraph [ref=e1429]: "SIT: WebSocket subscription disconnects after 5 minutes (#19"
+                        - generic [ref=e1430]:
+                          - button "TU" [ref=e1431]
+                          - button [ref=e1434]
+                      - generic [ref=e1437]:
+                        - generic [ref=e1438]: Sprint 2
+                        - generic [ref=e1442]: REL-1
+                        - generic [ref=e1447]: Done
+                    - generic [ref=e1453] [cursor=pointer]:
+                      - generic [ref=e1455]:
+                        - generic [ref=e1456]:
+                          - checkbox [ref=e1457]
+                          - generic [ref=e1458]:
+                            - generic [ref=e1459]:
+                              - button [ref=e1469]
+                              - paragraph [ref=e1472]: BUG-86
+                            - paragraph [ref=e1473]: "Production: Browser crash in Safari due to grid layout flex"
+                        - generic [ref=e1474]:
+                          - button "TU" [ref=e1475]
+                          - button [ref=e1478]
+                      - generic [ref=e1481]:
+                        - generic [ref=e1482]: Sprint 2
+                        - generic [ref=e1486]: REL-1
+                        - generic [ref=e1491]: Done
+                    - generic [ref=e1497] [cursor=pointer]:
+                      - generic [ref=e1499]:
+                        - generic [ref=e1500]:
+                          - checkbox [ref=e1501]
+                          - generic [ref=e1502]:
+                            - generic [ref=e1503]:
+                              - button [ref=e1513]
+                              - paragraph [ref=e1516]: BUG-61
+                            - paragraph [ref=e1517]: "SIT: Incorrect JSON payload signature on webhook payload (#1"
+                        - generic [ref=e1518]:
+                          - button "TU" [ref=e1519]
+                          - button [ref=e1522]
+                      - generic [ref=e1525]:
+                        - generic [ref=e1526]: Sprint 2
+                        - generic [ref=e1530]: REL-1
+                        - generic [ref=e1535]: Done
+                    - generic [ref=e1541] [cursor=pointer]:
+                      - generic [ref=e1543]:
+                        - generic [ref=e1544]:
+                          - checkbox [ref=e1545]
+                          - generic [ref=e1546]:
+                            - generic [ref=e1547]:
+                              - button [ref=e1557]
+                              - paragraph [ref=e1560]: BUG-77
+                            - paragraph [ref=e1561]: "UAT: Holiday generator confirmation modal is confusing (#11)"
+                        - generic [ref=e1562]:
+                          - button "TU" [ref=e1563]
+                          - button [ref=e1566]
+                      - generic [ref=e1569]:
+                        - generic [ref=e1570]: Sprint 2
+                        - generic [ref=e1574]: REL-1
+                        - generic [ref=e1579]: Done
+                    - generic [ref=e1585] [cursor=pointer]:
+                      - generic [ref=e1587]:
+                        - generic [ref=e1588]:
+                          - checkbox [ref=e1589]
+                          - generic [ref=e1590]:
+                            - generic [ref=e1591]:
+                              - button [ref=e1601]
+                              - paragraph [ref=e1604]: BUG-78
+                            - paragraph [ref=e1605]: "UAT: Utilization heatmaps are difficult to read in light mod"
+                        - generic [ref=e1606]:
+                          - button "TU" [ref=e1607]
+                          - button [ref=e1610]
+                      - generic [ref=e1613]:
+                        - generic [ref=e1614]: Sprint 2
+                        - generic [ref=e1618]: REL-1
+                        - generic [ref=e1623]: Done
+                    - generic [ref=e1629] [cursor=pointer]:
+                      - generic [ref=e1631]:
+                        - generic [ref=e1632]:
+                          - checkbox [ref=e1633]
+                          - generic [ref=e1634]:
+                            - generic [ref=e1635]:
+                              - button [ref=e1645]
+                              - paragraph [ref=e1648]: BUG-66
+                            - paragraph [ref=e1649]: "SIT: Database lock deadlock when saving story status (#22)"
+                        - generic [ref=e1650]:
+                          - button "TU" [ref=e1651]
+                          - button [ref=e1654]
+                      - generic [ref=e1657]:
+                        - generic [ref=e1658]: Sprint 1
+                        - generic [ref=e1662]: REL-1
+                        - generic [ref=e1667]: Done
+                    - generic [ref=e1673] [cursor=pointer]:
+                      - generic [ref=e1675]:
+                        - generic [ref=e1676]:
+                          - checkbox [ref=e1677]
+                          - generic [ref=e1678]:
+                            - generic [ref=e1679]:
+                              - button [ref=e1689]
+                              - paragraph [ref=e1692]: BUG-53
+                            - paragraph [ref=e1693]: "SIT: WebSocket subscription disconnects after 5 minutes (#9)"
+                        - generic [ref=e1694]:
+                          - button "TU" [ref=e1695]
+                          - button [ref=e1698]
+                      - generic [ref=e1701]:
+                        - generic [ref=e1702]: Sprint 1
+                        - generic [ref=e1706]: REL-1
+                        - generic [ref=e1711]: Done
+                    - generic [ref=e1717] [cursor=pointer]:
+                      - generic [ref=e1719]:
+                        - generic [ref=e1720]:
+                          - checkbox [ref=e1721]
+                          - generic [ref=e1722]:
+                            - generic [ref=e1723]:
+                              - button [ref=e1733]
+                              - paragraph [ref=e1736]: BUG-82
+                            - paragraph [ref=e1737]: "Production: Concurrent worklog submissions corrupt total hou"
+                        - generic [ref=e1738]:
+                          - button "TU" [ref=e1739]
+                          - button [ref=e1742]
+                      - generic [ref=e1745]:
+                        - generic [ref=e1746]: Sprint 1
+                        - generic [ref=e1750]: REL-1
+                        - generic [ref=e1755]: Done
+                    - generic [ref=e1761] [cursor=pointer]:
+                      - generic [ref=e1763]:
+                        - generic [ref=e1764]:
+                          - checkbox [ref=e1765]
+                          - generic [ref=e1766]:
+                            - generic [ref=e1767]:
+                              - button [ref=e1777]
+                              - paragraph [ref=e1780]: BUG-72
+                            - paragraph [ref=e1781]: "UAT: Dashboard stats cards count archived items incorrectly"
+                        - generic [ref=e1782]:
+                          - button "TU" [ref=e1783]
+                          - button [ref=e1786]
+                      - generic [ref=e1789]:
+                        - generic [ref=e1790]: Sprint 1
+                        - generic [ref=e1794]: REL-1
+                        - generic [ref=e1799]: Done
+                    - generic [ref=e1805] [cursor=pointer]:
+                      - generic [ref=e1807]:
+                        - generic [ref=e1808]:
+                          - checkbox [ref=e1809]
+                          - generic [ref=e1810]:
+                            - generic [ref=e1811]:
+                              - button [ref=e1821]
+                              - paragraph [ref=e1824]: BUG-68
+                            - paragraph [ref=e1825]: "UAT: Utilization heatmaps are difficult to read in light mod"
+                        - generic [ref=e1826]:
+                          - button "TU" [ref=e1827]
+                          - button [ref=e1830]
+                      - generic [ref=e1833]:
+                        - generic [ref=e1834]: Sprint 1
+                        - generic [ref=e1838]: REL-1
+                        - generic [ref=e1843]: Done
+                    - generic [ref=e1849] [cursor=pointer]:
+                      - generic [ref=e1851]:
+                        - generic [ref=e1852]:
+                          - checkbox [ref=e1853]
+                          - generic [ref=e1854]:
+                            - generic [ref=e1855]:
+                              - button [ref=e1865]
+                              - paragraph [ref=e1868]: BUG-70
+                            - paragraph [ref=e1869]: "UAT: Missing confirmation prompt before archiving a project"
+                        - generic [ref=e1870]:
+                          - button "TU" [ref=e1871]
+                          - button [ref=e1874]
+                      - generic [ref=e1877]:
+                        - generic [ref=e1878]: Sprint 1
+                        - generic [ref=e1882]: REL-1
+                        - generic [ref=e1887]: Done
+                    - generic [ref=e1893] [cursor=pointer]:
+                      - generic [ref=e1895]:
+                        - generic [ref=e1896]:
+                          - checkbox [ref=e1897]
+                          - generic [ref=e1898]:
+                            - generic [ref=e1899]:
+                              - button [ref=e1909]
+                              - paragraph [ref=e1912]: BUG-48
+                            - paragraph [ref=e1913]: "SIT: Memory leak observed in real-time chart re-rendering (#"
+                        - generic [ref=e1914]:
+                          - button "TU" [ref=e1915]
+                          - button [ref=e1918]
+                      - generic [ref=e1921]:
+                        - generic [ref=e1922]: Sprint 2
+                        - generic [ref=e1926]: REL-1
+                        - generic [ref=e1931]: Done
+                    - generic [ref=e1937] [cursor=pointer]:
+                      - generic [ref=e1939]:
+                        - generic [ref=e1940]:
+                          - checkbox [ref=e1941]
+                          - generic [ref=e1942]:
+                            - generic [ref=e1943]:
+                              - button [ref=e1953]
+                              - paragraph [ref=e1956]: BUG-87
+                            - paragraph [ref=e1957]: "Production: Billing calculations round cents incorrectly und"
+                        - generic [ref=e1958]:
+                          - button "TU" [ref=e1959]
+                          - button [ref=e1962]
+                      - generic [ref=e1965]:
+                        - generic [ref=e1966]: Sprint 1
+                        - generic [ref=e1970]: REL-1
+                        - generic [ref=e1975]: Done
+                    - generic [ref=e1981] [cursor=pointer]:
+                      - generic [ref=e1983]:
+                        - generic [ref=e1984]:
+                          - checkbox [ref=e1985]
+                          - generic [ref=e1986]:
+                            - generic [ref=e1987]:
+                              - button [ref=e1997]
+                              - paragraph [ref=e2000]: BUG-57
+                            - paragraph [ref=e2001]: "SIT: Authentication token expires prematurely on refresh (#1"
+                        - generic [ref=e2002]:
+                          - button "TU" [ref=e2003]
+                          - button [ref=e2006]
+                      - generic [ref=e2009]:
+                        - generic [ref=e2010]: Sprint 1
+                        - generic [ref=e2014]: REL-1
+                        - generic [ref=e2019]: Done
+                    - generic [ref=e2025] [cursor=pointer]:
+                      - generic [ref=e2027]:
+                        - generic [ref=e2028]:
+                          - checkbox [ref=e2029]
+                          - generic [ref=e2030]:
+                            - generic [ref=e2031]:
+                              - button [ref=e2041]
+                              - paragraph [ref=e2044]: BUG-75
+                            - paragraph [ref=e2045]: "UAT: Datepicker field allows past dates on sprint creation ("
+                        - generic [ref=e2046]:
+                          - button "TU" [ref=e2047]
+                          - button [ref=e2050]
+                      - generic [ref=e2053]:
+                        - generic [ref=e2054]: Sprint 2
+                        - generic [ref=e2058]: REL-1
+                        - generic [ref=e2063]: Done
+                    - generic [ref=e2069] [cursor=pointer]:
+                      - generic [ref=e2071]:
+                        - generic [ref=e2072]:
+                          - checkbox [ref=e2073]
+                          - generic [ref=e2074]:
+                            - generic [ref=e2075]:
+                              - button [ref=e2085]
+                              - paragraph [ref=e2088]: BUG-73
+                            - paragraph [ref=e2089]: "UAT: User profile editing doesn't save avatar selection (#7)"
+                        - generic [ref=e2090]:
+                          - button "TU" [ref=e2091]
+                          - button [ref=e2094]
+                      - generic [ref=e2097]:
+                        - generic [ref=e2098]: Sprint 1
+                        - generic [ref=e2102]: REL-1
+                        - generic [ref=e2107]: Done
+                    - generic [ref=e2113] [cursor=pointer]:
+                      - generic [ref=e2115]:
+                        - generic [ref=e2116]:
+                          - checkbox [ref=e2117]
+                          - generic [ref=e2118]:
+                            - generic [ref=e2119]:
+                              - button [ref=e2129]
+                              - paragraph [ref=e2132]: BUG-45
+                            - paragraph [ref=e2133]: "SIT: API validation error during batch import (#1)"
+                        - generic [ref=e2134]:
+                          - button [ref=e2135]:
+                            - img "Raman Nair" [ref=e2137]
+                          - button [ref=e2138]
+                      - generic [ref=e2141]:
+                        - generic [ref=e2142]: Sprint 2
+                        - generic [ref=e2146]: REL-1
+                        - generic [ref=e2151]: Done
+                    - generic [ref=e2157] [cursor=pointer]:
+                      - generic [ref=e2159]:
+                        - generic [ref=e2160]:
+                          - checkbox [ref=e2161]
+                          - generic [ref=e2162]:
+                            - generic [ref=e2163]:
+                              - button [ref=e2173]
+                              - paragraph [ref=e2176]: BUG-79
+                            - paragraph [ref=e2177]: "UAT: Expected payment milestones format doesn't match invoic"
+                        - generic [ref=e2178]:
+                          - button "TU" [ref=e2179]
+                          - button [ref=e2182]
+                      - generic [ref=e2185]:
+                        - generic [ref=e2186]: Sprint 2
+                        - generic [ref=e2190]: REL-1
+                        - generic [ref=e2195]: Done
+                    - generic [ref=e2201] [cursor=pointer]:
+                      - generic [ref=e2203]:
+                        - generic [ref=e2204]:
+                          - checkbox [ref=e2205]
+                          - generic [ref=e2206]:
+                            - generic [ref=e2207]:
+                              - button [ref=e2217]
+                              - paragraph [ref=e2220]: BUG-85
+                            - paragraph [ref=e2221]: "Production: CDN assets take more than 5s to load in APAC reg"
+                        - generic [ref=e2222]:
+                          - button "TU" [ref=e2223]
+                          - button [ref=e2226]
+                      - generic [ref=e2229]:
+                        - generic [ref=e2230]: Sprint 2
+                        - generic [ref=e2234]: REL-1
+                        - generic [ref=e2239]: Done
+                    - generic [ref=e2245] [cursor=pointer]:
+                      - generic [ref=e2247]:
+                        - generic [ref=e2248]:
+                          - checkbox [ref=e2249]
+                          - generic [ref=e2250]:
+                            - generic [ref=e2251]:
+                              - button [ref=e2261]
+                              - paragraph [ref=e2264]: BUG-51
+                            - paragraph [ref=e2265]: "SIT: Incorrect JSON payload signature on webhook payload (#7"
+                        - generic [ref=e2266]:
+                          - button "TU" [ref=e2267]
+                          - button [ref=e2270]
+                      - generic [ref=e2273]:
+                        - generic [ref=e2274]: Sprint 1
+                        - generic [ref=e2278]: REL-1
+                        - generic [ref=e2283]: Done
+                    - generic [ref=e2289] [cursor=pointer]:
+                      - generic [ref=e2291]:
+                        - generic [ref=e2292]:
+                          - checkbox [ref=e2293]
+                          - generic [ref=e2294]:
+                            - generic [ref=e2295]:
+                              - button [ref=e2305]
+                              - paragraph [ref=e2308]: BUG-50
+                            - paragraph [ref=e2309]: "SIT: File upload fails for attachments larger than 2MB (#6)"
+                        - generic [ref=e2310]:
+                          - button "TU" [ref=e2311]
+                          - button [ref=e2314]
+                      - generic [ref=e2317]:
+                        - generic [ref=e2318]: Sprint 1
+                        - generic [ref=e2322]: REL-1
+                        - generic [ref=e2327]: Done
+                    - generic [ref=e2333] [cursor=pointer]:
+                      - generic [ref=e2335]:
+                        - generic [ref=e2336]:
+                          - checkbox [ref=e2337]
+                          - generic [ref=e2338]:
+                            - generic [ref=e2339]:
+                              - button [ref=e2349]
+                              - paragraph [ref=e2352]: BUG-74
+                            - paragraph [ref=e2353]: "UAT: Wording of \"Move to Backlog\" button is misleading (#8)"
+                        - generic [ref=e2354]:
+                          - button "TU" [ref=e2355]
+                          - button [ref=e2358]
+                      - generic [ref=e2361]:
+                        - generic [ref=e2362]: Sprint 1
+                        - generic [ref=e2366]: REL-1
+                        - generic [ref=e2371]: Done
+                    - generic [ref=e2377] [cursor=pointer]:
+                      - generic [ref=e2379]:
+                        - generic [ref=e2380]:
+                          - checkbox [ref=e2381]
+                          - generic [ref=e2382]:
+                            - generic [ref=e2383]:
+                              - button [ref=e2393]
+                              - paragraph [ref=e2396]: BUG-46
+                            - paragraph [ref=e2397]: "SIT: Database lock deadlock when saving story status (#2)"
+                        - generic [ref=e2398]:
+                          - button "TU" [ref=e2399]
+                          - button [ref=e2402]
+                      - generic [ref=e2405]:
+                        - generic [ref=e2406]: Sprint 1
+                        - generic [ref=e2410]: REL-1
+                        - generic [ref=e2415]: Done
+                    - generic [ref=e2421] [cursor=pointer]:
+                      - generic [ref=e2423]:
+                        - generic [ref=e2424]:
+                          - checkbox [ref=e2425]
+                          - generic [ref=e2426]:
+                            - generic [ref=e2427]:
+                              - button [ref=e2437]
+                              - paragraph [ref=e2440]: BUG-55
+                            - paragraph [ref=e2441]: "SIT: API validation error during batch import (#11)"
+                        - generic [ref=e2442]:
+                          - button "TU" [ref=e2443]
+                          - button [ref=e2446]
+                      - generic [ref=e2449]:
+                        - generic [ref=e2450]: Sprint 1
+                        - generic [ref=e2454]: REL-1
+                        - generic [ref=e2459]: Done
+                    - generic [ref=e2465] [cursor=pointer]:
+                      - generic [ref=e2467]:
+                        - generic [ref=e2468]:
+                          - checkbox [ref=e2469]
+                          - generic [ref=e2470]:
+                            - generic [ref=e2471]:
+                              - button [ref=e2481]
+                              - paragraph [ref=e2484]: BUG-84
+                            - paragraph [ref=e2485]: "Production: Payment gateway callback signature mismatches on"
+                        - generic [ref=e2486]:
+                          - button "TU" [ref=e2487]
+                          - button [ref=e2490]
+                      - generic [ref=e2493]:
+                        - generic [ref=e2494]: Sprint 1
+                        - generic [ref=e2498]: REL-1
+                        - generic [ref=e2503]: Done
+                    - generic [ref=e2509] [cursor=pointer]:
+                      - generic [ref=e2511]:
+                        - generic [ref=e2512]:
+                          - checkbox [ref=e2513]
+                          - generic [ref=e2514]:
+                            - generic [ref=e2515]:
+                              - button [ref=e2525]
+                              - paragraph [ref=e2528]: BUG-67
+                            - paragraph [ref=e2529]: "UAT: Holiday generator confirmation modal is confusing (#1)"
+                        - generic [ref=e2530]:
+                          - button "TU" [ref=e2531]
+                          - button [ref=e2534]
+                      - generic [ref=e2537]:
+                        - generic [ref=e2538]: Sprint 2
+                        - generic [ref=e2542]: REL-1
+                        - generic [ref=e2547]: Done
+                    - generic [ref=e2553] [cursor=pointer]:
+                      - generic [ref=e2555]:
+                        - generic [ref=e2556]:
+                          - checkbox [ref=e2557]
+                          - generic [ref=e2558]:
+                            - generic [ref=e2559]:
+                              - button [ref=e2569]
+                              - paragraph [ref=e2572]: BUG-65
+                            - paragraph [ref=e2573]: "SIT: API validation error during batch import (#21)"
+                        - generic [ref=e2574]:
+                          - button "TU" [ref=e2575]
+                          - button [ref=e2578]
+                      - generic [ref=e2581]:
+                        - generic [ref=e2582]: Sprint 1
+                        - generic [ref=e2586]: REL-1
+                        - generic [ref=e2591]: Done
+                    - generic [ref=e2597] [cursor=pointer]:
+                      - generic [ref=e2599]:
+                        - generic [ref=e2600]:
+                          - checkbox [ref=e2601]
+                          - generic [ref=e2602]:
+                            - generic [ref=e2603]:
+                              - button [ref=e2613]
+                              - paragraph [ref=e2616]: BUG-62
+                            - paragraph [ref=e2617]: "SIT: System exception when generating utilization reports (#"
+                        - generic [ref=e2618]:
+                          - button "TU" [ref=e2619]
+                          - button [ref=e2622]
+                      - generic [ref=e2625]:
+                        - generic [ref=e2626]: Sprint 1
+                        - generic [ref=e2630]: REL-1
+                        - generic [ref=e2635]: Done
+                    - generic [ref=e2641] [cursor=pointer]:
+                      - generic [ref=e2643]:
+                        - generic [ref=e2644]:
+                          - checkbox [ref=e2645]
+                          - generic [ref=e2646]:
+                            - generic [ref=e2647]:
+                              - button [ref=e2657]
+                              - paragraph [ref=e2660]: BUG-52
+                            - paragraph [ref=e2661]: "SIT: System exception when generating utilization reports (#"
+                        - generic [ref=e2662]:
+                          - button "TU" [ref=e2663]
+                          - button [ref=e2666]
+                      - generic [ref=e2669]:
+                        - generic [ref=e2670]: Sprint 1
+                        - generic [ref=e2674]: REL-1
+                        - generic [ref=e2679]: Done
+                    - generic [ref=e2685] [cursor=pointer]:
+                      - generic [ref=e2687]:
+                        - generic [ref=e2688]:
+                          - checkbox [ref=e2689]
+                          - generic [ref=e2690]:
+                            - generic [ref=e2691]:
+                              - button [ref=e2701]
+                              - paragraph [ref=e2704]: BUG-81
+                            - paragraph [ref=e2705]: "UAT: Text overlap in resource Gantt chart headers (#15)"
+                        - generic [ref=e2706]:
+                          - button "TU" [ref=e2707]
+                          - button [ref=e2710]
+                      - generic [ref=e2713]:
+                        - generic [ref=e2714]: Sprint 2
+                        - generic [ref=e2718]: REL-1
+                        - generic [ref=e2723]: Done
+                    - generic [ref=e2729] [cursor=pointer]:
+                      - generic [ref=e2731]:
+                        - generic [ref=e2732]:
+                          - checkbox [ref=e2733]
+                          - generic [ref=e2734]:
+                            - generic [ref=e2735]:
+                              - button [ref=e2745]
+                              - paragraph [ref=e2748]: BUG-76
+                            - paragraph [ref=e2749]: "UAT: Export to CSV button is hidden on smaller screens (#10)"
+                        - generic [ref=e2750]:
+                          - button "TU" [ref=e2751]
+                          - button [ref=e2754]
+                      - generic [ref=e2757]:
+                        - generic [ref=e2758]: Sprint 2
+                        - generic [ref=e2762]: REL-1
+                        - generic [ref=e2767]: Done
+                    - generic [ref=e2773] [cursor=pointer]:
+                      - generic [ref=e2775]:
+                        - generic [ref=e2776]:
+                          - checkbox [ref=e2777]
+                          - generic [ref=e2778]:
+                            - generic [ref=e2779]:
+                              - button [ref=e2789]
+                              - paragraph [ref=e2792]: BUG-64
+                            - paragraph [ref=e2793]: "SIT: Thread exhaustion on parallel background sync tasks (#2"
+                        - generic [ref=e2794]:
+                          - button "TU" [ref=e2795]
+                          - button [ref=e2798]
+                      - generic [ref=e2801]:
+                        - generic [ref=e2802]: Sprint 2
+                        - generic [ref=e2806]: REL-1
+                        - generic [ref=e2811]: Done
+  - button "Open FlowPilot AI Copilot" [ref=e2816] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e9] [cursor=pointer]
+  - alert [ref=e2823]

@@ -1,0 +1,101 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e13]:
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - heading "ProjectFlow" [level=1] [ref=e25]
+        - generic [ref=e26]:
+          - button "Toggle Sidebar" [ref=e27] [cursor=pointer]
+          - button "Toggle theme" [ref=e30] [cursor=pointer]
+      - list [ref=e33]:
+        - listitem [ref=e34]:
+          - link "Access Settings" [ref=e35] [cursor=pointer]:
+            - /url: /portfolio-settings/access-settings
+        - listitem [ref=e39]:
+          - link "Database" [ref=e40] [cursor=pointer]:
+            - /url: /portfolio-settings/database
+        - listitem [ref=e46]:
+          - link "Authentication" [ref=e47] [cursor=pointer]:
+            - /url: /portfolio-settings/authentication
+        - listitem [ref=e53]:
+          - link "AI Config" [ref=e54] [cursor=pointer]:
+            - /url: /portfolio-settings/ai-config
+        - listitem [ref=e59]:
+          - button "Setup Wizard" [ref=e60] [cursor=pointer]
+        - listitem [ref=e65]:
+          - link "Archive" [ref=e66] [cursor=pointer]:
+            - /url: /portfolio-settings/archive
+      - generic [ref=e72] [cursor=pointer]:
+        - generic [ref=e73]: RN
+        - generic [ref=e75]:
+          - generic [ref=e76]: Raman Nair
+          - generic [ref=e77]: Administrator
+          - generic [ref=e78]: admin@zopcode.com
+    - main [ref=e79]:
+      - generic [ref=e80]:
+        - tablist [ref=e83]:
+          - tab "My Projects" [ref=e84] [cursor=pointer]
+          - tab "Projects" [ref=e85] [cursor=pointer]
+          - tab "Quality" [ref=e86] [cursor=pointer]
+          - tab "Billing" [ref=e87] [cursor=pointer]
+          - tab "Users" [ref=e88] [cursor=pointer]
+          - tab "Holidays" [ref=e89] [cursor=pointer]
+          - tab "Portfolio Settings" [ref=e90] [cursor=pointer]
+          - tab "Portfolio Trash" [ref=e95] [cursor=pointer]
+          - tab "Profile & Account" [selected]
+        - generic [ref=e101]:
+          - generic [ref=e103]:
+            - heading "My Account" [level=2] [ref=e104]
+            - paragraph [ref=e105]: Manage your personal profile.
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - heading "Profile Details" [level=3] [ref=e108]
+              - paragraph [ref=e109]: Manage your personal profile information.
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - generic [ref=e112]: RN
+                - generic [ref=e114]:
+                  - generic [ref=e115]:
+                    - heading "Raman Nair" [level=3] [ref=e116]
+                    - paragraph [ref=e117]: Administrator
+                  - button "Upload Photo" [ref=e119] [cursor=pointer]
+              - generic [ref=e120]:
+                - generic [ref=e121]:
+                  - text: First Name
+                  - textbox "First Name" [ref=e126]: Raman
+                - generic [ref=e127]:
+                  - text: Last Name
+                  - textbox "Last Name" [ref=e132]: Nair
+              - generic [ref=e133]:
+                - generic [ref=e134]:
+                  - text: Email Address
+                  - textbox "Email Address" [disabled] [ref=e139]: admin@zopcode.com
+                  - paragraph [ref=e140]: Unique identifier used for account login.
+                - generic [ref=e141]:
+                  - text: Access Level
+                  - textbox "Access Level" [disabled] [ref=e145]: Administrator
+                  - paragraph [ref=e146]: Assigned role controlling page and project access.
+            - button "Save Profile" [ref=e148] [cursor=pointer]
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - heading "Change Password" [level=3] [ref=e151]
+              - paragraph [ref=e152]: Update your password to secure your account.
+            - generic [ref=e154]:
+              - generic [ref=e155]:
+                - text: New Password
+                - textbox "New Password" [ref=e156]:
+                  - /placeholder: ••••••••
+              - generic [ref=e157]:
+                - text: Confirm Password
+                - textbox "Confirm Password" [ref=e158]:
+                  - /placeholder: ••••••••
+            - button "Change Password" [ref=e160] [cursor=pointer]
+  - button "Open FlowPilot AI Copilot" [ref=e162] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list [ref=e171]:
+      - listitem [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]: Profile Updated
+          - generic [ref=e175]: Your profile has been updated successfully.
+        - button [ref=e176] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e9] [cursor=pointer]
+  - alert [ref=e169]
