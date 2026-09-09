@@ -1,5 +1,3 @@
-utto
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -1267,6 +1265,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               </FormControl>
                               <datalist id="parent-story-options-add">
                                 {parentStoryOptions
+                                  .filter(opt => {
+                                    const q = addParentStoryText.toLowerCase().trim();
+                                    if (!q) return true;
+                                    const tokens = q.split(/\s+/).filter(Boolean);
+                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                  })
+                                  .map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
                               <FormMessage />
                               </FormItem>
                           )}
@@ -1302,6 +1308,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                               <datalist id="testcase-options-add">
                                   {testCaseOptions
                                     .filter(opt => {
+                                      const q = testCaseInputText.toLowerCase().trim();
+                                      if (!q) return true;
+                                      const tokens = q.split(/\s+/).filter(Boolean);
+                                      return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                    })
+                                    .map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
                               </FormItem>
                           )}
                           />
@@ -1392,6 +1406,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                         {relatedBugOptions
                                           .filter(opt => {
                                             const q = relatedBugInputText.toLowerCase().trim();
+                                            if (!q) return true;
+                                            const tokens = q.split(/\s+/).filter(Boolean);
+                                            return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                          })
+                                          .map(opt => <option key={opt.value} value={opt.label} />)}
+                                      </datalist>
+                                      <FormMessage />
+                                    </FormItem>
                                   )}
                                 />
                                 <FormField
@@ -2055,6 +2077,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                   .filter(opt => {
                                     const q = editParentStoryText.toLowerCase().trim();
                                     if (!q) return true;
+                                    const tokens = q.split(/\s+/).filter(Boolean);
+                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                  })
+                                  .map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
                         <FormField
                           control={editStoryForm.control}
@@ -2092,6 +2122,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     const q = testCaseInputText.toLowerCase().trim();
                                     if (!q) return true;
                                     const tokens = q.split(/\s+/).filter(Boolean);
+                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                  })
+                                  .map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
@@ -2190,6 +2228,15 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                     const q = relatedBugInputText.toLowerCase().trim();
                                     if (!q) return true;
                                     const tokens = q.split(/\s+/).filter(Boolean);
+                                    return tokens.every(token => opt.label.toLowerCase().includes(token));
+                                  })
+                                  .map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={editStoryForm.control}
@@ -2562,6 +2609,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                       const tokens = q.split(/\s+/).filter(Boolean);
                                       return tokens.every(token => opt.label.toLowerCase().includes(token));
                                     })
+                                    .map(opt => <option key={opt.value} value={opt.label} />)}
+                              </datalist>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                          />
+                        ) : null}
+                        <FormField
                             control={editStoryForm.control}
                             name="priority"
                             render={({ field }) => (
@@ -2624,6 +2679,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                      <SelectItem value="unassigned">Unassigned</SelectItem>
                                      {releases.map(release => (
                                          <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
+                                     ))}
                                      </SelectContent>
                                  </Select>
                                  <FormMessage />
@@ -2685,6 +2741,14 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                           })
                                           .map(opt => <option key={opt.value} value={opt.label} />)}
                                     </datalist>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="subTasks">
                         <div className="space-y-4 pt-4">
                             <div>
                                 <h4 className="text-sm font-medium mb-2">Sub-Tasks</h4>

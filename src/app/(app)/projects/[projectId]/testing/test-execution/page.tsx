@@ -450,10 +450,10 @@ export default function TestExecutionPage() {
                 <SelectValue placeholder="Select a Test Cycle" />
               </SelectTrigger>
               <SelectContent>
-                {testPlans?.map(plan => (
-                  <SelectItem key={plan.id} value={plan.id}>
-                    <span className="font-medium">{plan.name}</span>
-                    <span className="ml-1 text-muted-foreground text-[11px]">({plan.testPlanId})</span>
+                {testCycles?.map(cycle => (
+                  <SelectItem key={cycle.id} value={cycle.id}>
+                    <span className="font-medium">{cycle.name}</span>
+                    <span className="ml-1 text-muted-foreground text-[11px]">({cycle.testCycleId || cycle.testPlanId || ''})</span>
                   </SelectItem>
                 ))}
               </SelectContent>
