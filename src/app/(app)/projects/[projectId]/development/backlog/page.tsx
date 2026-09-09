@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle, ChevronRight, Search } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle, ChevronRight, Search, Layers } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -385,6 +385,7 @@ export default function BacklogPage() {
   const [selectedStories, setSelectedStories] = useState<string[]>([]);
   const [storiesToDelete, setStoriesToDelete] = useState<string[]>([]);
   const [storiesToMove, setStoriesToMove] = useState<string[]>([]);
+  const [groupBy, setGroupBy] = useState<'epic' | 'sprint'>('epic');
 
   useEffect(() => {
     setSelectedStories(prev => prev.filter(id => stories.some(s => s.id === id && !s.isDeleted)));
@@ -897,6 +898,84 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     acc[key].push(story);
     return acc;
   }, {} as Record<string, Story[]>);
+
+  const backlogItemsBySprint = useMemo(() => {
+    return allWorkItems.reduce((acc, story) => {
+      const key = (story.sprintId && story.sprintId !== 'backlog') ? story.sprintId : 'backlog';
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(story);
+      return acc;
+    }, {} as Record<string, Story[]>);
+  }, [allWorkItems]);
+
+  const inSprintCount = useMemo(() => allWorkItems.filter(s => s.sprintId && s.sprintId !== 'backlog').length, [allWorkItems]);
+  const inBacklogCount = useMemo(() => allWorkItems.filter(s => !s.sprintId || s.sprintId === 'backlog').length, [allWorkItems]);
+
+  const sprintGroups = useMemo(() => {
+    const sortedProjectSprints = [...sprints].sort((a, b) => {
+      const statusWeight: Record<string, number> = {
+        'Current': 1,
+        'Yet to Start': 2,
+        'Completed': 4,
+        'Cancelled': 5,
+      };
+      const weightA = statusWeight[a.status || 'Yet to Start'] || 3;
+      const weightB = statusWeight[b.status || 'Yet to Start'] || 3;
+      if (weightA !== weightB) return weightA - weightB;
+      if (a.startDate && b.startDate) {
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      }
+      return a.title.localeCompare(b.title, undefined, { numeric: true });
+    });
+
+    const activeOrUpcomingSprints = sortedProjectSprints.filter(s => s.status !== 'Completed' && s.status !== 'Cancelled');
+    const completedOrCancelledSprints = sortedProjectSprints.filter(s => s.status === 'Completed' || s.status === 'Cancelled');
+
+    const groups: Array<{
+      id: string;
+      title: string;
+      status?: SprintStatus | 'Backlog';
+      startDate?: string;
+      endDate?: string;
+      isBacklog?: boolean;
+    }> = [];
+
+    activeOrUpcomingSprints.forEach(s => {
+      groups.push({
+        id: s.id,
+        title: s.title,
+        status: s.status || 'Yet to Start',
+        startDate: s.startDate,
+        endDate: s.endDate,
+        isBacklog: false,
+      });
+    });
+
+    groups.push({
+      id: 'backlog',
+      title: 'Product Backlog',
+      status: 'Backlog',
+      isBacklog: true,
+    });
+
+    completedOrCancelledSprints.forEach(s => {
+      const count = (backlogItemsBySprint[s.id] || []).length;
+      if (count > 0) {
+        groups.push({
+          id: s.id,
+          title: s.title,
+          status: s.status || 'Completed',
+          startDate: s.startDate,
+          endDate: s.endDate,
+          isBacklog: false,
+        });
+      }
+    });
+
+    return groups;
+  }, [sprints, backlogItemsBySprint]);
   
   const epicsAndUnassigned = useMemo(() => {
     // Always show all epics so newly created (empty) epics are visible immediately.
@@ -917,23 +996,29 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
   
   const epicToDeleteStoryCount = epicToDelete ? stories.filter(story => story.epicId === epicToDelete.id).length : 0;
   
+  const selectedStoriesInList = (list: Story[]) => {
+    const ids = list.map(s => s.id);
+    return selectedStories.filter(id => ids.includes(id));
+  };
+
+  const handleToggleSelectAllInList = (list: Story[]) => {
+    const ids = list.map(s => s.id);
+    const selectedInList = selectedStoriesInList(list);
+
+    if (selectedInList.length === ids.length) {
+      setSelectedStories(prev => prev.filter(id => !ids.includes(id)));
+    } else {
+      setSelectedStories(prev => [...new Set([...prev, ...ids])]);
+    }
+  };
+
   const selectedStoriesInEpic = (epicId: string) => {
-    const epicStoryIds = (backlogItemsByEpic[epicId] || []).map(s => s.id);
-    return selectedStories.filter(id => epicStoryIds.includes(id));
-  }
+    return selectedStoriesInList(backlogItemsByEpic[epicId] || []);
+  };
   
   const handleToggleSelectAll = (epicId: string, storiesInEpic: Story[]) => {
-    const epicStoryIds = storiesInEpic.map(s => s.id);
-    const selectedInEpic = selectedStoriesInEpic(epicId);
-
-    if (selectedInEpic.length === epicStoryIds.length) {
-      // Deselect all in this epic
-      setSelectedStories(prev => prev.filter(id => !epicStoryIds.includes(id)));
-    } else {
-      // Select all in this epic
-      setSelectedStories(prev => [...new Set([...prev, ...epicStoryIds])]);
-    }
-  }
+    handleToggleSelectAllInList(storiesInEpic);
+  };
 
   const selectedStorySubItems = useMemo(() => {
     if (!selectedStory) return { devTasks: [], bugs: [], subTasks: [], logs: [] };
@@ -1533,110 +1618,278 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
             </DialogContent>
           </Dialog>
         </PageHeader>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b shrink-0">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group by:</span>
+            <Tabs value={groupBy} onValueChange={(val) => setGroupBy(val as 'epic' | 'sprint')} className="h-8">
+              <TabsList className="h-8 p-1 bg-muted/70">
+                <TabsTrigger value="epic" className="h-6 px-3 text-xs flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Layers className="h-3.5 w-3.5 text-primary" />
+                  By Epic
+                </TabsTrigger>
+                <TabsTrigger value="sprint" className="h-6 px-3 text-xs flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <FolderUp className="h-3.5 w-3.5 text-blue-500" />
+                  By Sprint
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <div className="flex items-center gap-2 text-xs flex-wrap">
+            <Badge variant="outline" className="font-normal text-muted-foreground">
+              Total: <span className="font-semibold text-foreground ml-1">{allWorkItems.length}</span>
+            </Badge>
+            <Badge variant="outline" className="font-normal border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20">
+              In Sprints: <span className="font-semibold ml-1">{inSprintCount}</span>
+            </Badge>
+            <Badge variant="outline" className="font-normal border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20">
+              Backlog: <span className="font-semibold ml-1">{inBacklogCount}</span>
+            </Badge>
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto pr-2">
-          <Accordion type="multiple" className="w-full" defaultValue={epicsAndUnassigned.map(e => e.id)}>
-            {epicsAndUnassigned.map((epic) => {
-              const isUnassignedEpic = epic.id === 'unassigned';
-              const allStoriesInEpic = stories.filter(s => s.epicId === epic.id);
-              const totalEpicItemsCount = allStoriesInEpic.length;
-              const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
-              const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
-              const backlogItemsForGroup = backlogItemsByEpic[epic.id] || [];
-              const selectedCount = selectedStoriesInEpic(epic.id).length;
+          {groupBy === 'epic' ? (
+            <Accordion type="multiple" className="w-full space-y-3" key="by-epic" defaultValue={epicsAndUnassigned.map(e => e.id)}>
+              {epicsAndUnassigned.map((epic) => {
+                const isUnassignedEpic = epic.id === 'unassigned';
+                const allStoriesInEpic = stories.filter(s => s.epicId === epic.id);
+                const totalEpicItemsCount = allStoriesInEpic.length;
+                const doneEpicItemsCount = allStoriesInEpic.filter(s => s.status === 'Done').length;
+                const donePercentage = totalEpicItemsCount > 0 ? Math.round((doneEpicItemsCount / totalEpicItemsCount) * 100) : 0;
+                const backlogItemsForGroup = backlogItemsByEpic[epic.id] || [];
+                const selectedCount = selectedStoriesInEpic(epic.id).length;
+                const inSprintInEpic = backlogItemsForGroup.filter(s => s.sprintId && s.sprintId !== 'backlog').length;
+                const inBacklogInEpic = backlogItemsForGroup.filter(s => !s.sprintId || s.sprintId === 'backlog').length;
 
-              if (backlogItemsForGroup.length === 0 && isUnassignedEpic && epics.length > 0) return null;
+                if (backlogItemsForGroup.length === 0 && isUnassignedEpic && epics.length > 0) return null;
 
-              return (
-                  <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
+                return (
+                    <AccordionItem value={epic.id} key={epic.id} className="bg-muted/50 rounded-lg border">
+                      <div className="flex items-center">
+                        <AccordionTrigger className="flex-1 p-2 group" hideChevron>
+                            <div className="flex items-center gap-3 md:gap-4 flex-1 flex-wrap">
+                                <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                                <span className="font-semibold">{epic.title}</span>
+                                <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
+                                {backlogItemsForGroup.length > 0 && (
+                                  <span className="text-xs text-muted-foreground hidden lg:inline">
+                                    ({inSprintInEpic} in sprint, {inBacklogInEpic} backlog)
+                                  </span>
+                                )}
+                                {!isUnassignedEpic && totalEpicItemsCount > 0 && (
+                                <div className="flex items-center gap-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
+                                    <Progress value={donePercentage} className="h-2 w-24" />
+                                    <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                                </div>
+                                )}
+                            </div>
+                        </AccordionTrigger>
+                        {!isUnassignedEpic && (
+                        <div className="flex items-center gap-1 flex-shrink-0 pr-2">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}>
+                            <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic as Epic); }}>
+                            <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        )}
+                      </div>
+                    <AccordionContent className="px-4 pb-4">
+                         <div className="flex items-center justify-between pb-2 border-y py-2 mb-2">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                    id={`select-all-${epic.id}`}
+                                    checked={selectedCount > 0 && selectedCount === backlogItemsForGroup.length}
+                                    onCheckedChange={() => handleToggleSelectAll(epic.id, backlogItemsForGroup)}
+                                />
+                                <Label htmlFor={`select-all-${epic.id}`} className="text-sm font-medium">
+                                    {selectedCount > 0 ? `${selectedCount} selected` : 'Select All'}
+                                </Label>
+                            </div>
+                            {selectedCount > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setStoriesToMove(selectedStoriesInEpic(epic.id))}>
+                                        <Move className="mr-2 h-4 w-4" />
+                                        Move
+                                    </Button>
+                                    <Button variant="destructive" size="sm" onClick={() => setStoriesToDelete(selectedStoriesInEpic(epic.id))}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                          {backlogItemsForGroup.length > 0 ? (
+                            backlogItemsForGroup.map((story) => {
+                              const storyEpic = epics.find((e) => e.id === story.epicId);
+                              const assignee = users.find((d) => d.id === story.assigneeId);
+                              const sprint = sprints.find(s => s.id === story.sprintId);
+                              const release = releases.find(r => r.id === story.releaseId);
+                              const subItems = subItemsByParentId[story.id] || [];
+                              
+                              return (
+                                <div key={story.id}>
+                                  <StoryCard
+                                      story={story}
+                                      epic={storyEpic}
+                                      assignee={assignee}
+                                      onClick={() => handleSetSelectedStory(story)}
+                                      subItems={subItems}
+                                      sprint={sprint}
+                                      release={release}
+                                      onSubItemClick={(item) => handleDrillDown(item)}
+                                      isSelected={selectedStories.includes(story.id)}
+                                      onSelectionChange={(checked) => {
+                                          setSelectedStories(prev => checked ? [...prev, story.id] : prev.filter(id => id !== story.id));
+                                      }}
+                                  />
+                                </div>
+                              )
+                            })
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic px-2">
+                                No items for this epic in the backlog.
+                            </p>
+                          )}
+                        </div>
+                    </AccordionContent>
+                    </AccordionItem>
+                );
+              })}
+            </Accordion>
+          ) : (
+            <Accordion type="multiple" className="w-full space-y-3" key="by-sprint" defaultValue={sprintGroups.map(s => s.id)}>
+              {sprintGroups.map((sprintGroup) => {
+                const itemsForSprint = backlogItemsBySprint[sprintGroup.id] || [];
+                const totalSprintItemsCount = itemsForSprint.length;
+                const doneSprintItemsCount = itemsForSprint.filter(s => s.status === 'Done').length;
+                const donePercentage = totalSprintItemsCount > 0 ? Math.round((doneSprintItemsCount / totalSprintItemsCount) * 100) : 0;
+                const selectedCount = selectedStoriesInList(itemsForSprint).length;
+                const sprintEffort = itemsForSprint.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+
+                return (
+                  <AccordionItem value={sprintGroup.id} key={sprintGroup.id} className="bg-muted/50 rounded-lg border">
                     <div className="flex items-center">
                       <AccordionTrigger className="flex-1 p-2 group" hideChevron>
-                          <div className="flex items-center gap-4 flex-1">
-                              <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                              <span className="font-semibold">{epic.title}</span>
-                              <Badge variant="secondary">{backlogItemsForGroup.length} {backlogItemsForGroup.length === 1 ? 'item' : 'items'}</Badge>
-                              {!isUnassignedEpic && totalEpicItemsCount > 0 && (
-                              <div className="flex items-center gap-2" title={`${doneEpicItemsCount} of ${totalEpicItemsCount} stories completed`}>
-                                  <Progress value={donePercentage} className="h-2 w-24" />
-                                  <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
-                              </div>
-                              )}
-                          </div>
-                      </AccordionTrigger>
-                      {!isUnassignedEpic && (
-                      <div className="flex items-center gap-1 flex-shrink-0 pr-2">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingEpic(epic as Epic); }}>
-                          <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEpicToDelete(epic as Epic); }}>
-                          <Trash2 className="h-4 w-4" />
-                          </Button>
-                      </div>
-                      )}
-                    </div>
-                  <AccordionContent className="px-4 pb-4">
-                       <div className="flex items-center justify-between pb-2 border-y py-2 mb-2">
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                                  id={`select-all-${epic.id}`}
-                                  checked={selectedCount > 0 && selectedCount === backlogItemsForGroup.length}
-                                  onCheckedChange={() => handleToggleSelectAll(epic.id, backlogItemsForGroup)}
-                              />
-                              <Label htmlFor={`select-all-${epic.id}`} className="text-sm font-medium">
-                                  {selectedCount > 0 ? `${selectedCount} selected` : 'Select All'}
-                              </Label>
-                          </div>
-                          {selectedCount > 0 && (
-                              <div className="flex items-center gap-2">
-                                  <Button variant="outline" size="sm" onClick={() => setStoriesToMove(selectedStoriesInEpic(epic.id))}>
-                                      <Move className="mr-2 h-4 w-4" />
-                                      Move
-                                  </Button>
-                                  <Button variant="destructive" size="sm" onClick={() => setStoriesToDelete(selectedStoriesInEpic(epic.id))}>
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
-                                  </Button>
-                              </div>
+                        <div className="flex items-center gap-3 md:gap-4 flex-1 flex-wrap">
+                          <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                          <span className="font-semibold">{sprintGroup.title}</span>
+
+                          {/* Status Badge */}
+                          {sprintGroup.isBacklog ? (
+                            <Badge variant="outline" className="border-amber-500/60 text-amber-600 dark:text-amber-400 bg-amber-500/10 flex items-center gap-1">
+                              <Library className="h-3 w-3" />
+                              Backlog
+                            </Badge>
+                          ) : sprintGroup.status === 'Current' ? (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Current Sprint
+                            </Badge>
+                          ) : sprintGroup.status === 'Yet to Start' ? (
+                            <Badge variant="outline" className="border-blue-500 text-blue-500">
+                              Upcoming
+                            </Badge>
+                          ) : sprintGroup.status === 'Completed' ? (
+                            <Badge variant="secondary">Completed</Badge>
+                          ) : null}
+
+                          {/* Date range */}
+                          {sprintGroup.startDate && sprintGroup.endDate && (
+                            <span className="text-xs text-muted-foreground hidden sm:inline">
+                              {format(parseISO(sprintGroup.startDate), 'MMM d')} - {format(parseISO(sprintGroup.endDate), 'MMM d, yyyy')}
+                            </span>
                           )}
+
+                          {/* Item count */}
+                          <Badge variant="secondary">
+                            {totalSprintItemsCount} {totalSprintItemsCount === 1 ? 'item' : 'items'}
+                          </Badge>
+
+                          {/* Effort */}
+                          {sprintEffort > 0 && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {sprintEffort}h
+                            </span>
+                          )}
+
+                          {/* Progress */}
+                          {!sprintGroup.isBacklog && totalSprintItemsCount > 0 && (
+                            <div className="flex items-center gap-2" title={`${doneSprintItemsCount} of ${totalSprintItemsCount} items completed`}>
+                              <Progress value={donePercentage} className="h-2 w-24" />
+                              <span className="text-xs font-semibold text-muted-foreground">{donePercentage}%</span>
+                            </div>
+                          )}
+                        </div>
+                      </AccordionTrigger>
+                    </div>
+                    <AccordionContent className="px-4 pb-4">
+                      <div className="flex items-center justify-between pb-2 border-y py-2 mb-2">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id={`select-all-sprint-${sprintGroup.id}`}
+                            checked={selectedCount > 0 && selectedCount === itemsForSprint.length}
+                            onCheckedChange={() => handleToggleSelectAllInList(itemsForSprint)}
+                          />
+                          <Label htmlFor={`select-all-sprint-${sprintGroup.id}`} className="text-sm font-medium">
+                            {selectedCount > 0 ? `${selectedCount} selected` : 'Select All'}
+                          </Label>
+                        </div>
+                        {selectedCount > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setStoriesToMove(selectedStoriesInList(itemsForSprint))}>
+                              <Move className="mr-2 h-4 w-4" />
+                              Move
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => setStoriesToDelete(selectedStoriesInList(itemsForSprint))}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
-                        {backlogItemsForGroup.length > 0 ? (
-                          backlogItemsForGroup.map((story) => {
+                        {itemsForSprint.length > 0 ? (
+                          itemsForSprint.map((story) => {
                             const storyEpic = epics.find((e) => e.id === story.epicId);
                             const assignee = users.find((d) => d.id === story.assigneeId);
                             const sprint = sprints.find(s => s.id === story.sprintId);
                             const release = releases.find(r => r.id === story.releaseId);
                             const subItems = subItemsByParentId[story.id] || [];
-                            
+
                             return (
                               <div key={story.id}>
                                 <StoryCard
-                                    story={story}
-                                    epic={storyEpic}
-                                    assignee={assignee}
-                                    onClick={() => handleSetSelectedStory(story)}
-                                    subItems={subItems}
-                                    sprint={sprint}
-                                    release={release}
-                                    onSubItemClick={(item) => handleDrillDown(item)}
-                                    isSelected={selectedStories.includes(story.id)}
-                                    onSelectionChange={(checked) => {
-                                        setSelectedStories(prev => checked ? [...prev, story.id] : prev.filter(id => id !== story.id));
-                                    }}
+                                  story={story}
+                                  epic={storyEpic}
+                                  assignee={assignee}
+                                  onClick={() => handleSetSelectedStory(story)}
+                                  subItems={subItems}
+                                  sprint={sprint}
+                                  release={release}
+                                  onSubItemClick={(item) => handleDrillDown(item)}
+                                  isSelected={selectedStories.includes(story.id)}
+                                  onSelectionChange={(checked) => {
+                                    setSelectedStories(prev => checked ? [...prev, story.id] : prev.filter(id => id !== story.id));
+                                  }}
                                 />
                               </div>
-                            )
+                            );
                           })
                         ) : (
                           <p className="text-sm text-muted-foreground italic px-2">
-                              No items for this epic in the backlog.
+                            {sprintGroup.isBacklog ? 'No items in the backlog.' : 'No items planned for this sprint.'}
                           </p>
                         )}
                       </div>
-                  </AccordionContent>
+                    </AccordionContent>
                   </AccordionItem>
-              );
-            })}
-          </Accordion>
+                );
+              })}
+            </Accordion>
+          )}
         </div>
       </div>
 
