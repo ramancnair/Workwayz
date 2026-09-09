@@ -36,7 +36,7 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2, GripVertical, Save, Bot, RefreshCcw } from 'lucide-react';
 import { type Environment, type ImpactedSystem, type ImpactedSystemCategory, Horizontal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, formatRateInput } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import {
   DndContext,
@@ -258,10 +258,10 @@ export default function EnvironmentsPage() {
         systemForm.reset({
           ...editingSystem,
           estimate: editingSystem.estimate || undefined,
-          dailyBillingRate: editingSystem.dailyBillingRate || 0,
+          dailyBillingRate: formatRateInput(editingSystem.dailyBillingRate) as any,
         });
       } else {
-        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: undefined, dailyBillingRate: 0 });
+        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: undefined, dailyBillingRate: '0.00' as any });
       }
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
@@ -674,16 +674,17 @@ export default function EnvironmentsPage() {
                     <TableCell>
                       <Input
                         key={`${system.id}-rate-${system.dailyBillingRate}`}
-                        type="number"
-                        step="any"
-                        defaultValue={system.dailyBillingRate || ''}
+                        type="text"
+                        inputMode="decimal"
+                        defaultValue={formatRateInput(system.dailyBillingRate)}
                         onWheel={(e) => e.currentTarget.blur()}
                         onBlur={(e) => {
-                            const newRate = parseFloat(e.target.value);
-                            if (!isNaN(newRate) && newRate !== system.dailyBillingRate) {
-                                updateImpactedSystem(system.id, { dailyBillingRate: newRate });
-                            } else if (e.target.value === '' && system.dailyBillingRate !== undefined) {
-                                updateImpactedSystem(system.id, { dailyBillingRate: undefined });
+                            const val = e.target.value;
+                            const newRate = parseFloat(val);
+                            const finalRate = isNaN(newRate) || newRate < 0 ? 0 : newRate;
+                            e.target.value = formatRateInput(finalRate);
+                            if (finalRate !== system.dailyBillingRate) {
+                                updateImpactedSystem(system.id, { dailyBillingRate: finalRate });
                             }
                         }}
                         className="w-24 font-mono"
@@ -792,19 +793,27 @@ export default function EnvironmentsPage() {
                       <TableCell>{horizontalEffort.toFixed(2)}</TableCell>
                       <TableCell>
                         <Input
-                          type="number"
-                          defaultValue={horizontal.dailyBillingRate || ''}
-                          placeholder={averageDevRate.toFixed(2)}
+                          type="text"
+                          inputMode="decimal"
+                          defaultValue={horizontal.dailyBillingRate !== undefined ? formatRateInput(horizontal.dailyBillingRate) : ''}
+                          placeholder={formatRateInput(averageDevRate)}
                           onWheel={(e) => e.currentTarget.blur()}
                           onBlur={(e) => {
-                              const newRate = parseFloat(e.target.value);
-                              if (!isNaN(newRate) && newRate !== horizontal.dailyBillingRate) {
-                                  updateHorizontal(horizontal.id, { dailyBillingRate: newRate });
-                              } else if (e.target.value === '' && horizontal.dailyBillingRate !== undefined) {
+                              const val = e.target.value;
+                              if (val.trim() === '') {
+                                if (horizontal.dailyBillingRate !== undefined) {
                                   updateHorizontal(horizontal.id, { dailyBillingRate: undefined });
+                                }
+                              } else {
+                                const newRate = parseFloat(val);
+                                const finalRate = isNaN(newRate) || newRate < 0 ? 0 : newRate;
+                                e.target.value = formatRateInput(finalRate);
+                                if (finalRate !== horizontal.dailyBillingRate) {
+                                  updateHorizontal(horizontal.id, { dailyBillingRate: finalRate });
+                                }
                               }
                           }}
-                          className="w-24"
+                          className="w-24 font-mono"
                         />
                       </TableCell>
                       <TableCell>${cost.toFixed(2)}</TableCell>
@@ -973,16 +982,37 @@ export default function EnvironmentsPage() {
                 />
               </div>
               <FormField
-                  control={systemForm.control}
-                  name="dailyBillingRate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Daily Billing Rate (USD)</FormLabel>
-                      <FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                control={systemForm.control}
+                name="dailyBillingRate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Daily Billing Rate (USD)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          if (val.length > 1 && /^0[0-9]/.test(val)) {
+                            val = val.replace(/^0+/, '');
+                          }
+                          if (/^(0|[1-9]\d{0,11})?(\.\d{0,2})?$/.test(val)) {
+                            field.onChange(val);
+                          }
+                        }}
+                        onBlur={() => {
+                          field.onChange(formatRateInput(field.value));
+                        }}
+                        className="font-mono"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               </div>
               <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSystemSubmitting}>

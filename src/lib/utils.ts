@@ -101,3 +101,20 @@ export function getUserInitials(firstName?: string | null, lastName?: string | n
   return name.slice(0, 2).toUpperCase();
 }
 
+/**
+ * Formats a currency or rate amount for input and view display.
+ * - Formats numbers to exactly two decimal places (e.g. 0 -> "0.00", 3.1 -> "3.10", 65464 -> "65464.00").
+ * - If value is undefined, null, or empty string:
+ *   - if fallbackToZero is true (default): returns "0.00"
+ *   - if fallbackToZero is false: returns ""
+ */
+export function formatRateInput(value: number | string | null | undefined, fallbackToZero: boolean = true): string {
+  if (value === undefined || value === null || value === '') {
+    return fallbackToZero ? '0.00' : '';
+  }
+  const num = typeof value === 'number' ? value : parseFloat(String(value));
+  if (isNaN(num)) {
+    return fallbackToZero ? '0.00' : '';
+  }
+  return num.toFixed(2);
+}

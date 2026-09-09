@@ -40,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PlusCircle, Edit, Trash2, ArrowUpDown, CheckCircle2, Calendar } from 'lucide-react';
 import { type PaymentMilestone, type PaymentMilestoneStatus } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn, isValidUrl, formatUrl } from '@/lib/utils';
+import { cn, isValidUrl, formatUrl, formatRateInput } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from '@/components/ui/badge';
 import { eachMonthOfInterval, format, parseISO, subMonths, addMonths } from 'date-fns';
@@ -209,7 +209,7 @@ export default function TnmPaymentMilestonesPage() {
       if (editingMilestone) {
         form.reset({
           name: editingMilestone.name,
-          amount: editingMilestone.amount,
+          amount: formatRateInput(editingMilestone.amount) as any,
           status: editingMilestone.status,
           statusDate: '',
           attachments: editingMilestone.attachments || '',
@@ -217,7 +217,7 @@ export default function TnmPaymentMilestonesPage() {
       } else {
         form.reset({
           name: formattedMonths[0] || '',
-          amount: 0,
+          amount: '0.00' as any,
           status: 'TBD',
           statusDate: new Date().toISOString().split('T')[0],
           attachments: '',
@@ -406,10 +406,23 @@ export default function TnmPaymentMilestonesPage() {
                     <FormLabel>Actual Invoiced Amount (USD)</FormLabel>
                     <FormControl>
                       <Input 
-                        type="number" 
-                        step="any"
+                        type="text" 
+                        inputMode="decimal"
                         placeholder="0.00" 
                         {...field} 
+                        value={field.value ?? ''}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          if (val.length > 1 && /^0[0-9]/.test(val)) {
+                            val = val.replace(/^0+/, '');
+                          }
+                          if (/^(0|[1-9]\d{0,11})?(\.\d{0,2})?$/.test(val)) {
+                            field.onChange(val);
+                          }
+                        }}
+                        onBlur={() => {
+                          field.onChange(formatRateInput(field.value));
+                        }}
                         className="font-mono"
                       />
                     </FormControl>

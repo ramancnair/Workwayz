@@ -48,7 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PlusCircle, Edit, Trash2, Save, CheckCircle, Bot, RefreshCcw } from 'lucide-react';
 import { type ImpactedSystem, type ImpactedSystemCategory, type Horizontal } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, formatRateInput } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
 import { getAiEstimates, getAiTechStackSuggestions, getAiHorizontalSuggestions } from '@/app/actions';
@@ -157,10 +157,10 @@ export default function InitialEstimationPage() {
         systemForm.reset({
           ...editingSystem,
           estimate: editingSystem.estimate || undefined,
-          dailyBillingRate: editingSystem.dailyBillingRate || 0,
+          dailyBillingRate: formatRateInput(editingSystem.dailyBillingRate) as any,
         });
       } else {
-        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: undefined, dailyBillingRate: 0 });
+        systemForm.reset({ name: '', description: '', category: 'Technology', estimate: undefined, dailyBillingRate: '0.00' as any });
       }
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
@@ -533,16 +533,17 @@ export default function InitialEstimationPage() {
                     <TableCell>
                       <Input
                         key={`${system.id}-rate-${system.dailyBillingRate}`}
-                        type="number"
-                        step="any"
-                        defaultValue={system.dailyBillingRate || ''}
+                        type="text"
+                        inputMode="decimal"
+                        defaultValue={formatRateInput(system.dailyBillingRate)}
                         onWheel={(e) => e.currentTarget.blur()}
                         onBlur={(e) => {
-                            const newRate = parseFloat(e.target.value);
-                            if (!isNaN(newRate) && newRate !== system.dailyBillingRate) {
-                                updateInitialImpactedSystem(system.id, { dailyBillingRate: newRate });
-                            } else if (e.target.value === '' && system.dailyBillingRate !== undefined) {
-                                updateInitialImpactedSystem(system.id, { dailyBillingRate: undefined });
+                            const val = e.target.value;
+                            const newRate = parseFloat(val);
+                            const finalRate = isNaN(newRate) || newRate < 0 ? 0 : newRate;
+                            e.target.value = formatRateInput(finalRate);
+                            if (finalRate !== system.dailyBillingRate) {
+                                updateInitialImpactedSystem(system.id, { dailyBillingRate: finalRate });
                             }
                         }}
                         className="w-24 font-mono"
@@ -828,7 +829,28 @@ export default function InitialEstimationPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Daily Billing Rate (USD)</FormLabel>
-                      <FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
+                      <FormControl>
+                        <Input 
+                          type="text" 
+                          inputMode="decimal" 
+                          placeholder="0.00" 
+                          {...field} 
+                          value={field.value ?? ''} 
+                          onChange={(e) => {
+                            let val = e.target.value;
+                            if (val.length > 1 && /^0[0-9]/.test(val)) {
+                              val = val.replace(/^0+/, '');
+                            }
+                            if (/^(0|[1-9]\d{0,11})?(\.\d{0,2})?$/.test(val)) {
+                              field.onChange(val);
+                            }
+                          }}
+                          onBlur={() => {
+                            field.onChange(formatRateInput(field.value));
+                          }}
+                          className="font-mono"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

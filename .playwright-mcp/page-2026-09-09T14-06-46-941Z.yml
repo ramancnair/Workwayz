@@ -1,0 +1,39 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]: ProjectFlow
+      - generic [ref=e12]:
+        - link "Log in" [ref=e13] [cursor=pointer]:
+          - /url: /login
+        - link [ref=e14] [cursor=pointer]:
+          - /url: /signup
+          - button "Sign up free" [ref=e15]
+    - main [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - heading "Manage Portfolios and Projects with Clarity" [level=1] [ref=e19]
+          - paragraph [ref=e20]: ProjectFlow streamlines your project management workflow. Organize by portfolios, track estimations, and deliver results on time.
+        - generic [ref=e21]:
+          - link [ref=e22] [cursor=pointer]:
+            - /url: /signup
+            - button "Get Started" [ref=e23]
+          - link [ref=e24] [cursor=pointer]:
+            - /url: /login
+            - button "Log In" [ref=e25]
+      - generic [ref=e27]:
+        - heading "Everything you need to succeed" [level=2] [ref=e28]
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - heading "Portfolio Management" [level=3] [ref=e34]
+            - paragraph [ref=e35]: Group your projects intelligently into portfolios for better oversight and reporting.
+          - generic [ref=e36]:
+            - heading "Project Tracking" [level=3] [ref=e43]
+            - paragraph [ref=e44]: Monitor tasks, estimations, and statuses with our intuitive kanban and dashboard views.
+          - generic [ref=e45]:
+            - heading "Team Collaboration" [level=3] [ref=e52]
+            - paragraph [ref=e53]: Assign project managers, set up automated updates, and keep everyone aligned.
+    - contentinfo [ref=e54]:
+      - paragraph [ref=e56]: © 2026 ProjectFlow. All rights reserved.
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e62] [cursor=pointer]

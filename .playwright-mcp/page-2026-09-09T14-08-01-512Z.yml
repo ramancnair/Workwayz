@@ -1,0 +1,57 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e53]:
+    - generic [ref=f1e57]:
+      - generic [ref=f1e59]:
+        - heading "ProjectFlow" [level=1] [ref=f1e65]
+        - generic [ref=f1e66]:
+          - button "Toggle Sidebar" [ref=f1e67] [cursor=pointer]
+          - button "Toggle theme" [ref=f1e70] [cursor=pointer]
+      - list [ref=f1e73]:
+        - listitem [ref=f1e74]:
+          - link "My Projects" [ref=f1e75] [cursor=pointer]:
+            - /url: /my-projects
+      - generic [ref=f1e81] [cursor=pointer]:
+        - generic [ref=f1e82]: RN
+        - generic [ref=f1e84]:
+          - generic [ref=f1e85]: Raman Nair
+          - generic [ref=f1e86]: Administrator
+          - generic [ref=f1e87]: admin@zopcode.com
+    - main [ref=f1e88]:
+      - generic [ref=f1e89]:
+        - tablist [ref=f1e92]:
+          - tab "My Projects" [selected]
+          - tab "Projects" [ref=f1e93] [cursor=pointer]
+          - tab "Quality" [ref=f1e94] [cursor=pointer]
+          - tab "Billing" [ref=f1e95] [cursor=pointer]
+          - tab "Users" [ref=f1e96] [cursor=pointer]
+          - tab "Holidays" [ref=f1e97] [cursor=pointer]
+          - tab "Portfolio Settings" [ref=f1e98] [cursor=pointer]
+          - tab "Portfolio Trash" [ref=f1e103] [cursor=pointer]
+        - generic [ref=f1e109]:
+          - generic [ref=f1e111]:
+            - heading "My Projects" [level=2] [ref=f1e112]
+            - paragraph [ref=f1e113]: View your assigned projects and quick links.
+          - generic [ref=f1e114]:
+            - generic [ref=f1e116] [cursor=pointer]:
+              - generic [ref=f1e117]:
+                - heading "Autogen Project 3" [level=3] [ref=f1e119]
+                - paragraph [ref=f1e122]: P2600003
+              - generic [ref=f1e123]:
+                - generic [ref=f1e124]:
+                  - generic [ref=f1e125]: Active
+                  - generic [ref=f1e126]: Health
+                - paragraph [ref=f1e129]: This project covers the end-to-end delivery of a new product feature across Front End, Middleware, and DB layers, following agile delivery principles.
+            - generic [ref=f1e131] [cursor=pointer]:
+              - generic [ref=f1e132]:
+                - heading "Autogen Project 5" [level=3] [ref=f1e134]
+                - paragraph [ref=f1e137]: P2600005
+              - generic [ref=f1e138]:
+                - generic [ref=f1e139]:
+                  - generic [ref=f1e140]: Active
+                  - generic [ref=f1e141]: Health
+                - paragraph [ref=f1e144]: This project covers the end-to-end delivery of a new product feature across Front End, Middleware, and DB layers, following agile delivery principles.
+  - button "Open FlowPilot AI Copilot" [ref=f1e45] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=f1e9] [cursor=pointer]
+  - alert [ref=f1e52]

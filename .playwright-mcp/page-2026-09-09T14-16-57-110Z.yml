@@ -1,0 +1,421 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: ProjectFlow
+              - generic:
+                - button:
+                  - generic: Toggle Sidebar
+                - generic:
+                  - button:
+                    - generic: Toggle theme
+          - generic:
+            - list:
+              - listitem:
+                - link:
+                  - /url: /users
+                  - generic: User List
+              - listitem:
+                - link:
+                  - /url: /utilization
+                  - generic: Utilization
+          - generic:
+            - generic:
+              - generic: RN
+              - generic:
+                - generic: Raman Nair
+                - generic: Administrator
+                - generic: admin@zopcode.com
+    - main:
+      - generic:
+        - generic:
+          - generic:
+            - tablist:
+              - tab: My Projects
+              - tab: Projects
+              - tab: Quality
+              - tab: Billing
+              - tab [selected]: Users
+              - tab: Holidays
+              - tab:
+                - generic: Portfolio Settings
+              - tab:
+                - generic: Portfolio Trash
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=2]: User List
+                - paragraph: Manage user access
+              - generic:
+                - button: User Autogen
+                - button: Add User
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=3]: Users Awaiting Enablement
+                - paragraph: These users have signed up but need to be enabled and assigned an access level before they can access the application.
+              - generic:
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader: Name
+                        - columnheader: Email
+                        - columnheader: Phone
+                        - columnheader: Action
+                    - rowgroup:
+                      - row:
+                        - cell:
+                          - generic:
+                            - generic: DD
+                            - text: Donald Duck
+                        - cell: Donald@disney.com
+                        - cell: N/A
+                        - cell:
+                          - button: Enable
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - textbox:
+                      - /placeholder: Filter by name, ID, or email...
+                  - combobox:
+                    - generic: All Access Levels
+                  - button: Clear Filters
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader:
+                          - checkbox
+                        - columnheader:
+                          - button: Emp ID
+                        - columnheader:
+                          - button: Name
+                        - columnheader:
+                          - button: Email
+                        - columnheader:
+                          - button: Access Level
+                        - columnheader:
+                          - button: Joining Date
+                        - columnheader:
+                          - button: Enabled
+                        - columnheader:
+                          - button: Annual Cost
+                        - columnheader: Actions
+                    - rowgroup:
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E014
+                        - cell: Donald Duck
+                        - cell: Donald@disney.com
+                        - cell: N/A
+                        - cell: Aug 6, 2025
+                        - cell:
+                          - generic: Pending
+                        - cell: N/A
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E005
+                        - cell: Lead1 User
+                        - cell: lead1.user@nair.com
+                        - cell: Lead
+                        - cell: Apr 23, 2026
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 0.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E006
+                        - cell: Lead2 User
+                        - cell: lead2.user@nair.com
+                        - cell: Lead
+                        - cell: Jun 30, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 100,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E12347
+                        - cell: PMO1 User
+                        - cell: pmo1.user@nair.com
+                        - cell: PMO
+                        - cell: Sep 9, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 101,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E003
+                        - cell: ProjectManager1 User
+                        - cell: projectmanager1.user@nair.com
+                        - cell: Project Manager
+                        - cell: Mar 10, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 41,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E004
+                        - cell: ProjectManager2 User
+                        - cell: projectmanager2.user@nair.com
+                        - cell: Project Manager
+                        - cell: Aug 2, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 107,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E949
+                        - cell: Raman Nair
+                        - cell: ramanreadsmail@gmail.com
+                        - cell: Administrator
+                        - cell: Oct 22, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell: N/A
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E949
+                        - cell: Raman Nair
+                        - cell: admin@zopcode.com
+                        - cell: Administrator
+                        - cell: "-"
+                        - cell:
+                          - generic: Enabled
+                        - cell: N/A
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E12346
+                        - cell: Raman6282
+                        - cell: ramancnair6282@gmail.com
+                        - cell: Administrator
+                        - cell: May 2, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell: N/A
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E002
+                        - cell: SeniorManagement1 User
+                        - cell: seniormanagement1.user@nair.com
+                        - cell: Senior Management
+                        - cell: Nov 3, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 76,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E007
+                        - cell: TeamMember1 User
+                        - cell: teammember1.user@nair.com
+                        - cell: Team Member
+                        - cell: Jan 31, 2026
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 89,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E008
+                        - cell: TeamMember2 User
+                        - cell: teammember2.user@nair.com
+                        - cell: Team Member
+                        - cell: Mar 19, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 85,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E009
+                        - cell: TeamMember3 User
+                        - cell: teammember3.user@nair.com
+                        - cell: Team Member
+                        - cell: May 25, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 54,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E011
+                        - cell: TeamMember5 User
+                        - cell: teammember5.user@nair.com
+                        - cell: Team Member
+                        - cell: Apr 8, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 53,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E012
+                        - cell: TeamMember6 User
+                        - cell: teammember6.user@nair.com
+                        - cell: Team Member
+                        - cell: Apr 27, 2025
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 87,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+                      - row:
+                        - cell:
+                          - checkbox
+                        - cell: E12345
+                        - cell: Test Admin
+                        - cell: admin@projectflow.com
+                        - cell: Administrator
+                        - cell: Mar 6, 2026
+                        - cell:
+                          - generic: Enabled
+                        - cell:
+                          - generic: USD 70,000.00
+                        - cell:
+                          - generic:
+                            - button
+                            - button
+  - generic [aria-hidden]:
+    - button
+  - list
+  - button "Open Next.js Dev Tools" [ref=f7e9] [cursor=pointer]
+  - alert
+  - dialog [ref=f7e543]:
+    - generic [ref=f7e544]:
+      - heading "Edit User" [level=2] [ref=f7e546]
+      - button "Close" [ref=f7e547] [cursor=pointer]
+    - generic [ref=f7e552]:
+      - generic [ref=f7e554]:
+        - generic [ref=f7e555]:
+          - text: First Name *
+          - textbox "First Name *" [ref=f7e556]:
+            - /placeholder: John
+            - text: Lead1
+        - generic [ref=f7e557]:
+          - text: Last Name *
+          - textbox "Last Name *" [ref=f7e558]:
+            - /placeholder: Doe
+            - text: User
+        - generic [ref=f7e559]:
+          - text: Emp ID *
+          - textbox "Emp ID *" [ref=f7e560]:
+            - /placeholder: E.g., E001
+            - text: E005
+        - generic [ref=f7e561]:
+          - text: Email *
+          - textbox "Email *" [ref=f7e562]:
+            - /placeholder: john.doe@example.com
+            - text: lead1.user@nair.com
+        - generic [ref=f7e563]:
+          - text: Phone *
+          - textbox "Phone *" [ref=f7e564]:
+            - /placeholder: 123-456-7890
+            - text: 555-555-5555
+        - generic [ref=f7e565]:
+          - text: Experience (years)
+          - spinbutton "Experience (years)" [ref=f7e566]: "8"
+        - generic [ref=f7e567]:
+          - text: Joining Date
+          - textbox "Joining Date" [ref=f7e568]: 2026-04-23
+        - generic [ref=f7e569]:
+          - text: Leaving Date
+          - textbox "Leaving Date" [ref=f7e570]
+        - generic [ref=f7e571]:
+          - text: Access Level *
+          - combobox "Access Level *" [ref=f7e572] [cursor=pointer]:
+            - generic: Lead
+          - combobox [aria-hidden] [ref=f7e575]
+        - generic [ref=f7e576]:
+          - text: Cost
+          - generic [ref=f7e577]:
+            - combobox "Cost" [ref=f7e578] [cursor=pointer]:
+              - generic: USD ($)
+            - combobox [aria-hidden] [ref=f7e581]
+            - textbox "0.00" [active] [ref=f7e583]: "51000"
+      - button "Save Changes" [ref=f7e585] [cursor=pointer]

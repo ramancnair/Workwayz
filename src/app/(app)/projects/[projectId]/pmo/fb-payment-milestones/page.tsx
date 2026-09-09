@@ -41,8 +41,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, ArrowUpDown, CheckCircle2, Coins, Calendar } from 'lucide-react';
 import { type PaymentMilestone, type PaymentMilestoneStatus } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { cn, isValidUrl, formatUrl } from '@/lib/utils';
+import { cn, isValidUrl, formatUrl, formatRateInput } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from '@/components/ui/badge';
 
@@ -298,14 +297,14 @@ export default function BillingPage() {
 
   useEffect(() => {
     if (project) {
-      setProjectValueInput(project.isProjectValueOverridden ? String(project.projectValue || '') : String(calculatedTotalBill));
-      setMonthlyBilledInput(project.monthlyBilledValue !== undefined ? String(project.monthlyBilledValue) : '');
+      setProjectValueInput(project.isProjectValueOverridden ? formatRateInput(project.projectValue) : formatRateInput(calculatedTotalBill));
+      setMonthlyBilledInput(project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null ? formatRateInput(project.monthlyBilledValue) : '0.00');
       setIsOverriddenInput(!!project.isProjectValueOverridden);
       
       if (!hasInitializedEditState) {
         const hasValue = project.pricingModel === 'Fixed Bid' 
-          ? (project.projectValue !== undefined && project.projectValue !== null && project.projectValue !== 0) || !project.isProjectValueOverridden
-          : (project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null && project.monthlyBilledValue !== 0);
+          ? (project.projectValue !== undefined && project.projectValue !== null) || !project.isProjectValueOverridden
+          : (project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null);
         setIsEditingValue(!hasValue);
         setHasInitializedEditState(true);
       }
@@ -386,6 +385,8 @@ export default function BillingPage() {
     });
     
     if (success) {
+      setProjectValueInput(formatRateInput(targetValue));
+      setIsEditingValue(false);
       // Synchronize all existing payment milestone amounts in the database
       const promises = paymentMilestones.map(milestone => {
         const computedAmount = (milestone.billingPercentage / 100) * targetValue;
@@ -410,6 +411,7 @@ export default function BillingPage() {
     setIsSavingVal(true);
     const success = await updateProject({ monthlyBilledValue: val });
     if (success) {
+      setMonthlyBilledInput(formatRateInput(val));
       toast({ title: "Success", description: "Monthly Billed Value updated successfully." });
       setIsEditingValue(false);
     } else {
@@ -554,11 +556,24 @@ export default function BillingPage() {
                         <div className="relative">
                           <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
                           <Input
-                            type="number"
-                            step="any"
+                            type="text"
+                            inputMode="decimal"
                             placeholder="0.00"
                             value={projectValueInput}
-                            onChange={(e) => setProjectValueInput(e.target.value)}
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              if (val.length > 1 && /^0[0-9]/.test(val)) {
+                                val = val.replace(/^0+/, '');
+                              }
+                              if (/^(0|[1-9]\d{0,11})?(\.\d{0,2})?$/.test(val)) {
+                                setProjectValueInput(val);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (projectValueInput !== '') {
+                                setProjectValueInput(formatRateInput(projectValueInput));
+                              }
+                            }}
                             className="pl-8 bg-background/50 border-muted focus-visible:ring-1 font-mono"
                             disabled={!isOverriddenInput}
                             autoFocus={isOverriddenInput}
@@ -572,7 +587,7 @@ export default function BillingPage() {
                         <Button 
                           variant="ghost" 
                           onClick={() => {
-                            setProjectValueInput(project.isProjectValueOverridden ? String(project.projectValue || '') : String(calculatedTotalBill));
+                            setProjectValueInput(project.isProjectValueOverridden ? formatRateInput(project.projectValue) : formatRateInput(calculatedTotalBill));
                             setIsOverriddenInput(!!project.isProjectValueOverridden);
                             setIsEditingValue(false);
                           }}
@@ -614,11 +629,24 @@ export default function BillingPage() {
                       <div className="relative">
                         <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-medium">$</span>
                         <Input
-                          type="number"
-                          step="any"
+                          type="text"
+                          inputMode="decimal"
                           placeholder="0.00"
                           value={monthlyBilledInput}
-                          onChange={(e) => setMonthlyBilledInput(e.target.value)}
+                          onChange={(e) => {
+                            let val = e.target.value;
+                            if (val.length > 1 && /^0[0-9]/.test(val)) {
+                              val = val.replace(/^0+/, '');
+                            }
+                            if (/^(0|[1-9]\d{0,11})?(\.\d{0,2})?$/.test(val)) {
+                              setMonthlyBilledInput(val);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (monthlyBilledInput !== '') {
+                              setMonthlyBilledInput(formatRateInput(monthlyBilledInput));
+                            }
+                          }}
                           className="pl-8 bg-background/50 border-muted font-mono"
                           autoFocus
                         />
@@ -628,11 +656,11 @@ export default function BillingPage() {
                       <Button onClick={handleSaveMonthlyBilled} disabled={isSavingVal} className="shadow-sm">
                         {isSavingVal ? 'Saving...' : 'Save Value'}
                       </Button>
-                      {(project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null && project.monthlyBilledValue !== 0) && (
+                      {(project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null) && (
                         <Button 
                           variant="ghost" 
                           onClick={() => {
-                            setMonthlyBilledInput(String(project.monthlyBilledValue || ''));
+                            setMonthlyBilledInput(formatRateInput(project.monthlyBilledValue));
                             setIsEditingValue(false);
                           }}
                           disabled={isSavingVal}

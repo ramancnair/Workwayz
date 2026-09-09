@@ -1,0 +1,317 @@
+- generic [active] [ref=f7e1]:
+  - generic [ref=f7e57]:
+    - generic [ref=f7e61]:
+      - generic [ref=f7e63]:
+        - heading "ProjectFlow" [level=1] [ref=f7e69]
+        - generic [ref=f7e70]:
+          - button "Toggle Sidebar" [ref=f7e71] [cursor=pointer]
+          - button "Toggle theme" [ref=f7e74] [cursor=pointer]
+      - list [ref=f7e77]:
+        - listitem [ref=f7e78]:
+          - link "User List" [ref=f7e79] [cursor=pointer]:
+            - /url: /users
+        - listitem [ref=f7e85]:
+          - link "Utilization" [ref=f7e86] [cursor=pointer]:
+            - /url: /utilization
+      - generic [ref=f7e94] [cursor=pointer]:
+        - generic [ref=f7e95]: RN
+        - generic [ref=f7e97]:
+          - generic [ref=f7e98]: Raman Nair
+          - generic [ref=f7e99]: Administrator
+          - generic [ref=f7e100]: admin@zopcode.com
+    - main [ref=f7e101]:
+      - generic [ref=f7e102]:
+        - tablist [ref=f7e105]:
+          - tab "My Projects" [ref=f7e106] [cursor=pointer]
+          - tab "Projects" [ref=f7e107] [cursor=pointer]
+          - tab "Quality" [ref=f7e108] [cursor=pointer]
+          - tab "Billing" [ref=f7e109] [cursor=pointer]
+          - tab "Users" [selected]
+          - tab "Holidays" [ref=f7e110] [cursor=pointer]
+          - tab "Portfolio Settings" [ref=f7e111] [cursor=pointer]
+          - tab "Portfolio Trash" [ref=f7e116] [cursor=pointer]
+        - generic [ref=f7e122]:
+          - generic [ref=f7e123]:
+            - generic [ref=f7e124]:
+              - heading "User List" [level=2] [ref=f7e125]
+              - paragraph [ref=f7e126]: Manage user access
+            - generic [ref=f7e127]:
+              - button "User Autogen" [ref=f7e128] [cursor=pointer]
+              - button "Add User" [ref=f7e129] [cursor=pointer]
+          - generic [ref=f7e130]:
+            - generic [ref=f7e131]:
+              - heading "Users Awaiting Enablement" [level=3] [ref=f7e136]
+              - paragraph [ref=f7e137]: These users have signed up but need to be enabled and assigned an access level before they can access the application.
+            - table [ref=f7e140]:
+              - rowgroup [ref=f7e141]:
+                - row [ref=f7e142]:
+                  - columnheader "Name" [ref=f7e143]
+                  - columnheader "Email" [ref=f7e144]
+                  - columnheader "Phone" [ref=f7e145]
+                  - columnheader "Action" [ref=f7e146]
+              - rowgroup [ref=f7e147]:
+                - row [ref=f7e148]:
+                  - cell "DD Donald Duck" [ref=f7e149]:
+                    - generic [ref=f7e150]:
+                      - generic [ref=f7e151]: DD
+                      - text: Donald Duck
+                  - cell "Donald@disney.com" [ref=f7e153]
+                  - cell "N/A" [ref=f7e154]
+                  - cell [ref=f7e155]:
+                    - button "Enable" [ref=f7e156] [cursor=pointer]
+          - generic [ref=f7e158]:
+            - generic [ref=f7e159]:
+              - textbox "Filter by name, ID, or email..." [ref=f7e161]
+              - combobox [ref=f7e162] [cursor=pointer]:
+                - generic: All Access Levels
+              - button "Clear Filters" [ref=f7e165] [cursor=pointer]
+            - table [ref=f7e167]:
+              - rowgroup [ref=f7e168]:
+                - row [ref=f7e169]:
+                  - columnheader [ref=f7e170]:
+                    - checkbox "Select all" [ref=f7e171] [cursor=pointer]
+                  - columnheader [ref=f7e172]:
+                    - button "Emp ID" [ref=f7e173] [cursor=pointer]
+                  - columnheader [ref=f7e174]:
+                    - button "Name" [ref=f7e175] [cursor=pointer]
+                  - columnheader [ref=f7e176]:
+                    - button "Email" [ref=f7e177] [cursor=pointer]
+                  - columnheader [ref=f7e178]:
+                    - button "Access Level" [ref=f7e179] [cursor=pointer]
+                  - columnheader [ref=f7e180]:
+                    - button "Joining Date" [ref=f7e181] [cursor=pointer]
+                  - columnheader [ref=f7e182]:
+                    - button "Enabled" [ref=f7e183] [cursor=pointer]
+                  - columnheader [ref=f7e184]:
+                    - button "Annual Cost" [ref=f7e185] [cursor=pointer]
+                  - columnheader "Actions" [ref=f7e186]
+              - rowgroup [ref=f7e187]:
+                - row [ref=f7e188]:
+                  - cell [ref=f7e189]:
+                    - checkbox "Select row" [ref=f7e190] [cursor=pointer]
+                  - cell "E014" [ref=f7e191]
+                  - cell "Donald Duck" [ref=f7e192]
+                  - cell "Donald@disney.com" [ref=f7e193]
+                  - cell "N/A" [ref=f7e194]
+                  - cell "Aug 6, 2025" [ref=f7e195]
+                  - cell "Pending" [ref=f7e196]
+                  - cell "N/A" [ref=f7e202]
+                  - cell [ref=f7e203]:
+                    - generic [ref=f7e204]:
+                      - button [ref=f7e205] [cursor=pointer]
+                      - button [ref=f7e206] [cursor=pointer]
+                - row [ref=f7e207]:
+                  - cell [ref=f7e208]:
+                    - checkbox "Select row" [ref=f7e209] [cursor=pointer]
+                  - cell "E005" [ref=f7e210]
+                  - cell "Lead1 User" [ref=f7e211]
+                  - cell "lead1.user@nair.com" [ref=f7e212]
+                  - cell "Lead" [ref=f7e213]
+                  - cell "Apr 23, 2026" [ref=f7e214]
+                  - cell "Enabled" [ref=f7e215]
+                  - cell "USD 0.00" [ref=f7e220]
+                  - cell [ref=f7e222]:
+                    - generic [ref=f7e223]:
+                      - button [ref=f7e224] [cursor=pointer]
+                      - button [ref=f7e225] [cursor=pointer]
+                - row [ref=f7e226]:
+                  - cell [ref=f7e227]:
+                    - checkbox "Select row" [ref=f7e228] [cursor=pointer]
+                  - cell "E006" [ref=f7e229]
+                  - cell "Lead2 User" [ref=f7e230]
+                  - cell "lead2.user@nair.com" [ref=f7e231]
+                  - cell "Lead" [ref=f7e232]
+                  - cell "Jun 30, 2025" [ref=f7e233]
+                  - cell "Enabled" [ref=f7e234]
+                  - cell "USD 100,000.00" [ref=f7e239]
+                  - cell [ref=f7e241]:
+                    - generic [ref=f7e242]:
+                      - button [ref=f7e243] [cursor=pointer]
+                      - button [ref=f7e244] [cursor=pointer]
+                - row [ref=f7e245]:
+                  - cell [ref=f7e246]:
+                    - checkbox "Select row" [ref=f7e247] [cursor=pointer]
+                  - cell "E12347" [ref=f7e248]
+                  - cell "PMO1 User" [ref=f7e249]
+                  - cell "pmo1.user@nair.com" [ref=f7e250]
+                  - cell "PMO" [ref=f7e251]
+                  - cell "Sep 9, 2025" [ref=f7e252]
+                  - cell "Enabled" [ref=f7e253]
+                  - cell "USD 101,000.00" [ref=f7e258]
+                  - cell [ref=f7e260]:
+                    - generic [ref=f7e261]:
+                      - button [ref=f7e262] [cursor=pointer]
+                      - button [ref=f7e263] [cursor=pointer]
+                - row [ref=f7e264]:
+                  - cell [ref=f7e265]:
+                    - checkbox "Select row" [ref=f7e266] [cursor=pointer]
+                  - cell "E003" [ref=f7e267]
+                  - cell "ProjectManager1 User" [ref=f7e268]
+                  - cell "projectmanager1.user@nair.com" [ref=f7e269]
+                  - cell "Project Manager" [ref=f7e270]
+                  - cell "Mar 10, 2025" [ref=f7e271]
+                  - cell "Enabled" [ref=f7e272]
+                  - cell "USD 41,000.00" [ref=f7e277]
+                  - cell [ref=f7e279]:
+                    - generic [ref=f7e280]:
+                      - button [ref=f7e281] [cursor=pointer]
+                      - button [ref=f7e282] [cursor=pointer]
+                - row [ref=f7e283]:
+                  - cell [ref=f7e284]:
+                    - checkbox "Select row" [ref=f7e285] [cursor=pointer]
+                  - cell "E004" [ref=f7e286]
+                  - cell "ProjectManager2 User" [ref=f7e287]
+                  - cell "projectmanager2.user@nair.com" [ref=f7e288]
+                  - cell "Project Manager" [ref=f7e289]
+                  - cell "Aug 2, 2025" [ref=f7e290]
+                  - cell "Enabled" [ref=f7e291]
+                  - cell "USD 107,000.00" [ref=f7e296]
+                  - cell [ref=f7e298]:
+                    - generic [ref=f7e299]:
+                      - button [ref=f7e300] [cursor=pointer]
+                      - button [ref=f7e301] [cursor=pointer]
+                - row [ref=f7e302]:
+                  - cell [ref=f7e303]:
+                    - checkbox "Select row" [ref=f7e304] [cursor=pointer]
+                  - cell "E949" [ref=f7e305]
+                  - cell "Raman Nair" [ref=f7e306]
+                  - cell "ramanreadsmail@gmail.com" [ref=f7e307]
+                  - cell "Administrator" [ref=f7e308]
+                  - cell "Oct 22, 2025" [ref=f7e309]
+                  - cell "Enabled" [ref=f7e310]
+                  - cell "N/A" [ref=f7e315]
+                  - cell [ref=f7e316]:
+                    - generic [ref=f7e317]:
+                      - button [ref=f7e318] [cursor=pointer]
+                      - button [ref=f7e319] [cursor=pointer]
+                - row [ref=f7e320]:
+                  - cell [ref=f7e321]:
+                    - checkbox "Select row" [ref=f7e322] [cursor=pointer]
+                  - cell "E949" [ref=f7e323]
+                  - cell "Raman Nair" [ref=f7e324]
+                  - cell "admin@zopcode.com" [ref=f7e325]
+                  - cell "Administrator" [ref=f7e326]
+                  - cell "-" [ref=f7e327]
+                  - cell "Enabled" [ref=f7e328]
+                  - cell "N/A" [ref=f7e333]
+                  - cell [ref=f7e334]:
+                    - generic [ref=f7e335]:
+                      - button [ref=f7e336] [cursor=pointer]
+                      - button [ref=f7e337] [cursor=pointer]
+                - row [ref=f7e338]:
+                  - cell [ref=f7e339]:
+                    - checkbox "Select row" [ref=f7e340] [cursor=pointer]
+                  - cell "E12346" [ref=f7e341]
+                  - cell "Raman6282" [ref=f7e342]
+                  - cell "ramancnair6282@gmail.com" [ref=f7e343]
+                  - cell "Administrator" [ref=f7e344]
+                  - cell "May 2, 2025" [ref=f7e345]
+                  - cell "Enabled" [ref=f7e346]
+                  - cell "N/A" [ref=f7e351]
+                  - cell [ref=f7e352]:
+                    - generic [ref=f7e353]:
+                      - button [ref=f7e354] [cursor=pointer]
+                      - button [ref=f7e355] [cursor=pointer]
+                - row [ref=f7e356]:
+                  - cell [ref=f7e357]:
+                    - checkbox "Select row" [ref=f7e358] [cursor=pointer]
+                  - cell "E002" [ref=f7e359]
+                  - cell "SeniorManagement1 User" [ref=f7e360]
+                  - cell "seniormanagement1.user@nair.com" [ref=f7e361]
+                  - cell "Senior Management" [ref=f7e362]
+                  - cell "Nov 3, 2025" [ref=f7e363]
+                  - cell "Enabled" [ref=f7e364]
+                  - cell "USD 76,000.00" [ref=f7e369]
+                  - cell [ref=f7e371]:
+                    - generic [ref=f7e372]:
+                      - button [ref=f7e373] [cursor=pointer]
+                      - button [ref=f7e374] [cursor=pointer]
+                - row [ref=f7e375]:
+                  - cell [ref=f7e376]:
+                    - checkbox "Select row" [ref=f7e377] [cursor=pointer]
+                  - cell "E007" [ref=f7e378]
+                  - cell "TeamMember1 User" [ref=f7e379]
+                  - cell "teammember1.user@nair.com" [ref=f7e380]
+                  - cell "Team Member" [ref=f7e381]
+                  - cell "Jan 31, 2026" [ref=f7e382]
+                  - cell "Enabled" [ref=f7e383]
+                  - cell "USD 89,000.00" [ref=f7e388]
+                  - cell [ref=f7e390]:
+                    - generic [ref=f7e391]:
+                      - button [ref=f7e392] [cursor=pointer]
+                      - button [ref=f7e393] [cursor=pointer]
+                - row [ref=f7e394]:
+                  - cell [ref=f7e395]:
+                    - checkbox "Select row" [ref=f7e396] [cursor=pointer]
+                  - cell "E008" [ref=f7e397]
+                  - cell "TeamMember2 User" [ref=f7e398]
+                  - cell "teammember2.user@nair.com" [ref=f7e399]
+                  - cell "Team Member" [ref=f7e400]
+                  - cell "Mar 19, 2025" [ref=f7e401]
+                  - cell "Enabled" [ref=f7e402]
+                  - cell "USD 85,000.00" [ref=f7e407]
+                  - cell [ref=f7e409]:
+                    - generic [ref=f7e410]:
+                      - button [ref=f7e411] [cursor=pointer]
+                      - button [ref=f7e412] [cursor=pointer]
+                - row [ref=f7e413]:
+                  - cell [ref=f7e414]:
+                    - checkbox "Select row" [ref=f7e415] [cursor=pointer]
+                  - cell "E009" [ref=f7e416]
+                  - cell "TeamMember3 User" [ref=f7e417]
+                  - cell "teammember3.user@nair.com" [ref=f7e418]
+                  - cell "Team Member" [ref=f7e419]
+                  - cell "May 25, 2025" [ref=f7e420]
+                  - cell "Enabled" [ref=f7e421]
+                  - cell "USD 54,000.00" [ref=f7e426]
+                  - cell [ref=f7e428]:
+                    - generic [ref=f7e429]:
+                      - button [ref=f7e430] [cursor=pointer]
+                      - button [ref=f7e431] [cursor=pointer]
+                - row [ref=f7e432]:
+                  - cell [ref=f7e433]:
+                    - checkbox "Select row" [ref=f7e434] [cursor=pointer]
+                  - cell "E011" [ref=f7e435]
+                  - cell "TeamMember5 User" [ref=f7e436]
+                  - cell "teammember5.user@nair.com" [ref=f7e437]
+                  - cell "Team Member" [ref=f7e438]
+                  - cell "Apr 8, 2025" [ref=f7e439]
+                  - cell "Enabled" [ref=f7e440]
+                  - cell "USD 53,000.00" [ref=f7e445]
+                  - cell [ref=f7e447]:
+                    - generic [ref=f7e448]:
+                      - button [ref=f7e449] [cursor=pointer]
+                      - button [ref=f7e450] [cursor=pointer]
+                - row [ref=f7e451]:
+                  - cell [ref=f7e452]:
+                    - checkbox "Select row" [ref=f7e453] [cursor=pointer]
+                  - cell "E012" [ref=f7e454]
+                  - cell "TeamMember6 User" [ref=f7e455]
+                  - cell "teammember6.user@nair.com" [ref=f7e456]
+                  - cell "Team Member" [ref=f7e457]
+                  - cell "Apr 27, 2025" [ref=f7e458]
+                  - cell "Enabled" [ref=f7e459]
+                  - cell "USD 87,000.00" [ref=f7e464]
+                  - cell [ref=f7e466]:
+                    - generic [ref=f7e467]:
+                      - button [ref=f7e468] [cursor=pointer]
+                      - button [ref=f7e469] [cursor=pointer]
+                - row [ref=f7e470]:
+                  - cell [ref=f7e471]:
+                    - checkbox "Select row" [ref=f7e472] [cursor=pointer]
+                  - cell "E12345" [ref=f7e473]
+                  - cell "Test Admin" [ref=f7e474]
+                  - cell "admin@projectflow.com" [ref=f7e475]
+                  - cell "Administrator" [ref=f7e476]
+                  - cell "Mar 6, 2026" [ref=f7e477]
+                  - cell "Enabled" [ref=f7e478]
+                  - cell "USD 70,000.00" [ref=f7e483]
+                  - cell [ref=f7e485]:
+                    - generic [ref=f7e486]:
+                      - button [ref=f7e487] [cursor=pointer]
+                      - button [ref=f7e488] [cursor=pointer]
+  - button "Open FlowPilot AI Copilot" [ref=f7e490] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=f7e9] [cursor=pointer]
+  - alert [ref=f7e497]

@@ -45,7 +45,7 @@ import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn, getUserInitials } from '@/lib/utils';
+import { cn, getUserInitials, formatRateInput } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
@@ -200,8 +200,7 @@ export default function UsersPage() {
       if (editingUser) {
         let initialCost = '';
         if (editingUser.costAmount !== undefined && editingUser.costAmount !== null) {
-          const num = Number(editingUser.costAmount);
-          initialCost = isNaN(num) ? '' : String(Math.round(num * 100) / 100);
+          initialCost = formatRateInput(editingUser.costAmount);
         }
 
         form.reset({
@@ -718,9 +717,9 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {user.costCurrency && user.costAmount !== undefined && user.costAmount !== null ? (
+                      {user.costAmount !== undefined && user.costAmount !== null ? (
                         <span>
-                          {user.costCurrency} {Number(user.costAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {user.costCurrency || 'USD'} {Number(user.costAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">N/A</span>
@@ -876,8 +875,16 @@ export default function UsersPage() {
                             value={field.value ?? ''}
                             onChange={(e) => {
                               let val = e.target.value;
+                              if (val.length > 1 && /^0[0-9]/.test(val)) {
+                                val = val.replace(/^0+/, '');
+                              }
                               if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) {
                                 field.onChange(val);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (field.value !== undefined && field.value !== null && String(field.value).trim() !== '') {
+                                field.onChange(formatRateInput(field.value));
                               }
                             }}
                           />

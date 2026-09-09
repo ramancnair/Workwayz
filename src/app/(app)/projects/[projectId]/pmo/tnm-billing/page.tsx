@@ -33,7 +33,7 @@ import { PlusCircle, Trash2, Printer, Calendar, Edit, Check, X } from 'lucide-re
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, formatRateInput } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -305,7 +305,7 @@ export default function ResourceBillingPage() {
     setEditingCostItem(item);
     setEditCostName(item.name);
     setEditCostType(item.type || 'One time');
-    setEditCostValue(item.cost !== undefined ? item.cost.toString() : '');
+    setEditCostValue(formatRateInput(item.cost));
   };
 
   const handleEditFixedCost = async () => {
@@ -506,7 +506,7 @@ export default function ResourceBillingPage() {
                       <TableCell>{user.availability || 100}%</TableCell>
                       <TableCell className="min-w-[150px]">
                         {(() => {
-                          const currentBilledRateStr = user.billedRate !== undefined ? user.billedRate.toString() : '';
+                          const currentBilledRateStr = formatRateInput(user.billedRate);
                           const editingBilledVal = editingRates[user.id]?.billedRate;
                           const hasBilledChanged = editingBilledVal !== undefined && editingBilledVal !== currentBilledRateStr;
 
@@ -518,6 +518,15 @@ export default function ResourceBillingPage() {
                                 placeholder="0.00"
                                 value={editingBilledVal ?? currentBilledRateStr}
                                 onChange={(e) => handleRateChange(user.id, 'billedRate', e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleSaveField(user.id, 'billedRate');
+                                  } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    handleCancelField(user.id, 'billedRate');
+                                  }
+                                }}
                                 className={cn(
                                   "w-24 font-mono h-8 text-xs transition-colors",
                                   hasBilledChanged && "border-primary ring-1 ring-primary/30"
@@ -531,6 +540,7 @@ export default function ResourceBillingPage() {
                                     variant="ghost"
                                     className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 border border-emerald-500/30"
                                     onClick={() => handleSaveField(user.id, 'billedRate')}
+                                    onMouseDown={(e) => e.preventDefault()}
                                     title="Save Billed Rate"
                                   >
                                     <Check className="h-3.5 w-3.5" />
@@ -541,6 +551,7 @@ export default function ResourceBillingPage() {
                                     variant="ghost"
                                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                     onClick={() => handleCancelField(user.id, 'billedRate')}
+                                    onMouseDown={(e) => e.preventDefault()}
                                     title="Cancel"
                                   >
                                     <X className="h-3.5 w-3.5" />
@@ -553,7 +564,7 @@ export default function ResourceBillingPage() {
                       </TableCell>
                       <TableCell className="min-w-[150px]">
                         {(() => {
-                          const currentCostRateStr = user.costRate !== undefined ? user.costRate.toString() : '';
+                          const currentCostRateStr = formatRateInput(user.costRate);
                           const editingCostVal = editingRates[user.id]?.costRate;
                           const hasCostChanged = editingCostVal !== undefined && editingCostVal !== currentCostRateStr;
 
@@ -565,6 +576,15 @@ export default function ResourceBillingPage() {
                                 placeholder="0.00"
                                 value={editingCostVal ?? currentCostRateStr}
                                 onChange={(e) => handleRateChange(user.id, 'costRate', e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleSaveField(user.id, 'costRate');
+                                  } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    handleCancelField(user.id, 'costRate');
+                                  }
+                                }}
                                 className={cn(
                                   "w-24 font-mono h-8 text-xs transition-colors",
                                   hasCostChanged && "border-primary ring-1 ring-primary/30"
@@ -578,6 +598,7 @@ export default function ResourceBillingPage() {
                                     variant="ghost"
                                     className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 border border-emerald-500/30"
                                     onClick={() => handleSaveField(user.id, 'costRate')}
+                                    onMouseDown={(e) => e.preventDefault()}
                                     title="Save Cost Rate"
                                   >
                                     <Check className="h-3.5 w-3.5" />
@@ -588,6 +609,7 @@ export default function ResourceBillingPage() {
                                     variant="ghost"
                                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                     onClick={() => handleCancelField(user.id, 'costRate')}
+                                    onMouseDown={(e) => e.preventDefault()}
                                     title="Cancel"
                                   >
                                     <X className="h-3.5 w-3.5" />
@@ -701,6 +723,11 @@ export default function ResourceBillingPage() {
                           setNewCostValue(val);
                         }
                       }}
+                      onBlur={() => {
+                        if (newCostValue !== '') {
+                          setNewCostValue(formatRateInput(newCostValue));
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -758,6 +785,11 @@ export default function ResourceBillingPage() {
                         }
                         if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) {
                           setEditCostValue(val);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (editCostValue !== '') {
+                          setEditCostValue(formatRateInput(editCostValue));
                         }
                       }}
                     />

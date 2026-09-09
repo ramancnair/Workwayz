@@ -66,8 +66,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { getUserInitials, cn } from '@/lib/utils';
+import { getUserInitials, cn, formatRateInput } from '@/lib/utils';
 import type { Project, User, AccessLevel, ImpactedSystem, Horizontal } from '@/types';
 
 const SYSTEM_ACCESS_LEVELS: AccessLevel[] = [
@@ -490,8 +489,8 @@ export default function BillingRatePage() {
 
   const openEditModal = (res: ResourceRateRow) => {
     setEditingResource(res);
-    setEditBilledRate(res.billedRate ? res.billedRate.toString() : '0');
-    setEditCostRate(res.costRate ? res.costRate.toString() : '0');
+    setEditBilledRate(formatRateInput(res.billedRate));
+    setEditCostRate(formatRateInput(res.costRate));
   };
 
   const handleSaveRate = async () => {
@@ -1443,6 +1442,9 @@ export default function BillingRatePage() {
                       setEditBilledRate(val);
                     }
                   }}
+                  onBlur={() => {
+                    setEditBilledRate(formatRateInput(editBilledRate));
+                  }}
                   className="pl-7 font-mono text-sm"
                 />
               </div>
@@ -1468,6 +1470,9 @@ export default function BillingRatePage() {
                     if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) {
                       setEditCostRate(val);
                     }
+                  }}
+                  onBlur={() => {
+                    setEditCostRate(formatRateInput(editCostRate));
                   }}
                   className="pl-7 font-mono text-sm"
                 />
