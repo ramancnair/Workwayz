@@ -51,3 +51,7 @@ connections.json
 
 # testing sandbox
 ai-testing-sandbox/
+
+# application logs
+/logs
+*.log
