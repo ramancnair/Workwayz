@@ -14,8 +14,11 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   /* Single worker for deterministic execution against local server */
   workers: 1,
-  /* Generous timeout for Next.js dev server on-demand compilation */
-  timeout: 45000,
+  /* Generous timeout for Next.js dev server on-demand compilation and UI runner */
+  timeout: 60000,
+  expect: {
+    timeout: 15000,
+  },
   /* Reporters */
   reporter: [['html', { open: 'never' }], ['list']],
   /* Shared settings for all the projects below */
@@ -24,8 +27,8 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000',
 
     /* Timeouts */
-    navigationTimeout: 30000,
-    actionTimeout: 15000,
+    navigationTimeout: 45000,
+    actionTimeout: 20000,
 
     /* Diagnostic traces and artifacts - lightweight to preserve resources */
     trace: 'off',

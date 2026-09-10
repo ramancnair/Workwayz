@@ -67,13 +67,12 @@ test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
     const closeBtn = page.locator('button:has(svg.lucide-x), button:has-text("Close"), button[aria-label="Close"]').first();
     if (await closeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await closeBtn.click();
-      await page.waitForLoadState('domcontentloaded');
-      // Should redirect back to project-home or previous view
-      await expect(page.locator('body')).toContainText(/Project Home|My Projects/i);
+      // Should redirect back to project-home or previous view via client-side routing
+      await expect(page.locator('body')).toContainText(/Project Home|My Projects/i, { timeout: 20000 });
     } else {
       // If modal doesn't have an X button in this state, navigating to project-home works
       await page.goto('/project-home', { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('body')).toContainText(/Project Home/i);
+      await expect(page.locator('body')).toContainText(/Project Home/i, { timeout: 20000 });
     }
   });
 });

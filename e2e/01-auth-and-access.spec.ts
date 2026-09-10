@@ -67,9 +67,13 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
     });
 
     // Should either show Access Denied or redirect away from access-settings
-    await page.waitForTimeout(1000);
-    const hasAccessDenied = await page.locator('text=Access Denied').isVisible().catch(() => false);
-    const isRedirected = !page.url().includes('/portfolio-settings/access-settings');
-    expect(hasAccessDenied || isRedirected).toBe(true);
+    await expect.poll(async () => {
+      const hasAccessDenied = await page.locator('text=Access Denied').isVisible().catch(() => false);
+      const isRedirected = !page.url().includes('/portfolio-settings/access-settings');
+      return hasAccessDenied || isRedirected;
+    }, {
+      message: 'Expected unauthorized user to be redirected away or shown Access Denied screen',
+      timeout: 15000,
+    }).toBe(true);
   });
 });

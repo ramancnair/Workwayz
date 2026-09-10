@@ -36,11 +36,12 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
   });
 
   test('TC-PORT-005: Billing & Billing Rate views present financial ledgers and rate tables', async ({ page }) => {
+    test.setTimeout(60000);
     await page.goto('/billing', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toContainText(/Billing|Invoice|Amount|Rate|Total/i);
+    await expect(page.locator('body')).toContainText(/Billing|Invoice|Amount|Rate|Total/i, { timeout: 20000 });
 
     await page.goto('/billing-rate', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toContainText(/Billing Rate|Rate|Role|Currency|Hourly Rate/i);
+    await expect(page.locator('body')).toContainText(/Billing Rate|Rate|Role|Currency|Hourly Rate/i, { timeout: 20000 });
   });
 
   test('TC-PORT-006: User Directory & Team Utilization views display employee allocations', async ({ page }) => {
