@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 import { FlowPilotWidgetClient } from "@/components/flowpilot/FlowPilotWidgetClient";
+import { GlobalErrorReporter } from "@/components/GlobalErrorReporter";
 
 export const metadata: Metadata = {
   title: 'ProjectFlow',
@@ -32,6 +33,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <GlobalErrorReporter />
           <SupabaseBootstrap />
           <SetupInterceptor />
           {children}
