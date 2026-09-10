@@ -20,7 +20,11 @@ export default defineConfig({
     timeout: 15000,
   },
   /* Reporters */
-  reporter: [['html', { open: 'never' }], ['list']],
+  reporter: [
+    ['html', { open: 'never' }],
+    ['list'],
+    ['./e2e/helpers/playwrightMatrixReporter.ts'],
+  ],
   /* Shared settings for all the projects below */
   use: {
     /* Base URL for actions like await page.goto('/') */
