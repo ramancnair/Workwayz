@@ -217,6 +217,44 @@ npm start
 
 ---
 
+## Quality Assurance & Automated Testing
+
+ProjectFlow features an enterprise-grade automated testing system:
+
+### 1. Unit & Component Testing (Vitest)
+```bash
+# Run unit tests
+npm test
+
+# Interactive watch mode
+npm run test:watch
+
+# Launch Vitest visual browser UI
+npm run test:ui
+```
+
+### 2. End-to-End Automation (Playwright)
+```bash
+# Run E2E test suite headlessly
+npm run test:e2e
+
+# Interactive UI test runner
+npm run test:e2e:ui
+
+# View latest HTML test run report
+npm run test:e2e:report
+
+# Install browser binaries if needed
+npm run test:e2e:install
+```
+
+### 3. Living Traceability & Sitemaps
+- **[ProjectFlow_Test_Plan.html](./ProjectFlow_Test_Plan.html)**: Interactive living test matrix covering 30+ enterprise verification checkpoints.
+- **[ProjectFlow_Sitemap.html](./ProjectFlow_Sitemap.html)**: Interactive application topology and view hierarchy across Global Portfolio and Project Detail hubs.
+- **[docs/testplan.md](./docs/testplan.md)**: Markdown test plan with full traceability IDs and assertion criteria.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |

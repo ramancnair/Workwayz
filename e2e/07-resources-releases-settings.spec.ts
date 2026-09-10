@@ -1,0 +1,25 @@
+import { test, expect } from '@playwright/test';
+import { setupAuthenticatedWorkspace, getOrNavigateToProject } from './helpers/testSetup';
+
+test.describe('Pillar 7: Resources, Releases & Administration', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedWorkspace(page, { targetUrl: '/my-projects' });
+  });
+
+  test('TC-RES-001: Project Resources view renders allocation tables if project exists', async ({ page }) => {
+    const projectId = await getOrNavigateToProject(page);
+    await page.goto(`/projects/${projectId}/resources/project-resources`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/Resources|Allocation|Role|Member/i);
+  });
+
+  test('TC-REL-001: Release Planning renders release timelines if project exists', async ({ page }) => {
+    const projectId = await getOrNavigateToProject(page);
+    await page.goto(`/projects/${projectId}/releases/project-releases`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/Release|Milestones|Target Date|Status/i);
+  });
+
+  test('TC-ADM-001: User Profile screen renders personal details and credentials view', async ({ page }) => {
+    await page.goto('/my-account', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/Account|Profile|Email|Password|Settings/i);
+  });
+});

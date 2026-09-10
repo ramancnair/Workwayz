@@ -30,6 +30,7 @@ export default function PortfolioTrashPage() {
     const { toast } = useToast();
     const [selectedItems, setSelectedItems] = useState<TrashedItem[]>([]);
     const [actionType, setActionType] = useState<'restore' | 'delete' | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!db) return;
@@ -47,8 +48,9 @@ export default function PortfolioTrashPage() {
                     const data = d.data();
                     if (!data.deletedAt) return null; // Skip items without a deletion date
                     
+                    const deletedDate = data.deletedAt?.toDate ? data.deletedAt.toDate() : new Date(data.deletedAt);
                     // Auto-delete logic
-                    if (data.deletedAt.toDate() < thirtyDaysAgo) {
+                    if (deletedDate < thirtyDaysAgo) {
                         // This will be handled by a scheduled function in a real app
                         // For now, we'll just filter them out from the view
                         return null;
@@ -56,7 +58,7 @@ export default function PortfolioTrashPage() {
 
                     const name = cName === 'employees' ? `${data.firstName} ${data.lastName}` : data.name;
                     const type: any = cName === 'portfolios' ? 'Portfolio' : (cName === 'projects' ? 'Project' : 'User');
-                    return { id: d.id, name: name, type, deletedAt: data.deletedAt.toDate().toISOString() };
+                    return { id: d.id, name: name, type, deletedAt: deletedDate.toISOString() };
                 }).filter(Boolean) as TrashedItem[]; // filter(Boolean) removes nulls
             })).then(allTrashed => {
                 const flattened = allTrashed.flat().sort((a, b) => parseISO(b.deletedAt).getTime() - parseISO(a.deletedAt).getTime());
@@ -83,11 +85,6 @@ export default function PortfolioTrashPage() {
 
         return () => unsubscribers.forEach(unsub => unsub());
     }, [toast]);
-    
-    const [error, setError] = useState<string | null>(null);
-    if (error) {
-        return <div className="p-8 text-red-500">Error: {error} <br /> This is likely due to a missing Firestore index. Please check the developer console for a link to create it.</div>;
-    }
 
 
     const getCollectionName = (type: TrashedItem['type']) => {
@@ -195,6 +192,9 @@ export default function PortfolioTrashPage() {
         : `This action cannot be undone. This will permanently delete the selected ${selectedItems.length} item(s) and all associated data.`;
     const dialogAction = actionType === 'restore' ? handleRestore : handleDeleteForever;
 
+    if (error) {
+        return <div className="p-8 text-red-500">Error: {error} <br /> This is likely due to a missing Firestore index. Please check the developer console for a link to create it.</div>;
+    }
 
     return (
         <>
