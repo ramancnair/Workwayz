@@ -1,5 +1,5 @@
 
-import type { Story, Task, Epic, Sprint, Employee, TestCase } from '@/types';
+import type { Story, Task, Epic, Sprint, Employee, TestCase, Project, Risk, Assumption, Issue, Dependency, Release } from '@/types';
 
 export const employees: Employee[] = [
   {
@@ -185,5 +185,98 @@ export const tasks: Task[] = [
     storyId: 'story3',
     plannedStartDate: new Date(new Date().setDate(new Date().getDate() + 2)),
     plannedEndDate: new Date(new Date().setDate(new Date().getDate() + 5)),
+  },
+];
+
+export const defaultDemoProject: Project = {
+  id: 'P2600001',
+  name: 'Platform Core Initiative',
+  portfolioId: 'PF001',
+  pricingModel: 'T&M',
+  status: 'Active',
+  startDate: new Date('2026-01-01').toISOString(),
+  endDate: new Date('2026-12-31').toISOString(),
+  overallStatus: 'Green',
+  scopeStatus: 'Green',
+  costStatus: 'Amber',
+  timeStatus: 'Green',
+  statusComments: 'On track for Q3 platform release.',
+  projectManagerId: 'E100001',
+  summary: 'Enterprise Cloud Core Modernization & Automation Platform',
+  isDeleted: false,
+};
+
+export const risks: Risk[] = [
+  {
+    id: 'risk1',
+    riskId: 'RSK-1',
+    description: 'Cloud API rate limiting under high concurrence load',
+    severity: 2,
+    probability: 2,
+    mitigationPlan: 'Implement exponential backoff and localized request batching',
+    residualRisk: 'Low',
+    contingencyPlan: 'Scale container replica pools dynamically',
+    isDeleted: false,
+  },
+  {
+    id: 'risk2',
+    riskId: 'RSK-2',
+    description: 'Dependency latency from upstream authentication providers',
+    severity: 3,
+    probability: 1,
+    mitigationPlan: 'Cache auth tokens locally with cryptographic verification',
+    residualRisk: 'Minimal',
+    contingencyPlan: 'Fallback to secondary identity token endpoint',
+    isDeleted: false,
+  },
+];
+
+export const assumptions: Assumption[] = [
+  {
+    id: 'asm1',
+    assumptionId: 'ASM-1',
+    description: 'Database schema migration handles zero-downtime rollouts',
+    category: 'Technical',
+    status: 'Active',
+    validationDate: new Date('2026-04-01').toISOString(),
+    isDeleted: false,
+  },
+];
+
+export const issues: Issue[] = [
+  {
+    id: 'iss1',
+    issueId: 'ISS-1',
+    description: 'Intermittent timeout in third-party billing sync endpoint',
+    priority: 'High',
+    status: 'Open',
+    reportedDate: new Date('2026-02-15').toISOString(),
+    isDeleted: false,
+  },
+];
+
+export const dependencies: Dependency[] = [
+  {
+    id: 'dep1',
+    dependencyId: 'DEP-1',
+    description: 'Security audit certificate renewal for OAuth endpoints',
+    type: 'External',
+    dependencyOn: 'Enterprise SecOps Team',
+    expectedByDate: new Date('2026-06-30').toISOString(),
+    status: 'On Track',
+    isDeleted: false,
+  },
+];
+
+export const releases: Release[] = [
+  {
+    id: 'rel1',
+    releaseId: 'REL-26.1',
+    name: 'Version 26.1 Milestone Release',
+    description: 'Major platform stability and enterprise access milestone',
+    itemType: 'Release',
+    startDate: new Date('2026-01-15').toISOString(),
+    endDate: new Date('2026-06-30').toISOString(),
+    isCompleted: false,
   },
 ];

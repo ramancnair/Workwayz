@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+scripts/.matrix-state.json
+test-results/
 
 # next.js
 /.next/

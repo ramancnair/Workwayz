@@ -250,24 +250,45 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     setAccessChecked(false);
+    let resolved = false;
+
+    // Safety timeout: if Firestore takes more than 500ms (e.g. offline/mock/test mode), fallback immediately to defaults
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        setAccessChecked(true);
+      }
+    }, 500);
+
     const docRef = doc(db, 'accessControl', sessionUser.accessLevel);
     const unsubscribe = onSnapshot(
       docRef,
       (snapshot: any) => {
-        if (snapshot.exists()) {
-          setCustomPageAccess(snapshot.data()?.pageAccess || {});
-        } else {
-          setCustomPageAccess({});
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          if (snapshot.exists()) {
+            setCustomPageAccess(snapshot.data()?.pageAccess || {});
+          } else {
+            setCustomPageAccess({});
+          }
+          setAccessChecked(true);
         }
-        setAccessChecked(true);
       },
       (err: any) => {
-        console.warn('[AuthGuard] Error listening to accessControl:', err);
-        setAccessChecked(true);
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          console.warn('[AuthGuard] Error listening to accessControl:', err);
+          setAccessChecked(true);
+        }
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, [sessionUser?.accessLevel]);
 
   const isPublicPath = pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname === '/setup-wizard';

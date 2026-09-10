@@ -1,39 +1,128 @@
-# ProjectFlow End-to-End Test Plan
+# ProjectFlow Comprehensive Quality Assurance & Test Plan
 
-This document outlines the test plan, test cases, execution status, and identified bugs for ProjectFlow.
-
-## Test Plan Overview
-The goal of this test plan is to verify the core functionalities of ProjectFlow as described in the product blueprint:
-1. **Authentication**: Verify admin login.
-2. **Project / Portfolio Management**: Create and manage portfolios and projects.
-3. **Kanban Board & Task Management**: Create user stories and tasks, assign them, and transition them across lanes.
-4. **Test Case Management**: Add test cases, assign to testers, and link to user stories.
-5. **Bug Tracking**: Log and track bugs under test cases.
-6. **Dashboards**: Verify development and testing dashboards populate correctly.
-7. **AI Assistant**: Verify AI suggestions for tasks or test cases.
+This document outlines the enterprise testing architecture, automated test suites (Vitest & Playwright), living HTML matrices, and execution runbooks for ProjectFlow.
 
 ---
 
-## Test Cases & Execution Status
+## 1. Quality Architecture Overview
 
-| Test Case ID | Feature / Area | Test Case Description | Expected Result | Status | Notes |
-|--------------|----------------|-----------------------|-----------------|--------|-------|
-| **TC-01** | Authentication | Log in using the admin credentials (`test.admin@email.com` / `P@ssw0rd`). | Redirected to dashboard/home, user session established. | ✅ **Pass** | Redirected to `/my-projects`. "Test Admin" shown in sidebar. |
-| **TC-02** | Portfolio Setup | Create a new Portfolio in Portfolio Settings. | Portfolio created and appears in the list. | **Not Run** | |
-| **TC-03** | Project Setup | Create a new Project under the created Portfolio. | Project created and details are editable. | **Not Run** | |
-| **TC-04** | Kanban Board | Create a User Story on the Kanban Board. | User Story appears in the "To Do" column. | **Not Run** | |
-| **TC-05** | Kanban Board | Move a User Story from "To Do" to "In Development". | Story successfully transitions with smooth animations. | **Not Run** | |
-| **TC-06** | Task Management | Add a Development Task under a User Story, assign to a user. | Task added, metadata (estimated time, assignee) updated. | **Not Run** | |
-| **TC-07** | Test Case Management | Create a Test Case and link it to a User Story. | Test Case successfully created and linked. | **Not Run** | |
-| **TC-08** | Bug Tracking | Fail a test case and log a Bug under it. | Bug created under the test case and appears in Bug Tracking. | **Not Run** | |
-| **TC-09** | Dashboards | Verify PMO/Development Dashboard shows correct progress. | Charts and progress metrics reflect the created stories/tasks. | **Not Run** | |
-| **TC-10** | Dashboards | Verify Testing Dashboard shows correct test/bug counts. | Testing dashboard displays correct test coverage and defect counts. | **Not Run** | |
-| **TC-11** | AI Assistant | Request AI suggestions for improving a task or test case. | Suggestion list generated and displayed on screen. | **Not Run** | |
+ProjectFlow implements an enterprise multi-tier testing pyramid:
+1. **Unit & Component Testing (Vitest + JSDOM)**: Fast, deterministic testing of business logic, role-based permissions, string formatters, and UI component behavior.
+2. **End-to-End Automation (Playwright)**: Full browser automation executing user journeys across the Global Portfolio Hub and Project Detail Hub with state-injecting session fixtures.
+3. **Living Traceability Matrices**: Standalone publication-ready HTML documents providing dynamic filtering and verification audit trails.
 
 ---
 
-## Bug List
+## 2. Test Execution Runbook
 
-| Bug ID | Description | Severity | Status | Steps to Reproduce |
-|--------|-------------|----------|--------|--------------------|
-| - | No bugs found yet. | - | - | - |
+### Unit & Component Tests (Vitest)
+```bash
+# Run all unit and component tests once
+npm test
+
+# Run tests in interactive watch mode
+npm run test:watch
+
+# Launch Vitest visual browser UI
+npm run test:ui
+```
+
+### End-to-End Tests (Playwright)
+```bash
+# Run all E2E specs headlessly
+npm run test:e2e
+
+# Run E2E tests in interactive UI mode
+npm run test:e2e:ui
+
+# View latest HTML test run report
+npm run test:e2e:report
+
+# Install Chromium browser binary (if needed)
+npm run test:e2e:install
+```
+
+---
+
+## 3. Test Suites & Traceability Matrix
+
+### Pillar 1: Authentication & Access Control (`e2e/01-auth-and-access.spec.ts`)
+| Test Case ID | Test Objective | Assertion Criteria | Status |
+|---|---|---|---|
+| **TC-AUTH-001** | Public landing page renders branding and CTAs | Hero header, "Get Started" and "Log In" CTAs visible | ✅ Automated |
+| **TC-AUTH-002** | Login page renders credentials form | Email, password input, and Sign In trigger present | ✅ Automated |
+| **TC-AUTH-003** | AuthGuard intercepts unauthenticated visits | Direct navigation to `/my-projects` redirects to `/login` | ✅ Automated |
+| **TC-AUTH-004** | Injected administrator session bypass | `localStorage` session loads `/my-projects` immediately | ✅ Automated |
+| **TC-AUTH-005** | Role-based access control gating | Non-admin accounts restricted from `/portfolio-settings` | ✅ Automated |
+
+### Pillar 2: Global Portfolio Workspace (`e2e/02-global-portfolio-workspace.spec.ts`)
+| Test Case ID | Test Objective | Assertion Criteria | Status |
+|---|---|---|---|
+| **TC-PORT-001** | My Projects catalog renders project grid | Project list rendered with filter and creation triggers | ✅ Automated |
+| **TC-PORT-002** | Project Home overview loads KPIs | Portfolio initiative summary cards visible | ✅ Automated |
+| **TC-PORT-003** | Portfolio Executive Dashboard | Budget burn rate and delivery velocity charts load | ✅ Automated |
+| **TC-PORT-004** | FlowPilot AI assistant dashboard | AI agent widgets and recommendation cards render | ✅ Automated |
+| **TC-PORT-005** | Billing and Rate cards | Rate card grids, milestone schedules accessible | ✅ Automated |
+| **TC-PORT-006** | Users roster and team directory | Member roster with role badges displayed | ✅ Automated |
+| **TC-PORT-007** | Resource utilization & Gantt chart | Team capacity percentages and timeline bars visible | ✅ Automated |
+| **TC-PORT-008** | Holidays calendar & leave management | Holiday dates and leave balance tabs active | ✅ Automated |
+| **TC-PORT-009** | Portfolio administration & trash recovery | Archive and soft-delete recovery workflows | ✅ Automated |
+
+### Pillar 3: Project Detail Hub (`e2e/03-project-details-and-estimations.spec.ts`)
+| Test Case ID | Test Objective | Assertion Criteria | Status |
+|---|---|---|---|
+| **TC-PRJ-001** | Project layout and tab bar navigation | Top navigation and sidebar submenus switch views | ✅ Automated |
+| **TC-PRJ-002** | Initial estimation & specifications | Scope specifications and estimation tables display | ✅ Automated |
+| **TC-PRJ-003** | PM Dashboard & project status | Progress bars, schedule health, effort metrics load | ✅ Automated |
+
+### Pillar 4: Agile Development Lifecycle (`e2e/04-development-lifecycle.spec.ts`)
+| Test Case ID | Test Objective | Assertion Criteria | Status |
+|---|---|---|---|
+| **TC-DEV-001** | Development sprint dashboard | Burndown charts and velocity metrics display | ✅ Automated |
+| **TC-DEV-002** | Product backlog & epic management | Backlog list, epic filters, story creation triggers | ✅ Automated |
+| **TC-DEV-003** | Backlog grooming & story point sizing | Sizing cards and story priority editing | ✅ Automated |
+| **TC-DEV-004** | Interactive Kanban board | Swimlanes (To Do, In Progress, In QA, Done) render | ✅ Automated |
+| **TC-DEV-005** | Engineering development tasks | Granular subtasks linked to parent stories | ✅ Automated |
+| **TC-DEV-006** | Defect tracker | Defect triage table with severity badges | ✅ Automated |
+
+### Pillar 5: Testing & QA Management (`e2e/05-testing-and-quality.spec.ts`)
+| Test Case ID | Test Objective | Assertion Criteria | Status |
+|---|---|---|---|
+| **TC-QA-001** | Quality estimations in portfolio hub | Cross-project QA effort estimations | ✅ Automated |
+| **TC-QA-002** | Project Testing Dashboard | Pass/fail rates and test coverage metrics | ✅ Automated |
+| **TC-QA-003** | Test Plan & Test Backlog | Test suite management and requirement links | ✅ Automated |
+| **TC-QA-004** | Test Case repository | Steps, preconditions, and expected results | ✅ Automated |
+| **TC-QA-005** | Test Cycle & Execution | Test execution runs with Pass/Fail recording | ✅ Automated |
+| **TC-QA-006** | Linked defect management | Bugs logged directly from failed test steps | ✅ Automated |
+
+### Pillar 6: RAID Governance (`e2e/06-governance-raid.spec.ts`)
+| Test Case ID | Test Objective | Assertion Criteria | Status |
+|---|---|---|---|
+| **TC-RAID-001** | RAID Dashboard | Risk probability/impact heatmap and issue cards | ✅ Automated |
+| **TC-RAID-002** | Risks Log | Risk register with severity and mitigation owners | ✅ Automated |
+| **TC-RAID-003** | Assumptions Log | Validated vs unvalidated project assumptions | ✅ Automated |
+| **TC-RAID-004** | Issues Log | Active blockers with target resolution dates | ✅ Automated |
+| **TC-RAID-005** | Dependencies Log | Upstream/downstream external dependencies | ✅ Automated |
+
+### Pillar 7: Resources, Releases & Settings (`e2e/07-resources-releases-settings.spec.ts`)
+| Test Case ID | Test Objective | Assertion Criteria | Status |
+|---|---|---|---|
+| **TC-RES-001** | Project resources & capacity planning | Member assignments and allocation percentages | ✅ Automated |
+| **TC-REL-001** | Release planning & deployments | Version milestones and release item checklists | ✅ Automated |
+| **TC-ADM-001** | Project Settings & Trash bin | Sprint duration cadence and soft-delete recovery | ✅ Automated |
+
+### Pillar 8: Setup Wizard & Initial Configuration (`e2e/08-setup-wizard.spec.ts`)
+| Test Case ID | Test Objective | Assertion Criteria | Status |
+|---|---|---|---|
+| **TC-WIZ-001** | Setup Wizard modal & step headers | Wizard dialog renders welcome and step indicators | ✅ Automated |
+| **TC-WIZ-002** | Database engine selection | Multi-engine support (PostgreSQL, Firebase, Supabase) selectable | ✅ Automated |
+| **TC-WIZ-003** | Multi-step navigation traversal | Forward/backward progression through wizard steps | ✅ Automated |
+| **TC-WIZ-004** | Clean wizard exit & completion | Close or skip action returns user to workspace | ✅ Automated |
+
+---
+
+## 4. Living Documentation Artifacts
+
+- [ProjectFlow_Test_Plan.html](../ProjectFlow_Test_Plan.html): Interactive publication-grade test matrix with live filtering, statistics, and test spec links.
+- [ProjectFlow_Sitemap.html](../ProjectFlow_Sitemap.html): Complete route topology and view hierarchy across Global Portfolio and Project Detail hubs.
+

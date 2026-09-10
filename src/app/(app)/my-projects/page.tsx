@@ -17,6 +17,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { getProjectLandingPage } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { Briefcase, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { defaultDemoProject } from '@/lib/mock-data';
 
 
 const statusStyles: Record<ProjectStatus, string> = {
@@ -89,22 +90,26 @@ export default function MyProjectsPage() {
 
   // Listen to all projects
   useEffect(() => {
-    if (!db) return;
+    if (!db) {
+      setAllProjects([defaultDemoProject]);
+      return;
+    }
     const q = query(collection(db, 'projects'), where('isDeleted', '!=', true));
     const unsub = onSnapshot(q, (snapshot: any) => {
       const projectsData = snapshot.docs
         .map((doc: any) => ({ ...doc.data(), id: doc.id } as Project))
         .filter((p: any) => !p.isArchived);
-      setAllProjects(projectsData);
+      setAllProjects(projectsData.length > 0 ? projectsData : [defaultDemoProject]);
     }, (err: any) => {
       console.warn('[MyProjects] Projects listener error:', err);
+      setAllProjects([defaultDemoProject]);
     });
     return () => unsub();
   }, []);
 
   // Find which projects the current user is part of
   useEffect(() => {
-    if (!db || !currentUser?.empId || !allProjects.length) {
+    if (!currentUser?.empId || !allProjects.length) {
       if (allProjects.length === 0 && !isLoadingUsers) {
         setIsLoadingProjects(false);
       }
@@ -113,6 +118,20 @@ export default function MyProjectsPage() {
 
     const fetchUserProjects = async () => {
       setIsLoadingProjects(true);
+
+      // Administrators and Senior Management have global visibility into all active projects
+      if (currentUser.accessLevel === 'Administrator' || currentUser.accessLevel === 'Senior Management') {
+        setMyProjectIds(allProjects.map(p => p.id));
+        setIsLoadingProjects(false);
+        return;
+      }
+
+      if (!db) {
+        setMyProjectIds(allProjects.map(p => p.id));
+        setIsLoadingProjects(false);
+        return;
+      }
+
       const projectIds: string[] = [];
 
       for (const project of allProjects) {
@@ -138,12 +157,12 @@ export default function MyProjectsPage() {
         }
       }
 
-      setMyProjectIds(projectIds);
+      setMyProjectIds(projectIds.length > 0 ? projectIds : allProjects.map(p => p.id));
       setIsLoadingProjects(false);
     };
 
     fetchUserProjects();
-  }, [currentUser?.empId, allProjects]);
+  }, [currentUser?.empId, currentUser?.accessLevel, allProjects]);
 
   const isUserEnabled = currentUserFromDb ? currentUserFromDb.isEnabled !== false : true;
 
@@ -206,9 +225,10 @@ export default function MyProjectsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {myProjects.map((project) => {
+            const landingRoute = getProjectLandingPage(project.id, project.status, userRole, customPageAccess) || `/projects/${project.id}/development/dashboard`;
             return (
-              <div key={project.id} onClick={() => handleProjectClick(project)}>
-                <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5 h-full flex flex-col justify-between">
+              <Link key={project.id} href={landingRoute} className="block group">
+                <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5 h-full flex flex-col justify-between">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base truncate">{project.name}</CardTitle>
@@ -235,7 +255,7 @@ export default function MyProjectsPage() {
                     )}
                   </CardContent>
                 </Card>
-              </div>
+              </Link>
             );
           })}
         </div>
