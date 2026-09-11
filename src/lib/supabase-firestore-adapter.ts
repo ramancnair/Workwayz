@@ -77,11 +77,16 @@ const pendingNotifications = new Set<string>();
 let notificationScheduled = false;
 let channelCounter = 0;
 
-function scheduleListenerNotification(changedDocPath: string) {
+export function scheduleListenerNotification(changedDocPath: string) {
     const collPath = getCollectionPath(changedDocPath);
     pendingNotifications.add(collPath);
     // Also add the exact doc path for doc-level listeners
     pendingNotifications.add(changedDocPath);
+    // Also add the collection name for collectionGroup listeners
+    const collName = collPath.split('/').pop();
+    if (collName) {
+        pendingNotifications.add(collName);
+    }
 
     if (!notificationScheduled) {
         notificationScheduled = true;
@@ -93,7 +98,7 @@ function scheduleListenerNotification(changedDocPath: string) {
             for (const listener of listeners) {
                 let shouldFire = false;
                 for (const p of paths) {
-                    if (p === listener.collectionPath || p === listener.ref.path || p.startsWith(listener.collectionPath + '/')) {
+                    if (p === listener.collectionPath || p === listener.ref.path) {
                         shouldFire = true;
                         break;
                     }
@@ -163,21 +168,32 @@ export const doc = (dbInstanceOrColOrDocRef: any, ...paths: string[]) => {
 };
 
 // ============================================================================
+// Path helpers
+// ============================================================================
+export function parsePathDetails(fullPath: string) {
+    const parts = fullPath.split('/');
+    let projectId: string | null = null;
+    let collectionName = parts[parts.length - 2] || 'unknown';
+
+    if (parts[0] === 'projects') {
+        projectId = parts[1];
+        if (parts.length === 2) {
+            collectionName = 'projects';
+        }
+    } else if (parts[0] !== 'projects') {
+        collectionName = parts[0];
+    }
+
+    return { projectId, collectionName };
+}
+
+// ============================================================================
 // Write operations — ALL call scheduleListenerNotification
 // ============================================================================
 export const addDoc = async (colRef: any, data: any) => {
     const docId = uuidv4();
     const fullPath = `${colRef.path}/${docId}`;
-    const parts = fullPath.split('/');
-    
-    let projectId = null;
-    let collectionName = parts[parts.length - 2] || 'unknown';
-    
-    if (parts[0] === 'projects' && parts.length > 2) {
-        projectId = parts[1];
-    } else if (parts[0] !== 'projects') {
-        collectionName = parts[0];
-    }
+    const { projectId, collectionName } = parsePathDetails(fullPath);
 
     const result = await supabase!.from('firebase_compat').upsert({
         collection_name: collectionName,
@@ -194,19 +210,7 @@ export const addDoc = async (colRef: any, data: any) => {
 
 export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean }) => {
     const fullPath = docRef.path;
-
-    const parts = fullPath.split('/');
-    let projectId = null;
-    let collectionName = parts[parts.length - 2] || 'unknown';
-
-    if (parts[0] === 'projects') {
-        projectId = parts[1];
-        if (parts.length === 2) {
-            collectionName = 'projects';
-        }
-    } else if (parts[0] !== 'projects') {
-        collectionName = parts[0];
-    }
+    const { projectId, collectionName } = parsePathDetails(fullPath);
 
     if (options?.merge) {
         const { data: existing } = await supabase!.from('firebase_compat').select('data').eq('path', fullPath).single();
@@ -286,8 +290,13 @@ export const where = (fieldPath: string, opStr: string, value: any) => {
 export const getDocs = async (queryRef: any) => {
     let request = supabase!.from('firebase_compat').select('*');
     
-    if (queryRef.path) {
-        request = request.like('path', `${queryRef.path}/%`);
+    let targetDepth = 0;
+    if (queryRef.type === 'collectionGroup') {
+        request = request.eq('collection_name', queryRef.collectionId);
+    } else if (queryRef.path) {
+        const targetCollection = queryRef.path.split('/').pop();
+        targetDepth = queryRef.path.split('/').length + 1;
+        request = request.eq('collection_name', targetCollection).like('path', `${queryRef.path}/%`);
     }
 
     if (queryRef.constraints) {
@@ -301,13 +310,8 @@ export const getDocs = async (queryRef: any) => {
                     } else {
                         request = request.eq(`data->${c.fieldPath}`, c.value);
                     }
-                } else if (c.opStr === '!=') {
-                     if (typeof c.value === 'string') {
-                        request = request.neq(`data->>${c.fieldPath}`, c.value);
-                    } else {
-                        request = request.neq(`data->${c.fieldPath}`, c.value);
-                    }
                 }
+                // != is evaluated in memory below to preserve documents where the field is undefined/null
             }
         }
     }
@@ -315,7 +319,25 @@ export const getDocs = async (queryRef: any) => {
     const { data, error } = await request;
     if (error) throw error;
 
-    const docs = (data || []).map((row: any) => {
+    let filteredData = data || [];
+    // Strictly filter to direct children of the collection (matching depth)
+    if (targetDepth > 0) {
+        filteredData = filteredData.filter((row: any) => row.path.split('/').length === targetDepth);
+    }
+
+    // Apply != constraints in memory to handle missing/undefined JSON properties identically to Firestore
+    if (queryRef.constraints) {
+        for (const c of queryRef.constraints) {
+            if (c.type === 'where' && c.opStr === '!=') {
+                filteredData = filteredData.filter((row: any) => {
+                    const val = row.data ? row.data[c.fieldPath] : undefined;
+                    return val !== c.value;
+                });
+            }
+        }
+    }
+
+    const docs = filteredData.map((row: any) => {
         const docId = row.path.split('/').pop();
         return {
             id: docId,
@@ -333,7 +355,7 @@ export const getDocs = async (queryRef: any) => {
 };
 
 // ============================================================================
-// Batch writes — commit triggers listeners once for all affected paths
+// Batch writes — optimized for bulk execution via PostgREST array upserts
 // ============================================================================
 export const writeBatch = (dbInstance: any) => {
     const operations: any[] = [];
@@ -348,18 +370,79 @@ export const writeBatch = (dbInstance: any) => {
              operations.push({ type: 'delete', docRef });
         },
         commit: async () => {
+            const CHUNK_SIZE = 100;
+            const CONCURRENCY = 4;
+            const affectedPaths: string[] = [];
+
+            let bulkSetMap = new Map<string, any>();
+            let bulkDeletePaths: string[] = [];
+
+            const flushBulkSets = async () => {
+                if (bulkSetMap.size === 0) return;
+                const rows = Array.from(bulkSetMap.values());
+                bulkSetMap.clear();
+
+                const chunks: any[][] = [];
+                for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+                    chunks.push(rows.slice(i, i + CHUNK_SIZE));
+                }
+
+                for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+                    const slice = chunks.slice(i, i + CONCURRENCY);
+                    await Promise.all(slice.map(async (chunk) => {
+                        const { error } = await supabase!.from('firebase_compat').upsert(chunk, { onConflict: 'path' });
+                        if (error) throw error;
+                    }));
+                }
+            };
+
+            const flushBulkDeletes = async () => {
+                if (bulkDeletePaths.length === 0) return;
+                const paths = [...bulkDeletePaths];
+                bulkDeletePaths = [];
+
+                for (let i = 0; i < paths.length; i += CHUNK_SIZE) {
+                    const chunk = paths.slice(i, i + CHUNK_SIZE);
+                    const { error } = await supabase!.from('firebase_compat').delete().in('path', chunk);
+                    if (error) throw error;
+                }
+            };
+
             for (const op of operations) {
-                if (op.type === 'set') {
-                    await setDoc(op.docRef, op.data, op.options);
-                } else if (op.type === 'update') {
-                    await updateDoc(op.docRef, op.data);
+                const fullPath = op.docRef.path;
+                affectedPaths.push(fullPath);
+
+                if (op.type === 'set' && !op.options?.merge) {
+                    await flushBulkDeletes();
+                    const { projectId, collectionName } = parsePathDetails(fullPath);
+                    bulkSetMap.set(fullPath, {
+                        path: fullPath,
+                        collection_name: collectionName,
+                        project_id: projectId,
+                        data: op.data,
+                        updated_at: new Date().toISOString()
+                    });
                 } else if (op.type === 'delete') {
-                    await deleteDoc(op.docRef);
+                    await flushBulkSets();
+                    bulkDeletePaths.push(fullPath);
+                } else {
+                    await flushBulkSets();
+                    await flushBulkDeletes();
+
+                    if (op.type === 'set') {
+                        await setDoc(op.docRef, op.data, op.options);
+                    } else if (op.type === 'update') {
+                        await updateDoc(op.docRef, op.data);
+                    }
                 }
             }
-            // Note: each individual setDoc/updateDoc/deleteDoc already calls
-            // scheduleListenerNotification, and they coalesce via microtask,
-            // so batch commits naturally fire a single notification round.
+
+            await flushBulkSets();
+            await flushBulkDeletes();
+
+            for (const p of affectedPaths) {
+                scheduleListenerNotification(p);
+            }
         }
     };
 };
@@ -384,11 +467,10 @@ export const arrayRemove = (...elements: any[]) => {
 // ============================================================================
 export const onSnapshot = (ref: any, onNext: (snapshot: any) => void, onError?: (error: any) => void) => {
     // Determine the collection path this listener cares about
-    const collectionPath = ref.type === 'doc' ? ref.path : ref.path;
+    const collectionPath = ref.type === 'collectionGroup' ? ref.collectionId : ref.path;
 
     const listenerObj: Listener = { collectionPath, ref, onNext, onError };
     listeners.push(listenerObj);
-
 
     // Initial fetch
     if (ref.type === 'doc') {
@@ -410,11 +492,19 @@ export const onSnapshot = (ref: any, onNext: (snapshot: any) => void, onError?: 
     // Secondary: Supabase Realtime for cross-tab/cross-user updates (best-effort)
     let channel: any = null;
     try {
-        const channelName = `compat_${ref.path.replace(/[^a-zA-Z0-9]/g, '_')}_${channelCounter++}`;
+        const identifier = ref.path || ref.collectionId || 'all';
+        const channelName = `compat_${identifier.replace(/[^a-zA-Z0-9]/g, '_')}_${channelCounter++}`;
         channel = supabase!.channel(channelName)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'firebase_compat' }, (payload: any) => {
                 const changedPath = payload.new?.path || payload.old?.path || '';
-                if (changedPath.startsWith(ref.path) || changedPath.startsWith(ref.path + '/')) {
+                const isExactDoc = ref.type === 'doc' && changedPath === ref.path;
+                const isDirectChild = ref.type !== 'doc' && ref.path &&
+                    changedPath.startsWith(ref.path + '/') &&
+                    changedPath.split('/').length === ref.path.split('/').length + 1;
+                const isMatchingGroup = ref.type === 'collectionGroup' &&
+                    (payload.new?.collection_name === ref.collectionId || payload.old?.collection_name === ref.collectionId);
+
+                if (isExactDoc || isDirectChild || isMatchingGroup) {
                     if (ref.type === 'doc') {
                         getDoc(ref).then(onNext).catch(err => { if (onError) onError(err); });
                     } else {

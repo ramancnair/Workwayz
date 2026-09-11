@@ -542,11 +542,6 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <Input placeholder="http://localhost:11434" value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)} />
                   </div>
                 )}
-
-                <div className="space-y-2">
-                  <Label>Default Model Override (Optional)</Label>
-                  <Input placeholder="e.g. gpt-4o, gemini-1.5-pro" value={aiModel} onChange={e => setAiModel(e.target.value)} />
-                </div>
               </div>
             )}
 

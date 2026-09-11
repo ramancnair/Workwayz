@@ -73,8 +73,11 @@ class AutoBatch {
   }
 
   async commit() {
-    for (const b of this.batches) {
-      await b.commit();
+    if (this.batches.length > 0) {
+      await this.batches[0].commit();
+    }
+    if (this.batches.length > 1) {
+      await Promise.all(this.batches.slice(1).map(b => b.commit()));
     }
   }
 }

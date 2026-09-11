@@ -127,15 +127,14 @@ export default function PortfolioTrashPage() {
     const handleDeleteForever = async () => {
         if (selectedItems.length === 0 || !db) return;
         try {
-             for (const item of selectedItems) {
+            await Promise.all(selectedItems.map(async (item) => {
                 if (item.type === 'Portfolio') {
                     const projectsQuery = query(collection(db, 'projects'), where('portfolioId', '==', item.id));
                     const projectsSnapshot = await getDocs(projectsQuery);
-                    for(const projectDoc of projectsSnapshot.docs) {
-                        await deleteProjectAndSubcollections(projectDoc.id);
-                    }
+                    await Promise.all(projectsSnapshot.docs.map((projectDoc: any) => 
+                        deleteProjectAndSubcollections(projectDoc.id)
+                    ));
                     await deleteDoc(doc(db, 'portfolios', item.id));
-
                 } else if (item.type === 'Project') {
                     await deleteProjectAndSubcollections(item.id);
                 } else { // User
@@ -152,7 +151,7 @@ export default function PortfolioTrashPage() {
                     }
                     await deleteDoc(doc(db, 'employees', item.id));
                 }
-            }
+            }));
             toast({ title: 'Success', description: `${selectedItems.length} item(s) have been permanently deleted.` });
 
         } catch (error) {
