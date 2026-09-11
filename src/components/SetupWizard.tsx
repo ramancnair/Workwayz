@@ -41,9 +41,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             if (activeDb) {
               setDbProfileId(activeDb.id);
               setDbProjectName(activeDb.profileName || 'Wizard Database');
-              setDbProvider(activeDb.provider || 'postgresql');
-              if (activeDb.provider === 'postgresql') setDbConnStr(activeDb.connectionString || '');
-              else if (activeDb.provider === 'firebase') {
+              setDbProvider(activeDb.provider || 'supabase');
+              if (activeDb.provider === 'firebase') {
                 setFbProjectId(activeDb.projectId || '');
                 setFbApiKey(activeDb.apiKey || '');
               } else if (activeDb.provider === 'supabase') {
@@ -57,16 +56,9 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             const activeAuth = data.authentication.find((a: any) => a.isActive) || data.authentication[0];
             if (activeAuth) {
               setAuthProfileId(activeAuth.id);
-              setAuthProvider(activeAuth.provider || 'firebase');
+              setAuthProvider(activeAuth.provider || 'supabase');
               setSsoGoogle(!!activeAuth.googleSso);
               setSsoGithub(!!activeAuth.githubSso);
-              if (activeAuth.provider === 'keycloak') {
-                setKcUrl(activeAuth.keycloakUrl || '');
-                setKcRealm(activeAuth.keycloakRealm || '');
-                setKcClientId(activeAuth.keycloakClientId || '');
-                setKcAdminClientId(activeAuth.keycloakAdminClientId || '');
-                setKcAdminSecret(activeAuth.keycloakAdminClientSecret || '');
-              }
             }
           }
 
@@ -95,22 +87,25 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
 
   // DB State
   const [dbProjectName, setDbProjectName] = useState('Wizard Database');
-  const [dbProvider, setDbProvider] = useState('postgresql');
-  const [dbConnStr, setDbConnStr] = useState('');
+  const [dbProvider, setDbProvider] = useState('supabase');
   const [fbProjectId, setFbProjectId] = useState('');
   const [fbApiKey, setFbApiKey] = useState('');
   const [supaUrl, setSupaUrl] = useState('');
   const [supaKey, setSupaKey] = useState('');
 
   // Auth State
-  const [authProvider, setAuthProvider] = useState('firebase');
+  const [authProvider, setAuthProvider] = useState('supabase');
   const [ssoGoogle, setSsoGoogle] = useState(false);
   const [ssoGithub, setSsoGithub] = useState(false);
-  const [kcUrl, setKcUrl] = useState('');
-  const [kcRealm, setKcRealm] = useState('');
-  const [kcClientId, setKcClientId] = useState('');
-  const [kcAdminClientId, setKcAdminClientId] = useState('');
-  const [kcAdminSecret, setKcAdminSecret] = useState('');
+
+  const handleDbProviderChange = (val: string) => {
+    setDbProvider(val);
+    if (val === 'supabase') {
+      setAuthProvider('supabase');
+    } else if (val === 'firebase') {
+      setAuthProvider('firebase');
+    }
+  };
 
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -144,8 +139,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
       // Prepare DB payload
       let dbProfile: any = { profileName: dbProjectName || 'Wizard Database', provider: dbProvider, isActive: true };
       if (dbProfileId) dbProfile.id = dbProfileId;
-      if (dbProvider === 'postgresql') dbProfile.connectionString = dbConnStr;
-      else if (dbProvider === 'firebase') {
+      if (dbProvider === 'firebase') {
         dbProfile.projectId = fbProjectId;
         dbProfile.apiKey = fbApiKey;
       } else if (dbProvider === 'supabase') {
@@ -162,13 +156,6 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         isActive: true,
       };
       if (authProfileId) authProfile.id = authProfileId;
-      if (authProvider === 'keycloak') {
-        authProfile.keycloakUrl = kcUrl;
-        authProfile.keycloakRealm = kcRealm;
-        authProfile.keycloakClientId = kcClientId;
-        authProfile.keycloakAdminClientId = kcAdminClientId;
-        authProfile.keycloakAdminClientSecret = kcAdminSecret;
-      }
 
       // Prepare AI payload
       let aiProfile: any = {
@@ -244,15 +231,11 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               adminPassword,
               adminName,
               dbProvider,
+              authProvider,
               fbProjectId,
               fbApiKey,
               supaUrl,
               supaKey,
-              authProvider,
-              kcUrl,
-              kcRealm,
-              kcClientId: kcAdminClientId,
-              kcAdminSecret
             })
           });
 
@@ -385,28 +368,16 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
 
                 <div className="space-y-2">
                   <Label>Database Provider</Label>
-                  <Select onValueChange={setDbProvider} value={dbProvider}>
+                  <Select onValueChange={handleDbProviderChange} value={dbProvider}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select Database Provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                      <SelectItem value="firebase">Firebase (Firestore)</SelectItem>
                       <SelectItem value="supabase">Supabase</SelectItem>
+                      <SelectItem value="firebase">Firebase (Firestore)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                {dbProvider === 'postgresql' && (
-                  <div className="space-y-2">
-                    <Label>Connection String</Label>
-                    <Input
-                      placeholder="postgresql://user:pass@host:5432/db"
-                      value={dbConnStr}
-                      onChange={e => setDbConnStr(e.target.value)}
-                    />
-                  </div>
-                )}
 
                 {dbProvider === 'firebase' && (
                   <div className="space-y-4">
@@ -428,7 +399,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                       <Input placeholder="https://xyz.supabase.co" value={supaUrl} onChange={e => setSupaUrl(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Supabase Anon Key</Label>
+                      <Label>Supabase Publishable Key</Label>
                       <Input type="password" placeholder="eyJhbG..." value={supaKey} onChange={e => setSupaKey(e.target.value)} />
                     </div>
                   </div>
@@ -446,9 +417,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                       <SelectValue placeholder="Select Authentication Provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="firebase">Firebase Auth</SelectItem>
-                      <SelectItem value="keycloak">Keycloak</SelectItem>
                       <SelectItem value="supabase">Supabase Auth</SelectItem>
+                      <SelectItem value="firebase">Firebase Auth</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -456,29 +426,9 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                   </p>
                 </div>
 
-                {authProvider === 'keycloak' && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Keycloak URL</Label>
-                      <Input placeholder="http://localhost:8080" value={kcUrl} onChange={e => setKcUrl(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Realm</Label>
-                      <Input placeholder="myrealm" value={kcRealm} onChange={e => setKcRealm(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Client ID (Public)</Label>
-                      <Input placeholder="myclient" value={kcClientId} onChange={e => setKcClientId(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Admin Client ID</Label>
-                      <Input placeholder="projectflow-admin" value={kcAdminClientId} onChange={e => setKcAdminClientId(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Admin Client Secret (For User Autogen)</Label>
-                      <Input type="password" placeholder="Enter service account secret" value={kcAdminSecret} onChange={e => setKcAdminSecret(e.target.value)} />
-                      <p className="text-xs text-muted-foreground mt-1">Required if you want to create Keycloak users directly from the ProjectFlow User panel.</p>
-                    </div>
+                {authProvider === 'supabase' && (
+                  <div className="p-4 bg-emerald-50 text-emerald-800 text-sm rounded-md border border-emerald-200">
+                    Supabase Auth leverages the project URL and publishable key configured in Step 1.
                   </div>
                 )}
 

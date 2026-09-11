@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         }
 
         // Map incoming body settings to ENV vars based on what they sent
-        const dbKeys = ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'DATABASE_URL', 'NEXT_PUBLIC_DATABASE_PROVIDER', 'NEXT_PUBLIC_DB_PROVIDER'];
+        const dbKeys = ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_DATABASE_PROVIDER', 'NEXT_PUBLIC_DB_PROVIDER'];
         if (type === 'database') {
             const db = payload;
             
@@ -77,9 +77,6 @@ export async function POST(request: Request) {
                 envMap.set('NEXT_PUBLIC_DB_PROVIDER', '"supabase"');
                 if (db.supabaseUrl) envMap.set('NEXT_PUBLIC_SUPABASE_URL', `"${db.supabaseUrl}"`);
                 if (db.supabaseAnonKey) envMap.set('NEXT_PUBLIC_SUPABASE_ANON_KEY', `"${db.supabaseAnonKey}"`);
-            } else if (['postgresql', 'mysql', 'mongodb'].includes(db.provider)) {
-                envMap.set('NEXT_PUBLIC_DB_PROVIDER', `"${db.provider}"`);
-                if (db.connectionString) envMap.set('DATABASE_URL', `"${db.connectionString}"`);
             }
             envMap.set('NEXT_PUBLIC_DATABASE_PROVIDER', `"${db.provider}"`);
         }
@@ -110,12 +107,7 @@ export async function POST(request: Request) {
             'NEXT_PUBLIC_AUTH_PROVIDER',
             'NEXT_PUBLIC_AUTH_GOOGLE_SSO', 
             'NEXT_PUBLIC_AUTH_FACEBOOK_SSO', 
-            'NEXT_PUBLIC_AUTH_APPLE_SSO',
-            'NEXT_PUBLIC_KEYCLOAK_URL',
-            'NEXT_PUBLIC_KEYCLOAK_REALM',
-            'NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
-            'KEYCLOAK_ADMIN_CLIENT_ID',
-            'KEYCLOAK_ADMIN_CLIENT_SECRET'
+            'NEXT_PUBLIC_AUTH_APPLE_SSO'
         ];
         if (type === 'authentication') {
             const auth = payload;
@@ -124,13 +116,6 @@ export async function POST(request: Request) {
             if (auth.googleSso) envMap.set('NEXT_PUBLIC_AUTH_GOOGLE_SSO', '"true"');
             if (auth.facebookSso) envMap.set('NEXT_PUBLIC_AUTH_FACEBOOK_SSO', '"true"');
             if (auth.appleSso) envMap.set('NEXT_PUBLIC_AUTH_APPLE_SSO', '"true"');
-            if (auth.provider === 'keycloak') {
-                if (auth.keycloakUrl) envMap.set('NEXT_PUBLIC_KEYCLOAK_URL', `"${auth.keycloakUrl}"`);
-                if (auth.keycloakRealm) envMap.set('NEXT_PUBLIC_KEYCLOAK_REALM', `"${auth.keycloakRealm}"`);
-                if (auth.keycloakClientId) envMap.set('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID', `"${auth.keycloakClientId}"`);
-                if (auth.keycloakAdminClientId) envMap.set('KEYCLOAK_ADMIN_CLIENT_ID', `"${auth.keycloakAdminClientId}"`);
-                if (auth.keycloakAdminClientSecret) envMap.set('KEYCLOAK_ADMIN_CLIENT_SECRET', `"${auth.keycloakAdminClientSecret}"`);
-            }
         }
 
         // Update isActive flags in connections.json if we mapped via an ID
@@ -201,7 +186,7 @@ export async function GET() {
         // Parse DB
         let dbProvider = envMap.get('NEXT_PUBLIC_DATABASE_PROVIDER')?.replace(/"/g, '');
         if (!dbProvider) {
-            if (envMap.get('DATABASE_URL')) dbProvider = 'postgresql';
+            if (envMap.get('NEXT_PUBLIC_SUPABASE_URL')) dbProvider = 'supabase';
             else if (envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID')) dbProvider = 'firebase';
         }
         
@@ -216,11 +201,6 @@ export async function GET() {
             db = {
                 provider: 'supabase',
                 supabaseUrl: envMap.get('NEXT_PUBLIC_SUPABASE_URL')?.replace(/"/g, ''),
-            };
-        } else if (dbProvider) {
-            db = {
-                provider: dbProvider,
-                connectionString: maskKey(envMap.get('DATABASE_URL') || ''),
             };
         }
 
@@ -245,13 +225,6 @@ export async function GET() {
         let auth: any = null;
         if (authProvider) {
             auth = { provider: authProvider };
-            if (authProvider === 'keycloak') {
-                auth.keycloakUrl = envMap.get('NEXT_PUBLIC_KEYCLOAK_URL')?.replace(/"/g, '');
-                auth.keycloakRealm = envMap.get('NEXT_PUBLIC_KEYCLOAK_REALM')?.replace(/"/g, '');
-                auth.keycloakClientId = envMap.get('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID')?.replace(/"/g, '');
-                auth.keycloakAdminClientId = envMap.get('KEYCLOAK_ADMIN_CLIENT_ID')?.replace(/"/g, '') || envMap.get('NEXT_PUBLIC_KEYCLOAK_ADMIN_CLIENT_ID')?.replace(/"/g, '');
-                auth.keycloakAdminClientSecret = envMap.get('KEYCLOAK_ADMIN_CLIENT_SECRET')?.replace(/"/g, '');
-            }
         }
 
         return NextResponse.json({ db, ai, auth });
@@ -276,18 +249,13 @@ export async function DELETE(request: Request) {
              envMap.set(line.substring(0, idx).trim(), line.substring(idx + 1).trim());
         });
 
-        const dbKeys = ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'DATABASE_URL', 'NEXT_PUBLIC_DATABASE_PROVIDER'];
+        const dbKeys = ['NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_DATABASE_PROVIDER'];
         const aiKeys = ['GEMINI_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'LOCAL_AI_BASE_URL', 'AI_DEFAULT_MODEL', 'NEXT_PUBLIC_AI_PROVIDER'];
         const authKeys = [
             'NEXT_PUBLIC_AUTH_PROVIDER',
             'NEXT_PUBLIC_AUTH_GOOGLE_SSO', 
             'NEXT_PUBLIC_AUTH_FACEBOOK_SSO', 
-            'NEXT_PUBLIC_AUTH_APPLE_SSO',
-            'NEXT_PUBLIC_KEYCLOAK_URL',
-            'NEXT_PUBLIC_KEYCLOAK_REALM',
-            'NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
-            'KEYCLOAK_ADMIN_CLIENT_ID',
-            'KEYCLOAK_ADMIN_CLIENT_SECRET'
+            'NEXT_PUBLIC_AUTH_APPLE_SSO'
         ];
 
         if (type === 'database') {

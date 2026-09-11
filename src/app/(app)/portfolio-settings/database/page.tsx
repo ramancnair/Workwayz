@@ -22,7 +22,7 @@ import { Save, Server, Loader2, Database as DatabaseIcon, Info, CheckCircle2, Bo
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 
-type DatabaseProvider = 'firebase' | 'supabase' | 'postgresql' | 'mysql' | 'mongodb';
+type DatabaseProvider = 'firebase' | 'supabase';
 
 interface DatabaseConfig {
     id?: string;
@@ -38,16 +38,11 @@ interface DatabaseConfig {
     // Supabase params
     supabaseUrl?: string;
     supabaseAnonKey?: string;
-    // Connection string for relational/mongo DBs
-    connectionString?: string;
 }
 
 const defaultConfigs: Record<DatabaseProvider, Partial<DatabaseConfig>> = {
     firebase: { provider: 'firebase', apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' },
     supabase: { provider: 'supabase', supabaseUrl: '', supabaseAnonKey: '' },
-    postgresql: { provider: 'postgresql', connectionString: '' },
-    mysql: { provider: 'mysql', connectionString: '' },
-    mongodb: { provider: 'mongodb', connectionString: '' },
 };
 
 export default function DatabaseSettingsPage() {
@@ -239,6 +234,10 @@ export default function DatabaseSettingsPage() {
                 await signOut(auth);
             }
         } catch(e) { }
+        try {
+            const { supabase } = await import('@/lib/supabase');
+            await supabase?.auth.signOut();
+        } catch(e) { }
         localStorage.removeItem('projectflow_user');
         window.location.href = '/';
     };
@@ -310,9 +309,6 @@ export default function DatabaseSettingsPage() {
                                             <SelectContent>
                                                 <SelectItem value="firebase">Firebase</SelectItem>
                                                 <SelectItem value="supabase">Supabase</SelectItem>
-                                                <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                                                <SelectItem value="mysql">MySQL</SelectItem>
-                                                <SelectItem value="mongodb">MongoDB</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -335,16 +331,10 @@ export default function DatabaseSettingsPage() {
                                                 <Input value={editConfig.supabaseUrl || ''} onChange={e => handleFieldChange('supabaseUrl', e.target.value, true)} />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label>Supabase Anon Key</Label>
+                                                <Label>Supabase Publishable Key</Label>
                                                 <Input value={editConfig.supabaseAnonKey || ''} onChange={e => handleFieldChange('supabaseAnonKey', e.target.value, true)} placeholder="Update..." type="password" />
                                             </div>
                                         </>
-                                    )}
-                                    {['postgresql', 'mysql', 'mongodb'].includes(editConfig.provider) && (
-                                        <div className="space-y-2 col-span-2">
-                                            <Label>Connection String</Label>
-                                            <Input value={editConfig.connectionString || ''} onChange={e => handleFieldChange('connectionString', e.target.value, true)} placeholder="Update..." type="password" />
-                                        </div>
                                     )}
                                 </div>
                             ) : (
@@ -441,9 +431,6 @@ export default function DatabaseSettingsPage() {
                                     <SelectContent>
                                         <SelectItem value="firebase">Firebase</SelectItem>
                                         <SelectItem value="supabase">Supabase</SelectItem>
-                                        <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                                        <SelectItem value="mysql">MySQL</SelectItem>
-                                        <SelectItem value="mongodb">MongoDB</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -497,28 +484,9 @@ export default function DatabaseSettingsPage() {
                                         <Input value={config.supabaseUrl || ''} onChange={e => handleFieldChange('supabaseUrl', e.target.value)} placeholder="https://your-project.supabase.co" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Supabase Anon Key</Label>
+                                        <Label>Supabase Publishable Key</Label>
                                         <Input value={config.supabaseAnonKey || ''} onChange={e => handleFieldChange('supabaseAnonKey', e.target.value)} placeholder="eyJh..." type="password" />
                                     </div>
-                                </div>
-                            )}
-
-                            {['postgresql', 'mysql', 'mongodb'].includes(config.provider) && (
-                                <div className="space-y-2">
-                                    <Label>Connection String (URI)</Label>
-                                    <Input 
-                                        value={config.connectionString || ''} 
-                                        onChange={e => handleFieldChange('connectionString', e.target.value)} 
-                                        placeholder={
-                                            config.provider === 'postgresql' ? 'postgresql://user:password@localhost:5432/dbname' :
-                                            config.provider === 'mysql' ? 'mysql://user:password@localhost:3306/dbname' :
-                                            'mongodb://user:password@localhost:27017/dbname'
-                                        } 
-                                        type="password"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Use standard connection URIs. Store credentials securely.
-                                    </p>
                                 </div>
                             )}
                         </div>

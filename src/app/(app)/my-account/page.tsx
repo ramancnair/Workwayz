@@ -158,7 +158,7 @@ export default function MyAccountPage() {
               // Dispatch event to keep sidebars synchronized
               window.dispatchEvent(new Event('user-profile-updated'));
             }
-          }).catch(err => {
+          }).catch((err: any) => {
             console.error("Failed fetching employee profile:", err);
           });
         }
@@ -493,45 +493,37 @@ export default function MyAccountPage() {
               {passwordSuccess}
             </div>
           )}
-          {user.authProvider === 'keycloak' ? (
-            <p className="text-sm text-muted-foreground">
-              Your account is managed via Keycloak. Password changes must be performed through your organization's portal.
-            </p>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
         </CardContent>
-        {user.authProvider !== 'keycloak' && (
-          <CardFooter className="border-t px-6 py-4 flex justify-end">
-            <Button
-              onClick={handleChangePassword}
-              disabled={isPasswordUpdating || (user.authProvider === 'firebase' && !isFirebaseLoaded)}
-            >
-              {isPasswordUpdating ? 'Updating...' : (user.authProvider === 'firebase' && !isFirebaseLoaded) ? 'Connecting session...' : 'Change Password'}
-            </Button>
-          </CardFooter>
-        )}
+        <CardFooter className="border-t px-6 py-4 flex justify-end">
+          <Button
+            onClick={handleChangePassword}
+            disabled={isPasswordUpdating || (user.authProvider === 'firebase' && !isFirebaseLoaded)}
+          >
+            {isPasswordUpdating ? 'Updating...' : (user.authProvider === 'firebase' && !isFirebaseLoaded) ? 'Connecting session...' : 'Change Password'}
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

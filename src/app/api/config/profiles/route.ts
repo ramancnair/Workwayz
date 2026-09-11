@@ -24,7 +24,7 @@ const autoSeedFromEnv = (conns: any): boolean => {
     if (envMap.size === 0) return false;
 
     if (!conns.database || conns.database.length === 0) {
-        let dbProvider = envMap.get('NEXT_PUBLIC_DB_PROVIDER') || envMap.get('NEXT_PUBLIC_DATABASE_PROVIDER') || (envMap.get('DATABASE_URL') ? 'postgresql' : (envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : null));
+        let dbProvider = envMap.get('NEXT_PUBLIC_DB_PROVIDER') || envMap.get('NEXT_PUBLIC_DATABASE_PROVIDER') || (envMap.get('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : (envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : null));
         if (dbProvider) {
             const db: any = { id: crypto.randomUUID(), profileName: 'Primary .env Connection', provider: dbProvider, isActive: true };
             if (dbProvider === 'firebase') {
@@ -37,8 +37,6 @@ const autoSeedFromEnv = (conns: any): boolean => {
             } else if (dbProvider === 'supabase') {
                 db.supabaseUrl = envMap.get('NEXT_PUBLIC_SUPABASE_URL');
                 db.supabaseAnonKey = envMap.get('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-            } else {
-                db.connectionString = envMap.get('DATABASE_URL');
             }
             conns.database = [db];
             changed = true;
@@ -61,7 +59,7 @@ const autoSeedFromEnv = (conns: any): boolean => {
     }
 
     if (!conns.authentication || conns.authentication.length === 0) {
-        let authProvider = envMap.get('NEXT_PUBLIC_AUTH_PROVIDER') || (envMap.get('NEXT_PUBLIC_KEYCLOAK_URL') ? 'keycloak' : 'firebase');
+        let authProvider = envMap.get('NEXT_PUBLIC_AUTH_PROVIDER') || (envMap.get('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : 'firebase');
         const auth: any = { 
              id: crypto.randomUUID(), 
              profileName: 'Primary .env Auth', 
@@ -71,13 +69,6 @@ const autoSeedFromEnv = (conns: any): boolean => {
              appleSso: false,
              isActive: true 
         };
-        if (authProvider === 'keycloak') {
-             auth.keycloakUrl = envMap.get('NEXT_PUBLIC_KEYCLOAK_URL');
-             auth.keycloakRealm = envMap.get('NEXT_PUBLIC_KEYCLOAK_REALM');
-             auth.keycloakClientId = envMap.get('NEXT_PUBLIC_KEYCLOAK_CLIENT_ID');
-             auth.keycloakAdminClientId = envMap.get('NEXT_PUBLIC_KEYCLOAK_ADMIN_CLIENT_ID') || envMap.get('KEYCLOAK_ADMIN_CLIENT_ID');
-             auth.keycloakAdminClientSecret = envMap.get('KEYCLOAK_ADMIN_CLIENT_SECRET');
-        }
         conns.authentication = [auth];
         changed = true;
     }

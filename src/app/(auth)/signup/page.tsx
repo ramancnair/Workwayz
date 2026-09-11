@@ -14,9 +14,6 @@ import { db } from '@/lib/db-provider';
 import { supabase } from '@/lib/supabase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, doc, setDoc, getDocs } from '@/lib/db-provider';
-import Keycloak from 'keycloak-js';
-
-
 
 export default function SignupPage() {
   const router = useRouter();
@@ -50,9 +47,7 @@ export default function SignupPage() {
         }
       } catch (_) { }
 
-      if (runtimeDbProvider === 'keycloak') {
-        throw new Error("Signup is managed by Keycloak. Please sign up via your organization's portal.");
-      } else if (runtimeDbProvider === 'supabase') {
+      if (runtimeDbProvider === 'supabase') {
         if (!supabase) {
           throw new Error("Supabase is not initialized. Please check your Supabase URL and Key in the database settings.");
         }
@@ -177,31 +172,6 @@ export default function SignupPage() {
     }
   };
 
-  const handleKeycloakRegister = async () => {
-    setIsLoading(true);
-    try {
-      const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
-      const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
-      const keycloakClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
-
-      if (!keycloakUrl || !keycloakRealm || !keycloakClientId) {
-        throw new Error("Keycloak configuration is missing.");
-      }
-
-      const keycloak = new Keycloak({
-        url: keycloakUrl,
-        realm: keycloakRealm,
-        clientId: keycloakClientId
-      });
-
-      await keycloak.init({ checkLoginIframe: false });
-      await keycloak.register();
-    } catch (error: any) {
-      toast({ title: "Registration failed", description: error.message || "Could not redirect to Keycloak.", variant: "destructive" });
-      setIsLoading(false);
-    }
-  };
-
   return (
     <Card className="w-full shadow-lg border-border/50">
       <CardHeader className="space-y-3 text-center">
@@ -220,59 +190,45 @@ export default function SignupPage() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          {process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'keycloak' ? (
-            <div className="p-4 text-center text-sm text-muted-foreground border rounded-md bg-muted/20">
-              Click the button below to create an account via your organization's portal.
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name *</Label>
+              <Input id="firstName" type="text" placeholder="John" required />
             </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input id="firstName" type="text" placeholder="John" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input id="lastName" type="text" placeholder="Doe" required />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="empId">Emp ID *</Label>
-                  <Input id="empId" type="text" placeholder="E001" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
-                  <Input id="phone" type="text" placeholder="123-456-7890" required />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="experience">Experience (years) *</Label>
-                  <Input id="experience" type="number" placeholder="5" min="0" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input id="email" type="email" placeholder="m@example.com" required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
-                <Input id="password" type="password" required />
-              </div>
-            </>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name *</Label>
+              <Input id="lastName" type="text" placeholder="Doe" required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="empId">Emp ID *</Label>
+              <Input id="empId" type="text" placeholder="E001" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone *</Label>
+              <Input id="phone" type="text" placeholder="123-456-7890" required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="experience">Experience (years) *</Label>
+              <Input id="experience" type="number" placeholder="5" min="0" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input id="email" type="email" placeholder="m@example.com" required />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password *</Label>
+            <Input id="password" type="password" required />
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          {process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'keycloak' ? (
-            <Button type="button" onClick={handleKeycloakRegister} className="w-full" disabled={isLoading}>
-              {isLoading ? 'Redirecting...' : 'Register with Keycloak'}
-            </Button>
-          ) : (
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Sign up'}
-            </Button>
-          )}
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Creating account...' : 'Sign up'}
+          </Button>
           <div className="text-center text-sm text-muted-foreground content-center">
             Already have an account?{' '}
             <Link href="/login" className="text-primary hover:underline font-medium">

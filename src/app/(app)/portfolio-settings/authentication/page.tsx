@@ -23,16 +23,12 @@ import { Save, Loader2, Key, Info, CheckCircle2, Bookmark } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 
-type AuthProvider = 'firebase' | 'local';
+type AuthProvider = 'firebase' | 'supabase';
 
 interface AuthConfig {
     id?: string;
     profileName: string;
     provider?: string;
-    keycloakUrl?: string;
-    keycloakRealm?: string;
-    keycloakClientId?: string;
-    keycloakAdminClientSecret?: string;
     googleSso: boolean;
     facebookSso: boolean;
     appleSso: boolean;
@@ -207,6 +203,10 @@ export default function AuthenticationSettingsPage() {
                 await signOut(auth);
             }
         } catch(e) { }
+        try {
+            const { supabase } = await import('@/lib/supabase');
+            await supabase?.auth.signOut();
+        } catch(e) { }
         localStorage.removeItem('projectflow_user');
         window.location.href = '/';
     };
@@ -272,30 +272,14 @@ export default function AuthenticationSettingsPage() {
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="firebase">Firebase Auth</SelectItem>
-                                                <SelectItem value="keycloak">Keycloak</SelectItem>
+                                                <SelectItem value="supabase">Supabase Auth</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    {editConfig.provider === 'keycloak' && (
-                                        <>
-                                            <div className="space-y-2 col-span-2">
-                                                <Label>Keycloak URL</Label>
-                                                <Input value={editConfig.keycloakUrl || ''} onChange={e => handleFieldChange('keycloakUrl', e.target.value, true)} placeholder="http://localhost:8080" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Realm</Label>
-                                                <Input value={editConfig.keycloakRealm || ''} onChange={e => handleFieldChange('keycloakRealm', e.target.value, true)} placeholder="myrealm" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Client ID (Public)</Label>
-                                                <Input value={editConfig.keycloakClientId || ''} onChange={e => handleFieldChange('keycloakClientId', e.target.value, true)} placeholder="myclient" />
-                                            </div>
-                                            <div className="space-y-2 col-span-2">
-                                                <Label>Admin Client Secret (For User Autogen)</Label>
-                                                <Input type="password" value={editConfig.keycloakAdminClientSecret || ''} onChange={e => handleFieldChange('keycloakAdminClientSecret', e.target.value, true)} placeholder="Enter service account secret" />
-                                                <p className="text-xs text-muted-foreground mt-1">Required if you want to create Keycloak users directly from the ProjectFlow User panel.</p>
-                                            </div>
-                                        </>
+                                    {editConfig.provider === 'supabase' && (
+                                        <div className="col-span-2 p-3 bg-muted/40 rounded-md border text-sm text-muted-foreground">
+                                            Supabase Auth is managed automatically via the Supabase URL and Publishable Key configured in Database settings.
+                                        </div>
                                     )}
                                     <div className="col-span-2 mt-4">
                                         <Label className="text-muted-foreground mb-4 block uppercase tracking-wider text-xs font-bold">Enabled SSO Providers</Label>
@@ -319,7 +303,7 @@ export default function AuthenticationSettingsPage() {
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground">Provider:</span>
-                                        <p className="font-medium capitalize text-emerald-600">{profile.provider === 'keycloak' ? 'Keycloak' : 'Firebase Auth'}</p>
+                                        <p className="font-medium capitalize text-emerald-600">{profile.provider === 'supabase' ? 'Supabase Auth' : 'Firebase Auth'}</p>
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground">SSO Configured:</span>
@@ -392,30 +376,14 @@ export default function AuthenticationSettingsPage() {
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="firebase">Firebase Auth</SelectItem>
-                                        <SelectItem value="keycloak">Keycloak</SelectItem>
+                                        <SelectItem value="supabase">Supabase Auth</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-                            {config.provider === 'keycloak' && (
-                                <>
-                                    <div className="space-y-2 col-span-2">
-                                        <Label>Keycloak URL</Label>
-                                        <Input value={config.keycloakUrl || ''} onChange={e => handleFieldChange('keycloakUrl', e.target.value)} placeholder="http://localhost:8080" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Realm</Label>
-                                        <Input value={config.keycloakRealm || ''} onChange={e => handleFieldChange('keycloakRealm', e.target.value)} placeholder="myrealm" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Client ID (Public)</Label>
-                                        <Input value={config.keycloakClientId || ''} onChange={e => handleFieldChange('keycloakClientId', e.target.value)} placeholder="myclient" />
-                                    </div>
-                                    <div className="space-y-2 col-span-2">
-                                        <Label>Admin Client Secret (For User Autogen)</Label>
-                                        <Input type="password" value={config.keycloakAdminClientSecret || ''} onChange={e => handleFieldChange('keycloakAdminClientSecret', e.target.value)} placeholder="Enter service account secret" />
-                                        <p className="text-xs text-muted-foreground mt-1">Required if you want to create Keycloak users directly from the ProjectFlow User panel.</p>
-                                    </div>
-                                </>
+                            {config.provider === 'supabase' && (
+                                <div className="col-span-2 p-3 bg-muted/40 rounded-md border text-sm text-muted-foreground">
+                                    Supabase Auth is managed automatically via the Supabase URL and Publishable Key configured in Database settings.
+                                </div>
                             )}
                         </div>
 

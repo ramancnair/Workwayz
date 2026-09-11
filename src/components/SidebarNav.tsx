@@ -106,23 +106,12 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       localStorage.removeItem('projectflow_user');
       document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
-      if (sessionProvider === 'keycloak') {
-        // Terminate the Keycloak SSO session server-side to prevent re-entry via session cookie
-        const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
-        const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM;
-        const keycloakClientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
-        if (keycloakUrl && keycloakRealm && keycloakClientId) {
-          try {
-            const Keycloak = (await import('keycloak-js')).default;
-            const keycloak = new Keycloak({ url: keycloakUrl, realm: keycloakRealm, clientId: keycloakClientId });
-            await keycloak.init({ checkLoginIframe: false });
-            if (keycloak.authenticated) {
-              await keycloak.logout({ redirectUri: window.location.origin + '/' });
-              return; // keycloak.logout() triggers a redirect, so stop here
-            }
-          } catch (kcErr) {
-            console.warn('[Logout] Keycloak session termination failed:', kcErr);
-          }
+      if (sessionProvider === 'supabase') {
+        try {
+          const { supabase } = await import('@/lib/supabase');
+          await supabase?.auth.signOut();
+        } catch (supaErr) {
+          console.warn('[Logout] Supabase signOut failed:', supaErr);
         }
       } else if (auth) {
         // Firebase signOut
