@@ -57,6 +57,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTestDataStudio, triggerOpenTestDataStudio } from "@/dev-tools";
 
 type PmSidebarNavProps = {
   activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing' | 'quality' | 'my-projects';
@@ -66,6 +67,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
+  const { isEnabled: isTestDataStudioEnabled } = useTestDataStudio();
   const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string }>({ name: '', email: '', avatar: '' });
   const [showWizard, setShowWizard] = useState(false);
 
@@ -259,6 +261,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: '/portfolio-settings/archive',
       label: 'Archive',
       icon: Archive,
+      group: 'portfolio'
+    },
+    {
+      id: 'test-data-studio',
+      href: '/portfolio-settings/test-data-studio',
+      label: 'Test Data Studio',
+      icon: Sparkles,
       group: 'portfolio'
     },
     {

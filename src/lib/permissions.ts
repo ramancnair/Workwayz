@@ -34,6 +34,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.startsWith('/portfolio-settings/authentication')) return 'Authentication';
   if (pathname.startsWith('/portfolio-settings/ai-config')) return 'AI Config';
   if (pathname.startsWith('/portfolio-settings/archive')) return 'Archive';
+  if (pathname.startsWith('/portfolio-settings/test-data-studio')) return 'Test Data Studio';
   if (pathname.startsWith('/portfolio-settings')) return 'Access Settings';
 
   // Portfolio Level Pages
@@ -483,6 +484,7 @@ export function getPermittedFallbackRoute(
         { name: 'Authentication', path: '/portfolio-settings/authentication' },
         { name: 'AI Config', path: '/portfolio-settings/ai-config' },
         { name: 'Archive', path: '/portfolio-settings/archive' },
+        { name: 'Test Data Studio', path: '/portfolio-settings/test-data-studio' },
       ],
     },
     {

@@ -223,6 +223,7 @@ const pageSections: PageSection[] = [
           'AI Config',
           'Setup Wizard',
           'Archive',
+          'Test Data Studio',
         ],
       },
       {

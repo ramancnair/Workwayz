@@ -40,7 +40,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Bot, ShieldCheck, ShieldOff, Clock, UserCheck, Search } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, ShieldCheck, ShieldOff, Clock, UserCheck, Search } from 'lucide-react';
 import { type User, type AccessLevel } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -72,15 +72,6 @@ const userFormSchema = z.object({
   }),
 });
 
-const autoGenFormSchema = z.object({
-  Administrator: z.coerce.number().min(0).default(0),
-  'Senior Management': z.coerce.number().min(0).default(0),
-  'Project Manager': z.coerce.number().min(0).default(0),
-  Lead: z.coerce.number().min(0).default(0),
-  'Team Member': z.coerce.number().min(0).default(0),
-  PMO: z.coerce.number().min(0).default(0),
-});
-
 // Helper to remove undefined values from an object before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
     const sanitized: any = {};
@@ -109,9 +100,6 @@ export default function UsersPage() {
 
   const [filters, setFilters] = useState({ search: '', accessLevel: 'all' });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'firstName', desc: false });
-  
-  const [isAutoGenOpen, setIsAutoGenOpen] = useState(false);
-  const [isAutoGenSubmitting, setIsAutoGenSubmitting] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<{ empId: string; accessLevel: AccessLevel; name: string; email: string } | null>(null);
 
@@ -152,19 +140,7 @@ export default function UsersPage() {
   const form = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
   });
-  
-  const autoGenForm = useForm<z.infer<typeof autoGenFormSchema>>({
-    resolver: zodResolver(autoGenFormSchema),
-    defaultValues: {
-        Administrator: 0,
-        'Senior Management': 0,
-        'Project Manager': 0,
-        Lead: 0,
-        'Team Member': 0,
-        PMO: 0,
-    }
-  });
-  
+
   useEffect(() => {
     if (!db) { console.error('DB is null, aborting onSubmit!'); return; }
     const q = query(collection(db, 'employees'), where('isDeleted', '!=', true));
@@ -252,77 +228,6 @@ export default function UsersPage() {
       console.error("Identity push failed", e);
       toast({ variant: "destructive", title: "Auth Sync Warning", description: "User saved to DB but identity creation failed. See console." });
     }
-  };
-  
-  const onAutoGenSubmit = async (values: z.infer<typeof autoGenFormSchema>) => {
-    if(!db) return;
-    setIsAutoGenSubmitting(true);
-    
-    try {
-        const batch = writeBatch(db);
-        const usersSnapshot = await getDocs(collection(db, 'employees'));
-        
-        let highestId = 0;
-        usersSnapshot.forEach((doc: any) => {
-            const empId = doc.id;
-            if (empId.startsWith('E')) {
-                const numPart = parseInt(empId.substring(1));
-                if (!isNaN(numPart) && numPart > highestId) {
-                    highestId = numPart;
-                }
-            }
-        });
-        
-        let currentIdCounter = highestId + 1;
-        
-        for (const level of accessLevels) {
-            const count = values[level];
-            for (let i = 0; i < count; i++) {
-                const empId = `E${currentIdCounter.toString().padStart(3, '0')}`;
-                const firstName = `${level.replace(' ', '')}${i+1}`;
-                const lastName = 'User';
-                const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@nair.com`;
-                
-                const is2025 = Math.random() < 0.75;
-                const startDate = is2025
-                  ? new Date(new Date('2025-01-10T00:00:00Z').getTime() + Math.random() * (new Date('2025-12-15T23:59:59Z').getTime() - new Date('2025-01-10T00:00:00Z').getTime())).toISOString()
-                  : new Date(new Date('2026-01-05T00:00:00Z').getTime() + Math.random() * (new Date('2026-05-25T23:59:59Z').getTime() - new Date('2026-01-05T00:00:00Z').getTime())).toISOString();
-
-                const newUser: Omit<User, 'id'> = {
-                    empId,
-                    firstName,
-                    lastName,
-                    email,
-                    phone: '555-555-5555',
-                    experience: Math.floor(Math.random() * 10) + 1,
-                    employmentStartDate: startDate,
-                    accessLevel: level,
-                    avatar: '',
-                    isDeleted: false,
-                    isEnabled: true,
-                    costCurrency: 'USD',
-                    costAmount: (Math.floor(Math.random() * 80) + 40) * 1000,
-                };
-                
-                const userRef = doc(db, 'employees', empId);
-                batch.set(userRef, sanitizeForFirestore(newUser));
-                
-                // Construct shadow identity in the auth pool
-                await createIdentityInAuthPool(email, firstName, lastName, level);
-                
-                currentIdCounter++;
-            }
-        }
-        
-        await batch.commit();
-        toast({ title: 'Success', description: 'Users generated and pushed to Authentication.' });
-        setIsAutoGenOpen(false);
-    } catch (e) {
-        console.error("Error auto-generating users", e);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not generate users.' });
-    }
-    
-    setIsAutoGenSubmitting(false);
   };
 
   const handleDeleteConfirm = async () => {
@@ -537,47 +442,6 @@ export default function UsersPage() {
                 Delete Selected ({selectedUsers.length})
             </Button>
           )}
-          <Dialog open={isAutoGenOpen} onOpenChange={setIsAutoGenOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline">
-                    <Bot className="mr-2 h-4 w-4" />
-                    User Autogen
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Auto-Generate Users</DialogTitle>
-                    <DialogDescription>Enter the number of users to create for each access level.</DialogDescription>
-                </DialogHeader>
-                <Form {...autoGenForm}>
-                    <form onSubmit={autoGenForm.handleSubmit(onAutoGenSubmit)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            {accessLevels.map(level => (
-                                <FormField
-                                    key={level}
-                                    control={autoGenForm.control}
-                                    name={level}
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{level}</FormLabel>
-                                        <FormControl>
-                                        <Input type="number" placeholder="" {...field} value={field.value ?? ''} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                            ))}
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isAutoGenSubmitting}>
-                                {isAutoGenSubmitting ? 'Generating...' : 'Generate Users'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-          </Dialog>
           <Button onClick={() => handleDialogOpen(null)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add User

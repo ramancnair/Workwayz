@@ -294,6 +294,7 @@ export type ProjectSettings = {
   allocatedPaidLeavesPerYear?: number;
   allowCarryOver?: boolean;
   carryOverLimit?: number;
+  testDataStudioEnabled?: boolean;
 };
 
 export type ImpactedSystemCategory = 'Technology' | 'Function';
