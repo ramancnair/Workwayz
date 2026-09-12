@@ -29,6 +29,8 @@ const DEFAULT_UNIT_TESTS: Record<string, string> = {
   'TC-UNIT-AUTH-001': '4ms',
   'TC-COMP-STAT-001': '28ms',
   'TC-COMP-HDR-001': '72ms',
+  'TC-AGENT-TOOL-001': '45ms',
+  'TC-AGENT-RETR-001': '55ms',
 };
 
 export function updateTestMatrix(options: MatrixSyncOptions): void {

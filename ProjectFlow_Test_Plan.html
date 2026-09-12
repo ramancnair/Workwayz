@@ -408,7 +408,7 @@
         </div>
         <div class="sync-stat-item">
           <span>🎭 Playwright E2E:</span>
-          <span id="e2eSummaryVal" class="sync-stat-val" style="background:#dcfce7; color:#15803d;">0 / 31 Passed</span>
+          <span id="e2eSummaryVal" class="sync-stat-val" style="background:#dcfce7; color:#15803d;">33 / 33 Passed</span>
         </div>
         <div class="sync-stat-item">
           <span>⚡ Vitest Unit:</span>
@@ -416,7 +416,7 @@
         </div>
         <div class="sync-stat-item">
           <span>🕒 Last Synced:</span>
-          <span id="lastSyncedTime" style="font-family: monospace; font-size: 0.82rem; color: #475569;">12 Sept 2026, 01:18:17</span>
+          <span id="lastSyncedTime" style="font-family: monospace; font-size: 0.82rem; color: #475569;">12 Sept 2026, 18:58:36</span>
         </div>
       </div>
 
@@ -428,6 +428,7 @@
         <button class="filter-btn" onclick="filterCategory('auth')">Auth &amp; Access</button>
         <button class="filter-btn" onclick="filterCategory('portfolio')">Portfolio Hub</button>
         <button class="filter-btn" onclick="filterCategory('project')">Project Hub</button>
+        <button class="filter-btn" onclick="filterCategory('agent')">🤖 FlowPilot Agent</button>
       </div>
 
       <table class="test-table" id="testTable">
@@ -755,7 +756,7 @@
             <td>Verifies Tailwind merge `cn`, URL parsing/formatting, currency decimals, user initials, and sprint ID generation.</td>
             <td><span class="status-tag tag-unit">Unit</span></td>
             <td><code>utils.test.ts</code></td>
-            <td class="tc-status" data-tc-status="TC-UNIT-UTIL-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">9ms</span></td>
+            <td class="tc-status" data-tc-status="TC-UNIT-UTIL-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">8ms</span></td>
           </tr>
           <tr data-tc-id="TC-UNIT-AUTH-001" data-category="unit">
             <td class="tc-id">TC-UNIT-AUTH-001</td>
@@ -773,7 +774,7 @@
             <td>Verifies StatsCard rendering with title, value, Lucide icons, and trend descriptions.</td>
             <td><span class="status-tag tag-component">Component</span></td>
             <td><code>StatsCard.test.tsx</code></td>
-            <td class="tc-status" data-tc-status="TC-COMP-STAT-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">27ms</span></td>
+            <td class="tc-status" data-tc-status="TC-COMP-STAT-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">28ms</span></td>
           </tr>
           <tr data-tc-id="TC-COMP-HDR-001" data-category="unit">
             <td class="tc-id">TC-COMP-HDR-001</td>
@@ -782,7 +783,35 @@
             <td>Verifies PageHeader heading hierarchy, title, description, and action button slot.</td>
             <td><span class="status-tag tag-component">Component</span></td>
             <td><code>PageHeader.test.tsx</code></td>
-            <td class="tc-status" data-tc-status="TC-COMP-HDR-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">75ms</span></td>
+            <td class="tc-status" data-tc-status="TC-COMP-HDR-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">81ms</span></td>
+          </tr>
+          <!-- FlowPilot Agent Quality & Tool Engine -->
+          <tr data-tc-id="TC-AGENT-TOOL-001" data-category="unit agent">
+            <td class="tc-id">TC-AGENT-TOOL-001</td>
+            <td><span class="top-tab-badge">AI Hub: Agent</span></td>
+            <td><span class="side-tab-badge">flowpilot-tools.ts</span></td>
+            <td>Validates complete contract parity for all 201 tools, Zod input/output schemas, safe execution containment, and action recording.</td>
+            <td><span class="status-tag tag-unit">Unit / AI</span></td>
+            <td><code>flowpilot-tools.test.ts</code></td>
+            <td class="tc-status" data-tc-status="TC-AGENT-TOOL-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">49ms</span></td>
+          </tr>
+          <tr data-tc-id="TC-AGENT-RETR-001" data-category="unit agent">
+            <td class="tc-id">TC-AGENT-RETR-001</td>
+            <td><span class="top-tab-badge">AI Hub: Discovery</span></td>
+            <td><span class="side-tab-badge">tool-retriever.ts</span></td>
+            <td>Evaluates BM25 and semantic hybrid retrieval recall across sprint planning, kanban updates, RAID governance, and billing queries.</td>
+            <td><span class="status-tag tag-unit">Unit / AI</span></td>
+            <td><code>tool-retriever.test.ts</code></td>
+            <td class="tc-status" data-tc-status="TC-AGENT-RETR-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">64ms</span></td>
+          </tr>
+          <tr data-tc-id="TC-AGENT-001" data-category="e2e agent">
+            <td class="tc-id">TC-AGENT-001</td>
+            <td><span class="top-tab-badge">AI Hub: Chat UI</span></td>
+            <td><span class="side-tab-badge">FlowPilotChatWidget</span></td>
+            <td>Verifies browser chat drawer toggle, user prompt submission, streaming state, action card rendering, and client execution navigation.</td>
+            <td><span class="status-tag tag-e2e">E2E / Playwright</span></td>
+            <td><code>09-flowpilot-agent.spec.ts</code></td>
+            <td class="tc-status" data-tc-status="TC-AGENT-001"><span class="status-tag tag-pass">PASS</span> <span class="tc-duration">3.8s</span></td>
           </tr>
         </tbody>
       </table>

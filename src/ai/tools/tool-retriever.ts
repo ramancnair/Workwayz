@@ -252,8 +252,26 @@ export async function retrieveCandidateTools(ctx: RetrievalContext): Promise<Too
       finalScore = normBm25;
     }
 
-    // Small boost if the tool name directly appears in user query
-    if (ctx.lastUserMessage.toLowerCase().includes(tool.name.toLowerCase())) {
+    // Action verb intent alignment boost
+    const queryLower = ctx.lastUserMessage.toLowerCase();
+    const isCreateIntent = /\b(create|add|new|log|generate|make|record|register)\b/.test(queryLower);
+    const isDeleteIntent = /\b(delete|remove|purge|trash)\b/.test(queryLower);
+    const isUpdateIntent = /\b(update|edit|change|modify|move|set|assign|mark|switch)\b/.test(queryLower);
+    const isQueryIntent = /\b(show|get|view|list|query|fetch|display|find|overview|details|summary|check)\b/.test(queryLower);
+
+    const toolNameLower = tool.name.toLowerCase();
+    if (isCreateIntent && (toolNameLower.startsWith('create') || toolNameLower.startsWith('add') || toolNameLower.startsWith('log') || toolNameLower.startsWith('bulkcreate') || toolNameLower.startsWith('autogen'))) {
+      finalScore += 0.35;
+    } else if (isDeleteIntent && (toolNameLower.startsWith('delete') || toolNameLower.startsWith('remove') || toolNameLower.startsWith('archive') || toolNameLower.startsWith('permanentlydelete'))) {
+      finalScore += 0.35;
+    } else if (isUpdateIntent && (toolNameLower.startsWith('update') || toolNameLower.startsWith('set') || toolNameLower.startsWith('reassign') || toolNameLower.startsWith('move') || toolNameLower.startsWith('assign') || toolNameLower.startsWith('restore') || toolNameLower.startsWith('confirm'))) {
+      finalScore += 0.35;
+    } else if (isQueryIntent && (toolNameLower.startsWith('query') || toolNameLower.startsWith('get') || toolNameLower.startsWith('list') || toolNameLower.startsWith('filter') || toolNameLower.startsWith('export'))) {
+      finalScore += 0.35;
+    }
+
+    // Direct tool name match boost
+    if (queryLower.includes(tool.name.toLowerCase())) {
       finalScore += 0.5;
     }
 

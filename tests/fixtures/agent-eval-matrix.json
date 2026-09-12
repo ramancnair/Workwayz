@@ -1,0 +1,93 @@
+[
+  {
+    "id": "EVAL-001",
+    "domain": "portfolio",
+    "prompt": "Create a new strategic portfolio called AI Innovations for next quarter",
+    "expectedTools": ["createPortfolio"],
+    "requiredParams": ["name"]
+  },
+  {
+    "id": "EVAL-002",
+    "domain": "work_items",
+    "prompt": "Create a high priority bug titled Session expiration logout loop in project alpha",
+    "expectedTools": ["createWorkItem"],
+    "requiredParams": ["projectId", "title"]
+  },
+  {
+    "id": "EVAL-003",
+    "domain": "work_items",
+    "prompt": "Add a user story for OAuth2 social sign-in with Google and Apple with 8 hours effort",
+    "expectedTools": ["createWorkItem"],
+    "requiredParams": ["projectId", "title"]
+  },
+  {
+    "id": "EVAL-004",
+    "domain": "sprints",
+    "prompt": "Create Sprint 3 for project alpha starting 2026-10-01 ending 2026-10-15 with goal to deliver MVP",
+    "expectedTools": ["createSprint"],
+    "requiredParams": ["projectId", "title"]
+  },
+  {
+    "id": "EVAL-005",
+    "domain": "kanban",
+    "prompt": "Move story ST-101 to In Progress on the kanban board",
+    "expectedTools": ["updateWorkItem"],
+    "requiredParams": ["projectId", "storyIdOrDocId"]
+  },
+  {
+    "id": "EVAL-006",
+    "domain": "raid",
+    "prompt": "Log a critical risk about cloud provider API rate limits exceeding 100 requests per second",
+    "expectedTools": ["createRaidItem"],
+    "requiredParams": ["projectId", "raidType", "description"]
+  },
+  {
+    "id": "EVAL-007",
+    "domain": "raid",
+    "prompt": "Add an assumption that the client will deliver third-party API keys before sprint start",
+    "expectedTools": ["createRaidItem"],
+    "requiredParams": ["projectId", "raidType", "description"]
+  },
+  {
+    "id": "EVAL-008",
+    "domain": "qa",
+    "prompt": "Create a test plan called Regression Suite Release 2.0 for project alpha",
+    "expectedTools": ["createTestPlan"],
+    "requiredParams": ["projectId", "title"]
+  },
+  {
+    "id": "EVAL-009",
+    "domain": "qa",
+    "prompt": "Add a functional test case for verifying password reset token validation",
+    "expectedTools": ["createTestCase", "bulkCreateTestCases"],
+    "requiredParams": ["projectId", "title"]
+  },
+  {
+    "id": "EVAL-010",
+    "domain": "financials",
+    "prompt": "Show fixed bid contract value, billed totals, and milestone invoices for this project",
+    "expectedTools": ["queryFbBillingSummary", "queryPaymentMilestones"],
+    "requiredParams": ["projectId"]
+  },
+  {
+    "id": "EVAL-011",
+    "domain": "financials",
+    "prompt": "Update the total fixed bid contract value to 250000 dollars",
+    "expectedTools": ["updateFbContractValue"],
+    "requiredParams": ["projectId", "contractValue"]
+  },
+  {
+    "id": "EVAL-012",
+    "domain": "resources",
+    "prompt": "Check resource workload and overallocated engineers across all projects",
+    "expectedTools": ["queryOverallocatedResources", "queryResourceUtilization"],
+    "requiredParams": []
+  },
+  {
+    "id": "EVAL-013",
+    "domain": "holidays",
+    "prompt": "List all configured company public holidays for the current calendar year",
+    "expectedTools": ["queryHolidays"],
+    "requiredParams": []
+  }
+]
