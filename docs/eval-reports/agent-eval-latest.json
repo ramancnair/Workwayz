@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-12T13:09:10.798Z",
+  "timestamp": "2026-09-12T13:39:39.103Z",
   "mode": "retrieval-benchmark",
   "total": 13,
   "passed": 13,
@@ -20,7 +20,7 @@
         "createSprint"
       ],
       "passed": true,
-      "durationMs": 33
+      "durationMs": 39
     },
     {
       "id": "EVAL-002",
@@ -88,7 +88,7 @@
         "updateDependencyStatus"
       ],
       "passed": true,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "id": "EVAL-006",
@@ -105,7 +105,7 @@
         "deleteRisk"
       ],
       "passed": true,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "id": "EVAL-007",
@@ -175,7 +175,7 @@
         "queryProjectResourceFinancials"
       ],
       "passed": true,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "id": "EVAL-011",
