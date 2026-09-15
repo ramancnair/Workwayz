@@ -642,7 +642,10 @@ export function FlowPilotChatWidget() {
   };
 
   if (!currentUser) {
-    return null;
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('projectflow_user') : null;
+    if (!stored) {
+      return null;
+    }
   }
 
   return (

@@ -17,7 +17,7 @@ function isUserAuthenticated(): boolean {
     const userStr = localStorage.getItem('projectflow_user');
     if (!userStr) return false;
     const session = JSON.parse(userStr);
-    return Boolean(session?.email && (session?.uid || session?.empId));
+    return Boolean(session && (session.email || session.empId || session.uid));
   } catch {
     return false;
   }
@@ -25,10 +25,9 @@ function isUserAuthenticated(): boolean {
 
 export function FlowPilotWidgetClient() {
   const pathname = usePathname();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => isUserAuthenticated());
 
   useEffect(() => {
-    // Initial check
     setIsAuthenticated(isUserAuthenticated());
 
     const handleAuthCheck = () => {
@@ -44,7 +43,7 @@ export function FlowPilotWidgetClient() {
       window.removeEventListener('focus', handleAuthCheck);
       clearInterval(interval);
     };
-  }, []);
+  }, [pathname]);
 
   const isPublicRoute =
     PUBLIC_PATHS.includes(pathname) ||
