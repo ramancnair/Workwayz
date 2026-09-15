@@ -3,11 +3,11 @@ import { AccessLevel } from '@/types';
 export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, string[]> = {
   'Senior Management': [
     'Project Home', 'Portfolio Dashboard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ],
   'Project Manager': [
     'Project Home', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
   ],
   'Lead': [
     'Project Home', 'User List', 'Holiday Calendar', 'Leave Tracker',
@@ -19,7 +19,7 @@ export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>
   ],
   'PMO': [
     'Project Home', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Tracker', 'Billing', 'Billing Rate',
-    'Project Status', 'PM Dashboard', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
+    'Project Status', 'PM Dashboard', 'FP PM Dash', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ]
 };
 
@@ -68,6 +68,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.includes('/testing/defect-tracker')) return 'Defect Tracker';
   if (pathname.includes('/project-details/project-status')) return 'Project Status';
   if (pathname.includes('/project-details/pm-dashboard')) return 'PM Dashboard';
+  if (pathname.includes('/project-details/fp-pm-dash')) return 'FP PM Dash';
   if (pathname.includes('/project-details/specifications')) return 'Specifications';
   if (pathname.includes('/initial-estimation/specifications')) return 'Specifications (Initial Estimation)';
   if (pathname.includes('/initial-estimation/project-status')) return 'Project Status (Initial Estimation)';
@@ -115,6 +116,8 @@ export function hasPagePermission(
     ? ['Test Cases', 'Test Backlog', 'Test Backlogs']
     : (pageName === 'FP Portfolio Dash' || pageName === 'FP Dashboard')
     ? ['FP Portfolio Dash', 'FP Dashboard']
+    : (pageName === 'FP PM Dash' || pageName === 'PM Dashboard')
+    ? ['FP PM Dash', 'PM Dashboard']
     : [pageName];
 
   if (customPageAccess) {
@@ -138,6 +141,7 @@ export const allProjectPageNames = [
   'Project Status (Initial Estimation)',
   'Project Status',
   'PM Dashboard',
+  'FP PM Dash',
   'Specifications',
   'Project Resources',
   'Worklog',
@@ -217,6 +221,7 @@ export function getProjectLandingPage(
         { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
         { name: 'Defects', path: `${basePath}/testing/defects` },
         { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+        { name: 'FP PM Dash', path: `${basePath}/project-details/fp-pm-dash` },
         { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
         { name: 'Worklog', path: `${basePath}/resources/worklog` },
         { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
@@ -249,6 +254,7 @@ export function getProjectLandingPage(
         { name: 'Defect Tracker', path: `${basePath}/development/defect-tracker` },
         { name: 'Specifications', path: `${basePath}/project-details/specifications` },
         { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+        { name: 'FP PM Dash', path: `${basePath}/project-details/fp-pm-dash` },
         { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
         { name: 'Test Cases', path: `${basePath}/testing/test-cases` },
         { name: 'Test Backlog', path: `${basePath}/testing/test-cases` },
@@ -347,6 +353,7 @@ export function getPermittedFallbackRoute(
         candidates: [
           { name: 'Project Status', path: `${basePath}/project-details/project-status` },
           { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+          { name: 'FP PM Dash', path: `${basePath}/project-details/fp-pm-dash` },
           { name: 'Specifications', path: `${basePath}/project-details/specifications` },
         ],
       },

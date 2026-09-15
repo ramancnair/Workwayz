@@ -36,6 +36,8 @@ describe('ProjectFlow Permissions Matrix', () => {
       expect(getPageNameForRoute(`/projects/${pid}/development/kanban`)).toBe('Kanban Board');
       expect(getPageNameForRoute(`/projects/${pid}/testing/dashboard`)).toBe('Test Dashboard');
       expect(getPageNameForRoute(`/projects/${pid}/testing/test-cases`)).toBe('Test Cases');
+      expect(getPageNameForRoute(`/projects/${pid}/project-details/pm-dashboard`)).toBe('PM Dashboard');
+      expect(getPageNameForRoute(`/projects/${pid}/project-details/fp-pm-dash`)).toBe('FP PM Dash');
       expect(getPageNameForRoute(`/projects/${pid}/raid-dashboard`)).toBe('RAID Dashboard');
       expect(getPageNameForRoute(`/projects/${pid}/risks`)).toBe('Risks');
       expect(getPageNameForRoute(`/projects/${pid}/resources/project-resources`)).toBe('Project Resources');
@@ -95,6 +97,22 @@ describe('ProjectFlow Permissions Matrix', () => {
       expect(hasPagePermission('PMO', 'PMO Documents')).toBe(true);
       // Denied development operations
       expect(hasPagePermission('PMO', 'Grooming')).toBe(false);
+    });
+
+    it('FP PM Dash should match PM Dashboard visibility across all roles', () => {
+      // Allowed roles
+      expect(hasPagePermission('Administrator', 'FP PM Dash')).toBe(true);
+      expect(hasPagePermission('Senior Management', 'FP PM Dash')).toBe(true);
+      expect(hasPagePermission('Project Manager', 'FP PM Dash')).toBe(true);
+      expect(hasPagePermission('PMO', 'FP PM Dash')).toBe(true);
+
+      // Denied roles
+      expect(hasPagePermission('Lead', 'FP PM Dash')).toBe(false);
+      expect(hasPagePermission('Team Member', 'FP PM Dash')).toBe(false);
+
+      // Custom override on PM Dashboard should cascade to FP PM Dash
+      const customOverrides = { 'PM Dashboard': true };
+      expect(hasPagePermission('Team Member', 'FP PM Dash', customOverrides)).toBe(true);
     });
 
     it('Custom page access overrides should be respected', () => {

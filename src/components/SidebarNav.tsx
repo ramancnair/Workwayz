@@ -64,6 +64,7 @@ import {
   HeartPulse,
   Hourglass,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useProject } from "@/context/ProjectContext";
@@ -212,6 +213,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/project-details/pm-dashboard`,
       label: "PM Dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      href: `${basePath}/project-details/fp-pm-dash`,
+      label: "FP PM Dash",
+      icon: Sparkles,
     },
     {
       href: `${basePath}/project-details/specifications`,
