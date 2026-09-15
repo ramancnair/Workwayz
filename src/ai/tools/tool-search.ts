@@ -41,7 +41,7 @@ export const searchToolsTool = ai.defineTool(
     const { query, limit = 5 } = input;
     const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
 
-    const scored = TOOL_CATALOG.map((tool) => {
+    const scored = TOOL_CATALOG.filter((tool) => tool.name !== 'createUser').map((tool) => {
       let score = 0;
       const lowerName = tool.name.toLowerCase();
       const lowerDesc = tool.description.toLowerCase();

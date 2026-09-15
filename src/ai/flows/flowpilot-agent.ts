@@ -318,7 +318,13 @@ ${liveSnapshotContext}
    - Relevant candidate tools have been dynamically retrieved and loaded into your tool definition context for this request.
    - If you need a specialized capability that is not present in your active tools, invoke the "searchTools" tool with your search query to discover it.
    - Execute the appropriate tool immediately when an action is requested.
-   - Return a crisp, professional confirmation summarizing the created/updated item with its ID and attributes.`;
+   - Return a crisp, professional confirmation summarizing the created/updated item with its ID and attributes.
+8. **RESTRICTED ACTIONS - USER DIRECTORY GOVERNANCE (PORTFOLIO > USERS)**:
+   - You must NOT add, create, invite, remove, or delete users from the workspace user directory (Portfolio > Users / User List).
+   - Workspace user creation and deletion are restricted administrative functions.
+   - If the user asks to add, create, register, invite, delete, or remove a user from Portfolio > Users (or the workspace directory), YOU MUST REFUSE and respond:
+     "For security and governance reasons, adding or removing users from Portfolio > Users cannot be performed through FlowPilot. Please manage users directly on the Portfolio > Users (User List) page with Administrator privileges."
+   - NEVER invoke "createUser" or any tool attempting to add or delete workspace users.`;
 
   // Format messages for Genkit
   const lastUserMessage = messages[messages.length - 1]?.content || '';
@@ -326,6 +332,27 @@ ${liveSnapshotContext}
     role: m.role === 'model' ? ('model' as const) : ('user' as const),
     content: [{ text: m.content }],
   }));
+
+  // Deterministic Guardrail: Restrict adding or removing users from Portfolio > Users through FlowPilot
+  const lowerMsg = lastUserMessage.toLowerCase();
+  const isTargetingPortfolioUsers =
+    /\b(users|user list|portfolio users|workspace users|directory|employee directory)\b/i.test(lowerMsg) ||
+    !/\b(from project|to project|project resource|team resource|for project|in project)\b/i.test(lowerMsg);
+
+  const isAddUserIntent =
+    /\b(add|create|register|invite|new|onboard)\s+(a\s+)?(user|employee|team member|account)\b/i.test(lowerMsg) ||
+    /\b(add|create|register|invite)\b.*\b(user|users)\b.*\b(to|in|into)\b.*\b(portfolio|users|user list|system|workspace)\b/i.test(lowerMsg);
+
+  const isRemoveUserIntent =
+    /\b(delete|remove|purge|trash|deactivate|drop|terminate)\s+(a\s+)?(user|employee|account)\b/i.test(lowerMsg) ||
+    /\b(delete|remove|purge|drop)\b.*\b(user|users|employee)\b.*\b(from|in|out of)?\b.*\b(portfolio|users|user list|system|workspace)\b/i.test(lowerMsg);
+
+  if ((isAddUserIntent || isRemoveUserIntent) && isTargetingPortfolioUsers) {
+    return {
+      reply: 'For security and governance reasons, adding or removing users from Portfolio > Users cannot be performed through FlowPilot. Please manage workspace users directly on the Portfolio > Users (User List) page with Administrator privileges.',
+      aiDetails,
+    };
+  }
 
   try {
     const executedActions: FlowPilotActionItem[] = [];

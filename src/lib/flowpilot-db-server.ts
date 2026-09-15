@@ -2531,8 +2531,8 @@ export async function flowpilotSetDefaultRoleBenchmarkRates(params: {
   };
 }
 
-// 51. Create User
-export async function flowpilotCreateUser(params: {
+// 51. Create User (RESTRICTED)
+export async function flowpilotCreateUser(_params: {
   email: string;
   firstName: string;
   lastName: string;
@@ -2546,69 +2546,9 @@ export async function flowpilotCreateUser(params: {
   employmentStartDate?: string;
   employmentEndDate?: string;
 }) {
-  if (!db || !params.email || !params.firstName || !params.lastName) {
-    throw new Error('Database, email, firstName, and lastName are required');
-  }
-
-  const employeesSnap = await getDocs(collection(db, 'employees'));
-  const existingEmail = employeesSnap.docs.find(
-    (d: any) => (d.data().email || '').toLowerCase() === params.email.toLowerCase()
+  throw new Error(
+    'Adding or creating users from Portfolio > Users through FlowPilot is strictly disallowed for security and governance. Please add users directly on the Portfolio > Users (User List) page with Administrator privileges.'
   );
-  if (existingEmail) {
-    throw new Error(`A user with email "${params.email}" already exists.`);
-  }
-
-  let empId = params.empId;
-  if (!empId) {
-    let highestId = 0;
-    employeesSnap.forEach((docSnap: any) => {
-      const id = docSnap.id;
-      if (id.startsWith('E')) {
-        const num = parseInt(id.substring(1), 10);
-        if (!isNaN(num) && num > highestId) highestId = num;
-      }
-    });
-    empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
-  }
-
-  const parseDate = (dStr: any) => {
-    if (!dStr) return undefined;
-    const d = new Date(dStr);
-    return isNaN(d.getTime()) ? undefined : d.toISOString();
-  };
-
-  const userPayload = sanitizeData({
-    empId,
-    firstName: params.firstName,
-    lastName: params.lastName,
-    email: params.email,
-    phone: params.phone || '555-0100',
-    role: params.role || 'Developer',
-    accessLevel: params.accessLevel || 'Team Member',
-    experience: params.experience || 3,
-    costAmount: params.costAmount !== undefined ? Math.round(Number(params.costAmount) * 100) / 100 : 65000,
-    costCurrency: params.costCurrency || 'USD',
-    employmentStartDate: parseDate(params.employmentStartDate),
-    employmentEndDate: parseDate(params.employmentEndDate),
-    avatar: '',
-    isEnabled: true,
-    isDeleted: false,
-    createdAt: new Date().toISOString(),
-  });
-
-  const userRef = doc(db, 'employees', empId);
-  await setDoc(userRef, userPayload);
-
-  return {
-    success: true,
-    id: empId,
-    empId,
-    name: `${params.firstName} ${params.lastName}`.trim(),
-    email: params.email,
-    accessLevel: params.accessLevel || 'Team Member',
-    role: params.role || 'Developer',
-    url: '/users',
-  };
 }
 
 // 52. Update User Role & Access Level

@@ -1731,31 +1731,9 @@ export async function executeFlowPilotActionOnClient(action: any) {
         return { success: true, role: params.role, url: '/billing-rate' };
       }
       case 'createUser': {
-        let empId = params.empId;
-        if (!empId) {
-          const employeesSnap = await getDocs(collection(db, 'employees'));
-          let highestId = 0;
-          employeesSnap.forEach((docSnap: any) => {
-            if (docSnap.id.startsWith('E')) {
-              const num = parseInt(docSnap.id.substring(1), 10);
-              if (!isNaN(num) && num > highestId) highestId = num;
-            }
-          });
-          empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
-        }
-        await setDoc(doc(db, 'employees', empId), {
-          empId,
-          firstName: params.firstName,
-          lastName: params.lastName,
-          email: params.email,
-          phone: params.phone || '555-0100',
-          role: params.role || 'Developer',
-          accessLevel: params.accessLevel || 'Team Member',
-          isEnabled: true,
-          isDeleted: false,
-          createdAt: new Date().toISOString(),
-        });
-        return { success: true, id: empId, empId, name: `${params.firstName} ${params.lastName}`, email: params.email, url: '/users' };
+        throw new Error(
+          'Adding or creating users from Portfolio > Users through FlowPilot is strictly disallowed for security and governance. Please add users directly on the Portfolio > Users (User List) page with Administrator privileges.'
+        );
       }
       case 'updateUserRole': {
         const employeesSnap = await getDocs(collection(db, 'employees'));

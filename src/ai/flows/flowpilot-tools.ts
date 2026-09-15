@@ -2479,11 +2479,11 @@ export const setDefaultRoleBenchmarkRatesTool = ai.defineTool(
   }
 );
 
-// 66. Tool: Create User
+// 66. Tool: Create User (RESTRICTED)
 export const createUserTool = ai.defineTool(
   {
     name: 'createUser',
-    description: 'Adds a new team member/user to the workspace directory with email, role, access level, joining date, leaving date, and Emp ID.',
+    description: 'RESTRICTED GOVERNANCE: Adding or creating users in Portfolio > Users through FlowPilot is strictly disallowed. Direct users to the Portfolio > Users page.',
     inputSchema: z.object({
       email: z.string().email().describe('User work email address.'),
       firstName: z.string().describe('First name.'),
@@ -2502,32 +2502,24 @@ export const createUserTool = ai.defineTool(
       success: z.boolean(),
       id: z.string().optional(),
       empId: z.string().optional(),
-      name: z.string(),
-      email: z.string(),
-      accessLevel: z.string(),
-      role: z.string(),
+      name: z.string().optional(),
+      email: z.string().optional(),
+      accessLevel: z.string().optional(),
+      role: z.string().optional(),
       url: z.string().optional(),
+      message: z.string().optional(),
+      error: z.string().optional(),
       needsClientExecution: z.boolean().optional(),
       params: z.any().optional(),
     }),
   },
   async (input) => {
-    let result: any;
-    try {
-      result = await flowpilotCreateUser(input);
-    } catch (err: any) {
-      result = {
-        success: true,
-        empId: input.empId || 'E999',
-        name: `${input.firstName} ${input.lastName}`,
-        email: input.email,
-        accessLevel: input.accessLevel || 'Team Member',
-        role: input.role || 'Developer',
-        url: '/users',
-        needsClientExecution: true,
-        params: input,
-      };
-    }
+    const result = {
+      success: false,
+      error: 'ACTION_RESTRICTED',
+      message: 'Adding or creating users from Portfolio > Users through FlowPilot is strictly disallowed for security and governance. Please add users directly on the Portfolio > Users (User List) page with Administrator privileges.',
+      url: '/users',
+    };
     recordExecutedAction('createUser', result, input);
     return result;
   }
