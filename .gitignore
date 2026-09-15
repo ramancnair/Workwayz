@@ -41,13 +41,18 @@ next-env.d.ts
 
 .genkit/*
 .env*
+!.env.example
 
 # firebase
 firebase-debug.log
 firestore-debug.log
 
-# local configuration profiles
+# local configuration profiles & secrets
 connections.json
+connections.*.json
+*.key
+service-account*.json
+*-service-account.json
 
 # testing sandbox
 ai-testing-sandbox/

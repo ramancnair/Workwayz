@@ -1,7 +1,36 @@
+# Git
+.git
+.github
+
+# Dependencies
 node_modules
+.npm-cache
+
+# Build outputs
 .next
 out
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+build
+*.tsbuildinfo
+
+# Environment & Secrets (NEVER bake into Docker images)
+.env*
+connections.json
+connections.*.json
+*.pem
+*.key
+service-account*.json
+*-service-account.json
+
+# Test & Debug Artifacts
+playwright-report
+test-results
+coverage
+*.log
+firebase-debug.log*
+firestore-debug.log*
+
+# IDE & Tooling
+.vscode
+.claude
+.idx
+scratch

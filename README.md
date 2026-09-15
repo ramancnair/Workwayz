@@ -130,86 +130,90 @@ npm install
 
 ---
 
-### Step 4 — Configure Environment Variables
+## Quick Start & Deployment Options
 
-Copy the example environment file and fill in your configuration:
+ProjectFlow can be run in two ways depending on your use case:
+* **Option 1: Docker Compose + In-App Setup Wizard** — *Zero-config setup for self-hosters & on-premise.*
+* **Option 2: Local Development / Cloud Hosting via `.env`** — *Ideal for contributors, DevOps, and cloud deployment.*
+
+---
+
+### Option 1 — Docker Compose (Recommended for Self-Hosting)
+
+The fastest way to deploy ProjectFlow locally or on a server:
 
 ```bash
-cp .env.example .env
+# 1. Clone the repository
+git clone https://github.com/ramancnair/ProjectFlow.git
+cd ProjectFlow
+
+# 2. Start the container stack
+docker compose up -d
 ```
 
-Open `.env` and set the required values:
+1. Open your browser to **[http://localhost:3000](http://localhost:3000)**.
+2. If this is your first run, ProjectFlow will launch the **In-App Setup Wizard** (`/setup-wizard`).
+3. Follow the on-screen steps to select your backend (**Firebase**, **Supabase Cloud**, or **Supabase Docker**) and enter your API keys.
+4. Settings are automatically persisted inside the Docker named volume (`projectflow-data`), surviving restarts and updates.
 
+---
+
+### Option 2 — Local Development / Cloud Hosting
+
+#### Step 1 — Install Dependencies
+Ensure you have **Node.js 18+** installed.
+```bash
+git clone https://github.com/ramancnair/ProjectFlow.git
+cd ProjectFlow
+npm install
+```
+
+#### Step 2 — Configure Environment Variables
+Copy the template `.env.example` to `.env.local`:
+```bash
+cp .env.example .env.local
+```
+
+Configure your chosen database and AI provider:
+
+##### A. Using Supabase Cloud (Managed Postgres)
 ```env
-# Firebase Configuration (if using Firebase)
+NEXT_PUBLIC_DB_PROVIDER=supabase
+NEXT_PUBLIC_AUTH_PROVIDER=supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+GEMINI_API_KEY=your_google_gemini_api_key
+```
+
+##### B. Using Supabase Docker (Self-Hosted / Local)
+```env
+NEXT_PUBLIC_DB_PROVIDER=supabase
+NEXT_PUBLIC_AUTH_PROVIDER=supabase
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_local_anon_key
+GEMINI_API_KEY=your_google_gemini_api_key
+```
+
+##### C. Using Firebase (Cloud Firestore & Auth)
+```env
+NEXT_PUBLIC_DB_PROVIDER=firebase
+NEXT_PUBLIC_AUTH_PROVIDER=firebase
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-
-# Supabase Configuration (if using Supabase)
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-
-# AI (Google Gemini via Genkit)
-GOOGLE_GENAI_API_KEY=your_gemini_api_key
-
-# Keycloak (if using Keycloak authentication)
-NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
-NEXT_PUBLIC_KEYCLOAK_REALM=projectflow
-NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=projectflow-app
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+GEMINI_API_KEY=your_google_gemini_api_key
 ```
 
----
-
-### Step 5 — Keycloak Setup *(Optional — for Enterprise Auth)*
-
-Keycloak provides enterprise-grade authentication with SSO, LDAP, and role-based access.
-
-**Run Keycloak via Docker (recommended):**
-```bash
-docker run -d \
-  --name keycloak \
-  -p 8080:8080 \
-  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
-  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
-  quay.io/keycloak/keycloak:26.2.4 start-dev
-```
-
-**Configure Keycloak:**
-1. Open [http://localhost:8080](http://localhost:8080) and log in as `admin / admin`
-2. Create a new **Realm** named `projectflow`
-3. Create a new **Client** with:
-   - Client ID: `projectflow-app`
-   - Client Protocol: `openid-connect`
-   - Root URL: `http://localhost:9002`
-4. Set the redirect URI to `http://localhost:9002/*`
-5. Create your users and assign roles
-
----
-
-### Step 6 — Run the Development Server
-
+#### Step 3 — Run the Development Server
 ```bash
 npm run dev
 ```
+Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
-Open your browser and navigate to: **[http://localhost:9002](http://localhost:9002)**
-
----
-
-### Step 7 — Run AI Services *(Optional — for Genkit AI features)*
-
-In a separate terminal:
-```bash
-npm run genkit:dev
-```
-
-This starts the Genkit AI development server and enables all AI-powered features.
-
----
-
-### Production Build
-
+#### Step 4 — Production Build
 ```bash
 npm run build
 npm start
