@@ -27,6 +27,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Security check: Only authenticated users may interact with the AI agent
+    if (!body.currentUser || (!body.currentUser.email && !body.currentUser.empId)) {
+      return NextResponse.json(
+        { reply: 'Unauthorized: You must be logged in to interact with FlowPilot.' },
+        { status: 401 }
+      );
+    }
+
     const result = await runFlowPilotAgent(body);
     const response = NextResponse.json(result);
 

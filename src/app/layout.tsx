@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
-import { FlowPilotWidgetClient } from "@/components/flowpilot/FlowPilotWidgetClient";
 import { GlobalErrorReporter } from "@/components/GlobalErrorReporter";
 
 export const metadata: Metadata = {
@@ -37,7 +36,6 @@ export default function RootLayout({
           <SupabaseBootstrap />
           <SetupInterceptor />
           {children}
-          <FlowPilotWidgetClient />
           <Toaster />
         </ThemeProvider>
       </body>

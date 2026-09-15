@@ -155,7 +155,17 @@ export function FlowPilotChatWidget() {
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProjectName, setSelectedProjectName] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('projectflow_user');
+        return stored ? JSON.parse(stored) : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [aiDetails, setAiDetails] = useState<AiDetailsInfo | null>(null);
@@ -219,11 +229,12 @@ export function FlowPilotChatWidget() {
   };
 
   useEffect(() => {
+    if (!currentUser) return;
     refreshAiDetails();
     if (isOpen) {
       refreshRateStats();
     }
-  }, [isOpen]);
+  }, [isOpen, currentUser]);
 
   const handleSelectModel = async (provider: string, model: string) => {
     try {
@@ -262,15 +273,20 @@ export function FlowPilotChatWidget() {
   // Load user and project list
   useEffect(() => {
     const storedUser = localStorage.getItem('projectflow_user');
-    if (storedUser) {
-      try {
-        setCurrentUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Failed to parse user from localStorage', e);
-      }
+    if (!storedUser) {
+      setCurrentUser(null);
+      return;
     }
 
-    // Fetch projects from DB
+    try {
+      setCurrentUser(JSON.parse(storedUser));
+    } catch (e) {
+      console.error('Failed to parse user from localStorage', e);
+      setCurrentUser(null);
+      return;
+    }
+
+    // Fetch projects from DB only when user is authenticated
     if (db) {
       getDocs(collection(db, 'projects'))
         .then((snapshot: any) => {
@@ -624,6 +640,10 @@ export function FlowPilotChatWidget() {
       </div>
     );
   };
+
+  if (!currentUser) {
+    return null;
+  }
 
   return (
     <>

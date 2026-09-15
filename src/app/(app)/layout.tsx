@@ -15,6 +15,7 @@ import { collection, query, where, getDocs } from '@/lib/db-provider';
 import { db } from '@/lib/db-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { DevTriggerButton } from '@/dev-tools';
+import { FlowPilotWidgetClient } from '@/components/flowpilot/FlowPilotWidgetClient';
 
 type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
@@ -226,6 +227,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         </SidebarInset>
       </SidebarProvider>
       <DevTriggerButton />
+      <FlowPilotWidgetClient />
     </AuthGuard>
   );
 }
