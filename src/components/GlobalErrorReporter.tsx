@@ -51,10 +51,11 @@ export function GlobalErrorReporter() {
     };
 
     const handleWindowError = (event: ErrorEvent) => {
-      // Ignore benign browser extension noise
+      // Ignore benign browser extension noise or next-themes script tag notice
       if (
         event.filename?.includes('chrome-extension://') ||
-        event.filename?.includes('moz-extension://')
+        event.filename?.includes('moz-extension://') ||
+        event.message?.includes('Encountered a script tag')
       ) {
         return;
       }

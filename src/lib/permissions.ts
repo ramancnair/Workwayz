@@ -2,11 +2,11 @@ import { AccessLevel } from '@/types';
 
 export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, string[]> = {
   'Senior Management': [
-    'Project Home', 'Portfolio Dashboard', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
+    'Project Home', 'Portfolio Dashboard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
     'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ],
   'Project Manager': [
-    'Project Home', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
+    'Project Home', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
     'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
   ],
   'Lead': [
@@ -40,7 +40,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   // Portfolio Level Pages
   if (pathname.startsWith('/project-home')) return 'Project Home';
   if (pathname.startsWith('/portfolio-dashboard')) return 'Portfolio Dashboard';
-  if (pathname.startsWith('/fp-dashboard')) return 'FP Dashboard';
+  if (pathname.startsWith('/fp-portfolio-dash') || pathname.startsWith('/fp-dashboard') || pathname.startsWith('/fp-porfolio-dash')) return 'FP Portfolio Dash';
   if (pathname.startsWith('/quality/estimations')) return 'Estimations';
   if (pathname.startsWith('/quality/defects')) return 'Defects';
   if (pathname.startsWith('/quality')) return 'Estimations';
@@ -113,6 +113,8 @@ export function hasPagePermission(
     ? ['Portfolio Trash', 'Trash']
     : (pageName === 'Test Cases' || pageName === 'Test Backlog' || pageName === 'Test Backlogs')
     ? ['Test Cases', 'Test Backlog', 'Test Backlogs']
+    : (pageName === 'FP Portfolio Dash' || pageName === 'FP Dashboard')
+    ? ['FP Portfolio Dash', 'FP Dashboard']
     : [pageName];
 
   if (customPageAccess) {
@@ -492,21 +494,29 @@ export function getPermittedFallbackRoute(
       candidates: [
         { name: 'Project Home', path: '/project-home' },
         { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
-        { name: 'FP Dashboard', path: '/fp-dashboard' },
+        { name: 'FP Portfolio Dash', path: '/fp-portfolio-dash' },
       ],
     },
     {
       prefix: '/portfolio-dashboard',
       candidates: [
         { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
-        { name: 'FP Dashboard', path: '/fp-dashboard' },
+        { name: 'FP Portfolio Dash', path: '/fp-portfolio-dash' },
+        { name: 'Project Home', path: '/project-home' },
+      ],
+    },
+    {
+      prefix: '/fp-portfolio-dash',
+      candidates: [
+        { name: 'FP Portfolio Dash', path: '/fp-portfolio-dash' },
+        { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
         { name: 'Project Home', path: '/project-home' },
       ],
     },
     {
       prefix: '/fp-dashboard',
       candidates: [
-        { name: 'FP Dashboard', path: '/fp-dashboard' },
+        { name: 'FP Portfolio Dash', path: '/fp-portfolio-dash' },
         { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
         { name: 'Project Home', path: '/project-home' },
       ],

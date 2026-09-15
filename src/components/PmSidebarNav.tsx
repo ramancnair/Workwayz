@@ -148,9 +148,9 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'projects'
     },
     {
-      id: 'fp-dashboard',
-      href: `/fp-dashboard`,
-      label: "FP Dashboard",
+      id: 'fp-portfolio-dash',
+      href: `/fp-portfolio-dash`,
+      label: "FP Portfolio Dash",
       icon: Sparkles,
       group: 'projects'
     },

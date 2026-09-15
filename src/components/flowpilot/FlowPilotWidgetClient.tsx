@@ -25,9 +25,11 @@ function isUserAuthenticated(): boolean {
 
 export function FlowPilotWidgetClient() {
   const pathname = usePathname();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => isUserAuthenticated());
+  const [mounted, setMounted] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setIsAuthenticated(isUserAuthenticated());
 
     const handleAuthCheck = () => {
@@ -44,6 +46,11 @@ export function FlowPilotWidgetClient() {
       clearInterval(interval);
     };
   }, [pathname]);
+
+  // Prevent SSR vs client initial hydration mismatch by delaying render until client has mounted
+  if (!mounted) {
+    return null;
+  }
 
   const isPublicRoute =
     PUBLIC_PATHS.includes(pathname) ||

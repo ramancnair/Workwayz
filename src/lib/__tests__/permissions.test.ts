@@ -18,7 +18,8 @@ describe('ProjectFlow Permissions Matrix', () => {
     it('should resolve portfolio-level routes correctly', () => {
       expect(getPageNameForRoute('/project-home')).toBe('Project Home');
       expect(getPageNameForRoute('/portfolio-dashboard')).toBe('Portfolio Dashboard');
-      expect(getPageNameForRoute('/fp-dashboard')).toBe('FP Dashboard');
+      expect(getPageNameForRoute('/fp-portfolio-dash')).toBe('FP Portfolio Dash');
+      expect(getPageNameForRoute('/fp-dashboard')).toBe('FP Portfolio Dash');
       expect(getPageNameForRoute('/quality/estimations')).toBe('Estimations');
       expect(getPageNameForRoute('/quality/defects')).toBe('Defects');
       expect(getPageNameForRoute('/users')).toBe('User List');
