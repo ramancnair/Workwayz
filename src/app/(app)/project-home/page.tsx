@@ -1067,7 +1067,7 @@ export default function ProjectsDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move the project "{deletingProject?.name}" to the Trash. It will be permanently deleted after 30 days.
+              This will move the project &quot;{deletingProject?.name}&quot; to the Trash. It will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1086,7 +1086,7 @@ export default function ProjectsDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to move "{archivingProject?.name}" to the archive? You can restore it later if needed.
+              Are you sure you want to move &quot;{archivingProject?.name}&quot; to the archive? You can restore it later if needed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1104,7 +1104,7 @@ export default function ProjectsDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Portfolio?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move the portfolio "{deletingPortfolio?.name}" and all its projects to the Trash. They will be permanently deleted after 30 days.
+              This will move the portfolio &quot;{deletingPortfolio?.name}&quot; and all its projects to the Trash. They will be permanently deleted after 30 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

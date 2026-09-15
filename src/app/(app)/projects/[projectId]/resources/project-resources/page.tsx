@@ -354,7 +354,7 @@ function ResourceDialog({
                           <Info className="h-3.5 w-3.5 text-muted-foreground cursor-pointer animate-pulse" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[250px] p-2 text-xs font-normal">
-                          This availability is the resource's total availability for the project, not capability wise.
+                          This availability is the resource&apos;s total availability for the project, not capability wise.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

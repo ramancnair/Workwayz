@@ -829,7 +829,7 @@ export default function DevelopmentTasksPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move the sub-task "{deletingSubTask?.title}" to the trash.
+              This will move the sub-task &quot;{deletingSubTask?.title}&quot; to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

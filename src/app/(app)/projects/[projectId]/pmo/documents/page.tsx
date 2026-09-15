@@ -521,7 +521,7 @@ export default function DocumentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the link to the document "{deletingDocument?.name}".
+              This action cannot be undone. This will permanently delete the link to the document &quot;{deletingDocument?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

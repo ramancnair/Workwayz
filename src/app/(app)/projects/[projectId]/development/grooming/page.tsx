@@ -1744,7 +1744,7 @@ export default function GroomingPage() {
                     <DialogHeader>
                       <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
                       <DialogDescription>
-                        Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
+                        Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you&apos;re done.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">

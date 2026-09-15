@@ -157,6 +157,7 @@ function StoryCard({
   onSubItemStatusChange: (storyId: string, newStatus: StoryStatus) => void;
 }) {
 
+  const { impactedSystems } = useProject();
   const Icon = workItemIcons[story.itemType];
   const doneColumn = columns.find(c => c.isDoneColumn);
   
@@ -324,7 +325,7 @@ function StoryCard({
             {(subTasks.length > 0 || bugs.length > 0) && <Separator />}
             {[...subTasks, ...bugs].map(item => {
                 const ItemIcon = workItemIcons[item.itemType];
-                const impactedSystem = useProject().impactedSystems.find(s => s.id === item.impactedSystemId);
+                const impactedSystem = impactedSystems.find(s => s.id === item.impactedSystemId);
 
                 return (
                     <div key={item.id} className="flex flex-col gap-1 py-1.5 border-b border-border/40 last:border-0 min-w-0">
@@ -1400,7 +1401,7 @@ export default function KanbanPage() {
                         <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
                       </div>
                       <DialogDescription>
-                        Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you're done.
+                        Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you&apos;re done.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">

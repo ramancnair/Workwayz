@@ -218,7 +218,7 @@ export default function MyProjectsPage() {
             </div>
             <h3 className="text-xl font-semibold mb-2">No Projects Found</h3>
             <p className="text-muted-foreground max-w-md">
-              You are not currently assigned to any projects. Ask your Project Manager to add you to a project's resource list.
+              You are not currently assigned to any projects. Ask your Project Manager to add you to a project&apos;s resource list.
             </p>
           </CardContent>
         </Card>

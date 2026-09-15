@@ -422,7 +422,7 @@ export default function InitialEstimationPage() {
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
                   <CardTitle>Project Summary</CardTitle>
-                  <CardDescription>Provide a brief overview of the project's goals and scope.</CardDescription>
+                  <CardDescription>Provide a brief overview of the project&apos;s goals and scope.</CardDescription>
               </div>
               {!isEditingSummary && project?.status === 'Initial Estimation' && (
                 <Button onClick={() => setIsEditingSummary(true)}>
@@ -891,7 +891,7 @@ export default function InitialEstimationPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the horizontal "{deletingHorizontal?.name}".
+              This action cannot be undone. This will permanently delete the horizontal &quot;{deletingHorizontal?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

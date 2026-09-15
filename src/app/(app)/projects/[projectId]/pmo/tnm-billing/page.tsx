@@ -68,9 +68,6 @@ export default function ResourceBillingPage() {
 
   const { toast } = useToast();
 
-  if (!project || project.pricingModel !== 'T&M') {
-    return null;
-  }
   const [editingRates, setEditingRates] = useState<Record<string, { billedRate?: string; costRate?: string }>>({});
   const [newCostName, setNewCostName] = useState('');
   const [newCostValue, setNewCostValue] = useState('');
@@ -438,6 +435,10 @@ export default function ResourceBillingPage() {
 
     return { totalRevenue, totalResourceCost, totalFixedCost, profit };
   }, [employees, fixedCosts, holidays, weeklyOffDays, project, activeMonthDate, totalWorkingDays, worklogs, isFirstMonth]);
+
+  if (!project || project.pricingModel !== 'T&M') {
+    return null;
+  }
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">

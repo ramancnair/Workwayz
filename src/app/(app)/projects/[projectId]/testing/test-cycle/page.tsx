@@ -749,7 +749,7 @@ export default function TestCyclePage() {
                       <div className="p-0">
                         {dayTCs.length === 0 ? (
                           <div className="py-4 px-4 text-center text-xs text-muted-foreground bg-background/30">
-                            No test cases scheduled for this day. Select test cases from the backlog and click "Move Here".
+                            No test cases scheduled for this day. Select test cases from the backlog and click &quot;Move Here&quot;.
                           </div>
                         ) : (
                           <Table>

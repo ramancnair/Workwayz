@@ -710,7 +710,7 @@ export default function TestCasesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move the test case "{deletingTestCase?.title}" to the trash.
+              This will move the test case &quot;{deletingTestCase?.title}&quot; to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

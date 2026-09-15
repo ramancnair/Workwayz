@@ -274,7 +274,7 @@ export default function ArchiveSettingsPage() {
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Based on the project's End Date.
+                        Based on the project&apos;s End Date.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

@@ -10,6 +10,7 @@ import { eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -103,10 +104,6 @@ export default function BillingPage() {
 
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  if (!project || project.pricingModel !== 'Fixed Bid') {
-    return null;
-  }
 
   const [editingMilestone, setEditingMilestone] = useState<PaymentMilestone | null>(null);
   const [deletingMilestone, setDeletingMilestone] = useState<PaymentMilestone | null>(null);
@@ -469,6 +466,10 @@ export default function BillingPage() {
     }
     setIsSubmitting(false);
   };
+
+  if (!project || project.pricingModel !== 'Fixed Bid') {
+    return null;
+  }
 
   return (
     <>
@@ -948,7 +949,7 @@ export default function BillingPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the milestone "{deletingMilestone?.name}".
+              This action cannot be undone. This will permanently delete the milestone &quot;{deletingMilestone?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

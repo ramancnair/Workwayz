@@ -348,7 +348,7 @@ export default function AIConfigPage() {
 
              {profiles.length === 0 && !showNewForm && (
                  <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground mt-4">
-                     No saved AI profiles found. Click "Add New Connection" to create one.
+                     No saved AI profiles found. Click &quot;Add New Connection&quot; to create one.
                  </div>
             )}
 

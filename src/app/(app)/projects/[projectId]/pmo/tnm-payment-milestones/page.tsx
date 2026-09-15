@@ -98,10 +98,6 @@ export default function TnmPaymentMilestonesPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  if (!project || project.pricingModel !== 'T&M') {
-    return null;
-  }
-
   const [editingMilestone, setEditingMilestone] = useState<PaymentMilestone | null>(null);
   const [deletingMilestone, setDeletingMilestone] = useState<PaymentMilestone | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -291,6 +287,10 @@ export default function TnmPaymentMilestonesPage() {
     }
     setIsSubmitting(false);
   };
+
+  if (!project || project.pricingModel !== 'T&M') {
+    return null;
+  }
 
   return (
     <>
@@ -547,7 +547,7 @@ export default function TnmPaymentMilestonesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the milestone "{deletingMilestone?.name}".
+              This action cannot be undone. This will permanently delete the milestone &quot;{deletingMilestone?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

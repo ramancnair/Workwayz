@@ -552,7 +552,7 @@ export default function EnvironmentsPage() {
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
                   <CardTitle>Project Summary</CardTitle>
-                  <CardDescription>A high-level overview of the project's goals and technical scope.</CardDescription>
+                  <CardDescription>A high-level overview of the project&apos;s goals and technical scope.</CardDescription>
               </div>
               {!isEditingSummary && (
                 <Button onClick={() => setIsEditingSummary(true)}>
@@ -1068,7 +1068,7 @@ export default function EnvironmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the environment "{deletingEnv?.name}".
+              This action cannot be undone. This will permanently delete the environment &quot;{deletingEnv?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1088,7 +1088,7 @@ export default function EnvironmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the system "{deletingSystem?.name}".
+              This action cannot be undone. This will permanently delete the system &quot;{deletingSystem?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1108,7 +1108,7 @@ export default function EnvironmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the horizontal "{deletingHorizontal?.name}".
+              This action cannot be undone. This will permanently delete the horizontal &quot;{deletingHorizontal?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

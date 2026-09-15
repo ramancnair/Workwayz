@@ -525,7 +525,7 @@ export default function ReleasesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the {deletingItem?.itemType} "{deletingItem?.name}".
+              This action cannot be undone. This will permanently delete the {deletingItem?.itemType} &quot;{deletingItem?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

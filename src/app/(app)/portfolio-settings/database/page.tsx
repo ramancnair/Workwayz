@@ -401,9 +401,9 @@ export default function DatabaseSettingsPage() {
                 ))}
 
                 {profiles.length === 0 && !showNewForm && (
-                     <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground">
-                         No saved database profiles found. Click "Add New Connection" to create one.
-                     </div>
+                      <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground">
+                          No saved database profiles found. Click &quot;Add New Connection&quot; to create one.
+                      </div>
                 )}
             </div>
 

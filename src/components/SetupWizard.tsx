@@ -306,7 +306,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             <Sparkles className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Welcome to ProjectFlow Setup</h1>
-          <p className="text-muted-foreground text-lg">Let's configure your environment to get you started.</p>
+          <p className="text-muted-foreground text-lg">Let&apos;s configure your environment to get you started.</p>
         </div>
 
         {/* Stepper Header */}
@@ -551,9 +551,9 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                 <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-bold">You're almost there!</h3>
+                <h3 className="text-2xl font-bold">You&apos;re almost there!</h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Click 'Complete Setup' below to save your configurations and boot up the ProjectFlow application.
+                  Click &apos;Complete Setup&apos; below to save your configurations and boot up the ProjectFlow application.
                 </p>
                 <div className="w-full bg-muted/30 p-4 rounded-lg mt-6 text-left border">
                   <h4 className="font-semibold text-sm mb-2 text-primary">Summary:</h4>

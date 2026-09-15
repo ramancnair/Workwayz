@@ -349,9 +349,9 @@ export default function AuthenticationSettingsPage() {
                 ))}
 
                 {profiles.length === 0 && !showNewForm && (
-                     <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground">
-                         No saved authentication configurations found. Click "Add New Setup" to create one.
-                     </div>
+                      <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground">
+                          No saved authentication configurations found. Click &quot;Add New Setup&quot; to create one.
+                      </div>
                 )}
             </div>
 
