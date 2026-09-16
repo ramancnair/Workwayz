@@ -84,7 +84,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (pathname.startsWith('/portfolio-trash') || pathname.startsWith('/trash')) return 'trash'; 
     if (pathname.startsWith('/holidays')) return 'holidays';
     if (pathname.startsWith('/portfolio-settings')) return 'portfolios';
-    if (pathname.startsWith('/my-account')) return 'my-account';
+    if (pathname.startsWith('/my-account') || pathname.startsWith('/messages')) return 'my-account';
     return 'my-projects';
   };
 
@@ -139,7 +139,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   };
 
   const dynamicTab = useMemo(() => {
-    if (pathname.startsWith('/my-account')) return { value: 'my-account', label: 'Profile & Account' };
+    if (pathname.startsWith('/my-account') || pathname.startsWith('/messages')) return { value: 'my-account', label: 'Profile & Account' };
     return null;
   }, [pathname]);
 

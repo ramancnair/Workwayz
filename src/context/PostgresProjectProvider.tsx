@@ -1638,6 +1638,9 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         return { id: d.id, ...docData } as TestCycleTestCase;
       });
       setTestCycleTestCases(prev => ({ ...prev, [cycleId]: data }));
+    }, (err: any) => {
+      if (err?.code === 'permission-denied' || (typeof window !== 'undefined' && (window as any).__isLoggingOut)) return;
+      console.warn('[PostgresProjectProvider] testCycleTestCases listener error:', err);
     });
     return unsubscribe;
   }, [projectId]);

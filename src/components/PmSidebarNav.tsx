@@ -53,14 +53,17 @@ import {
   ClipboardList,
   CalendarCheck,
   Sparkles,
+  UserCog,
+  Mail,
 } from "lucide-react";
+import { db, collection, query, where, onSnapshot, unsubscribeAllListeners } from "@/lib/db-provider";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTestDataStudio, triggerOpenTestDataStudio } from "@/dev-tools";
 
 type PmSidebarNavProps = {
-  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing' | 'quality' | 'my-projects';
+  activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing' | 'quality' | 'my-projects' | 'my-account';
 };
 
 export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
@@ -68,8 +71,9 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
   const { isEnabled: isTestDataStudioEnabled } = useTestDataStudio();
-  const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string }>({ name: '', email: '', avatar: '' });
+  const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string; empId?: string; id?: string }>({ name: '', email: '', avatar: '' });
   const [showWizard, setShowWizard] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   useEffect(() => {
     const loadUser = () => {
@@ -87,12 +91,53 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     return () => window.removeEventListener('user-profile-updated', loadUser);
   }, []);
 
+  useEffect(() => {
+    if (!db || (!user.empId && !user.email)) return;
+    const userIds = [user.empId, (user.email || '').toLowerCase()].filter(Boolean);
+    if (userIds.length === 0) return;
+
+    try {
+      const q = query(collection(db, 'messages'), where('recipientUserIds', 'array-contains-any', userIds));
+      const unsubscribe = onSnapshot(q, (snapshot: any) => {
+        let count = 0;
+        snapshot.docs.forEach((d: any) => {
+          const data = d.data();
+          const isRead = userIds.some(id => data.readBy?.includes(id));
+          const isDeleted = userIds.some(id => data.deletedBy?.includes(id));
+          if (!isRead && !isDeleted) {
+            count++;
+          }
+        });
+        setUnreadCount(count);
+      }, (err: any) => {
+        if (
+          err?.code === 'permission-denied' ||
+          String(err?.message || '').toLowerCase().includes('permission') ||
+          (typeof window !== 'undefined' && (window as any).__isLoggingOut)
+        ) {
+          return;
+        }
+        console.warn('Error fetching unread message count:', err);
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Failed to subscribe to unread messages:', err);
+    }
+  }, [user.empId, user.email]);
+
   const handleLogout = async () => {
     try {
+      if (typeof window !== 'undefined') {
+        (window as any).__isLoggingOut = true;
+      }
+      unsubscribeAllListeners();
+
       const userStr = localStorage.getItem('projectflow_user');
       const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
 
       localStorage.removeItem('projectflow_user');
+      localStorage.removeItem('projectflow_last_activity');
       document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
       if (sessionProvider === 'supabase') {
@@ -106,12 +151,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
         await signOut(auth);
       }
 
-      router.push('/');
+      window.location.href = '/';
     } catch (error) {
       console.error("Error logging out:", error);
       localStorage.removeItem('projectflow_user');
+      localStorage.removeItem('projectflow_last_activity');
       document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      router.push('/');
+      window.location.href = '/';
     }
   };
 
@@ -277,12 +323,28 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       icon: Trash2,
       group: 'trash'
     },
+    {
+      id: 'account-settings',
+      href: '/my-account',
+      label: 'Account Settings',
+      icon: UserCog,
+      group: 'account'
+    },
+    {
+      id: 'messages',
+      href: '/messages',
+      label: 'Messages',
+      icon: Mail,
+      group: 'account'
+    },
   ];
 
   const getGroupForTab = (tab: PmSidebarNavProps['activeTab']) => {
     switch (tab) {
       case 'my-projects':
         return 'my-projects';
+      case 'my-account':
+        return 'account';
       case 'portfolios':
         return 'portfolio';
       case 'trash':
@@ -306,7 +368,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const activeGroup = getGroupForTab(activeTab);
   const menuItems = allMenuItems
     .filter(item => item.group === activeGroup)
-    .filter(item => item.label === 'My Projects' || hasAccess(item.label));
+    .filter(item => item.label === 'My Projects' || item.label === 'Account Settings' || item.label === 'Messages' || hasAccess(item.label));
 
   return (
     <>
@@ -346,11 +408,18 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
                 <SidebarMenuButton
                   asChild
                   isActive={pathname.startsWith(item.href)}
-                  tooltip={item.label}
+                  tooltip={item.id === 'messages' && unreadCount > 0 ? `${item.label} (${unreadCount})` : item.label}
                 >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
+                  <Link href={item.href} className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.id === 'messages' && unreadCount > 0 && (
+                      <span className="ml-auto bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none group-data-[collapsible=icon]:hidden">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               )}

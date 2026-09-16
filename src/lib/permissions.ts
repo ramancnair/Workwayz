@@ -24,8 +24,8 @@ export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>
 };
 
 export function getPageNameForRoute(pathname: string): string | null {
-  if (!pathname || pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/setup-wizard' || pathname.startsWith('/my-account') || pathname.startsWith('/my-projects')) {
-    return null; // Public or universal profile/landing path (no specific role restriction)
+  if (!pathname || pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/setup-wizard' || pathname.startsWith('/my-account') || pathname.startsWith('/messages') || pathname.startsWith('/my-projects')) {
+    return null; // Public or universal profile/landing/messaging path (no specific role restriction)
   }
 
   // Admin Level Pages

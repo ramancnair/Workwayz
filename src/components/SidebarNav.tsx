@@ -73,6 +73,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProjectSimulator } from "./ProjectSimulator";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
+import { unsubscribeAllListeners } from "@/lib/db-provider";
 
 export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
@@ -99,12 +100,18 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const handleLogout = async () => {
     try {
+      if (typeof window !== 'undefined') {
+        (window as any).__isLoggingOut = true;
+      }
+      unsubscribeAllListeners();
+
       // Read current session before clearing so we know which provider to terminate
       const userStr = localStorage.getItem('projectflow_user');
       const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
 
       // Always clear local session first
       localStorage.removeItem('projectflow_user');
+      localStorage.removeItem('projectflow_last_activity');
       document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
       if (sessionProvider === 'supabase') {
@@ -119,13 +126,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         await signOut(auth);
       }
 
-      router.push('/');
+      window.location.href = '/';
     } catch (error) {
       console.error("Error logging out:", error);
       // Even on error, ensure local session is cleared and redirect
       localStorage.removeItem('projectflow_user');
+      localStorage.removeItem('projectflow_last_activity');
       document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      router.push('/');
+      window.location.href = '/';
     }
   };
 

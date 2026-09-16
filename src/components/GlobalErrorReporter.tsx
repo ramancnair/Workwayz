@@ -56,7 +56,9 @@ export function GlobalErrorReporter() {
         event.filename?.includes('chrome-extension://') ||
         event.filename?.includes('moz-extension://') ||
         event.message?.includes('Encountered a script tag') ||
-        event.message?.includes('antigravity-scroll-lock')
+        event.message?.includes('antigravity-scroll-lock') ||
+        ((event.message?.includes('Missing or insufficient permissions') || event.message?.includes('permission-denied')) &&
+          (typeof window !== 'undefined' && (window as any).__isLoggingOut))
       ) {
         return;
       }
@@ -82,6 +84,13 @@ export function GlobalErrorReporter() {
         } catch {
           msg = String(reason);
         }
+      }
+
+      if (
+        (msg.includes('Missing or insufficient permissions') || msg.includes('permission-denied')) &&
+        (typeof window !== 'undefined' && (window as any).__isLoggingOut)
+      ) {
+        return;
       }
 
       sendLog(`Unhandled Promise Rejection: ${msg}`, stack);

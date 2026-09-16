@@ -13,6 +13,14 @@ export function SessionManager() {
 
   const handleLogout = useCallback(async () => {
     try {
+      if (typeof window !== 'undefined') {
+        (window as any).__isLoggingOut = true;
+      }
+      try {
+        const { unsubscribeAllListeners } = await import('@/lib/db-provider');
+        unsubscribeAllListeners();
+      } catch {}
+
       const userStr = localStorage.getItem(USER_STORAGE_KEY);
       const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
 
@@ -32,12 +40,12 @@ export function SessionManager() {
         await signOut(auth);
       }
       
-      router.push('/login');
+      window.location.href = '/login';
     } catch (error) {
       console.error("Error during timeout logout:", error);
-      router.push('/login');
+      window.location.href = '/login';
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     let activityInterval: NodeJS.Timeout;

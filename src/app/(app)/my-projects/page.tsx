@@ -82,7 +82,14 @@ export default function MyProjectsPage() {
       }
       setIsLoadingUsers(false);
     }, (error: any) => {
-      console.error("Error listening to current user status:", error);
+      if (
+        error?.code === 'permission-denied' ||
+        String(error?.message || '').toLowerCase().includes('permission') ||
+        (typeof window !== 'undefined' && (window as any).__isLoggingOut)
+      ) {
+        return;
+      }
+      console.warn("Error listening to current user status:", error);
       setIsLoadingUsers(false);
     });
     return () => unsub();
