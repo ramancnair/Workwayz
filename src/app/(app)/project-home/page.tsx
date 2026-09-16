@@ -567,6 +567,7 @@ export default function ProjectsDashboard() {
           : 1;
 
         const projectId = `P${currentYear}${newIdNumber.toString().padStart(5, '0')}`;
+        const newProjectRef = doc(db, 'projects', projectId);
         await setDoc(newProjectRef, { ...dataToSave, id: projectId, isDeleted: false });
 
         // Automatically create project distro (distro name is project ID)
