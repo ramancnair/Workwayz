@@ -1000,14 +1000,7 @@ export default function TestCyclePage() {
                       <FormItem>
                         <FormLabel>Sprint</FormLabel>
                         <Select
-                          onValueChange={(val) => {
-                            field.onChange(val);
-                            const selectedSprint = sprints.find(s => s.id === val);
-                            if (selectedSprint?.startDate && selectedSprint?.endDate) {
-                              testCycleForm.setValue('startDate', format(parseISO(selectedSprint.startDate), 'yyyy-MM-dd'), { shouldDirty: true });
-                              testCycleForm.setValue('endDate', format(parseISO(selectedSprint.endDate), 'yyyy-MM-dd'), { shouldDirty: true });
-                            }
-                          }}
+                          onValueChange={field.onChange}
                           value={field.value}
                         >
                           <FormControl><SelectTrigger><SelectValue placeholder="Select a sprint..." /></SelectTrigger></FormControl>
@@ -1024,14 +1017,7 @@ export default function TestCyclePage() {
                       <FormItem>
                         <FormLabel>Release</FormLabel>
                         <Select
-                          onValueChange={(val) => {
-                            field.onChange(val);
-                            const selectedRelease = releases.find(r => r.id === val);
-                            if (selectedRelease?.startDate && selectedRelease?.endDate) {
-                              testCycleForm.setValue('startDate', format(parseISO(selectedRelease.startDate), 'yyyy-MM-dd'), { shouldDirty: true });
-                              testCycleForm.setValue('endDate', format(parseISO(selectedRelease.endDate), 'yyyy-MM-dd'), { shouldDirty: true });
-                            }
-                          }}
+                          onValueChange={field.onChange}
                           value={field.value}
                         >
                           <FormControl><SelectTrigger><SelectValue placeholder="Select a release..." /></SelectTrigger></FormControl>
