@@ -95,6 +95,7 @@ const subTaskFormSchema = z.object({
 
 export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; onClose: () => void }) {
   const { 
+    project,
     stories, 
     epics, 
     sprints, 
@@ -182,8 +183,44 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
 
 }, [selectedStory, stories, calculateBusinessDays, projectSettings]);
 
+  const projStart = useMemo(() => project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : undefined, [project?.startDate]);
+  const projEnd = useMemo(() => project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : undefined, [project?.endDate]);
+
+  const dynamicSubTaskSchema = useMemo(() => {
+    return subTaskFormSchema.superRefine((data, ctx) => {
+      if (projStart && data.startDate && data.startDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Start date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+          path: ['startDate'],
+        });
+      }
+      if (projEnd && data.startDate && data.startDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Start date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+          path: ['startDate'],
+        });
+      }
+      if (projStart && data.endDate && data.endDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+          path: ['endDate'],
+        });
+      }
+      if (projEnd && data.endDate && data.endDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+          path: ['endDate'],
+        });
+      }
+    });
+  }, [projStart, projEnd, project]);
+
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
-    resolver: zodResolver(subTaskFormSchema),
+    resolver: zodResolver(dynamicSubTaskSchema),
   });
 
   const editStoryForm = useForm<z.infer<typeof storyFormSchema>>({
@@ -294,6 +331,27 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
+    
+    if (projStart && values.startDate && values.startDate < projStart) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `Start date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).` });
+      setIsEditStorySubmitting(false);
+      return;
+    }
+    if (projEnd && values.startDate && values.startDate > projEnd) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `Start date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).` });
+      setIsEditStorySubmitting(false);
+      return;
+    }
+    if (projStart && values.endDate && values.endDate < projStart) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `End date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).` });
+      setIsEditStorySubmitting(false);
+      return;
+    }
+    if (projEnd && values.endDate && values.endDate > projEnd) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `End date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).` });
+      setIsEditStorySubmitting(false);
+      return;
+    }
     
     const success = await updateStory(selectedStory.id, {
         ...values,
@@ -429,14 +487,24 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                         <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Start Date</FormLabel>
-                                                <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                                <FormControl><Input type="date" {...field} value={field.value || ''} min={projStart} max={projEnd} /></FormControl>
+                                                {projStart && projEnd && (
+                                                  <p className="text-[11px] text-muted-foreground">
+                                                    Project: {format(parseISO(projStart), 'dd MMM yyyy')} - {format(parseISO(projEnd), 'dd MMM yyyy')}
+                                                  </p>
+                                                )}
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
                                         <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>End Date</FormLabel>
-                                                <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                                <FormControl><Input type="date" {...field} value={field.value || ''} min={projStart} max={projEnd} /></FormControl>
+                                                {projStart && projEnd && (
+                                                  <p className="text-[11px] text-muted-foreground">
+                                                    Project: {format(parseISO(projStart), 'dd MMM yyyy')} - {format(parseISO(projEnd), 'dd MMM yyyy')}
+                                                  </p>
+                                                )}
                                                 <FormMessage />
                                             </FormItem>
                                         )} />

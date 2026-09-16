@@ -108,6 +108,7 @@ const statusStyles: Record<TestCaseStatus, string> = {
 
 export default function TestCyclePage() {
   const {
+    project,
     testCases,
     addTestCycle,
     testCycles,
@@ -137,8 +138,65 @@ export default function TestCyclePage() {
 
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
-  const testCycleForm = useForm<z.infer<typeof refinedTestCycleSchema>>({
-    resolver: zodResolver(refinedTestCycleSchema),
+  const projStart = project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : null;
+  const projEnd = project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : null;
+
+  const dynamicTestCycleSchema = useMemo(() => {
+    return testCycleSchemaBase.superRefine((data, ctx) => {
+      if (data.planType === 'Sprint' && !data.sprintId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'A sprint must be selected.',
+          path: ['sprintId'],
+        });
+      }
+      if (data.planType === 'Release' && !data.releaseId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'A release must be selected.',
+          path: ['releaseId'],
+        });
+      }
+      if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'End date cannot be earlier than start date.',
+          path: ['endDate'],
+        });
+      }
+      if (data.startDate && projStart && data.startDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Start date cannot be earlier than project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+          path: ['startDate'],
+        });
+      }
+      if (data.startDate && projEnd && data.startDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Start date cannot be later than project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+          path: ['startDate'],
+        });
+      }
+      if (data.endDate && projStart && data.endDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End date cannot be earlier than project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+          path: ['endDate'],
+        });
+      }
+      if (data.endDate && projEnd && data.endDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End date cannot be later than project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+          path: ['endDate'],
+        });
+      }
+    });
+  }, [projStart, projEnd, project]);
+
+  const testCycleForm = useForm<z.infer<typeof testCycleSchemaBase>>({
+    resolver: zodResolver(dynamicTestCycleSchema),
     defaultValues: {
       planType: 'Sprint',
     }
@@ -242,7 +300,7 @@ export default function TestCyclePage() {
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
 
 
-  const onTestCycleSubmit = async (values: z.infer<typeof refinedTestCycleSchema>) => {
+  const onTestCycleSubmit = async (values: z.infer<typeof testCycleSchemaBase>) => {
     const success = editingPlan
       ? await updateTestCycle(editingPlan.id, values)
       : await addTestCycle(values);
@@ -1112,18 +1170,39 @@ export default function TestCyclePage() {
                 <FormField control={testCycleForm.control} name="startDate" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value || ''}
+                        min={projStart || undefined}
+                        max={testCycleForm.watch('endDate') || projEnd || undefined}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={testCycleForm.control} name="endDate" render={({ field }) => (
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
-                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value || ''}
+                        min={testCycleForm.watch('startDate') || projStart || undefined}
+                        max={projEnd || undefined}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
               </div>
+              {project?.startDate && (
+                <p className="text-[11px] text-muted-foreground -mt-2">
+                  Project timeline: {format(parseISO(project.startDate), 'dd MMM yyyy')}{project.endDate ? ` — ${format(parseISO(project.endDate), 'dd MMM yyyy')}` : ''}
+                </p>
+              )}
               <DialogFooter>
                 <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Cycle'}</Button>
               </DialogFooter>
@@ -1257,7 +1336,13 @@ export default function TestCyclePage() {
                     <FormItem>
                       <FormLabel>Execution Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} value={field.value || ''} />
+                        <Input
+                          type="date"
+                          {...field}
+                          value={field.value || ''}
+                          min={projStart || undefined}
+                          max={projEnd || undefined}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

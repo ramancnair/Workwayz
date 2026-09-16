@@ -112,7 +112,7 @@ const storyFormSchema = z.object({
   closedAt: z.date().optional(),
 });
 
-const subTaskFormSchema = z.object({
+const subTaskFormSchemaBase = z.object({
     title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
     description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
     impactedSystemId: z.string().optional(),
@@ -123,14 +123,6 @@ const subTaskFormSchema = z.object({
     endDate: z.string().optional(),
     sprintId: z.string().optional(),
     releaseId: z.string().optional(),
-}).refine(data => {
-    if (data.startDate && data.endDate) {
-        return new Date(data.endDate) >= new Date(data.startDate);
-    }
-    return true;
-}, {
-    message: "End date must be on or after start date.",
-    path: ['endDate'],
 });
 
 
@@ -476,6 +468,7 @@ function SprintColumn({
 
 export default function GroomingPage() {
     const { 
+        project,
         stories, 
         epics,
         employees,
@@ -583,8 +576,91 @@ export default function GroomingPage() {
         }
     }, [sprintsWithStories, visibleSprintIndex]);
 
+    const projStart = project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : null;
+    const projEnd = project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : null;
+
+    const dynamicSprintSchema = useMemo(() => {
+        return sprintSchema.superRefine((data, ctx) => {
+            if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "End date must be on or after start date.",
+                    path: ['endDate'],
+                });
+            }
+            if (data.startDate && projStart && data.startDate < projStart) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Sprint start date cannot be earlier than project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+                    path: ['startDate'],
+                });
+            }
+            if (data.startDate && projEnd && data.startDate > projEnd) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Sprint start date cannot be later than project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+                    path: ['startDate'],
+                });
+            }
+            if (data.endDate && projStart && data.endDate < projStart) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Sprint end date cannot be earlier than project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+                    path: ['endDate'],
+                });
+            }
+            if (data.endDate && projEnd && data.endDate > projEnd) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Sprint end date cannot be later than project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+                    path: ['endDate'],
+                });
+            }
+        });
+    }, [projStart, projEnd, project]);
+
+    const dynamicSubTaskSchema = useMemo(() => {
+        return subTaskFormSchemaBase.superRefine((data, ctx) => {
+            if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "End date must be on or after start date.",
+                    path: ['endDate'],
+                });
+            }
+            if (data.startDate && projStart && data.startDate < projStart) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Sub-task start date cannot be earlier than project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+                    path: ['startDate'],
+                });
+            }
+            if (data.startDate && projEnd && data.startDate > projEnd) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Sub-task start date cannot be later than project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+                    path: ['startDate'],
+                });
+            }
+            if (data.endDate && projStart && data.endDate < projStart) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Sub-task end date cannot be earlier than project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+                    path: ['endDate'],
+                });
+            }
+            if (data.endDate && projEnd && data.endDate > projEnd) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Sub-task end date cannot be later than project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+                    path: ['endDate'],
+                });
+            }
+        });
+    }, [projStart, projEnd, project]);
+
     const sprintForm = useForm<z.infer<typeof sprintSchema>>({
-        resolver: zodResolver(sprintSchema),
+        resolver: zodResolver(dynamicSprintSchema),
         defaultValues: {
             title: '',
             startDate: '',
@@ -597,8 +673,8 @@ export default function GroomingPage() {
         resolver: zodResolver(storyFormSchema),
     });
 
-    const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
-        resolver: zodResolver(subTaskFormSchema),
+    const subTaskForm = useForm<z.infer<typeof subTaskFormSchemaBase>>({
+        resolver: zodResolver(dynamicSubTaskSchema),
         defaultValues: {
           title: '',
           description: '',
@@ -808,6 +884,23 @@ export default function GroomingPage() {
             return;
         }
 
+        if (values.startDate && projStart && values.startDate < projStart) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Start Date',
+                description: `Sprint start date cannot be earlier than project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`
+            });
+            return;
+        }
+        if (values.endDate && projEnd && values.endDate > projEnd) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid End Date',
+                description: `Sprint end date cannot be later than project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`
+            });
+            return;
+        }
+
         const sprintId = editingSprint ? getSprintDisplayId(editingSprint) : nextSprintId;
 
         const payload = {
@@ -848,7 +941,7 @@ export default function GroomingPage() {
         setIsEditStorySubmitting(false);
     };
 
-    const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
+    const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchemaBase>) => {
         if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
         setIsEditStorySubmitting(true);
         
@@ -867,7 +960,7 @@ export default function GroomingPage() {
         setIsEditStorySubmitting(false);
     };
 
-    const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
+    const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchemaBase>) => {
       if (!selectedStory) return;
 
       const newSubTask: Omit<Story, 'id' | 'storyId'> = {
@@ -1083,7 +1176,13 @@ export default function GroomingPage() {
                                     <FormItem>
                                         <FormLabel>Start Date</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} value={field.value ?? ''} />
+                                            <Input
+                                                type="date"
+                                                {...field}
+                                                value={field.value ?? ''}
+                                                min={projStart || undefined}
+                                                max={sprintForm.watch('endDate') || projEnd || undefined}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -1096,13 +1195,24 @@ export default function GroomingPage() {
                                     <FormItem>
                                         <FormLabel>End Date</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} value={field.value ?? ''} />
+                                            <Input
+                                                type="date"
+                                                {...field}
+                                                value={field.value ?? ''}
+                                                min={sprintForm.watch('startDate') || projStart || undefined}
+                                                max={projEnd || undefined}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
+                        {project?.startDate && (
+                            <p className="text-[11px] text-muted-foreground -mt-2">
+                                Project timeline: {format(parseISO(project.startDate), 'dd MMM yyyy')}{project.endDate ? ` — ${format(parseISO(project.endDate), 'dd MMM yyyy')}` : ''}
+                            </p>
+                        )}
                          <FormField
                             control={sprintForm.control}
                             name="status"
@@ -2199,22 +2309,38 @@ export default function GroomingPage() {
                                                     </FormItem>
                                                     )}/>
                                                 </div>
-                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Start Date</FormLabel>
-                                                            <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )} />
-                                                    <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>End Date</FormLabel>
-                                                            <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )} />
-                                                </div>
+                                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                         <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
+                                             <FormItem>
+                                                 <FormLabel>Start Date</FormLabel>
+                                                 <FormControl>
+                                                     <Input
+                                                         type="date"
+                                                         {...field}
+                                                         value={field.value || ''}
+                                                         min={projStart || undefined}
+                                                         max={subTaskForm.watch('endDate') || projEnd || undefined}
+                                                     />
+                                                 </FormControl>
+                                                 <FormMessage />
+                                             </FormItem>
+                                         )} />
+                                         <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
+                                             <FormItem>
+                                                 <FormLabel>End Date</FormLabel>
+                                                 <FormControl>
+                                                     <Input
+                                                         type="date"
+                                                         {...field}
+                                                         value={field.value || ''}
+                                                         min={subTaskForm.watch('startDate') || projStart || undefined}
+                                                         max={projEnd || undefined}
+                                                     />
+                                                 </FormControl>
+                                                 <FormMessage />
+                                             </FormItem>
+                                         )} />
+                                     </div>
                                                 <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                                     <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
                                                 )}/>

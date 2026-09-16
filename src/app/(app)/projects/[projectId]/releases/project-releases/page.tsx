@@ -78,7 +78,7 @@ function SortableHeader({
 }
 
 export default function ReleasesPage() {
-  const { releasesAndMilestones, addReleaseOrMilestone, updateReleaseOrMilestone, deleteReleaseOrMilestone } = useProject();
+  const { project, releasesAndMilestones, addReleaseOrMilestone, updateReleaseOrMilestone, deleteReleaseOrMilestone } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Release | null>(null);
@@ -101,6 +101,9 @@ export default function ReleasesPage() {
     return parent ? `(${parent.releaseId}) ${parent.name}` : 'N/A';
   }, [releases]);
   
+  const projStart = project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : null;
+  const projEnd = project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : null;
+
   const refinedReleaseSchema = releaseSchemaBase.superRefine((data, ctx) => {
     if (currentItemType === 'Release' || currentItemType === 'Stage') {
         if (!data.startDate) {
@@ -112,11 +115,53 @@ export default function ReleasesPage() {
         if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "End date must be on or after the start date.", path: ["endDate"]});
         }
+        if (data.startDate && projStart && data.startDate < projStart) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Start date cannot be earlier than project start date (${format(parseISO(project!.startDate!), 'dd MMM yyyy')}).`,
+                path: ["startDate"],
+            });
+        }
+        if (data.startDate && projEnd && data.startDate > projEnd) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Start date cannot be later than project end date (${format(parseISO(project!.endDate!), 'dd MMM yyyy')}).`,
+                path: ["startDate"],
+            });
+        }
+        if (data.endDate && projStart && data.endDate < projStart) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `End date cannot be earlier than project start date (${format(parseISO(project!.startDate!), 'dd MMM yyyy')}).`,
+                path: ["endDate"],
+            });
+        }
+        if (data.endDate && projEnd && data.endDate > projEnd) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `End date cannot be later than project end date (${format(parseISO(project!.endDate!), 'dd MMM yyyy')}).`,
+                path: ["endDate"],
+            });
+        }
     }
 
     if (currentItemType === 'Milestone') {
          if (!data.milestoneDate) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Milestone date is required.", path: ["milestoneDate"]});
+        }
+        if (data.milestoneDate && projStart && data.milestoneDate < projStart) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Milestone date cannot be earlier than project start date (${format(parseISO(project!.startDate!), 'dd MMM yyyy')}).`,
+                path: ["milestoneDate"],
+            });
+        }
+        if (data.milestoneDate && projEnd && data.milestoneDate > projEnd) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Milestone date cannot be later than project end date (${format(parseISO(project!.endDate!), 'dd MMM yyyy')}).`,
+                path: ["milestoneDate"],
+            });
         }
     }
 
@@ -468,7 +513,13 @@ export default function ReleasesPage() {
                       <FormItem>
                           <FormLabel>Milestone Date</FormLabel>
                           <FormControl>
-                              <Input type="date" {...field} value={field.value ?? ''} />
+                              <Input
+                                type="date"
+                                {...field}
+                                value={field.value ?? ''}
+                                min={projStart || undefined}
+                                max={projEnd || undefined}
+                              />
                           </FormControl>
                           <FormMessage />
                       </FormItem>
@@ -479,7 +530,13 @@ export default function ReleasesPage() {
                           <FormItem>
                               <FormLabel>Start Date</FormLabel>
                               <FormControl>
-                                  <Input type="date" {...field} value={field.value ?? ''} />
+                                  <Input
+                                    type="date"
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    min={projStart || undefined}
+                                    max={form.watch('endDate') || projEnd || undefined}
+                                  />
                               </FormControl>
                               <FormMessage />
                           </FormItem>
@@ -488,12 +545,23 @@ export default function ReleasesPage() {
                           <FormItem>
                               <FormLabel>End Date</FormLabel>
                               <FormControl>
-                                  <Input type="date" {...field} value={field.value ?? ''} />
+                                  <Input
+                                    type="date"
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    min={form.watch('startDate') || projStart || undefined}
+                                    max={projEnd || undefined}
+                                  />
                               </FormControl>
                               <FormMessage />
                           </FormItem>
                       )} />
                   </div>
+                )}
+                {project?.startDate && (
+                  <p className="text-[11px] text-muted-foreground -mt-2">
+                    Project timeline: {format(parseISO(project.startDate), 'dd MMM yyyy')}{project.endDate ? ` — ${format(parseISO(project.endDate), 'dd MMM yyyy')}` : ''}
+                  </p>
                 )}
                 
                   <FormField

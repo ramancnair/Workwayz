@@ -105,7 +105,7 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean, f
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function DevelopmentTasksPage() {
-  const { stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones, bulkAssignSubTasks, bulkDeleteStories } = useProject();
+  const { project, stories, employees, addStory, updateStory, deleteStory, impactedSystems, sprints, releasesAndMilestones, bulkAssignSubTasks, bulkDeleteStories } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubTask, setEditingSubTask] = useState<Story | null>(null);
@@ -115,7 +115,42 @@ export default function DevelopmentTasksPage() {
   const [tasksToAssign, setTasksToAssign] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  
+  const projStart = useMemo(() => project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : undefined, [project?.startDate]);
+  const projEnd = useMemo(() => project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : undefined, [project?.endDate]);
+
+  const dynamicSubTaskSchema = useMemo(() => {
+    return subTaskSchema.superRefine((data, ctx) => {
+      if (projStart && data.startDate && data.startDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Start date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+          path: ['startDate'],
+        });
+      }
+      if (projEnd && data.startDate && data.startDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Start date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+          path: ['startDate'],
+        });
+      }
+      if (projStart && data.endDate && data.endDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+          path: ['endDate'],
+        });
+      }
+      if (projEnd && data.endDate && data.endDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+          path: ['endDate'],
+        });
+      }
+    });
+  }, [projStart, projEnd, project]);
+
   const subTasks = stories.filter(story => story.itemType === 'Sub Task');
   const parentStories = stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType));
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
@@ -130,7 +165,7 @@ export default function DevelopmentTasksPage() {
   );
 
   const form = useForm<z.infer<typeof subTaskSchema>>({
-    resolver: zodResolver(subTaskSchema),
+    resolver: zodResolver(dynamicSubTaskSchema),
   });
 
   const bulkAssignForm = useForm<z.infer<typeof bulkAssignSchema>>({
@@ -320,6 +355,27 @@ export default function DevelopmentTasksPage() {
 
   const onSubmit = async (values: z.infer<typeof subTaskSchema>) => {
     setIsSubmitting(true);
+    
+    if (projStart && values.startDate && values.startDate < projStart) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `Start date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).` });
+      setIsSubmitting(false);
+      return;
+    }
+    if (projEnd && values.startDate && values.startDate > projEnd) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `Start date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).` });
+      setIsSubmitting(false);
+      return;
+    }
+    if (projStart && values.endDate && values.endDate < projStart) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `End date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).` });
+      setIsSubmitting(false);
+      return;
+    }
+    if (projEnd && values.endDate && values.endDate > projEnd) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `End date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).` });
+      setIsSubmitting(false);
+      return;
+    }
     
     const parentStory = parentStories.find(p => p.id === values.parentStoryId);
     
@@ -759,14 +815,24 @@ export default function DevelopmentTasksPage() {
                     <FormField control={form.control} name="startDate" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Start Date</FormLabel>
-                            <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                            <FormControl><Input type="date" {...field} value={field.value || ''} min={projStart} max={projEnd} /></FormControl>
+                            {projStart && projEnd && (
+                              <p className="text-[11px] text-muted-foreground">
+                                Project: {format(parseISO(projStart), 'dd MMM yyyy')} - {format(parseISO(projEnd), 'dd MMM yyyy')}
+                              </p>
+                            )}
                             <FormMessage />
                         </FormItem>
                     )} />
                     <FormField control={form.control} name="endDate" render={({ field }) => (
                         <FormItem>
                             <FormLabel>End Date</FormLabel>
-                            <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                            <FormControl><Input type="date" {...field} value={field.value || ''} min={projStart} max={projEnd} /></FormControl>
+                            {projStart && projEnd && (
+                              <p className="text-[11px] text-muted-foreground">
+                                Project: {format(parseISO(projStart), 'dd MMM yyyy')} - {format(parseISO(projEnd), 'dd MMM yyyy')}
+                              </p>
+                            )}
                             <FormMessage />
                         </FormItem>
                     )} />

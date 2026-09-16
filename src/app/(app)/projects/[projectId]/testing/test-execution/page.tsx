@@ -46,6 +46,7 @@ const testCaseStatuses: TestCaseStatus[] = ['Not Run', 'Passed', 'Failed', 'Bloc
 
 export default function TestExecutionPage() {
   const {
+    project,
     testCycles,
     testCycleTestCases,
     employees,
@@ -56,6 +57,8 @@ export default function TestExecutionPage() {
   } = useProject();
 
   const { toast } = useToast();
+  const projStart = project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : null;
+  const projEnd = project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : null;
 
   // Filters State
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -374,6 +377,25 @@ export default function TestExecutionPage() {
   // Save manual edits from right column form
   const handleSaveDetails = async () => {
     if (!selectedPlanId || !selectedTC) return;
+
+    if (formExecutionDate) {
+      if (projStart && formExecutionDate < projStart) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid Execution Date',
+          description: `Execution date cannot be earlier than project start date (${format(parseISO(project!.startDate!), 'dd MMM yyyy')}).`,
+        });
+        return;
+      }
+      if (projEnd && formExecutionDate > projEnd) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid Execution Date',
+          description: `Execution date cannot be later than project end date (${format(parseISO(project!.endDate!), 'dd MMM yyyy')}).`,
+        });
+        return;
+      }
+    }
 
     // Validate attachments: both document name and location URL are mandatory
     for (let i = 0; i < formAttachments.length; i++) {
@@ -1080,6 +1102,8 @@ export default function TestExecutionPage() {
                     type="date"
                     value={formExecutionDate}
                     onChange={e => setFormExecutionDate(e.target.value)}
+                    min={projStart || undefined}
+                    max={projEnd || undefined}
                     className="h-9 text-xs"
                   />
                   <p className="text-[11px] text-muted-foreground">

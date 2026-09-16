@@ -454,8 +454,44 @@ export default function BacklogPage() {
     defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', severity: 'Medium', releaseId: 'unassigned', foundInTestPlanId: 'unassigned', relatedBugId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned', predecessorId: 'unassigned' },
   });
   
+  const projStart = useMemo(() => project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : undefined, [project?.startDate]);
+  const projEnd = useMemo(() => project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : undefined, [project?.endDate]);
+
+  const dynamicSubTaskSchema = useMemo(() => {
+    return subTaskFormSchema.superRefine((data, ctx) => {
+      if (projStart && data.startDate && data.startDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Start date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+          path: ['startDate'],
+        });
+      }
+      if (projEnd && data.startDate && data.startDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Start date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+          path: ['startDate'],
+        });
+      }
+      if (projStart && data.endDate && data.endDate < projStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).`,
+          path: ['endDate'],
+        });
+      }
+      if (projEnd && data.endDate && data.endDate > projEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `End date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).`,
+          path: ['endDate'],
+        });
+      }
+    });
+  }, [projStart, projEnd, project]);
+
   const subTaskForm = useForm<z.infer<typeof subTaskFormSchema>>({
-    resolver: zodResolver(subTaskFormSchema),
+    resolver: zodResolver(dynamicSubTaskSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -781,6 +817,27 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
     setIsEditStorySubmitting(true);
     
+    if (projStart && values.startDate && values.startDate < projStart) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `Start date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).` });
+      setIsEditStorySubmitting(false);
+      return;
+    }
+    if (projEnd && values.startDate && values.startDate > projEnd) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `Start date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).` });
+      setIsEditStorySubmitting(false);
+      return;
+    }
+    if (projStart && values.endDate && values.endDate < projStart) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `End date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).` });
+      setIsEditStorySubmitting(false);
+      return;
+    }
+    if (projEnd && values.endDate && values.endDate > projEnd) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `End date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).` });
+      setIsEditStorySubmitting(false);
+      return;
+    }
+    
     const success = await updateStory(selectedStory.id, {
         ...values,
         assigneeId: values.assigneeId === 'unassigned' ? undefined : (values.assigneeId || undefined),
@@ -799,6 +856,23 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
 
 const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     if (!selectedStory) return;
+
+    if (projStart && values.startDate && values.startDate < projStart) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `Start date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).` });
+      return;
+    }
+    if (projEnd && values.startDate && values.startDate > projEnd) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `Start date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).` });
+      return;
+    }
+    if (projStart && values.endDate && values.endDate < projStart) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `End date cannot be before project start date (${format(parseISO(projStart), 'dd MMM yyyy')}).` });
+      return;
+    }
+    if (projEnd && values.endDate && values.endDate > projEnd) {
+      toast({ variant: "destructive", title: "Invalid Date", description: `End date cannot be after project end date (${format(parseISO(projEnd), 'dd MMM yyyy')}).` });
+      return;
+    }
 
     const newSubTask: Omit<Story, 'id' | 'storyId'> = {
         title: values.title,
@@ -2167,14 +2241,24 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                         <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Start Date</FormLabel>
-                                                <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                                <FormControl><Input type="date" {...field} value={field.value || ''} min={projStart} max={projEnd} /></FormControl>
+                                                {projStart && projEnd && (
+                                                  <p className="text-[11px] text-muted-foreground">
+                                                    Project: {format(parseISO(projStart), 'dd MMM yyyy')} - {format(parseISO(projEnd), 'dd MMM yyyy')}
+                                                  </p>
+                                                )}
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
                                         <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>End Date</FormLabel>
-                                                <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                                                <FormControl><Input type="date" {...field} value={field.value || ''} min={projStart} max={projEnd} /></FormControl>
+                                                {projStart && projEnd && (
+                                                  <p className="text-[11px] text-muted-foreground">
+                                                    Project: {format(parseISO(projStart), 'dd MMM yyyy')} - {format(parseISO(projEnd), 'dd MMM yyyy')}
+                                                  </p>
+                                                )}
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
@@ -3082,7 +3166,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                              <FormControl><SelectTrigger><SelectValue placeholder="Assign a resource"/></SelectTrigger></FormControl>
                                                              <SelectContent>
                                                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                             {backlogFilteredUsersForSubTasks.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.empId?.trim()})</SelectItem>)}
+                                                             {users.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
                                                              </SelectContent>
                                                          </Select>
                                                          <FormMessage/>
@@ -3112,21 +3196,31 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                                      )}/>
                                                  </div>
                                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                     <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
-                                                         <FormItem>
-                                                             <FormLabel>Start Date</FormLabel>
-                                                             <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                                                             <FormMessage />
-                                                         </FormItem>
-                                                     )} />
-                                                     <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
-                                                         <FormItem>
-                                                             <FormLabel>End Date</FormLabel>
-                                                             <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                                                             <FormMessage />
-                                                         </FormItem>
-                                                     )} />
-                                                 </div>
+                                                      <FormField control={subTaskForm.control} name="startDate" render={({ field }) => (
+                                                          <FormItem>
+                                                              <FormLabel>Start Date</FormLabel>
+                                                              <FormControl><Input type="date" {...field} value={field.value || ''} min={projStart} max={projEnd} /></FormControl>
+                                                              {projStart && projEnd && (
+                                                                <p className="text-[11px] text-muted-foreground">
+                                                                  Project: {format(parseISO(projStart), 'dd MMM yyyy')} - {format(parseISO(projEnd), 'dd MMM yyyy')}
+                                                                </p>
+                                                              )}
+                                                              <FormMessage />
+                                                          </FormItem>
+                                                      )} />
+                                                      <FormField control={subTaskForm.control} name="endDate" render={({ field }) => (
+                                                          <FormItem>
+                                                              <FormLabel>End Date</FormLabel>
+                                                              <FormControl><Input type="date" {...field} value={field.value || ''} min={projStart} max={projEnd} /></FormControl>
+                                                              {projStart && projEnd && (
+                                                                <p className="text-[11px] text-muted-foreground">
+                                                                  Project: {format(parseISO(projStart), 'dd MMM yyyy')} - {format(parseISO(projEnd), 'dd MMM yyyy')}
+                                                                </p>
+                                                              )}
+                                                              <FormMessage />
+                                                          </FormItem>
+                                                      )} />
+                                                  </div>
                                                   <FormField control={subTaskForm.control} name="estimatedHours" render={({field}) => (
                                                       <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
                                                   )}/>
