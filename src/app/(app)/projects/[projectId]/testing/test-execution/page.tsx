@@ -137,7 +137,13 @@ export default function TestExecutionPage() {
         initialAttachments = [{ name: 'Attachment', url: selectedTC.attachment }];
       }
       setFormAttachments(initialAttachments);
-      setEditingExecAttachmentIndices({});
+      const initialEditing: Record<number, boolean> = {};
+      initialAttachments.forEach((att, idx) => {
+        if (!att.name?.trim() || !att.url?.trim() || !isValidUrl(att.url)) {
+          initialEditing[idx] = true;
+        }
+      });
+      setEditingExecAttachmentIndices(initialEditing);
     } else {
       setFormStatus('Not Run');
       setFormAssigneeId('unassigned');
@@ -369,25 +375,47 @@ export default function TestExecutionPage() {
   const handleSaveDetails = async () => {
     if (!selectedPlanId || !selectedTC) return;
 
-    // Validate attachment URLs
-    const invalidAttachment = formAttachments.find(
-      a => a.url && a.url.trim() !== '' && !isValidUrl(a.url)
-    );
-    if (invalidAttachment) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid URL',
-        description: `Attachment "${invalidAttachment.name || 'Untitled'}" has an invalid URL format. Please enter a valid URL (e.g. https://example.com or www.example.com).`,
-      });
-      return;
+    // Validate attachments: both document name and location URL are mandatory
+    for (let i = 0; i < formAttachments.length; i++) {
+      const att = formAttachments[i];
+      const trimmedName = (att.name || '').trim();
+      const trimmedUrl = (att.url || '').trim();
+      if (!trimmedName) {
+        setEditingExecAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'Document Name Required',
+          description: `Attachment #${i + 1} is missing a document name. Document name is mandatory.`,
+        });
+        return;
+      }
+      if (!trimmedUrl) {
+        setEditingExecAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'URL Required',
+          description: `Attachment "${trimmedName || `#${i + 1}`}" is missing a location URL. URL is mandatory.`,
+        });
+        return;
+      }
+      if (!isValidUrl(trimmedUrl)) {
+        setEditingExecAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'Invalid URL',
+          description: `Attachment "${trimmedName || `#${i + 1}`}" has an invalid URL format. Please enter a valid URL (e.g. https://example.com or www.example.com).`,
+        });
+        return;
+      }
     }
 
     setIsSaving(true);
     const parsedActual = formActualEffort.trim() !== '' ? parseFloat(formActualEffort) : undefined;
 
-    const cleanedAttachments = formAttachments
-      .map(a => ({ name: (a.name || '').trim(), url: a.url && a.url.trim() !== '' ? formatUrl(a.url) : '' }))
-      .filter(a => a.name !== '' || a.url !== '');
+    const cleanedAttachments = formAttachments.map(a => ({
+      name: a.name.trim(),
+      url: formatUrl(a.url.trim()),
+    }));
 
     const payload: Partial<TestCycleTestCase> = {
       status: formStatus,
@@ -1167,18 +1195,19 @@ export default function TestExecutionPage() {
                       };
 
                       if (!isEditing) {
+                        const isInvalid = !att.name?.trim() || !att.url?.trim() || !isValidUrl(att.url);
                         return (
-                          <div key={index} className="p-3 rounded-md border bg-background/80 flex items-center justify-between gap-3 shadow-xs">
+                          <div key={index} className={cn("p-3 rounded-md border bg-background/80 flex items-center justify-between gap-3 shadow-xs", isInvalid && "border-destructive/50 bg-destructive/5")}>
                             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 min-w-0 flex-1">
                               <div className="min-w-[120px] max-w-[200px] truncate">
                                 <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Document Name</span>
-                                <span className="text-xs font-medium text-foreground truncate block" title={att.name || 'Untitled Document'}>
-                                  {att.name || 'Untitled Document'}
+                                <span className={cn("text-xs font-medium truncate block", !att.name?.trim() ? "text-destructive italic" : "text-foreground")} title={att.name || 'Name missing'}>
+                                  {att.name?.trim() || 'Name missing *'}
                                 </span>
                               </div>
                               <div className="min-w-0 flex-1">
                                 <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Location</span>
-                                {att.url ? (
+                                {att.url && isValidUrl(att.url) ? (
                                   <a
                                     href={att.url.startsWith('http://') || att.url.startsWith('https://') ? att.url : `https://${att.url}`}
                                     target="_blank"
@@ -1189,7 +1218,9 @@ export default function TestExecutionPage() {
                                     <span>View Document</span>
                                   </a>
                                 ) : (
-                                  <span className="text-xs text-muted-foreground italic">No URL provided</span>
+                                  <span className="text-xs text-destructive italic">
+                                    {!att.url?.trim() ? 'URL missing *' : 'Invalid URL *'}
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -1232,7 +1263,25 @@ export default function TestExecutionPage() {
                                 size="sm"
                                 className="h-7 text-xs px-2.5 gap-1 font-medium bg-primary/10 hover:bg-primary/20 text-primary"
                                 onClick={() => {
-                                  if (att.url && att.url.trim() !== '' && !isValidUrl(att.url)) {
+                                  const trimmedName = (att.name || '').trim();
+                                  const trimmedUrl = (att.url || '').trim();
+                                  if (!trimmedName) {
+                                    toast({
+                                      variant: 'destructive',
+                                      title: 'Document Name Required',
+                                      description: 'Please enter a document name for the attachment.',
+                                    });
+                                    return;
+                                  }
+                                  if (!trimmedUrl) {
+                                    toast({
+                                      variant: 'destructive',
+                                      title: 'URL Required',
+                                      description: 'Please enter a URL for the attachment.',
+                                    });
+                                    return;
+                                  }
+                                  if (!isValidUrl(trimmedUrl)) {
                                     toast({
                                       variant: 'destructive',
                                       title: 'Invalid URL',
@@ -1260,7 +1309,9 @@ export default function TestExecutionPage() {
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <Label className="text-[11px] text-muted-foreground font-medium">Document Name</Label>
+                              <Label className="text-[11px] text-muted-foreground font-medium">
+                                Document Name <span className="text-destructive">*</span>
+                              </Label>
                               <Input
                                 placeholder="e.g. SOW, Test Evidence Screenshot"
                                 value={att.name || ''}
@@ -1272,11 +1323,16 @@ export default function TestExecutionPage() {
                                     return next;
                                   });
                                 }}
-                                className="h-8 text-xs bg-background"
+                                className={cn("h-8 text-xs bg-background", !att.name?.trim() && "border-destructive focus-visible:ring-destructive")}
                               />
+                              {!att.name?.trim() && (
+                                <p className="text-[10px] text-destructive">Document name is required</p>
+                              )}
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-[11px] text-muted-foreground font-medium">Location (URL)</Label>
+                              <Label className="text-[11px] text-muted-foreground font-medium">
+                                Location (URL) <span className="text-destructive">*</span>
+                              </Label>
                               <Input
                                 placeholder="https://example.com/your-document-link"
                                 value={att.url || ''}
@@ -1288,11 +1344,13 @@ export default function TestExecutionPage() {
                                     return next;
                                   });
                                 }}
-                                className={cn("h-8 text-xs bg-background font-mono", att.url && !isValidUrl(att.url) && "border-destructive focus-visible:ring-destructive")}
+                                className={cn("h-8 text-xs bg-background font-mono", (!att.url?.trim() || !isValidUrl(att.url)) && "border-destructive focus-visible:ring-destructive")}
                               />
-                              {att.url && !isValidUrl(att.url) && (
+                              {!att.url?.trim() ? (
+                                <p className="text-[10px] text-destructive">URL is required</p>
+                              ) : !isValidUrl(att.url) ? (
                                 <p className="text-[10px] text-destructive">Invalid URL format (e.g. https://example.com or www.example.com)</p>
-                              )}
+                              ) : null}
                             </div>
                           </div>
                         </div>

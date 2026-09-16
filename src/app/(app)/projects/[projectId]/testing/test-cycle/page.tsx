@@ -86,8 +86,8 @@ const testCaseFormSchema = z.object({
   executionDate: z.string().optional(),
   effortHours: z.string().optional(),
   attachments: z.array(z.object({
-    name: z.string(),
-    url: z.string().refine(val => !val || val.trim() === '' || isValidUrl(val), {
+    name: z.string().trim().min(1, 'Document name is required.'),
+    url: z.string().trim().min(1, 'URL is required.').refine(val => isValidUrl(val), {
       message: "Please enter a valid URL (e.g. https://example.com or www.example.com).",
     }),
   })).optional(),
@@ -134,7 +134,7 @@ export default function TestCyclePage() {
   const [selectedBacklogTCs, setSelectedBacklogTCs] = useState<string[]>([]);
   const [selectedScheduledTCs, setSelectedScheduledTCs] = useState<string[]>([]);
   const [openDays, setOpenDays] = useState<Record<string, boolean>>({});
-  
+
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const testCycleForm = useForm<z.infer<typeof refinedTestCycleSchema>>({
@@ -144,7 +144,9 @@ export default function TestCyclePage() {
     }
   });
 
-  const testCaseForm = useForm<z.infer<typeof testCaseFormSchema>>({});
+  const testCaseForm = useForm<z.infer<typeof testCaseFormSchema>>({
+    resolver: zodResolver(testCaseFormSchema),
+  });
   const [editingAttachmentIndices, setEditingAttachmentIndices] = useState<Record<number, boolean>>({});
 
   const watchedPlanType = useWatch({ control: testCycleForm.control, name: 'planType' });
@@ -214,22 +216,28 @@ export default function TestCyclePage() {
 
   useEffect(() => {
     if (isTestCaseDialogOpen && editingTestCase) {
-        let initialAttachments = (editingTestCase.attachments || []).map(a => ({ name: a.name || '', url: a.url || '' }));
-        if (initialAttachments.length === 0 && editingTestCase.attachment) {
-          initialAttachments = [{ name: 'Attachment', url: editingTestCase.attachment }];
+      let initialAttachments = (editingTestCase.attachments || []).map(a => ({ name: a.name || '', url: a.url || '' }));
+      if (initialAttachments.length === 0 && editingTestCase.attachment) {
+        initialAttachments = [{ name: 'Attachment', url: editingTestCase.attachment }];
+      }
+      const initialEditing: Record<number, boolean> = {};
+      initialAttachments.forEach((att, idx) => {
+        if (!att.name?.trim() || !att.url?.trim() || !isValidUrl(att.url)) {
+          initialEditing[idx] = true;
         }
-        setEditingAttachmentIndices({});
-        testCaseForm.reset({
-            title: (editingTestCase.title || '').slice(0, 60),
-            type: editingTestCase.type,
-            description: (editingTestCase.description || '').slice(0, 300),
-            expectedResult: editingTestCase.expectedResult,
-            status: editingTestCase.status || 'Not Run',
-            assigneeId: editingTestCase.assigneeId || 'unassigned',
-            executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
-            effortHours: editingTestCase.effortHours !== undefined && editingTestCase.effortHours !== null ? String(editingTestCase.effortHours) : '',
-            attachments: initialAttachments,
-        });
+      });
+      setEditingAttachmentIndices(initialEditing);
+      testCaseForm.reset({
+        title: (editingTestCase.title || '').slice(0, 60),
+        type: editingTestCase.type,
+        description: (editingTestCase.description || '').slice(0, 300),
+        expectedResult: editingTestCase.expectedResult,
+        status: editingTestCase.status || 'Not Run',
+        assigneeId: editingTestCase.assigneeId || 'unassigned',
+        executionDate: editingTestCase.executionDate ? format(parseISO(editingTestCase.executionDate), 'yyyy-MM-dd') : '',
+        effortHours: editingTestCase.effortHours !== undefined && editingTestCase.effortHours !== null ? String(editingTestCase.effortHours) : '',
+        attachments: initialAttachments,
+      });
     }
   }, [isTestCaseDialogOpen, editingTestCase, testCaseForm]);
 
@@ -249,29 +257,88 @@ export default function TestCyclePage() {
     }
   };
 
+  const onTestCaseInvalid = () => {
+    const currentAttachments = testCaseForm.getValues('attachments') || [];
+    for (let i = 0; i < currentAttachments.length; i++) {
+      const att = currentAttachments[i];
+      const trimmedName = (att.name || '').trim();
+      const trimmedUrl = (att.url || '').trim();
+      if (!trimmedName) {
+        setEditingAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'Document Name Required',
+          description: `Attachment #${i + 1} is missing a document name. Document name is mandatory.`,
+        });
+        return;
+      }
+      if (!trimmedUrl) {
+        setEditingAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'URL Required',
+          description: `Attachment "${trimmedName || `#${i + 1}`}" is missing a location URL. URL is mandatory.`,
+        });
+        return;
+      }
+      if (!isValidUrl(trimmedUrl)) {
+        setEditingAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'Invalid URL',
+          description: `Attachment "${trimmedName || `#${i + 1}`}" has an invalid URL format. Please enter a valid URL (e.g. https://example.com or www.example.com).`,
+        });
+        return;
+      }
+    }
+  };
+
   const onTestCaseSubmit = async (values: z.infer<typeof testCaseFormSchema>) => {
     if (!editingTestCase || !selectedPlanId) return;
 
-    // Validate attachment URLs
-    const invalidAttachment = (values.attachments || []).find(
-      a => a.url && a.url.trim() !== '' && !isValidUrl(a.url)
-    );
-    if (invalidAttachment) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid URL',
-        description: `Attachment "${invalidAttachment.name || 'Untitled'}" has an invalid URL format. Please enter a valid URL (e.g. https://example.com or www.example.com).`,
-      });
-      return;
+    // Validate attachments: both document name and location URL are mandatory
+    const rawAttachments = values.attachments || [];
+    for (let i = 0; i < rawAttachments.length; i++) {
+      const att = rawAttachments[i];
+      const trimmedName = (att.name || '').trim();
+      const trimmedUrl = (att.url || '').trim();
+      if (!trimmedName) {
+        setEditingAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'Document Name Required',
+          description: `Attachment #${i + 1} is missing a document name. Document name is mandatory.`,
+        });
+        return;
+      }
+      if (!trimmedUrl) {
+        setEditingAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'URL Required',
+          description: `Attachment "${trimmedName || `#${i + 1}`}" is missing a location URL. URL is mandatory.`,
+        });
+        return;
+      }
+      if (!isValidUrl(trimmedUrl)) {
+        setEditingAttachmentIndices(prev => ({ ...prev, [i]: true }));
+        toast({
+          variant: 'destructive',
+          title: 'Invalid URL',
+          description: `Attachment "${trimmedName || `#${i + 1}`}" has an invalid URL format. Please enter a valid URL (e.g. https://example.com or www.example.com).`,
+        });
+        return;
+      }
     }
 
     const parsedEffort = values.effortHours && values.effortHours.trim() !== ''
       ? parseFloat(values.effortHours)
       : undefined;
 
-    const cleanedAttachments = (values.attachments || [])
-      .map(a => ({ name: (a.name || '').trim(), url: a.url && a.url.trim() !== '' ? formatUrl(a.url) : '' }))
-      .filter(a => a.name !== '' || a.url !== '');
+    const cleanedAttachments = rawAttachments.map(a => ({
+      name: a.name.trim(),
+      url: formatUrl(a.url.trim()),
+    }));
 
     const updateData: Partial<TestCycleTestCase> = {
       title: values.title,
@@ -379,7 +446,7 @@ export default function TestCyclePage() {
             dayMap[dStr].push(tc);
             return;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       unscheduled.push(tc);
     });
@@ -394,7 +461,7 @@ export default function TestCyclePage() {
     // Apply Search Query Filter (ID or Title)
     if (backlogSearchQuery.trim()) {
       const q = backlogSearchQuery.trim().toLowerCase();
-      backlogTCs = backlogTCs.filter(tc => 
+      backlogTCs = backlogTCs.filter(tc =>
         (tc.testCaseId && tc.testCaseId.toLowerCase().includes(q)) ||
         (tc.title && tc.title.toLowerCase().includes(q))
       );
@@ -503,13 +570,13 @@ export default function TestCyclePage() {
     setIsTestCaseDialogOpen(true);
   };
 
-  const SortableHeader = ({ 
-    columnId, 
-    children, 
-    sortState, 
-    onSort 
-  }: { 
-    columnId: string; 
+  const SortableHeader = ({
+    columnId,
+    children,
+    sortState,
+    onSort
+  }: {
+    columnId: string;
     children: React.ReactNode;
     sortState: { id: string; desc: boolean | null } | null;
     onSort: (columnId: string) => void;
@@ -975,93 +1042,93 @@ export default function TestCyclePage() {
           </DialogHeader>
           <Form {...testCycleForm}>
             <form onSubmit={testCycleForm.handleSubmit(onTestCycleSubmit)} className="space-y-4 pt-2">
-                  <FormField control={testCycleForm.control} name="name" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cycle Name</FormLabel>
-                      <FormControl><Input placeholder="e.g., SIT Execution Cycle" {...field} maxLength={60} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={testCycleForm.control} name="planType" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cycle Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="Sprint">Sprint</SelectItem>
-                          <SelectItem value="Release">Release</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  {watchedPlanType === 'Sprint' && (
-                    <FormField control={testCycleForm.control} name="sprintId" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Sprint</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select a sprint..." /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  )}
-                  {watchedPlanType === 'Release' && (
-                    <FormField control={testCycleForm.control} name="releaseId" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Release</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select a release..." /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  )}
-                  <FormField control={testCycleForm.control} name="environmentId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Environment</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select an environment..." /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {[...environments].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField control={testCycleForm.control} name="startDate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Date</FormLabel>
-                        <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={testCycleForm.control} name="endDate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Date</FormLabel>
-                        <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Cycle'}</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
+              <FormField control={testCycleForm.control} name="name" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cycle Name</FormLabel>
+                  <FormControl><Input placeholder="e.g., SIT Execution Cycle" {...field} maxLength={60} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={testCycleForm.control} name="planType" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cycle Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="Sprint">Sprint</SelectItem>
+                      <SelectItem value="Release">Release</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              {watchedPlanType === 'Sprint' && (
+                <FormField control={testCycleForm.control} name="sprintId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sprint</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select a sprint..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+              {watchedPlanType === 'Release' && (
+                <FormField control={testCycleForm.control} name="releaseId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Release</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select a release..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {releases.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+              <FormField control={testCycleForm.control} name="environmentId" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Environment</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select an environment..." /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {[...environments].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={testCycleForm.control} name="startDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Date</FormLabel>
+                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={testCycleForm.control} name="endDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Date</FormLabel>
+                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <DialogFooter>
+                <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Cycle'}</Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
@@ -1073,7 +1140,7 @@ export default function TestCyclePage() {
             <DialogDescription>Editing the test case copy within this test cycle. Changes here do not affect the original backlog test case.</DialogDescription>
           </DialogHeader>
           <Form {...testCaseForm}>
-            <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <form onSubmit={testCaseForm.handleSubmit(onTestCaseSubmit, onTestCaseInvalid)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                 {/* Parent Test Cycle & ID Information */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-lg border bg-muted/40 text-xs">
@@ -1090,11 +1157,11 @@ export default function TestCyclePage() {
                       <Badge variant="secondary" className="font-mono text-xs px-2 py-0.5">
                         {editingTestCase
                           ? (() => {
-                              const cyclePrefix = selectedPlan?.testCycleId || selectedPlan?.testPlanId || 'TC';
-                              return editingTestCase.testCaseId.startsWith(cyclePrefix)
-                                ? editingTestCase.testCaseId
-                                : `${cyclePrefix}-${editingTestCase.testCaseId}`;
-                            })()
+                            const cyclePrefix = selectedPlan?.testCycleId || selectedPlan?.testPlanId || 'TC';
+                            return editingTestCase.testCaseId.startsWith(cyclePrefix)
+                              ? editingTestCase.testCaseId
+                              : `${cyclePrefix}-${editingTestCase.testCaseId}`;
+                          })()
                           : '—'}
                       </Badge>
                     </div>
@@ -1141,8 +1208,8 @@ export default function TestCyclePage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-              </div>
-               <FormField control={testCaseForm.control} name="description" render={({ field }) => (
+                </div>
+                <FormField control={testCaseForm.control} name="description" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description (Steps)</FormLabel>
                     <FormControl><Textarea placeholder="1. Navigate to login page..." {...field} rows={4} maxLength={300} /></FormControl>
@@ -1276,18 +1343,19 @@ export default function TestCyclePage() {
                         };
 
                         if (!isEditing) {
+                          const isInvalid = !att.name?.trim() || !att.url?.trim() || !isValidUrl(att.url);
                           return (
-                            <div key={index} className="p-3 rounded-md border bg-background/80 flex items-center justify-between gap-3 shadow-xs">
+                            <div key={index} className={cn("p-3 rounded-md border bg-background/80 flex items-center justify-between gap-3 shadow-xs", isInvalid && "border-destructive/50 bg-destructive/5")}>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 min-w-0 flex-1">
                                 <div className="min-w-[120px] max-w-[200px] truncate">
                                   <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Document Name</span>
-                                  <span className="text-xs font-medium text-foreground truncate block" title={att.name || 'Untitled Document'}>
-                                    {att.name || 'Untitled Document'}
+                                  <span className={cn("text-xs font-medium truncate block", !att.name?.trim() ? "text-destructive italic" : "text-foreground")} title={att.name || 'Name missing'}>
+                                    {att.name?.trim() || 'Name missing *'}
                                   </span>
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Location</span>
-                                  {att.url ? (
+                                  {att.url && isValidUrl(att.url) ? (
                                     <a
                                       href={att.url.startsWith('http://') || att.url.startsWith('https://') ? att.url : `https://${att.url}`}
                                       target="_blank"
@@ -1298,7 +1366,9 @@ export default function TestCyclePage() {
                                       <span>View Document</span>
                                     </a>
                                   ) : (
-                                    <span className="text-xs text-muted-foreground italic">No URL provided</span>
+                                    <span className="text-xs text-destructive italic">
+                                      {!att.url?.trim() ? 'URL missing *' : 'Invalid URL *'}
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -1339,7 +1409,25 @@ export default function TestCyclePage() {
                                   size="sm"
                                   className="h-7 text-xs px-2.5 gap-1 font-medium bg-primary/10 hover:bg-primary/20 text-primary"
                                   onClick={() => {
-                                    if (att.url && att.url.trim() !== '' && !isValidUrl(att.url)) {
+                                    const trimmedName = (att.name || '').trim();
+                                    const trimmedUrl = (att.url || '').trim();
+                                    if (!trimmedName) {
+                                      toast({
+                                        variant: 'destructive',
+                                        title: 'Document Name Required',
+                                        description: 'Please enter a document name for the attachment.',
+                                      });
+                                      return;
+                                    }
+                                    if (!trimmedUrl) {
+                                      toast({
+                                        variant: 'destructive',
+                                        title: 'URL Required',
+                                        description: 'Please enter a URL for the attachment.',
+                                      });
+                                      return;
+                                    }
+                                    if (!isValidUrl(trimmedUrl)) {
                                       toast({
                                         variant: 'destructive',
                                         title: 'Invalid URL',
@@ -1367,33 +1455,42 @@ export default function TestCyclePage() {
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="space-y-1">
-                                <Label className="text-[11px] text-muted-foreground font-medium">Document Name</Label>
+                                <Label className="text-[11px] text-muted-foreground font-medium">
+                                  Document Name <span className="text-destructive">*</span>
+                                </Label>
                                 <Input
                                   placeholder="e.g. SOW, Test Evidence Screenshot"
                                   value={att.name || ''}
                                   onChange={(e) => {
                                     const current = [...(testCaseForm.getValues('attachments') || [])];
                                     current[index] = { ...current[index], name: e.target.value };
-                                    testCaseForm.setValue('attachments', current);
+                                    testCaseForm.setValue('attachments', current, { shouldDirty: true });
                                   }}
-                                  className="h-8 text-xs bg-background"
+                                  className={cn("h-8 text-xs bg-background", !att.name?.trim() && "border-destructive focus-visible:ring-destructive")}
                                 />
+                                {!att.name?.trim() && (
+                                  <p className="text-[10px] text-destructive">Document name is required</p>
+                                )}
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[11px] text-muted-foreground font-medium">Location (URL)</Label>
+                                <Label className="text-[11px] text-muted-foreground font-medium">
+                                  Location (URL) <span className="text-destructive">*</span>
+                                </Label>
                                 <Input
                                   placeholder="https://example.com/your-document-link"
                                   value={att.url || ''}
                                   onChange={(e) => {
                                     const current = [...(testCaseForm.getValues('attachments') || [])];
                                     current[index] = { ...current[index], url: e.target.value };
-                                    testCaseForm.setValue('attachments', current);
+                                    testCaseForm.setValue('attachments', current, { shouldDirty: true });
                                   }}
-                                  className={cn("h-8 text-xs bg-background font-mono", att.url && !isValidUrl(att.url) && "border-destructive focus-visible:ring-destructive")}
+                                  className={cn("h-8 text-xs bg-background font-mono", (!att.url?.trim() || !isValidUrl(att.url)) && "border-destructive focus-visible:ring-destructive")}
                                 />
-                                {att.url && !isValidUrl(att.url) && (
+                                {!att.url?.trim() ? (
+                                  <p className="text-[10px] text-destructive">URL is required</p>
+                                ) : !isValidUrl(att.url) ? (
                                   <p className="text-[10px] text-destructive">Invalid URL format (e.g. https://example.com or www.example.com)</p>
-                                )}
+                                ) : null}
                               </div>
                             </div>
                           </div>
@@ -1403,34 +1500,34 @@ export default function TestCyclePage() {
                   )}
                 </div>
               </div>
-            <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
-              <Button type="submit">Save Changes</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-    
-    <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => { if (!isOpen) setDeletingPlan(null); }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action will delete the test cycle &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={handleDeletePlan}
-            className={cn(buttonVariants({ variant: 'destructive' }))}
-          >
-            Continue
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletingPlan} onOpenChange={(isOpen) => { if (!isOpen) setDeletingPlan(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will delete the test cycle &quot;{deletingPlan?.name}&quot; and all test case copies within it. Original backlog test cases will not be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePlan}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
 
