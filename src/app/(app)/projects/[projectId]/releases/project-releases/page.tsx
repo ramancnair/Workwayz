@@ -1,8 +1,6 @@
-
-
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -60,6 +58,24 @@ const releaseSchemaBase = z.object({
   isCompleted: z.boolean().optional(),
 });
 
+function SortableHeader({
+  columnId,
+  onSort,
+  children,
+}: {
+  columnId: string;
+  onSort: (columnId: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <TableHead>
+      <Button variant="ghost" onClick={() => onSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+}
 
 export default function ReleasesPage() {
   const { releasesAndMilestones, addReleaseOrMilestone, updateReleaseOrMilestone, deleteReleaseOrMilestone } = useProject();
@@ -79,11 +95,11 @@ export default function ReleasesPage() {
   const dialogTitle = editingItem ? `Edit ${editingItem.itemType}` : `Add New ${itemTypeToAdd}`;
   const currentItemType = editingItem?.itemType || itemTypeToAdd;
 
-  const getParentReleaseName = (parentReleaseId?: string) => {
+  const getParentReleaseName = useCallback((parentReleaseId?: string) => {
     if (!parentReleaseId) return 'N/A';
     const parent = releases.find(r => r.id === parentReleaseId);
     return parent ? `(${parent.releaseId}) ${parent.name}` : 'N/A';
-  };
+  }, [releases]);
   
   const refinedReleaseSchema = releaseSchemaBase.superRefine((data, ctx) => {
     if (currentItemType === 'Release' || currentItemType === 'Stage') {
@@ -234,7 +250,7 @@ export default function ReleasesPage() {
     }
 
     return filtered;
-  }, [releasesAndMilestones, filters, sorting]);
+  }, [releasesAndMilestones, filters, sorting, getParentReleaseName]);
 
   const handleDialogOpen = (item: Release | null, type: ReleaseItemType) => {
     setEditingItem(item);
@@ -279,16 +295,6 @@ export default function ReleasesPage() {
     }
     setIsSubmitting(false);
   };
-  
-  const SortableHeader = ({ columnId, children }: { columnId: string, children: React.ReactNode }) => (
-    <TableHead>
-      <Button variant="ghost" onClick={() => handleSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  );
-
 
   return (
     <>
@@ -350,11 +356,11 @@ export default function ReleasesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHeader columnId="releaseId">ID</SortableHeader>
-                <SortableHeader columnId="name">Name</SortableHeader>
-                <SortableHeader columnId="parentReleaseId">Parent Release</SortableHeader>
-                <SortableHeader columnId="startDate">Start/Milestone Date</SortableHeader>
-                <SortableHeader columnId="endDate">End Date</SortableHeader>
+                <SortableHeader columnId="releaseId" onSort={handleSort}>ID</SortableHeader>
+                <SortableHeader columnId="name" onSort={handleSort}>Name</SortableHeader>
+                <SortableHeader columnId="parentReleaseId" onSort={handleSort}>Parent Release</SortableHeader>
+                <SortableHeader columnId="startDate" onSort={handleSort}>Start/Milestone Date</SortableHeader>
+                <SortableHeader columnId="endDate" onSort={handleSort}>End Date</SortableHeader>
                 <TableHead>Completed</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>

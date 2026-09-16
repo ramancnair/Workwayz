@@ -1,0 +1,578 @@
+{
+  "totalWarnings": 85,
+  "ruleCounts": {
+    "react-hooks/set-state-in-effect": 79,
+    "react-hooks/incompatible-library": 6
+  },
+  "fileCounts": {
+    "src/app/(app)/billing-rate/page.tsx": 1,
+    "src/app/(app)/billing/page.tsx": 1,
+    "src/app/(app)/fp-portfolio-dash/page.tsx": 1,
+    "src/app/(app)/holidays/leave-tracker/page.tsx": 1,
+    "src/app/(app)/layout.tsx": 1,
+    "src/app/(app)/my-account/page.tsx": 2,
+    "src/app/(app)/my-projects/page.tsx": 4,
+    "src/app/(app)/portfolio-settings/ai-config/page.tsx": 1,
+    "src/app/(app)/portfolio-settings/archive/page.tsx": 1,
+    "src/app/(app)/portfolio-settings/authentication/page.tsx": 1,
+    "src/app/(app)/portfolio-settings/database/page.tsx": 1,
+    "src/app/(app)/portfolio-settings/test-data-studio/page.tsx": 1,
+    "src/app/(app)/portfolio-trash/page.tsx": 1,
+    "src/app/(app)/project-home/page.tsx": 2,
+    "src/app/(app)/projects/[projectId]/assumptions/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/dependencies/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/development/backlog/page.tsx": 7,
+    "src/app/(app)/projects/[projectId]/development/dashboard/page.tsx": 2,
+    "src/app/(app)/projects/[projectId]/development/development-tasks/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/development/grooming/page.tsx": 3,
+    "src/app/(app)/projects/[projectId]/development/kanban/page.tsx": 2,
+    "src/app/(app)/projects/[projectId]/initial-estimation/project-status/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/initial-estimation/specifications/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/issues/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/pmo/documents/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/pmo/fb-payment-milestones/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/pmo/tnm-billing/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/pmo/tnm-payment-milestones/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/project-details/fp-pm-dash/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/project-details/pm-dashboard/page.tsx": 2,
+    "src/app/(app)/projects/[projectId]/project-details/project-status/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/project-trash/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/resources/project-resources/page.tsx": 2,
+    "src/app/(app)/projects/[projectId]/resources/worklog/page.tsx": 3,
+    "src/app/(app)/projects/[projectId]/risks/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/testing/defect-tracker/page.tsx": 3,
+    "src/app/(app)/projects/[projectId]/testing/defects/page.tsx": 2,
+    "src/app/(app)/projects/[projectId]/testing/test-cases/page.tsx": 2,
+    "src/app/(app)/projects/[projectId]/testing/test-cycle/page.tsx": 1,
+    "src/app/(app)/projects/[projectId]/testing/test-execution/page.tsx": 3,
+    "src/app/(app)/users/page.tsx": 2,
+    "src/app/(app)/utilization/page.tsx": 1,
+    "src/components/AuthGuard.tsx": 3,
+    "src/components/ReportIssueModal.tsx": 1,
+    "src/components/ThemeToggle.tsx": 1,
+    "src/components/flowpilot/FlowPilotChatWidget.tsx": 3,
+    "src/components/flowpilot/FlowPilotWidgetClient.tsx": 1,
+    "src/components/kanban/StoryEditDialog.tsx": 2,
+    "src/components/ui/carousel.tsx": 1,
+    "src/context/FirebaseProjectProvider.tsx": 1,
+    "src/context/PostgresProjectProvider.tsx": 1,
+    "src/hooks/use-permissions.ts": 2
+  },
+  "detailsByRule": {
+    "react-hooks/set-state-in-effect": [
+      {
+        "file": "src/app/(app)/billing-rate/page.tsx",
+        "line": 162,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/billing/page.tsx",
+        "line": 112,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/fp-portfolio-dash/page.tsx",
+        "line": 168,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/layout.tsx",
+        "line": 41,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/my-account/page.tsx",
+        "line": 58,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/my-account/page.tsx",
+        "line": 119,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/my-projects/page.tsx",
+        "line": 56,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/my-projects/page.tsx",
+        "line": 72,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/my-projects/page.tsx",
+        "line": 94,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/my-projects/page.tsx",
+        "line": 114,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/portfolio-settings/ai-config/page.tsx",
+        "line": 75,
+        "column": 21,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/portfolio-settings/authentication/page.tsx",
+        "line": 85,
+        "column": 21,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/portfolio-settings/database/page.tsx",
+        "line": 97,
+        "column": 21,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/portfolio-settings/test-data-studio/page.tsx",
+        "line": 74,
+        "column": 11,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/portfolio-trash/page.tsx",
+        "line": 183,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/project-home/page.tsx",
+        "line": 128,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/project-home/page.tsx",
+        "line": 348,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/assumptions/page.tsx",
+        "line": 108,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/dependencies/page.tsx",
+        "line": 110,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/backlog/page.tsx",
+        "line": 391,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/backlog/page.tsx",
+        "line": 526,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/backlog/page.tsx",
+        "line": 532,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/backlog/page.tsx",
+        "line": 544,
+        "column": 11,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/backlog/page.tsx",
+        "line": 608,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/backlog/page.tsx",
+        "line": 618,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/backlog/page.tsx",
+        "line": 3278,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/dashboard/page.tsx",
+        "line": 122,
+        "column": 11,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/dashboard/page.tsx",
+        "line": 131,
+        "column": 11,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/development-tasks/page.tsx",
+        "line": 287,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/grooming/page.tsx",
+        "line": 580,
+        "column": 13,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/grooming/page.tsx",
+        "line": 682,
+        "column": 11,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/grooming/page.tsx",
+        "line": 2366,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/kanban/page.tsx",
+        "line": 537,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/development/kanban/page.tsx",
+        "line": 1953,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/initial-estimation/project-status/page.tsx",
+        "line": 134,
+        "column": 21,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/initial-estimation/specifications/page.tsx",
+        "line": 149,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/issues/page.tsx",
+        "line": 116,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/pmo/documents/page.tsx",
+        "line": 82,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/pmo/tnm-billing/page.tsx",
+        "line": 115,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/project-details/fp-pm-dash/page.tsx",
+        "line": 239,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/project-details/pm-dashboard/page.tsx",
+        "line": 125,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/project-details/pm-dashboard/page.tsx",
+        "line": 516,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/project-details/project-status/page.tsx",
+        "line": 135,
+        "column": 21,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx",
+        "line": 240,
+        "column": 13,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/project-trash/page.tsx",
+        "line": 159,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/resources/project-resources/page.tsx",
+        "line": 520,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/resources/worklog/page.tsx",
+        "line": 136,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/resources/worklog/page.tsx",
+        "line": 172,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/resources/worklog/page.tsx",
+        "line": 244,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/risks/page.tsx",
+        "line": 127,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/defect-tracker/page.tsx",
+        "line": 371,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/defect-tracker/page.tsx",
+        "line": 377,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/defect-tracker/page.tsx",
+        "line": 386,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/defects/page.tsx",
+        "line": 157,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/defects/page.tsx",
+        "line": 210,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/test-cases/page.tsx",
+        "line": 285,
+        "column": 11,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/test-cases/page.tsx",
+        "line": 310,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/test-execution/page.tsx",
+        "line": 92,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/test-execution/page.tsx",
+        "line": 125,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/test-execution/page.tsx",
+        "line": 244,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/users/page.tsx",
+        "line": 132,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/users/page.tsx",
+        "line": 230,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/app/(app)/utilization/page.tsx",
+        "line": 174,
+        "column": 13,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/AuthGuard.tsx",
+        "line": 73,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/AuthGuard.tsx",
+        "line": 222,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/AuthGuard.tsx",
+        "line": 248,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/ReportIssueModal.tsx",
+        "line": 50,
+        "column": 29,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/ThemeToggle.tsx",
+        "line": 29,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/flowpilot/FlowPilotChatWidget.tsx",
+        "line": 271,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/flowpilot/FlowPilotChatWidget.tsx",
+        "line": 279,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/flowpilot/FlowPilotChatWidget.tsx",
+        "line": 319,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/flowpilot/FlowPilotWidgetClient.tsx",
+        "line": 32,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/kanban/StoryEditDialog.tsx",
+        "line": 119,
+        "column": 5,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/kanban/StoryEditDialog.tsx",
+        "line": 212,
+        "column": 11,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/components/ui/carousel.tsx",
+        "line": 114,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/context/FirebaseProjectProvider.tsx",
+        "line": 253,
+        "column": 9,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/context/PostgresProjectProvider.tsx",
+        "line": 226,
+        "column": 13,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/hooks/use-permissions.ts",
+        "line": 32,
+        "column": 11,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      },
+      {
+        "file": "src/hooks/use-permissions.ts",
+        "line": 44,
+        "column": 7,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders"
+      }
+    ],
+    "react-hooks/incompatible-library": [
+      {
+        "file": "src/app/(app)/holidays/leave-tracker/page.tsx",
+        "line": 261,
+        "column": 25,
+        "message": "Compilation Skipped: Use of incompatible library"
+      },
+      {
+        "file": "src/app/(app)/portfolio-settings/archive/page.tsx",
+        "line": 263,
+        "column": 42,
+        "message": "Compilation Skipped: Use of incompatible library"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/pmo/fb-payment-milestones/page.tsx",
+        "line": 312,
+        "column": 22,
+        "message": "Compilation Skipped: Use of incompatible library"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/pmo/tnm-payment-milestones/page.tsx",
+        "line": 196,
+        "column": 25,
+        "message": "Compilation Skipped: Use of incompatible library"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/resources/project-resources/page.tsx",
+        "line": 428,
+        "column": 28,
+        "message": "Compilation Skipped: Use of incompatible library"
+      },
+      {
+        "file": "src/app/(app)/projects/[projectId]/testing/test-cycle/page.tsx",
+        "line": 1262,
+        "column": 22,
+        "message": "Compilation Skipped: Use of incompatible library"
+      }
+    ]
+  }
+}

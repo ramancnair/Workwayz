@@ -161,8 +161,8 @@ function StoryCard({
   const Icon = workItemIcons[story.itemType];
   const doneColumn = columns.find(c => c.isDoneColumn);
   
-  const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
-  const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
+  const subTasks = useMemo(() => subItems?.filter(i => i.itemType === 'Sub Task') || [], [subItems]);
+  const bugs = useMemo(() => subItems?.filter(i => i.itemType === 'Bug') || [], [subItems]);
   const showSubItems = story.itemType !== 'Bug' && (subTasks.length > 0 || bugs.length > 0);
   
   const isReadyForDev = useMemo(() => {
@@ -589,7 +589,7 @@ export default function KanbanPage() {
           setEditParentStoryText('');
       }
     }
-  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases]);
+  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases, stories]);
 
   const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
     if (!selectedStory) return;

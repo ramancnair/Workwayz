@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,7 +60,20 @@ export default function AuthenticationSettingsPage() {
     const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
     const [editConfig, setEditConfig] = useState<AuthConfig | null>(null);
 
+    const router = useRouter();
     const { toast } = useToast();
+
+    const loadData = async () => {
+        try {
+            const profRes = await fetch('/api/config/profiles');
+            const profData = await profRes.json();
+            setProfiles(profData.authentication || []);
+            setIsLoading(false);
+        } catch (e) {
+            console.error("Failed to load configs", e);
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         // Authenticate admin access
@@ -74,18 +88,6 @@ export default function AuthenticationSettingsPage() {
         }
         loadData();
     }, []);
-
-    const loadData = async () => {
-        try {
-            const profRes = await fetch('/api/config/profiles');
-            const profData = await profRes.json();
-            setProfiles(profData.authentication || []);
-            setIsLoading(false);
-        } catch (e) {
-            console.error("Failed to load configs", e);
-            setIsLoading(false);
-        }
-    };
 
     // handleProviderChange removed as it is inherited
 
@@ -208,7 +210,7 @@ export default function AuthenticationSettingsPage() {
             await supabase?.auth.signOut();
         } catch(e) { }
         localStorage.removeItem('projectflow_user');
-        window.location.href = '/';
+        router.push('/');
     };
 
     if (!isAdmin) {

@@ -10,14 +10,15 @@ const STORAGE_KEY = 'sidebar_open';
  * layout and the per-project layout.
  */
 export function useSidebarPersistedState() {
-  const [open, setOpenState] = useState<boolean>(true);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored !== null) {
-      setOpenState(stored === 'true');
+  const [open, setOpenState] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored !== null) {
+        return stored === 'true';
+      }
     }
-  }, []);
+    return true;
+  });
 
   const setOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
     setOpenState((prev) => {

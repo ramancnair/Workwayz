@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useTransition } from 'react';
+import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import Link from 'next/link';
 import { useProject } from '@/context/ProjectContext';
 import { db } from '@/lib/firebase';
@@ -165,11 +165,13 @@ export default function FpPmDashboardPage() {
     loadPortfolios();
   }, []);
 
+  const projectPortfolioId = project?.portfolioId;
+  const projectPortfolioName = (project as any)?.portfolioName;
   const portfolioName = useMemo(() => {
-    if (!project?.portfolioId) return 'General Portfolio';
-    const found = portfolios.find((p) => p.id === project.portfolioId || p.name === project.portfolioId);
-    return found?.name || (project as any).portfolioName || project.portfolioId;
-  }, [portfolios, project?.portfolioId, (project as any)?.portfolioName]);
+    if (!projectPortfolioId) return 'General Portfolio';
+    const found = portfolios.find((p) => p.id === projectPortfolioId || p.name === projectPortfolioId);
+    return found?.name || projectPortfolioName || projectPortfolioId;
+  }, [portfolios, projectPortfolioId, projectPortfolioName]);
 
   // Package project data for query engine
   const projectData: FpPmProjectData = useMemo(() => ({
@@ -208,7 +210,7 @@ export default function FpPmDashboardPage() {
     impactedSystems,
   ]);
 
-  const handleRunQuery = (queryToRun: string) => {
+  const handleRunQuery = useCallback((queryToRun: string) => {
     const q = queryToRun.trim();
     if (!q) return;
 
@@ -229,7 +231,7 @@ export default function FpPmDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [projectData]);
 
   // Run or refresh query on mount and when project data finishes loading
   useEffect(() => {
@@ -238,13 +240,8 @@ export default function FpPmDashboardPage() {
     }
   }, [
     project?.id,
-    stories.length,
-    sprints.length,
-    epics.length,
-    employees.length,
-    risks.length,
-    issues.length,
-    paymentMilestones.length,
+    handleRunQuery,
+    searchQuery,
   ]);
 
   const handleCopySummary = () => {

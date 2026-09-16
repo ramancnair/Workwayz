@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -642,7 +642,7 @@ export default function ProjectsDashboard() {
     }
   };
 
-  const getProjectsByPortfolio = (isArchiveTab: boolean) => {
+  const getProjectsByPortfolio = useCallback((isArchiveTab: boolean) => {
     const userMap = new Map(users.map(u => [u.id, u]));
 
     return portfolios.map(portfolio => {
@@ -684,10 +684,10 @@ export default function ProjectsDashboard() {
       }
       return { ...portfolio, projects: filtered };
     });
-  };
+  }, [users, portfolios, projects, filterText, sorting]);
 
-  const activeProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(false), [projects, portfolios, filterText, sorting, users]);
-  const archivedProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(true), [projects, portfolios, filterText, sorting, users]);
+  const activeProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(false), [getProjectsByPortfolio]);
+  const archivedProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(true), [getProjectsByPortfolio]);
 
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>

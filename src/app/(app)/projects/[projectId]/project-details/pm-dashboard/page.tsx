@@ -273,7 +273,7 @@ export default function ProjectDashboardPage() {
         count: storyCount,
       };
     });
-  }, [stories, sprints, releases, timeSpentSprintId, timeSpentReleaseId, timeSpentMetric, swimLanes, testDate]);
+  }, [stories, timeSpentSprintId, timeSpentReleaseId, timeSpentMetric, swimLanes, testDate]);
 
   const resourceTimeData = useMemo(() => {
     const parentIdsWithSubTasks = new Set<string>();

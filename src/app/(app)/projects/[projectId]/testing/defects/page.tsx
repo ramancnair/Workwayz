@@ -93,6 +93,25 @@ const bugFormSchema = z.object({
   closedAt: z.date().optional(),
 });
 
+function SortableHeader({
+  columnId,
+  onSort,
+  children,
+}: {
+  columnId: string;
+  onSort: (columnId: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <TableHead>
+      <Button variant="ghost" onClick={() => onSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+}
+
 export default function DefectsPage() {
   const { stories, epics, employees, sprints, addStory, updateStory, deleteStory, environments, releasesAndMilestones, testCases, testPlans } = useProject();
   const { toast } = useToast();
@@ -299,15 +318,6 @@ export default function DefectsPage() {
     return sorted;
   }, [filteredBugs, sorting]);
 
-  const SortableHeader = ({ columnId, children }: { columnId: string, children: React.ReactNode }) => (
-    <TableHead>
-      <Button variant="ghost" onClick={() => handleSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  );
-
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -356,13 +366,13 @@ export default function DefectsPage() {
                     aria-label="Select all"
                 />
               </TableHead>
-              <SortableHeader columnId="storyId">ID</SortableHeader>
-              <SortableHeader columnId="title">Title</SortableHeader>
-              <SortableHeader columnId="status">Status</SortableHeader>
-              <SortableHeader columnId="resolution">Resolution</SortableHeader>
-              <SortableHeader columnId="severity">Severity</SortableHeader>
-              <SortableHeader columnId="foundInTestPlanId">Test Cycle</SortableHeader>
-              <SortableHeader columnId="assigneeId">Assignee</SortableHeader>
+              <SortableHeader columnId="storyId" onSort={handleSort}>ID</SortableHeader>
+              <SortableHeader columnId="title" onSort={handleSort}>Title</SortableHeader>
+              <SortableHeader columnId="status" onSort={handleSort}>Status</SortableHeader>
+              <SortableHeader columnId="resolution" onSort={handleSort}>Resolution</SortableHeader>
+              <SortableHeader columnId="severity" onSort={handleSort}>Severity</SortableHeader>
+              <SortableHeader columnId="foundInTestPlanId" onSort={handleSort}>Test Cycle</SortableHeader>
+              <SortableHeader columnId="assigneeId" onSort={handleSort}>Assignee</SortableHeader>
             </TableRow>
           </TableHeader>
           <TableBody>

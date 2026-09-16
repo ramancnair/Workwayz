@@ -215,12 +215,12 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
   const isInitialLoad = useRef(true);
   const prevProjectId = useRef(projectId);
 
-  if (prevProjectId.current !== projectId) {
-    isInitialLoad.current = true;
-    prevProjectId.current = projectId;
-  }
-
   useEffect(() => {
+    if (prevProjectId.current !== projectId) {
+        prevProjectId.current = projectId;
+        isInitialLoad.current = true;
+    }
+
     if (!db || !projectId) {
         if (!db) {
             setError(`Database is not configured correctly. The application is trying to use the Project ID: "${projectId || 'your-project-id'}". This is likely a placeholder. Please check your project setup.`);
@@ -462,7 +462,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       unsubGlobalHolidays();
       unsubAllUsers();
     }
-  }, [projectId, neededCollectionsKey]);
+  }, [projectId, neededCollectionsKey, neededCollectionNames]);
 
   // Auto-repair: If employee capabilities are unpopulated (e.g. for older seeded projects),
   // automatically map capabilities to the project's impacted systems so capacity bars show correctly.
@@ -1640,7 +1640,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       setTestCycleTestCases(prev => ({ ...prev, [cycleId]: data }));
     });
     return unsubscribe;
-  }, [db, projectId]);
+  }, [projectId]);
 
   // Backwards compatibility aliases
   const addTestPlan = addTestCycle;

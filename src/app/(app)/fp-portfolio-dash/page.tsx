@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useTransition } from 'react';
+import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -140,12 +140,7 @@ export default function FpDashboardPage() {
     loadPortfolios();
   }, []);
 
-  // Run initial query on mount (RAG health)
-  useEffect(() => {
-    handleRunQuery(PRESET_PROMPTS[0].query, 'all');
-  }, []);
-
-  const handleRunQuery = async (queryToRun: string, portfolioId = selectedPortfolioId) => {
+  const handleRunQuery = useCallback(async (queryToRun: string, portfolioId = selectedPortfolioId) => {
     const q = queryToRun.trim();
     if (!q) return;
 
@@ -166,7 +161,12 @@ export default function FpDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedPortfolioId]);
+
+  // Run initial query on mount (RAG health)
+  useEffect(() => {
+    handleRunQuery(PRESET_PROMPTS[0].query, 'all');
+  }, [handleRunQuery]);
 
   const handleCopySummary = () => {
     if (!response || !response.executiveSummary) return;

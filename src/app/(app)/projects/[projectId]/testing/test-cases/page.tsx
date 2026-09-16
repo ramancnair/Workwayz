@@ -87,6 +87,24 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     releaseId: { label: 'Release', defaultVisible: true },
 };
 
+function SortableHeader({
+  columnId,
+  onSort,
+  children,
+}: {
+  columnId: string;
+  onSort: (columnId: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <TableHead>
+      <Button variant="ghost" onClick={() => onSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+}
 
 export default function TestCasesPage() {
   const { testCases, employees, stories, sprints, addTestCase, updateTestCase, deleteTestCase, releasesAndMilestones, environments, autoGenerateTestCases } = useProject();
@@ -386,15 +404,6 @@ export default function TestCasesPage() {
     setIsSubmitting(false);
   };
 
-  const SortableHeader = ({ columnId, children }: { columnId: string, children: React.ReactNode }) => (
-    <TableHead>
-      <Button variant="ghost" onClick={() => handleSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  );
-
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -502,12 +511,12 @@ export default function TestCasesPage() {
                         aria-label="Select all"
                     />
                  </TableHead>
-                {columnVisibility.testCaseId && <SortableHeader columnId="testCaseId">ID</SortableHeader>}
-                {columnVisibility.title && <SortableHeader columnId="title">Title</SortableHeader>}
-                {columnVisibility.type && <SortableHeader columnId="type">Type</SortableHeader>}
-                {columnVisibility.storyId && <SortableHeader columnId="storyId">Requirement</SortableHeader>}
-                {columnVisibility.sprintId && <SortableHeader columnId="sprintId">Sprint</SortableHeader>}
-                {columnVisibility.releaseId && <SortableHeader columnId="releaseId">Release</SortableHeader>}
+                {columnVisibility.testCaseId && <SortableHeader columnId="testCaseId" onSort={handleSort}>ID</SortableHeader>}
+                {columnVisibility.title && <SortableHeader columnId="title" onSort={handleSort}>Title</SortableHeader>}
+                {columnVisibility.type && <SortableHeader columnId="type" onSort={handleSort}>Type</SortableHeader>}
+                {columnVisibility.storyId && <SortableHeader columnId="storyId" onSort={handleSort}>Requirement</SortableHeader>}
+                {columnVisibility.sprintId && <SortableHeader columnId="sprintId" onSort={handleSort}>Sprint</SortableHeader>}
+                {columnVisibility.releaseId && <SortableHeader columnId="releaseId" onSort={handleSort}>Release</SortableHeader>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

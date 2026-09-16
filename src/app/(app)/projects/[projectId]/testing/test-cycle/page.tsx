@@ -338,7 +338,7 @@ export default function TestCyclePage() {
       initial['unscheduled'] = true;
       setOpenDays(initial);
     }
-  }, [selectedPlan?.id, planDays.length]);
+  }, [selectedPlan, planDays]);
 
   const toggleDay = (key: string) => {
     setOpenDays(prev => ({

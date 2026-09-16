@@ -87,6 +87,26 @@ const sanitizeForFirestore = (data: any) => {
     return sanitized;
 };
 
+function SortableHeader({
+  columnId,
+  onSort,
+  children,
+  className,
+}: {
+  columnId: string;
+  onSort: (columnId: string) => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <TableHead className={className}>
+      <Button variant="ghost" onClick={() => onSort(columnId)}>
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+}
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -423,15 +443,6 @@ export default function UsersPage() {
     return filtered;
   }, [users, filters, sorting]);
 
-  const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
-    <TableHead className={className}>
-      <Button variant="ghost" onClick={() => handleSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  );
-
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -540,13 +551,13 @@ export default function UsersPage() {
                         aria-label="Select all"
                     />
                   </TableHead>
-                  <SortableHeader columnId="empId">Emp ID</SortableHeader>
-                  <SortableHeader columnId="name">Name</SortableHeader>
-                  <SortableHeader columnId="email">Email</SortableHeader>
-                  <SortableHeader columnId="accessLevel">Access Level</SortableHeader>
-                  <SortableHeader columnId="employmentStartDate">Joining Date</SortableHeader>
-                  <SortableHeader columnId="isEnabled">Enabled</SortableHeader>
-                  <SortableHeader columnId="costAmount">Annual Cost</SortableHeader>
+                  <SortableHeader columnId="empId" onSort={handleSort}>Emp ID</SortableHeader>
+                  <SortableHeader columnId="name" onSort={handleSort}>Name</SortableHeader>
+                  <SortableHeader columnId="email" onSort={handleSort}>Email</SortableHeader>
+                  <SortableHeader columnId="accessLevel" onSort={handleSort}>Access Level</SortableHeader>
+                  <SortableHeader columnId="employmentStartDate" onSort={handleSort}>Joining Date</SortableHeader>
+                  <SortableHeader columnId="isEnabled" onSort={handleSort}>Enabled</SortableHeader>
+                  <SortableHeader columnId="costAmount" onSort={handleSort}>Annual Cost</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

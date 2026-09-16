@@ -25,6 +25,42 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [authProfileId, setAuthProfileId] = useState<string>('');
   const [aiProfileId, setAiProfileId] = useState<string>('');
 
+  // DB State
+  const [dbProjectName, setDbProjectName] = useState('Wizard Database');
+  const [dbProvider, setDbProvider] = useState('supabase');
+  const [fbProjectId, setFbProjectId] = useState('');
+  const [fbApiKey, setFbApiKey] = useState('');
+  const [supaUrl, setSupaUrl] = useState('');
+  const [supaKey, setSupaKey] = useState('');
+
+  // Auth State
+  const [authProvider, setAuthProvider] = useState('supabase');
+  const [ssoGoogle, setSsoGoogle] = useState(false);
+  const [ssoGithub, setSsoGithub] = useState(false);
+
+  const [adminName, setAdminName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showAdminConfirmPassword, setShowAdminConfirmPassword] = useState(false);
+
+  // AI State
+  const [aiProjectName, setAiProjectName] = useState('Wizard AI Config');
+  const [aiProvider, setAiProvider] = useState('google');
+  const [aiApiKey, setAiApiKey] = useState('');
+  const [aiBaseUrl, setAiBaseUrl] = useState('');
+  const [aiModel, setAiModel] = useState('');
+
+  const handleDbProviderChange = (val: string) => {
+    setDbProvider(val);
+    if (val === 'supabase') {
+      setAuthProvider('supabase');
+    } else if (val === 'firebase') {
+      setAuthProvider('firebase');
+    }
+  };
+
   useEffect(() => {
     fetch('/api/config/profiles')
       .then(res => res.json())
@@ -84,42 +120,6 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         setIsLoading(false);
       });
   }, []);
-
-  // DB State
-  const [dbProjectName, setDbProjectName] = useState('Wizard Database');
-  const [dbProvider, setDbProvider] = useState('supabase');
-  const [fbProjectId, setFbProjectId] = useState('');
-  const [fbApiKey, setFbApiKey] = useState('');
-  const [supaUrl, setSupaUrl] = useState('');
-  const [supaKey, setSupaKey] = useState('');
-
-  // Auth State
-  const [authProvider, setAuthProvider] = useState('supabase');
-  const [ssoGoogle, setSsoGoogle] = useState(false);
-  const [ssoGithub, setSsoGithub] = useState(false);
-
-  const handleDbProviderChange = (val: string) => {
-    setDbProvider(val);
-    if (val === 'supabase') {
-      setAuthProvider('supabase');
-    } else if (val === 'firebase') {
-      setAuthProvider('firebase');
-    }
-  };
-
-  const [adminName, setAdminName] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
-  const [showAdminConfirmPassword, setShowAdminConfirmPassword] = useState(false);
-
-  // AI State
-  const [aiProjectName, setAiProjectName] = useState('Wizard AI Config');
-  const [aiProvider, setAiProvider] = useState('google');
-  const [aiApiKey, setAiApiKey] = useState('');
-  const [aiBaseUrl, setAiBaseUrl] = useState('');
-  const [aiModel, setAiModel] = useState('');
 
   const handleNext = () => {
     if (step === 3 && adminPassword !== adminConfirmPassword) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProject } from '@/context/ProjectContext';
@@ -21,7 +21,7 @@ export function ProjectSimulator() {
   const doneColumn = orderedColumns.find(c => c.isDoneColumn);
 
   // Helper to compute overall project start/end timeline
-  const getProjectTimeline = () => {
+  const getProjectTimeline = useCallback(() => {
     const sprintDates = sprints
       .filter(s => s.startDate && s.endDate)
       .map(s => ({
@@ -43,7 +43,7 @@ export function ProjectSimulator() {
     if (!end) end = addDays(start, 30);
 
     return { start, end };
-  };
+  }, [sprints, project]);
 
   // Simulation loop
   useEffect(() => {
@@ -111,7 +111,7 @@ export function ProjectSimulator() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isSimulating, percentage, simulatedItems, orderedColumns, doneColumn, sprints, updateStory, testDate, setTestDate, project]);
+  }, [isSimulating, percentage, simulatedItems, orderedColumns, doneColumn, sprints, updateStory, testDate, setTestDate, project, getProjectTimeline]);
 
   const handleStartStop = () => {
     if (!isSimulating) {

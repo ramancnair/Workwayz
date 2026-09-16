@@ -49,19 +49,6 @@ export default function AIConfigPage() {
 
     const { toast } = useToast();
 
-    useEffect(() => {
-        const storedUser = localStorage.getItem('projectflow_user');
-        if (storedUser) {
-            try {
-                const user = JSON.parse(storedUser);
-                if (user.role === 'Administrator' || user.accessLevel === 'Administrator') {
-                    setIsAdmin(true);
-                }
-            } catch (e) { }
-        }
-        loadData();
-    }, []);
-
     const loadData = async () => {
         try {
             const envRes = await fetch('/api/config');
@@ -78,6 +65,19 @@ export default function AIConfigPage() {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('projectflow_user');
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                if (user.role === 'Administrator' || user.accessLevel === 'Administrator') {
+                    setIsAdmin(true);
+                }
+            } catch (e) { }
+        }
+        loadData();
+    }, []);
 
     const handleProviderChange = (value: string, forEdit = false) => {
         const provider = value as AIProvider;

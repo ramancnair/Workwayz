@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
@@ -255,7 +255,7 @@ export default function ResourceBillingPage() {
     }
   };
 
-  const calculateBusinessDays = (startDateStr?: string, endDateStr?: string): number => {
+  const calculateBusinessDays = useCallback((startDateStr?: string, endDateStr?: string): number => {
     if (!startDateStr || !endDateStr) return 0;
     try {
         const start = parseISO(startDateStr);
@@ -281,9 +281,9 @@ export default function ResourceBillingPage() {
         console.error("Error calculating business days", e);
         return 0;
     }
-  };
+  }, [holidays, weeklyOffDays]);
 
-  const calculateProjectMonths = (): number => {
+  const calculateProjectMonths = useCallback((): number => {
     if (!project?.startDate || !project?.endDate) return 1;
     try {
         const start = parseISO(project.startDate);
@@ -300,7 +300,7 @@ export default function ResourceBillingPage() {
         console.error("Error calculating project months", e);
         return 1;
     }
-  };
+  }, [project]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A';
@@ -329,14 +329,19 @@ export default function ResourceBillingPage() {
     if (!employees || !fixedCosts) {
       return { totalRevenue: 0, totalResourceCost: 0, totalFixedCost: 0, profit: 0 };
     }
-    
-    let totalRevenue = 0;
-    let totalResourceCost = 0;
 
+    const totalRevenue = employees.reduce((acc, user) => acc + (user.billedRate || 0), 0);
+    
+    let totalResourceCost = 0;
     employees.forEach(user => {
-      const workingDays = calculateBusinessDays(user.onboardingDate, user.offloadingDate);
-      if (workingDays > 0) {
-        totalRevenue += workingDays * (user.billedRate || 0);
+      if (user.resourceAllocations && user.resourceAllocations.length > 0) {
+        let userWorkingDays = 0;
+        user.resourceAllocations.forEach(alloc => {
+          userWorkingDays += calculateBusinessDays(alloc.startDate, alloc.endDate);
+        });
+        totalResourceCost += userWorkingDays * (user.costRate || 0);
+      } else {
+        const workingDays = calculateBusinessDays(project.startDate, project.endDate);
         totalResourceCost += workingDays * (user.costRate || 0);
       }
     });
@@ -351,7 +356,7 @@ export default function ResourceBillingPage() {
     const profit = totalRevenue - totalResourceCost - totalFixedCost;
 
     return { totalRevenue, totalResourceCost, totalFixedCost, profit };
-  }, [employees, fixedCosts, holidays, weeklyOffDays, project]);
+  }, [employees, fixedCosts, calculateBusinessDays, calculateProjectMonths, project.startDate, project.endDate]);
 
   if (!project || project.pricingModel !== 'Fixed Bid') {
     return null;

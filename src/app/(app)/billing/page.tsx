@@ -76,6 +76,29 @@ const convertToDate = (val: any): Date | null => {
   return null;
 };
 
+function SortableHeader({
+  columnId,
+  onSort,
+  children,
+}: {
+  columnId: keyof ProjectBillingRow;
+  onSort: (columnId: keyof ProjectBillingRow) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <TableHead>
+      <Button
+        variant="ghost"
+        onClick={() => onSort(columnId)}
+        className="-ml-4 hover:bg-transparent text-muted-foreground font-semibold"
+      >
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  );
+}
+
 export default function BillingPage() {
   const [billingData, setBillingData] = useState<ProjectBillingRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -302,15 +325,6 @@ export default function BillingPage() {
     return filtered;
   }, [scaledBillingData, searchQuery, sorting]);
 
-  const SortableHeader = ({ columnId, children }: { columnId: keyof ProjectBillingRow; children: React.ReactNode }) => (
-    <TableHead>
-      <Button variant="ghost" onClick={() => handleSort(columnId)} className="-ml-4 hover:bg-transparent text-muted-foreground font-semibold">
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  );
-
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <PageHeader title="Billing" description="Overview of project billing, revenue, and payments across all active projects." />
@@ -455,13 +469,13 @@ export default function BillingPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-muted/20">
-                    <SortableHeader columnId="name">Project Name</SortableHeader>
-                    <SortableHeader columnId="pricingModel">Pricing Model</SortableHeader>
-                    <SortableHeader columnId="revenue">Revenue (USD)</SortableHeader>
-                    <SortableHeader columnId="resourceCost">Resource Cost (USD)</SortableHeader>
-                    <SortableHeader columnId="fixedCosts">Fixed Costs (USD)</SortableHeader>
-                    <SortableHeader columnId="profit">Profit (USD)</SortableHeader>
-                    <SortableHeader columnId="completedPayments">Completed Payments (USD)</SortableHeader>
+                    <SortableHeader columnId="name" onSort={handleSort}>Project Name</SortableHeader>
+                    <SortableHeader columnId="pricingModel" onSort={handleSort}>Pricing Model</SortableHeader>
+                    <SortableHeader columnId="revenue" onSort={handleSort}>Revenue (USD)</SortableHeader>
+                    <SortableHeader columnId="resourceCost" onSort={handleSort}>Resource Cost (USD)</SortableHeader>
+                    <SortableHeader columnId="fixedCosts" onSort={handleSort}>Fixed Costs (USD)</SortableHeader>
+                    <SortableHeader columnId="profit" onSort={handleSort}>Profit (USD)</SortableHeader>
+                    <SortableHeader columnId="completedPayments" onSort={handleSort}>Completed Payments (USD)</SortableHeader>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

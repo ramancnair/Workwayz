@@ -54,6 +54,28 @@ const dependencyConfig = {
   'Blocked': { label: 'Blocked', color: '#ef4444' },
 } satisfies ChartConfig;
 
+function ChartCard({ title, config, data }: { title: string, config: ChartConfig, data: { name: string, value: number, fill: string }[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="h-[250px]">
+        <ChartContainer config={config} className="mx-auto aspect-square h-full">
+          <PieChart>
+            <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+            <Pie data={data} dataKey="value" nameKey="name" />
+            <ChartLegend
+                content={<ChartLegendContent nameKey="name" />}
+                className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+            />
+          </PieChart>
+        </ChartContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function RaidDashboardPage() {
   const { risks, assumptions, issues, dependencies } = useProject();
 
@@ -100,26 +122,6 @@ export default function RaidDashboardPage() {
   ).map(([name, value]) => ({ name, value, fill: (dependencyConfig[name as keyof typeof dependencyConfig] as any)?.color || '#8884d8' }));
   const totalDependencies = dependencyData.reduce((sum, item) => sum + item.value, 0);
   const atRiskDependencies = (dependencyData.find(item => item.name === 'At Risk')?.value || 0) + (dependencyData.find(item => item.name === 'Blocked')?.value || 0);
-
-  const ChartCard = ({ title, config, data }: { title: string, config: ChartConfig, data: { name: string, value: number, fill: string }[] }) => (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="h-[250px]">
-        <ChartContainer config={config} className="mx-auto aspect-square h-full">
-          <PieChart>
-            <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-            <Pie data={data} dataKey="value" nameKey="name" />
-            <ChartLegend
-                content={<ChartLegendContent nameKey="name" />}
-                className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
-            />
-          </PieChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">

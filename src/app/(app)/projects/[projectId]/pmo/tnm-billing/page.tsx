@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
@@ -337,7 +337,7 @@ export default function ResourceBillingPage() {
   };
 
   // Calculate Loss of Pay Days for a resource in the selected month
-  const calculateLossOfPayDays = (user: User, monthDate: Date): number => {
+  const calculateLossOfPayDays = useCallback((user: User, monthDate: Date): number => {
     if (!user.leavePeriods || user.leavePeriods.length === 0) return 0;
     
     const monthStart = startOfMonth(monthDate);
@@ -374,10 +374,10 @@ export default function ResourceBillingPage() {
     });
     
     return count;
-  };
+  }, [holidays, weeklyOffDays]);
 
   // Calculate Overtime Days for a resource in the selected month
-  const calculateOvertimeDays = (user: User, monthDate: Date): number => {
+  const calculateOvertimeDays = useCallback((user: User, monthDate: Date): number => {
     if (!worklogs || worklogs.length === 0) return 0;
     
     const monthStart = startOfMonth(monthDate);
@@ -405,7 +405,7 @@ export default function ResourceBillingPage() {
     });
     
     return count;
-  };
+  }, [worklogs, holidays, weeklyOffDays]);
 
   const revenueData = useMemo(() => {
     if (!employees || !fixedCosts) {
@@ -434,7 +434,7 @@ export default function ResourceBillingPage() {
     const profit = totalRevenue - totalResourceCost - totalFixedCost;
 
     return { totalRevenue, totalResourceCost, totalFixedCost, profit };
-  }, [employees, fixedCosts, holidays, weeklyOffDays, project, activeMonthDate, totalWorkingDays, worklogs, isFirstMonth]);
+  }, [employees, fixedCosts, activeMonthDate, totalWorkingDays, isFirstMonth, calculateLossOfPayDays, calculateOvertimeDays]);
 
   if (!project || project.pricingModel !== 'T&M') {
     return null;

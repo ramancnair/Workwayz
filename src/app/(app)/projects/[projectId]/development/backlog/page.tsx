@@ -152,8 +152,8 @@ const bulkMoveSchema = z.object({
 
 function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint, release, onSubItemClick, isSelected, onSelectionChange }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, release?: Release | null, onSubItemClick: (item: Story) => void; isSelected: boolean; onSelectionChange: (checked: boolean) => void; }) {
   const Icon = workItemIcons[story.itemType];
-  const subTasks = subItems?.filter(i => i.itemType === 'Sub Task') || [];
-  const bugs = subItems?.filter(i => i.itemType === 'Bug') || [];
+  const subTasks = useMemo(() => subItems?.filter(i => i.itemType === 'Sub Task') || [], [subItems]);
+  const bugs = useMemo(() => subItems?.filter(i => i.itemType === 'Bug') || [], [subItems]);
   
   const isReadyForDev = useMemo(() => {
     if (!story.estimatedHours || story.estimatedHours <= 0) return false;
@@ -600,7 +600,7 @@ export default function BacklogPage() {
           const predStory = stories.find(s => s.id === selectedStory.predecessorId);
           setEditPredecessorText(predStory ? `[${predStory.storyId}] ${predStory.title}` : '');
       }
-  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases]);
+  }, [selectedStory, editStoryForm, subTaskForm, parentStoryOptions, testCases, stories]);
   
   useEffect(() => {
     if (!addRequirementOpen) {

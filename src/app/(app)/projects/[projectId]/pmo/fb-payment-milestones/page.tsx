@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -117,7 +117,7 @@ export default function BillingPage() {
   const [isOverriddenInput, setIsOverriddenInput] = useState(false);
 
   // Helper functions for billing total calculation
-  const calculateBusinessDays = (startDateStr?: string, endDateStr?: string): number => {
+  const calculateBusinessDays = useCallback((startDateStr?: string, endDateStr?: string): number => {
     if (!startDateStr || !endDateStr) return 0;
     try {
         const start = parseISO(startDateStr);
@@ -143,9 +143,9 @@ export default function BillingPage() {
         console.error("Error calculating business days", e);
         return 0;
     }
-  };
+  }, [holidays, weeklyOffDays]);
 
-  const calculateProjectMonths = (): number => {
+  const calculateProjectMonths = useCallback((): number => {
     if (!project?.startDate || !project?.endDate) return 1;
     try {
         const start = parseISO(project.startDate);
@@ -162,7 +162,7 @@ export default function BillingPage() {
         console.error("Error calculating project months", e);
         return 1;
     }
-  };
+  }, [project]);
 
   const calculatedTotalBill = useMemo(() => {
     if (!employees || !fixedCosts) {
@@ -187,7 +187,7 @@ export default function BillingPage() {
     }, 0);
 
     return totalRevenue + totalFixedCost;
-  }, [employees, fixedCosts, holidays, weeklyOffDays, project]);
+  }, [employees, fixedCosts, calculateBusinessDays, calculateProjectMonths]);
 
   const effectiveContractValue = useMemo(() => {
     return project.isProjectValueOverridden 

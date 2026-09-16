@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,21 +65,8 @@ export default function DatabaseSettingsPage() {
     const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
     const [editConfig, setEditConfig] = useState<DatabaseConfig | null>(null);
 
+    const router = useRouter();
     const { toast } = useToast();
-
-    useEffect(() => {
-        // Authenticate admin access
-        const storedUser = localStorage.getItem('projectflow_user');
-        if (storedUser) {
-            try {
-                const user = JSON.parse(storedUser);
-                if (user.role === 'Administrator' || user.accessLevel === 'Administrator') {
-                    setIsAdmin(true);
-                }
-            } catch (e) { }
-        }
-        loadData();
-    }, []);
 
     const loadData = async () => {
         try {
@@ -94,10 +82,24 @@ export default function DatabaseSettingsPage() {
             
             setIsLoading(false);
         } catch (e) {
-            console.error("Failed to load configs", e);
+            console.error(e);
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        // Authenticate admin access
+        const storedUser = localStorage.getItem('projectflow_user');
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                if (user.role === 'Administrator' || user.accessLevel === 'Administrator') {
+                    setIsAdmin(true);
+                }
+            } catch (e) { }
+        }
+        loadData();
+    }, []);
 
     const handleProviderChange = (value: string, forEdit = false) => {
         const provider = value as DatabaseProvider;
@@ -239,7 +241,7 @@ export default function DatabaseSettingsPage() {
             await supabase?.auth.signOut();
         } catch(e) { }
         localStorage.removeItem('projectflow_user');
-        window.location.href = '/';
+        router.push('/');
     };
 
     if (!isAdmin) {

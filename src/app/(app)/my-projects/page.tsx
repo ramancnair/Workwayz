@@ -162,7 +162,7 @@ export default function MyProjectsPage() {
     };
 
     fetchUserProjects();
-  }, [currentUser?.empId, currentUser?.accessLevel, allProjects]);
+  }, [currentUser?.empId, currentUser?.accessLevel, allProjects, isLoadingUsers]);
 
   const isUserEnabled = currentUserFromDb ? currentUserFromDb.isEnabled !== false : true;
 

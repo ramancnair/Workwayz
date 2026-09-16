@@ -224,7 +224,7 @@ export default function WorklogPage() {
     };
 
     autoPopulateWeek();
-  }, [selectedEmployee, weekStartDate, worklogs, holidays, weeklyOffDays, saveWorklog, isLoading]);
+  }, [selectedEmployee, weekStartDate, weekDays, worklogs, holidays, weeklyOffDays, saveWorklog, isLoading]);
 
 
   useEffect(() => {
@@ -260,6 +260,10 @@ export default function WorklogPage() {
     }
   }, [selectedEmployee, selectedDate, worklogs, workItemOptions]);
 
+  const currentTotalHours = useMemo(() => {
+    return logItems.reduce((sum, item) => sum + (Number(item.hours) || 0), 0);
+  }, [logItems]);
+
   const handleAddItem = () => {
     if (currentTotalHours >= 24) {
       toast({
@@ -287,10 +291,6 @@ export default function WorklogPage() {
     setWorkItemInputValues(newInputs);
     handleAutoSave();
   };
-
-  const currentTotalHours = useMemo(() => {
-    return logItems.reduce((sum, item) => sum + (Number(item.hours) || 0), 0);
-  }, [logItems]);
 
   const handleItemChange = (
     id: string,

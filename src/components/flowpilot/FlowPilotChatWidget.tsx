@@ -144,6 +144,8 @@ const QUICK_PROMPTS = [
   'Summarize current project status',
 ];
 
+const generateMessageId = (prefix = 'msg') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
 export function FlowPilotChatWidget() {
   const pathname = usePathname();
   const { toast } = useToast();
@@ -336,7 +338,7 @@ export function FlowPilotChatWidget() {
     setMessages((prev) => [
       ...prev,
       {
-        id: `msg-cancelled-${Date.now()}`,
+        id: generateMessageId('msg-cancelled'),
         role: 'model',
         content: '🛑 *Execution was cancelled.*',
         timestamp: new Date(),
@@ -349,7 +351,7 @@ export function FlowPilotChatWidget() {
     if (!text || isLoading) return;
 
     const userMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: generateMessageId('msg'),
       role: 'user',
       content: text,
       timestamp: new Date(),
@@ -567,7 +569,7 @@ export function FlowPilotChatWidget() {
       if (controller.signal.aborted) return;
 
       const assistantMessage: ChatMessage = {
-        id: `msg-${Date.now() + 1}`,
+        id: generateMessageId('msg'),
         role: 'model',
         content: data.reply || data.error || 'Request completed.',
         executedActions: finalActions.length > 0 ? finalActions : undefined,
@@ -583,7 +585,7 @@ export function FlowPilotChatWidget() {
       }
       console.error('Failed to communicate with FlowPilot:', error);
       const errorMessage: ChatMessage = {
-        id: `msg-${Date.now() + 1}`,
+        id: generateMessageId('msg-err'),
         role: 'model',
         content: `⚠️ Sorry, I encountered an issue executing your request: ${error.message || 'Could not connect to FlowPilot service.'}`,
         timestamp: new Date(),
