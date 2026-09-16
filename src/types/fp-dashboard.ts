@@ -60,5 +60,9 @@ export interface FpQueryResponse {
   table: FpTableSpec;
   audit: FpAuditStamp;
   followUpSuggestions: string[];
-  errorMessage?: string;
+  isFallback?: boolean;
+  fallbackReason?: string;
+  fallbackTitle?: string;
+  failedModel?: string;
+  errorCategory?: 'quota_exceeded' | 'high_demand' | 'auth_error' | 'network_error' | 'other';
 }

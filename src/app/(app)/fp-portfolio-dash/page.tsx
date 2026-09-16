@@ -58,47 +58,49 @@ import type { Portfolio } from '@/types';
 import type { FpQueryResponse, FpKpiCard } from '@/types/fp-dashboard';
 import { executeFpQuery } from '@/lib/fp-query-engine';
 import { cn } from '@/lib/utils';
+import { FpModelSelector } from '@/components/fp-dashboard/FpModelSelector';
+import { FpFallbackAlert } from '@/components/fp-dashboard/FpFallbackAlert';
 
 const PM_PALETTE = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
 const PRESET_PROMPTS = [
   {
-    label: '≡ƒæö Projects by PM',
+    label: '🧑‍💼 Projects by PM',
     query: 'Show projects grouped by Project Manager',
     description: 'Distribution and count of active projects assigned to each Project Manager',
   },
   {
-    label: '≡ƒôè PM Workload Graph',
+    label: '📊 PM Workload Graph',
     query: 'graph grouping project by PMs',
     description: 'Visual workload comparison and distribution across Project Managers',
   },
   {
-    label: '≡ƒÜª Project RAG Health',
+    label: '🚦 Project RAG Health',
     query: 'Show project RAG health breakdown across all portfolios',
     description: 'Executive overview of Green, Amber, and Red project health distributions',
   },
   {
-    label: '≡ƒÆ░ Pricing Model Breakdown',
+    label: '💰 Pricing Model Breakdown',
     query: 'Compare Fixed Bid vs T&M projects distribution',
     description: 'Contract distribution and portfolio value split between Fixed Bid and T&M',
   },
   {
-    label: 'ΓÜá∩╕Å Critical Risks & Blockers',
+    label: '⚠️ Critical Risks & Blockers',
     query: 'List open Critical and High priority risks and blockers',
     description: 'High potential risks and unresolved critical issues across projects',
   },
   {
-    label: '≡ƒÆ╡ Billing & Financial Valuation',
+    label: '💵 Billing & Financial Valuation',
     query: 'Show portfolio revenue and project valuation breakdown',
     description: 'Total pipeline value, monthly billing run-rate, and top billable projects',
   },
   {
-    label: '≡ƒæÑ Resource Allocation & Bench',
+    label: '👥 Resource Allocation & Bench',
     query: 'Show team roles, headcount, and resource availability',
     description: 'Headcount by engineering role, utilization, and bench availability',
   },
   {
-    label: '≡ƒôï All Active Projects',
+    label: '📋 All Active Projects',
     query: 'Overview of all active projects in the portfolio',
     description: 'Complete directory of active projects with managers, pricing, and health',
   },
@@ -119,28 +121,63 @@ export default function FpDashboardPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [, startTransition] = useTransition();
 
-  // Load portfolios on mount
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.5-flash');
+  const [dataLoaded, setDataLoaded] = useState<boolean>(false);
+  const [dbData, setDbData] = useState<{ portfolios: any[]; projects: any[]; employees: any[] }>({
+    portfolios: [],
+    projects: [],
+    employees: [],
+  });
+
+  // Load portfolios, projects, and employees on mount for authenticated client
   useEffect(() => {
-    async function loadPortfolios() {
+    async function loadData() {
       if (!db) return;
       try {
-        const snap = await getDocs(collection(db, 'portfolios'));
-        const list: Portfolio[] = [];
-        snap.docs.forEach((d: any) => {
+        const [portSnap, projSnap, empSnap] = await Promise.all([
+          getDocs(collection(db, 'portfolios')),
+          getDocs(collection(db, 'projects')),
+          getDocs(collection(db, 'employees')),
+        ]);
+        const portList: Portfolio[] = [];
+        portSnap.docs.forEach((d: any) => {
           const data = d.data();
-          if (!data.isDeleted) {
-            list.push({ id: d.id, ...data });
-          }
+          if (!data.isDeleted) portList.push({ id: d.id, ...data });
         });
-        setPortfolios(list);
+        setPortfolios(portList);
+
+        const projList: any[] = [];
+        projSnap.docs.forEach((d: any) => {
+          const data = d.data();
+          if (!data.isDeleted && !data.isArchived) projList.push({ id: d.id, ...data });
+        });
+
+        const empList: any[] = [];
+        empSnap.docs.forEach((d: any) => {
+          const data = d.data();
+          if (!data.isDeleted) empList.push({ id: d.id, ...data });
+        });
+
+        const snapshot = {
+          portfolios: portList,
+          projects: projList,
+          employees: empList,
+        };
+        setDbData(snapshot);
       } catch (e) {
-        console.error('Failed to fetch portfolios:', e);
+        console.error('Failed to fetch initial portfolio data:', e);
+      } finally {
+        setDataLoaded(true);
       }
     }
-    loadPortfolios();
+    loadData();
   }, []);
 
-  const handleRunQuery = useCallback(async (queryToRun: string, portfolioId = selectedPortfolioId) => {
+  const handleRunQuery = useCallback(async (
+    queryToRun: string,
+    portfolioId = selectedPortfolioId,
+    modelToUse = selectedModel
+  ) => {
     const q = queryToRun.trim();
     if (!q) return;
 
@@ -149,24 +186,98 @@ export default function FpDashboardPage() {
     setSearchQuery(q);
 
     try {
-      const data = await executeFpQuery(q, portfolioId);
+      const res = await fetch('/api/fp-analytics/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: q,
+          scope: 'portfolio',
+          portfolioId,
+          portfolioDataSnapshot: dbData.projects.length > 0 ? dbData : undefined,
+          modelId: modelToUse,
+        }),
+      });
+
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        // Non-JSON response
+      }
+
+      if (!res.ok || !data) {
+        throw new Error(data?.errorMessage || `Analytics API returned status ${res.status}`);
+      }
+      if (!data.success && data.errorMessage) {
+        throw new Error(data.errorMessage);
+      }
+
       setResponse(data);
       if (data.table?.defaultSortKey) {
         setSortKey(data.table.defaultSortKey);
         setSortDir(data.table.defaultSortDir || 'asc');
       }
     } catch (err: any) {
-      console.error('FP Dashboard query error:', err);
-      setErrorMsg(err.message || 'Failed to retrieve data from database.');
+      console.warn('AI Analytics API error, falling back to local heuristic engine:', err);
+      try {
+        const fallbackData = await executeFpQuery(q, portfolioId, dbData.projects.length > 0 ? dbData : undefined);
+        fallbackData.isFallback = true;
+        fallbackData.failedModel = modelToUse;
+
+        const rawMsg = String(err?.message || '');
+        const msg = rawMsg.toLowerCase();
+
+        if (
+          msg.includes('503') ||
+          msg.includes('unavailable') ||
+          msg.includes('no capacity') ||
+          msg.includes('capacity') ||
+          msg.includes('overloaded') ||
+          msg.includes('high demand')
+        ) {
+          fallbackData.errorCategory = 'high_demand';
+          fallbackData.fallbackTitle = msg.includes('capacity')
+            ? 'AI Service No Capacity (HTTP 503)'
+            : 'AI Service High Demand (HTTP 503)';
+          fallbackData.fallbackReason =
+            rawMsg.length > 0 && (rawMsg.includes('capacity') || rawMsg.includes('demand') || rawMsg.includes('503'))
+              ? `${rawMsg}. Google AI servers are temporarily experiencing high load. Switch to another model above.`
+              : `Model "${modelToUse}" is experiencing high server demand or capacity constraints. Switch to another model or retry.`;
+        } else if (msg.includes('429') || msg.includes('quota') || msg.includes('resource_exhausted')) {
+          fallbackData.errorCategory = 'quota_exceeded';
+          fallbackData.fallbackTitle = 'AI Quota Exceeded (HTTP 429)';
+          fallbackData.fallbackReason = `Daily request quota for "${modelToUse}" has been reached on your Google AI key (Resource Exhausted 429). Switch to another model using the selector above.`;
+        } else {
+          fallbackData.errorCategory = 'other';
+          fallbackData.fallbackTitle = 'AI Service Notice';
+          fallbackData.fallbackReason = rawMsg || `AI service unavailable for model "${modelToUse}". Operating on local heuristic engine.`;
+        }
+
+        fallbackData.audit = {
+          ...fallbackData.audit,
+          provider: `Offline / Local Heuristic Engine (${fallbackData.fallbackTitle})`,
+          confidence: 'Heuristic pattern match (Connect to AI for deep semantic reasoning)',
+        };
+        setResponse(fallbackData);
+        if (fallbackData.table?.defaultSortKey) {
+          setSortKey(fallbackData.table.defaultSortKey);
+          setSortDir(fallbackData.table.defaultSortDir || 'asc');
+        }
+      } catch (clientErr: any) {
+        console.error('FP Dashboard fallback query error:', clientErr);
+        setErrorMsg(clientErr.message || 'Failed to retrieve data from database.');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPortfolioId]);
+  }, [selectedPortfolioId, dbData, selectedModel]);
 
-  // Run initial query on mount (RAG health)
+  // Run initial query once data has loaded
   useEffect(() => {
-    handleRunQuery(PRESET_PROMPTS[0].query, 'all');
-  }, [handleRunQuery]);
+    if (dataLoaded) {
+      handleRunQuery(PRESET_PROMPTS[0].query, 'all');
+    }
+  }, [dataLoaded, handleRunQuery]);
 
   const handleCopySummary = () => {
     if (!response || !response.executiveSummary) return;
@@ -175,7 +286,7 @@ export default function FpDashboardPage() {
       `Query: "${response.query}"`,
       `Verified Source: ${response.audit?.recordsAnalyzed} records analyzed (${response.audit?.portfolioScope})`,
       '',
-      ...response.executiveSummary.map((s) => `ΓÇó ${s}`),
+      ...response.executiveSummary.map((s) => `• ${s}`),
     ].join('\n');
 
     navigator.clipboard.writeText(text);
@@ -323,30 +434,45 @@ export default function FpDashboardPage() {
             </div>
           </div>
 
-          {/* Portfolio Scope Filter */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Portfolio Scope:</span>
-            <Select
-              value={selectedPortfolioId}
-              onValueChange={(val) => {
-                setSelectedPortfolioId(val);
-                if (searchQuery) {
-                  handleRunQuery(searchQuery, val);
-                }
-              }}
-            >
-              <SelectTrigger className="w-[200px] h-9 bg-card border-border text-xs font-medium">
-                <SelectValue placeholder="Select Scope" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">≡ƒîÉ All Portfolios</SelectItem>
-                {portfolios.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    ≡ƒôü {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Controls: Model Selector & Portfolio Scope Filter */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">AI Model:</span>
+              <FpModelSelector
+                selectedModel={selectedModel}
+                onModelChange={(newModel) => {
+                  setSelectedModel(newModel);
+                  if (searchQuery) {
+                    handleRunQuery(searchQuery, selectedPortfolioId, newModel);
+                  }
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Portfolio Scope:</span>
+              <Select
+                value={selectedPortfolioId}
+                onValueChange={(val) => {
+                  setSelectedPortfolioId(val);
+                  if (searchQuery) {
+                    handleRunQuery(searchQuery, val);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-[180px] h-8 bg-card border-border text-xs font-medium">
+                  <SelectValue placeholder="Select Scope" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">🌐 All Portfolios</SelectItem>
+                  {portfolios.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      📁 {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -450,21 +576,39 @@ export default function FpDashboardPage() {
         {/* Results View */}
         {!isLoading && response && (
           <div className="space-y-6">
+            {/* Rich Actionable Fallback Alert */}
+            <FpFallbackAlert
+              response={response}
+              selectedModel={selectedModel}
+              onModelChange={(newModel) => setSelectedModel(newModel)}
+              onRetry={(newModel) =>
+                handleRunQuery(searchQuery || response.query, selectedPortfolioId, newModel || selectedModel)
+              }
+              isLoading={isLoading}
+            />
+
             {/* Live Database Audit Stamp */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-xs">
+            <div className={cn(
+              "flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-lg border text-xs",
+              response.isFallback
+                ? "border-amber-500/20 bg-amber-500/5 text-amber-300"
+                : "border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
+            )}>
               <div className="flex items-center gap-2 font-medium">
-                <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                <ShieldCheck className={cn("h-4 w-4", response.isFallback ? "text-amber-400" : "text-emerald-400")} />
                 <span>
                   <strong>Live Database Verified:</strong> {response.audit.recordsAnalyzed} records analyzed from{' '}
-                  <code className="text-[11px] bg-emerald-500/10 px-1 py-0.5 rounded border border-emerald-500/20">
+                  <code className={cn("text-[11px] px-1 py-0.5 rounded border", response.isFallback ? "bg-amber-500/10 border-amber-500/20" : "bg-emerald-500/10 border-emerald-500/20")}>
                     {response.audit.sourceCollection}
                   </code>{' '}
                   under <strong>{response.audit.portfolioScope}</strong>.
                 </span>
               </div>
               <div className="flex items-center gap-3 text-muted-foreground text-[11px]">
-                <span className="text-emerald-400 font-semibold">Zero Hallucination Guaranteed</span>
-                <span>ΓÇó</span>
+                <span className={cn("font-semibold", response.isFallback ? "text-amber-400" : "text-emerald-400")}>
+                  {response.audit.provider || (response.isFallback ? 'Local Heuristic Engine' : 'FlowPilot AI Analytics')}
+                </span>
+                <span>•</span>
                 <span>{new Date(response.audit.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
               </div>
             </div>
@@ -506,7 +650,7 @@ export default function FpDashboardPage() {
                 <ul className="space-y-1.5 text-sm text-foreground/90">
                   {response.executiveSummary.map((bullet, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <span className="text-primary font-bold mt-0.5">ΓÇó</span>
+                      <span className="text-primary font-bold mt-0.5">•</span>
                       <span>{bullet}</span>
                     </li>
                   ))}

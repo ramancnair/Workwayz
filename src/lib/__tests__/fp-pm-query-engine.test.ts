@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { executeFpPmQuery, type FpPmProjectData } from '../fp-pm-query-engine';
 
 describe('executeFpPmQuery', () => {

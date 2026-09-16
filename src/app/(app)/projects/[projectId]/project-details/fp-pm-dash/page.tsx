@@ -62,6 +62,8 @@ import {
 import type { FpQueryResponse, FpKpiCard } from '@/types/fp-dashboard';
 import { executeFpPmQuery, type FpPmProjectData } from '@/lib/fp-pm-query-engine';
 import { cn } from '@/lib/utils';
+import { FpModelSelector } from '@/components/fp-dashboard/FpModelSelector';
+import { FpFallbackAlert } from '@/components/fp-dashboard/FpFallbackAlert';
 
 const PALETTE = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
@@ -142,6 +144,7 @@ export default function FpPmDashboardPage() {
   const [tableFilter, setTableFilter] = useState<string>('');
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.5-flash');
   const [, startTransition] = useTransition();
 
   // Load portfolios on mount to resolve project portfolio names
@@ -210,7 +213,7 @@ export default function FpPmDashboardPage() {
     impactedSystems,
   ]);
 
-  const handleRunQuery = useCallback((queryToRun: string) => {
+  const handleRunQuery = useCallback(async (queryToRun: string, modelToUse = selectedModel) => {
     const q = queryToRun.trim();
     if (!q) return;
 
@@ -219,19 +222,92 @@ export default function FpPmDashboardPage() {
     setSearchQuery(q);
 
     try {
-      const data = executeFpPmQuery(q, projectData);
+      const res = await fetch('/api/fp-analytics/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: q,
+          scope: 'project',
+          projectId: project?.id,
+          projectDataSnapshot: projectData,
+          modelId: modelToUse,
+        }),
+      });
+
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        // Non-JSON response
+      }
+
+      if (!res.ok || !data) {
+        throw new Error(data?.errorMessage || `Analytics API returned status ${res.status}`);
+      }
+
+      if (!data.success && data.errorMessage) {
+        throw new Error(data.errorMessage);
+      }
+
       setResponse(data);
       if (data.table?.defaultSortKey) {
         setSortKey(data.table.defaultSortKey);
         setSortDir(data.table.defaultSortDir || 'asc');
       }
     } catch (err: any) {
-      console.error('FP PM Dash query error:', err);
-      setErrorMsg(err.message || 'Failed to retrieve data from project database.');
+      console.warn('AI PM Analytics API error, falling back to local heuristic engine:', err);
+      try {
+        const fallbackData = executeFpPmQuery(q, projectData);
+        fallbackData.isFallback = true;
+        fallbackData.failedModel = modelToUse;
+
+        const rawMsg = String(err?.message || '');
+        const msg = rawMsg.toLowerCase();
+
+        if (
+          msg.includes('503') ||
+          msg.includes('unavailable') ||
+          msg.includes('no capacity') ||
+          msg.includes('capacity') ||
+          msg.includes('overloaded') ||
+          msg.includes('high demand')
+        ) {
+          fallbackData.errorCategory = 'high_demand';
+          fallbackData.fallbackTitle = msg.includes('capacity')
+            ? 'AI Service No Capacity (HTTP 503)'
+            : 'AI Service High Demand (HTTP 503)';
+          fallbackData.fallbackReason =
+            rawMsg.length > 0 && (rawMsg.includes('capacity') || rawMsg.includes('demand') || rawMsg.includes('503'))
+              ? `${rawMsg}. Google AI servers are temporarily experiencing high load. Switch to another model above.`
+              : `Model "${modelToUse}" is experiencing high server demand or capacity constraints. Switch to another model or retry.`;
+        } else if (msg.includes('429') || msg.includes('quota') || msg.includes('resource_exhausted')) {
+          fallbackData.errorCategory = 'quota_exceeded';
+          fallbackData.fallbackTitle = 'AI Quota Exceeded (HTTP 429)';
+          fallbackData.fallbackReason = `Daily request quota for "${modelToUse}" has been reached on your Google AI key (Resource Exhausted 429). Switch to another model using the selector above.`;
+        } else {
+          fallbackData.errorCategory = 'other';
+          fallbackData.fallbackTitle = 'AI Service Notice';
+          fallbackData.fallbackReason = rawMsg || `AI service unavailable for model "${modelToUse}". Operating on local heuristic engine.`;
+        }
+
+        fallbackData.audit = {
+          ...fallbackData.audit,
+          provider: `Offline / Local Heuristic Engine (${fallbackData.fallbackTitle})`,
+          confidence: 'Heuristic pattern match (Connect to AI for deep semantic reasoning)',
+        };
+        setResponse(fallbackData);
+        if (fallbackData.table?.defaultSortKey) {
+          setSortKey(fallbackData.table.defaultSortKey);
+          setSortDir(fallbackData.table.defaultSortDir || 'asc');
+        }
+      } catch (clientErr: any) {
+        console.error('FP PM Dash fallback query error:', clientErr);
+        setErrorMsg(clientErr.message || 'Failed to retrieve data from project database.');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [projectData]);
+  }, [project?.id, projectData, selectedModel]);
 
   // Run or refresh query on mount and when project data finishes loading
   useEffect(() => {
@@ -418,26 +494,42 @@ export default function FpPmDashboardPage() {
             </div>
           </div>
 
-          {/* Project Scope Card */}
-          <div className="flex items-center gap-3 bg-card border border-border px-3.5 py-2 rounded-lg shadow-sm">
-            <Briefcase className="w-4 h-4 text-primary shrink-0" />
-            <div className="text-xs space-y-0.5">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-foreground truncate max-w-[180px]">
-                  {project?.name || 'Project'}
-                </span>
-                <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0">
-                  {project?.id}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="truncate max-w-[140px] text-primary/90 font-medium">📁 {portfolioName}</span>
-                <span>•</span>
-                <span>{project?.pricingModel || 'Fixed Bid'}</span>
-                <span>•</span>
-                <span className={cn('font-semibold', project?.overallStatus === 'Green' ? 'text-emerald-400' : project?.overallStatus === 'Amber' ? 'text-amber-400' : 'text-rose-400')}>
-                  {project?.overallStatus || 'Green'} Health
-                </span>
+          {/* Controls: Model Selector & Project Scope Card */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">AI Model:</span>
+              <FpModelSelector
+                selectedModel={selectedModel}
+                onModelChange={(newModel) => {
+                  setSelectedModel(newModel);
+                  if (searchQuery || PRESET_PROMPTS[0]?.query) {
+                    handleRunQuery(searchQuery || PRESET_PROMPTS[0].query, newModel);
+                  }
+                }}
+              />
+            </div>
+
+            {/* Project Scope Card */}
+            <div className="flex items-center gap-3 bg-card border border-border px-3.5 py-1.5 rounded-lg shadow-sm">
+              <Briefcase className="w-4 h-4 text-primary shrink-0" />
+              <div className="text-xs space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-foreground truncate max-w-[180px]">
+                    {project?.name || 'Project'}
+                  </span>
+                  <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0">
+                    {project?.id}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span className="truncate max-w-[140px] text-primary/90 font-medium">📁 {portfolioName}</span>
+                  <span>•</span>
+                  <span>{project?.pricingModel || 'Fixed Bid'}</span>
+                  <span>•</span>
+                  <span className={cn('font-semibold', project?.overallStatus === 'Green' ? 'text-emerald-400' : project?.overallStatus === 'Amber' ? 'text-amber-400' : 'text-rose-400')}>
+                    {project?.overallStatus || 'Green'} Health
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -516,17 +608,33 @@ export default function FpPmDashboardPage() {
         {/* Main Response Area */}
         {response && (
           <div className="space-y-6">
+            {/* Rich Actionable Fallback Alert */}
+            <FpFallbackAlert
+              response={response}
+              selectedModel={selectedModel}
+              onModelChange={(newModel) => setSelectedModel(newModel)}
+              onRetry={(newModel) =>
+                handleRunQuery(searchQuery || response.query, newModel || selectedModel)
+              }
+              isLoading={isLoading}
+            />
+
             {/* Audit & Compliance Stamp */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-card border border-border text-xs text-muted-foreground">
+            <div className={cn(
+              "flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 rounded-lg border text-xs text-muted-foreground",
+              response.isFallback
+                ? "bg-amber-500/5 border-amber-500/20"
+                : "bg-card border-border"
+            )}>
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <ShieldCheck className={cn("w-4 h-4 shrink-0", response.isFallback ? "text-amber-400" : "text-emerald-400")} />
                 <span>
-                  <strong className="text-emerald-400 font-semibold">Live Database Verified:</strong>{' '}
+                  <strong className={cn("font-semibold", response.isFallback ? "text-amber-400" : "text-emerald-400")}>Live Database Verified:</strong>{' '}
                   {response.audit?.recordsAnalyzed} records analyzed under {response.audit?.portfolioScope}.
                 </span>
                 <span className="hidden md:inline text-border">|</span>
-                <span className="hidden md:inline font-mono text-[11px] text-primary font-medium">
-                  Zero Hallucination Guaranteed
+                <span className={cn("hidden md:inline font-mono text-[11px] font-medium", response.isFallback ? "text-amber-400" : "text-primary")}>
+                  {response.audit?.provider || (response.isFallback ? 'Local Heuristic Engine' : 'FlowPilot AI PM Intelligence')}
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">

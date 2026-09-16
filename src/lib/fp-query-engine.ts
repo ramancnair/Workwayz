@@ -1,73 +1,97 @@
 import { collection, getDocs, db } from '@/lib/db-provider';
 import type { FpQueryResponse, FpKpiCard, FpAuditStamp } from '@/types/fp-dashboard';
 
-export async function executeFpQuery(rawQuery: string, portfolioScopeId = 'all'): Promise<FpQueryResponse> {
+export async function executeFpQuery(
+  rawQuery: string,
+  portfolioScopeId = 'all',
+  snapshot?: { portfolios?: any[]; projects?: any[]; employees?: any[] }
+): Promise<FpQueryResponse> {
   const queryText = (rawQuery || '').trim();
   if (!queryText) {
     throw new Error('Please enter a search query or question.');
   }
 
-  if (!db) {
-    throw new Error('Database connection is not initialized.');
-  }
-
   const lowerQuery = queryText.toLowerCase();
 
-  // 1. Fetch Portfolios directly from DB
-  const portfoliosSnap = await getDocs(collection(db, 'portfolios'));
   const portfoliosMap = new Map<string, string>();
-  portfoliosSnap.docs.forEach((d: any) => {
-    const data = d.data();
-    if (!data.isDeleted) {
-      portfoliosMap.set(d.id, data.name || d.id);
-    }
-  });
-
-  // 2. Fetch Employees to reliably resolve Project Manager names
-  const employeesSnap = await getDocs(collection(db, 'employees'));
   const employeesMap = new Map<string, string>();
-  employeesSnap.docs.forEach((d: any) => {
-    const data = d.data();
-    if (!data.isDeleted) {
-      const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.name || data.empId || d.id;
+  let allProjects: any[] = [];
+  let employeesRaw: any[] = [];
+
+  if (snapshot) {
+    (snapshot.portfolios || []).forEach((d: any) => {
+      if (!d.isDeleted) {
+        portfoliosMap.set(d.id, d.name || d.id);
+      }
+    });
+
+    employeesRaw = (snapshot.employees || []).filter((d: any) => !d.isDeleted);
+    employeesRaw.forEach((d: any) => {
+      const fullName = `${d.firstName || ''} ${d.lastName || ''}`.trim() || d.name || d.empId || d.id;
       employeesMap.set(d.id, fullName);
-      if (data.empId) {
-        employeesMap.set(data.empId, fullName);
-      }
-      if (data.email) {
-        employeesMap.set(data.email, fullName);
-      }
-      if (data.uid) {
-        employeesMap.set(data.uid, fullName);
-      }
+      if (d.empId) employeesMap.set(d.empId, fullName);
+      if (d.email) employeesMap.set(d.email, fullName);
+      if (d.uid) employeesMap.set(d.uid, fullName);
+    });
+
+    allProjects = (snapshot.projects || [])
+      .map((p: any) => ({ ...p }))
+      .filter((p: any) => !p.isDeleted && !p.isArchived);
+  } else {
+    if (!db) {
+      throw new Error('Database connection is not initialized.');
     }
-  });
 
-  // 3. Fetch Projects directly from DB
-  const projectsSnap = await getDocs(collection(db, 'projects'));
-  let allProjects = projectsSnap.docs
-    .map((d: any) => ({ id: d.id, ...d.data() }))
-    .filter((p: any) => !p.isDeleted && !p.isArchived);
+    // 1. Fetch Portfolios directly from DB
+    const portfoliosSnap = await getDocs(collection(db, 'portfolios'));
+    portfoliosSnap.docs.forEach((d: any) => {
+      const data = d.data();
+      if (!data.isDeleted) {
+        portfoliosMap.set(d.id, data.name || d.id);
+      }
+    });
 
-  // Fallback: For any project without explicit projectManagerId, inspect its employees subcollection
-  for (const p of allProjects) {
-    if (!p.projectManagerId || p.projectManagerId === 'unassigned') {
-      try {
-        const subSnap = await getDocs(collection(db, 'projects', p.id, 'employees'));
-        const pmMember = subSnap.docs.find((m: any) => {
-          const mData = m.data();
-          const r = String(mData.role || mData.accessLevel || '').toLowerCase();
-          return r === 'pm' || r === 'project manager';
-        });
-        if (pmMember) {
-          const mData = pmMember.data();
-          const fullName = `${mData.firstName || ''} ${mData.lastName || ''}`.trim() || mData.name || mData.empId || pmMember.id;
-          p.projectManagerId = pmMember.id;
-          p.projectManager = fullName;
-          employeesMap.set(pmMember.id, fullName);
+    // 2. Fetch Employees to reliably resolve Project Manager names
+    const employeesSnap = await getDocs(collection(db, 'employees'));
+    employeesRaw = employeesSnap.docs
+      .map((d: any) => ({ id: d.id, ...d.data() }))
+      .filter((d: any) => !d.isDeleted);
+    employeesRaw.forEach((d: any) => {
+      const fullName = `${d.firstName || ''} ${d.lastName || ''}`.trim() || d.name || d.empId || d.id;
+      employeesMap.set(d.id, fullName);
+      if (d.empId) employeesMap.set(d.empId, fullName);
+      if (d.email) employeesMap.set(d.email, fullName);
+      if (d.uid) employeesMap.set(d.uid, fullName);
+    });
+
+    // 3. Fetch Projects directly from DB
+    const projectsSnap = await getDocs(collection(db, 'projects'));
+    allProjects = projectsSnap.docs
+      .map((d: any) => ({ id: d.id, ...d.data() }))
+      .filter((p: any) => !p.isDeleted && !p.isArchived);
+  }
+
+  // Fallback: For any project without explicit projectManagerId, inspect its employees subcollection if direct DB is active
+  if (!snapshot && db) {
+    for (const p of allProjects) {
+      if (!p.projectManagerId || p.projectManagerId === 'unassigned') {
+        try {
+          const subSnap = await getDocs(collection(db, 'projects', p.id, 'employees'));
+          const pmMember = subSnap.docs.find((m: any) => {
+            const mData = m.data();
+            const r = String(mData.role || mData.accessLevel || '').toLowerCase();
+            return r === 'pm' || r === 'project manager';
+          });
+          if (pmMember) {
+            const mData = pmMember.data();
+            const fullName = `${mData.firstName || ''} ${mData.lastName || ''}`.trim() || mData.name || mData.empId || pmMember.id;
+            p.projectManagerId = pmMember.id;
+            p.projectManager = fullName;
+            employeesMap.set(pmMember.id, fullName);
+          }
+        } catch {
+          // Continue if subcollection fetch cannot be reached
         }
-      } catch {
-        // Continue if subcollection fetch cannot be reached
       }
     }
   }
@@ -280,7 +304,7 @@ export async function executeFpQuery(rawQuery: string, portfolioScopeId = 'all')
       },
       audit: {
         ...baseAudit,
-        recordsAnalyzed: allProjects.length + employeesSnap.docs.length,
+        recordsAnalyzed: allProjects.length + employeesRaw.length,
       },
       followUpSuggestions: [
         'Show project RAG health breakdown across all portfolios',
@@ -712,18 +736,16 @@ export async function executeFpQuery(rawQuery: string, portfolioScopeId = 'all')
     const roleMap: Record<string, number> = {};
     let totalAvail = 0;
 
-    const rows = employeesSnap.docs
-      .filter((d: any) => !d.data().isDeleted)
-      .map((d: any) => {
-        const e = d.data();
+    const rows = employeesRaw
+      .map((e: any) => {
         const role = e.role || 'Developer';
         roleMap[role] = (roleMap[role] || 0) + 1;
         const avail = Number(e.availability) || 100;
         totalAvail += avail;
 
         return {
-          empId: e.empId || d.id,
-          name: `${e.firstName || ''} ${e.lastName || ''}`.trim() || 'Unknown',
+          empId: e.empId || e.id,
+          name: `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || 'Unknown',
           role,
           accessLevel: e.accessLevel || 'Team Member',
           availability: `${avail}%`,
