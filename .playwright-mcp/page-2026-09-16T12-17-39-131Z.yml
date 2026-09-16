@@ -1,0 +1,118 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: ProjectFlow
+              - generic:
+                - button:
+                  - generic: Toggle Sidebar
+                - generic:
+                  - button:
+                    - generic: Toggle theme
+          - generic:
+            - list:
+              - listitem:
+                - link:
+                  - /url: /my-account
+                  - generic: Account Settings
+              - listitem:
+                - link:
+                  - /url: /messages
+                  - generic: Messages
+          - generic:
+            - generic:
+              - generic: RN
+              - generic:
+                - generic: Raman Nair
+                - generic: Administrator
+                - generic: admin@zopcode.com
+    - main:
+      - generic:
+        - generic:
+          - generic:
+            - tablist:
+              - tab: My Projects
+              - tab: Projects
+              - tab: Quality
+              - tab: Billing
+              - tab: Users
+              - tab: Holidays
+              - tab:
+                - generic: Portfolio Settings
+              - tab:
+                - generic: Portfolio Trash
+              - tab [selected]: Profile & Account
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - button:
+                  - generic: New Message
+              - generic:
+                - button:
+                  - generic: Inbox
+                - button:
+                  - generic: Sent
+                - button:
+                  - generic: Starred
+                  - generic: "1"
+                - button:
+                  - generic: Trash
+                  - generic: "2"
+              - generic: admin@zopcode.com
+            - generic:
+              - generic:
+                - generic:
+                  - textbox:
+                    - /placeholder: Search messages...
+                - generic:
+                  - generic:
+                    - generic: trash
+                    - generic: 2 messages
+                  - button: Empty Trash
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: RA
+                    - generic:
+                      - generic:
+                        - generic: Raman6282
+                        - generic: 9:39 AM
+                      - generic:
+                        - generic: P2600005
+                        - generic: "Re: Bulk message"
+                      - paragraph: hmm --- Original Message from Raman Nair (9/16/2026, 9:07:03 AM) --- > Bulking
+                    - generic:
+                      - button
+                      - button
+                  - generic:
+                    - generic: RA
+                    - generic:
+                      - generic:
+                        - generic: Raman6282
+                        - generic: 9:38 AM
+                      - generic: "Re: Personal"
+                      - paragraph: ok --- Original Message from Raman Nair (9/16/2026, 9:07:30 AM) --- > HI
+                    - generic:
+                      - button
+                      - button
+            - generic:
+              - generic:
+                - paragraph: No message selected
+                - paragraph: Select an internal message from the list on the left to read its full content or reply to team members.
+  - generic [aria-hidden]:
+    - button
+  - list
+  - button "Open Next.js Dev Tools" [ref=f1e9] [cursor=pointer]
+  - alert
+  - alertdialog [ref=f1e374]:
+    - generic [ref=f1e375]:
+      - heading "Empty Trash?" [level=2] [ref=f1e376]
+      - paragraph [ref=f1e377]: This will permanently delete all 2 messages in your Trash folder. This action cannot be undone.
+    - generic [ref=f1e378]:
+      - button "Cancel" [active] [ref=f1e379] [cursor=pointer]
+      - button "Empty Trash" [ref=f1e380] [cursor=pointer]

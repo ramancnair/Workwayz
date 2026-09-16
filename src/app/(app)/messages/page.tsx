@@ -25,7 +25,19 @@ import {
   toggleStarMessage,
   deleteMessageForUser,
   restoreMessageForUser,
+  permanentlyDeleteMessageForUser,
+  emptyTrashForUser,
 } from '@/lib/messaging-service';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 export default function MessagesPage() {
@@ -50,6 +62,10 @@ export default function MessagesPage() {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [replyToMessage, setReplyToMessage] = useState<InternalMessage | null>(null);
   const [replyAll, setReplyAll] = useState(false);
+
+  // Empty Trash Dialog State
+  const [isEmptyTrashConfirmOpen, setIsEmptyTrashConfirmOpen] = useState(false);
+  const [isClearingTrash, setIsClearingTrash] = useState(false);
 
   // Load current user from localStorage
   useEffect(() => {
@@ -126,6 +142,10 @@ export default function MessagesPage() {
     if (userIdentifiers.length === 0) return [];
 
     return allRawMessages.filter((msg) => {
+      // If permanently cleared by this user, do not show anywhere (including Trash)
+      const isPurged = userIdentifiers.some((id) => msg.purgedBy?.includes(id));
+      if (isPurged) return false;
+
       const isDeleted = userIdentifiers.some((id) => msg.deletedBy?.includes(id));
       const isSender = userIdentifiers.some(
         (id) =>
@@ -185,22 +205,36 @@ export default function MessagesPage() {
   const unreadCounts = useMemo(() => {
     let inbox = 0;
     let starred = 0;
+    let trash = 0;
 
     allRawMessages.forEach((msg) => {
-      const isDeleted = userIdentifiers.some((id) => msg.deletedBy?.includes(id));
-      if (isDeleted) return;
+      const isPurged = userIdentifiers.some((id) => msg.purgedBy?.includes(id));
+      if (isPurged) return;
 
+      const isDeleted = userIdentifiers.some((id) => msg.deletedBy?.includes(id));
+      const isSender = userIdentifiers.some(
+        (id) =>
+          msg.senderId?.toLowerCase() === id.toLowerCase() ||
+          msg.senderEmail?.toLowerCase() === id.toLowerCase()
+      );
       const isRecipient = userIdentifiers.some((id) =>
         msg.recipientUserIds?.map((r) => r.toLowerCase()).includes(id.toLowerCase())
       );
       const isRead = userIdentifiers.some((id) => msg.readBy?.includes(id));
       const isStarred = userIdentifiers.some((id) => msg.starredBy?.includes(id));
 
+      if (isDeleted && (isRecipient || isSender)) {
+        trash++;
+        return;
+      }
+
+      if (isDeleted) return;
+
       if (isRecipient && !isRead) inbox++;
-      if (isStarred) starred++;
+      if (isStarred && (isRecipient || isSender)) starred++;
     });
 
-    return { inbox, starred };
+    return { inbox, starred, trash };
   }, [allRawMessages, userIdentifiers]);
 
   // Handler: Select message and automatically mark as read if in inbox
@@ -222,15 +256,59 @@ export default function MessagesPage() {
     markMessageRead(db, messageId, userIdentifiers, isRead);
   };
 
-  // Handler: Delete message (soft delete)
-  const handleDeleteMessage = (messageId: string) => {
-    deleteMessageForUser(db, messageId, userIdentifiers);
+  // Handler: Delete message (soft delete in inbox/sent/starred, permanent delete in trash)
+  const handleDeleteMessage = async (messageId: string) => {
+    if (currentFolder === 'trash') {
+      await permanentlyDeleteMessageForUser(db, messageId, userIdentifiers);
+      toast({
+        title: 'Message Permanently Deleted',
+        description: 'The message was cleared from your Trash.',
+      });
+    } else {
+      await deleteMessageForUser(db, messageId, userIdentifiers);
+      toast({
+        title: 'Message Deleted',
+        description: 'Moved to Trash folder.',
+      });
+    }
+    if (selectedMessage?.id === messageId) {
+      setSelectedMessage(null);
+    }
+  };
+
+  // Handler: Restore message from Trash
+  const handleRestoreMessage = async (messageId: string) => {
+    await restoreMessageForUser(db, messageId, userIdentifiers);
     toast({
-      title: 'Message Deleted',
-      description: 'Moved to Trash folder.',
+      title: 'Message Restored',
+      description: 'The message has been restored to your messages.',
     });
     if (selectedMessage?.id === messageId) {
       setSelectedMessage(null);
+    }
+  };
+
+  // Handler: Empty entire Trash
+  const handleEmptyTrash = async () => {
+    try {
+      setIsClearingTrash(true);
+      const trashMessageIds = folderMessages.map((m) => m.id);
+      await emptyTrashForUser(db, trashMessageIds, userIdentifiers);
+      setSelectedMessage(null);
+      setIsEmptyTrashConfirmOpen(false);
+      toast({
+        title: 'Trash Emptied',
+        description: 'All messages in Trash have been permanently deleted.',
+      });
+    } catch (err) {
+      console.error('Failed to empty trash:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to empty trash.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsClearingTrash(false);
     }
   };
 
@@ -336,6 +414,11 @@ export default function MessagesPage() {
               <Trash2 className="h-4 w-4 text-muted-foreground" />
               <span>Trash</span>
             </div>
+            {unreadCounts.trash > 0 && (
+              <Badge variant="outline" className="h-5 px-1.5 text-[11px] font-medium">
+                {unreadCounts.trash}
+              </Badge>
+            )}
           </Button>
         </div>
 
@@ -364,10 +447,23 @@ export default function MessagesPage() {
             />
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-            <span className="capitalize font-semibold text-foreground">
-              {currentFolder}
-            </span>
-            <span>{filteredMessages.length} message{filteredMessages.length === 1 ? '' : 's'}</span>
+            <div className="flex items-center gap-2">
+              <span className="capitalize font-semibold text-foreground">
+                {currentFolder}
+              </span>
+              <span>{filteredMessages.length} message{filteredMessages.length === 1 ? '' : 's'}</span>
+            </div>
+            {currentFolder === 'trash' && filteredMessages.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsEmptyTrashConfirmOpen(true)}
+                className="h-6 px-2 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10 gap-1 font-medium"
+              >
+                <Trash2 className="h-3 w-3" />
+                Empty Trash
+              </Button>
+            )}
           </div>
         </div>
 
@@ -386,6 +482,7 @@ export default function MessagesPage() {
               folder={currentFolder}
               onToggleStar={handleToggleStar}
               onDeleteMessage={handleDeleteMessage}
+              onRestoreMessage={handleRestoreMessage}
             />
           )}
         </div>
@@ -400,11 +497,13 @@ export default function MessagesPage() {
         <MessageDetail
           message={selectedMessage}
           userIdentifiers={userIdentifiers}
+          folder={currentFolder}
           onReply={handleReply}
           onReplyAll={handleReplyAll}
           onToggleStar={handleToggleStar}
           onToggleRead={handleToggleRead}
           onDeleteMessage={handleDeleteMessage}
+          onRestoreMessage={handleRestoreMessage}
           onBackToList={() => setSelectedMessage(null)}
         />
       </div>
@@ -423,6 +522,31 @@ export default function MessagesPage() {
           }
         }}
       />
+
+      {/* Empty Trash Confirmation Dialog */}
+      <AlertDialog
+        open={isEmptyTrashConfirmOpen}
+        onOpenChange={setIsEmptyTrashConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Empty Trash?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all {filteredMessages.length} message{filteredMessages.length === 1 ? '' : 's'} in your Trash folder. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingTrash}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEmptyTrash}
+              disabled={isClearingTrash}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearingTrash ? 'Emptying...' : 'Empty Trash'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

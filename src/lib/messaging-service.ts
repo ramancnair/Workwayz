@@ -6,13 +6,13 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   where,
   arrayUnion,
   arrayRemove,
 } from '@/lib/db-provider';
-import { InternalMessage, MessageRecipient, ProjectDistro } from '@/types/messaging';
-import { User } from '@/types';
+import { InternalMessage, MessageRecipient, ProjectDistro, MessagingUser } from '@/types/messaging';
 
 export interface SendMessagePayload {
   sender: {
@@ -33,7 +33,7 @@ export interface SendMessagePayload {
  * Every active project automatically serves as a distribution list named by its projectId.
  */
 export async function fetchUsersAndDistros(db: any): Promise<{
-  users: User[];
+  users: MessagingUser[];
   distros: ProjectDistro[];
 }> {
   if (!db) return { users: [], distros: [] };
@@ -44,7 +44,7 @@ export async function fetchUsersAndDistros(db: any): Promise<{
       getDocs(collection(db, 'projects')),
     ]);
 
-    const users: User[] = employeesSnap.docs
+    const users: MessagingUser[] = employeesSnap.docs
       .map((d: any) => {
         const data = d.data();
         return {
@@ -59,9 +59,9 @@ export async function fetchUsersAndDistros(db: any): Promise<{
           role: data.role,
           accessLevel: data.accessLevel,
           isDeleted: data.isDeleted,
-        } as unknown as User;
+        };
       })
-      .filter((u: User) => !u.isDeleted && u.email);
+      .filter((u: MessagingUser) => !u.isDeleted && u.email);
 
     const distros: ProjectDistro[] = projectsSnap.docs
       .map((d: any) => {
@@ -263,3 +263,66 @@ export async function restoreMessageForUser(
     console.error('Error restoring message for user:', error);
   }
 }
+
+/**
+ * Permanently deletes / clears a message from Trash for the current user.
+ * If all participants have permanently deleted the message, the Firestore doc is deleted entirely.
+ */
+export async function permanentlyDeleteMessageForUser(
+  db: any,
+  messageId: string,
+  userIdentifiers: string[]
+): Promise<void> {
+  if (!db || !messageId) return;
+  const msgRef = doc(db, 'messages', messageId);
+  try {
+    const snap = await getDoc(msgRef);
+    if (!snap.exists()) return;
+    const data = snap.data() as InternalMessage;
+
+    const existingPurged = data.purgedBy || [];
+    const updatedPurged = Array.from(new Set([...existingPurged, ...userIdentifiers]));
+
+    const allStakeholders = new Set<string>([
+      data.senderId,
+      (data.senderEmail || '').toLowerCase(),
+      ...(data.recipientUserIds || []).map((r) => r.toLowerCase()),
+    ].filter(Boolean));
+
+    const allStakeholdersPurged = Array.from(allStakeholders).every((stakeholder) =>
+      updatedPurged.some((p) => p.toLowerCase() === stakeholder.toLowerCase())
+    );
+
+    if (allStakeholdersPurged) {
+      await deleteDoc(msgRef);
+    } else {
+      await updateDoc(msgRef, {
+        purgedBy: arrayUnion(...userIdentifiers),
+      });
+    }
+  } catch (error) {
+    console.error('Error permanently deleting message for user:', error);
+    try {
+      await updateDoc(msgRef, {
+        purgedBy: arrayUnion(...userIdentifiers),
+      });
+    } catch (e) {
+      console.error('Fallback permanent delete failed:', e);
+    }
+  }
+}
+
+/**
+ * Empties all messages currently in Trash for the user.
+ */
+export async function emptyTrashForUser(
+  db: any,
+  messageIds: string[],
+  userIdentifiers: string[]
+): Promise<void> {
+  if (!db || messageIds.length === 0) return;
+  await Promise.all(
+    messageIds.map((id) => permanentlyDeleteMessageForUser(db, id, userIdentifiers))
+  );
+}
+

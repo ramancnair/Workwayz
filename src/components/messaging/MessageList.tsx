@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getUserInitials } from '@/lib/utils';
-import { Star, FolderKanban, Trash2, Mail, MailOpen } from 'lucide-react';
+import { Star, FolderKanban, Trash2, Mail, MailOpen, RotateCcw } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 
 interface MessageListProps {
@@ -17,6 +17,7 @@ interface MessageListProps {
   folder: MessageFolder;
   onToggleStar: (messageId: string, isStarred: boolean) => void;
   onDeleteMessage: (messageId: string) => void;
+  onRestoreMessage?: (messageId: string) => void;
 }
 
 function formatMessageDate(dateStr: string) {
@@ -43,6 +44,7 @@ export function MessageList({
   folder,
   onToggleStar,
   onDeleteMessage,
+  onRestoreMessage,
 }: MessageListProps) {
   if (messages.length === 0) {
     return (
@@ -148,36 +150,71 @@ export function MessageList({
               </p>
             </div>
 
-            {/* Actions: Star & Delete */}
+            {/* Actions: Star & Delete, or Restore & Delete Permanently in Trash */}
             <div className="flex items-center gap-1 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 text-muted-foreground hover:text-amber-500"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleStar(msg.id, !isStarred);
-                }}
-              >
-                <Star
-                  className={`h-3.5 w-3.5 ${
-                    isStarred
-                      ? 'fill-amber-400 text-amber-500 opacity-100'
-                      : 'text-muted-foreground'
-                  }`}
-                />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteMessage(msg.id);
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              {folder === 'trash' ? (
+                <>
+                  {onRestoreMessage && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRestoreMessage(msg.id);
+                      }}
+                      title="Restore to Inbox / Sent"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteMessage(msg.id);
+                    }}
+                    title="Delete permanently"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-muted-foreground hover:text-amber-500"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleStar(msg.id, !isStarred);
+                    }}
+                    title={isStarred ? 'Unstar' : 'Star'}
+                  >
+                    <Star
+                      className={`h-3.5 w-3.5 ${
+                        isStarred
+                          ? 'fill-amber-400 text-amber-500 opacity-100'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteMessage(msg.id);
+                    }}
+                    title="Move to Trash"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         );

@@ -24,6 +24,7 @@ export interface InternalMessage {
   readBy: string[];           // User IDs who marked this as read
   starredBy?: string[];       // User IDs who starred this message
   deletedBy?: string[];       // User IDs who deleted this message
+  purgedBy?: string[];        // User IDs who permanently cleared this message from Trash
   replyToId?: string;         // Parent message ID if this is a reply
 }
 
@@ -36,3 +37,17 @@ export interface ProjectDistro {
 }
 
 export type MessageFolder = 'inbox' | 'sent' | 'starred' | 'trash';
+
+export interface MessagingUser {
+  id: string;
+  empId: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  role?: string;
+  accessLevel?: string;
+  isDeleted?: boolean;
+}

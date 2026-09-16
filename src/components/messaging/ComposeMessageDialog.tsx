@@ -32,8 +32,8 @@ import {
   InternalMessage,
   MessageRecipient,
   ProjectDistro,
+  MessagingUser,
 } from '@/types/messaging';
-import { User } from '@/types';
 import { fetchUsersAndDistros, sendInternalMessage } from '@/lib/messaging-service';
 
 interface ComposeMessageDialogProps {
@@ -61,7 +61,7 @@ export function ComposeMessageDialog({
 }: ComposeMessageDialogProps) {
   const { toast } = useToast();
 
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<MessagingUser[]>([]);
   const [availableDistros, setAvailableDistros] = useState<ProjectDistro[]>([]);
   const [isLoadingRecipients, setIsLoadingRecipients] = useState(false);
 
