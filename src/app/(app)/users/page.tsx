@@ -47,7 +47,6 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, getUserInitials, formatRateInput } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -74,17 +73,17 @@ const userFormSchema = z.object({
 
 // Helper to remove undefined values from an object before sending to Firestore
 const sanitizeForFirestore = (data: any) => {
-    const sanitized: any = {};
-    for (const key in data) {
-        if (data[key] !== undefined) {
-             if (typeof data[key] === 'number' && !Number.isNaN(data[key])) {
-                sanitized[key] = data[key];
-            } else if (typeof data[key] !== 'number') {
-                sanitized[key] = data[key];
-            }
-        }
+  const sanitized: any = {};
+  for (const key in data) {
+    if (data[key] !== undefined) {
+      if (typeof data[key] === 'number' && !Number.isNaN(data[key])) {
+        sanitized[key] = data[key];
+      } else if (typeof data[key] !== 'number') {
+        sanitized[key] = data[key];
+      }
     }
-    return sanitized;
+  }
+  return sanitized;
 };
 
 function SortableHeader({
@@ -165,18 +164,18 @@ export default function UsersPage() {
     if (!db) { console.error('DB is null, aborting onSubmit!'); return; }
     const q = query(collection(db, 'employees'), where('isDeleted', '!=', true));
     const unsubscribe = onSnapshot(q, (querySnapshot: any) => {
-        const usersData = querySnapshot.docs.map((doc: any) => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                employmentStartDate: data.employmentStartDate?.toDate ? data.employmentStartDate.toDate().toISOString() : data.employmentStartDate,
-                employmentEndDate: data.employmentEndDate?.toDate ? data.employmentEndDate.toDate().toISOString() : data.employmentEndDate,
-            } as User;
-        });
-        setUsers(usersData);
+      const usersData = querySnapshot.docs.map((doc: any) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          employmentStartDate: data.employmentStartDate?.toDate ? data.employmentStartDate.toDate().toISOString() : data.employmentStartDate,
+          employmentEndDate: data.employmentEndDate?.toDate ? data.employmentEndDate.toDate().toISOString() : data.employmentEndDate,
+        } as User;
+      });
+      setUsers(usersData);
     }, (err: any) => {
-        console.warn('[Users] Employees listener error:', err);
+      console.warn('[Users] Employees listener error:', err);
     });
     return () => unsubscribe();
   }, []);
@@ -234,7 +233,7 @@ export default function UsersPage() {
     setEditingUser(user);
     setIsDialogOpen(true);
   };
-  
+
   const createIdentityInAuthPool = async (email: string, firstName?: string, lastName?: string, accessLevel?: string, password?: string) => {
     try {
       const res = await fetch('/api/users', {
@@ -264,24 +263,24 @@ export default function UsersPage() {
     }
     setDeletingUser(null);
   };
-  
+
   const handleBulkDeleteConfirm = async () => {
     if (selectedUsers.length === 0 || !db) return;
     const batch = writeBatch(db);
     const deletionTime = Timestamp.now();
     selectedUsers.forEach(userId => {
-        const userRef = doc(db!, 'employees', userId);
-        batch.update(userRef, { isDeleted: true, deletedAt: deletionTime });
+      const userRef = doc(db!, 'employees', userId);
+      batch.update(userRef, { isDeleted: true, deletedAt: deletionTime });
     });
 
     try {
-        await batch.commit();
-        toast({ title: "Success", description: `${selectedUsers.length} user(s) moved to trash.` });
+      await batch.commit();
+      toast({ title: "Success", description: `${selectedUsers.length} user(s) moved to trash.` });
     } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "Could not move users to trash." });
+      toast({ variant: "destructive", title: "Error", description: "Could not move users to trash." });
     } finally {
-        setSelectedUsers([]);
-        setShowBulkDeleteConfirm(false);
+      setSelectedUsers([]);
+      setShowBulkDeleteConfirm(false);
     }
   };
 
@@ -289,15 +288,15 @@ export default function UsersPage() {
     console.log('onSubmit called', values, 'db is', db);
     if (!db) { console.error('DB is null, aborting onSubmit!'); return; }
     setIsSubmitting(true);
-    
+
     // Check for unique email
     const isEmailTaken = users.some(user => user.email === values.email && user.id !== editingUser?.id);
     if (isEmailTaken) {
-        form.setError("email", { type: "manual", message: "This email is already in use." });
-        setIsSubmitting(false);
-        return;
+      form.setError("email", { type: "manual", message: "This email is already in use." });
+      setIsSubmitting(false);
+      return;
     }
-    
+
     const valuesWithDates: any = { ...values };
     if (values.employmentStartDate && values.employmentStartDate.trim() !== '') {
       valuesWithDates.employmentStartDate = new Date(values.employmentStartDate).toISOString();
@@ -316,7 +315,7 @@ export default function UsersPage() {
     } else {
       valuesWithDates.costAmount = null;
     }
-    
+
     const sanitizedValues = sanitizeForFirestore(valuesWithDates);
 
     try {
@@ -338,10 +337,10 @@ export default function UsersPage() {
         if (values.accessLevel !== editingUser.accessLevel) {
           createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel);
         }
-        
+
         toast({
           title: editingUser.isEnabled === false ? "User Enabled" : "Success",
-          description: editingUser.isEnabled === false 
+          description: editingUser.isEnabled === false
             ? `${values.firstName} ${values.lastName} has been enabled successfully.`
             : "User updated successfully."
         });
@@ -349,23 +348,23 @@ export default function UsersPage() {
         // Check for unique Emp ID when creating a new user
         const isEmpIdTaken = users.some(user => user.empId === values.empId);
         if (isEmpIdTaken) {
-            form.setError("empId", { type: "manual", message: "This Emp ID is already taken." });
-            setIsSubmitting(false);
-            return;
+          form.setError("empId", { type: "manual", message: "This Emp ID is already taken." });
+          setIsSubmitting(false);
+          return;
         }
 
         // Use empId as the document ID
         const userRef = doc(db, 'employees', values.empId);
-        await setDoc(userRef, { 
-            ...sanitizedValues, 
-            avatar: '',
-            isDeleted: false,
-            isEnabled: true,
+        await setDoc(userRef, {
+          ...sanitizedValues,
+          avatar: '',
+          isDeleted: false,
+          isEnabled: true,
         });
-        
+
         // Push single identity to auth pool asynchronously in background
         createIdentityInAuthPool(values.email, values.firstName, values.lastName, values.accessLevel, values.password);
-        
+
         toast({ title: "Success", description: `User added to database.` });
       }
       setIsDialogOpen(false);
@@ -385,7 +384,7 @@ export default function UsersPage() {
   const clearFilters = () => {
     setFilters({ search: '', accessLevel: 'all' });
   };
-  
+
   const handleSort = (columnId: string) => {
     if (sorting?.id === columnId) {
       setSorting({ ...sorting, desc: !sorting.desc });
@@ -399,7 +398,7 @@ export default function UsersPage() {
     const searchTerm = filters.search.toLowerCase();
 
     if (searchTerm) {
-      filtered = filtered.filter(user => 
+      filtered = filtered.filter(user =>
         user.firstName.toLowerCase().includes(searchTerm) ||
         user.lastName.toLowerCase().includes(searchTerm) ||
         user.email.toLowerCase().includes(searchTerm) ||
@@ -415,15 +414,15 @@ export default function UsersPage() {
       filtered.sort((a, b) => {
         let valA: any = (a as any)[sorting.id] || '';
         let valB: any = (b as any)[sorting.id] || '';
-        
+
         if (sorting.id === 'name') {
-            valA = `${a.firstName} ${a.lastName}`;
-            valB = `${b.firstName} ${b.lastName}`;
+          valA = `${a.firstName} ${a.lastName}`;
+          valB = `${b.firstName} ${b.lastName}`;
         }
-        
+
         if (valA === null || valA === undefined) return 1;
         if (valB === null || valB === undefined) return -1;
-        
+
         let comparison = 0;
         if (typeof valA === 'string' && typeof valB === 'string') {
           comparison = valA.localeCompare(valB, undefined, { numeric: true });
@@ -449,8 +448,8 @@ export default function UsersPage() {
         <PageHeader title="User List" description="Manage user access">
           {selectedUsers.length > 0 && (
             <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Selected ({selectedUsers.length})
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Selected ({selectedUsers.length})
             </Button>
           )}
           <Button onClick={() => handleDialogOpen(null)}>
@@ -517,47 +516,45 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4 space-y-4">
             <div className="flex items-center gap-4 flex-wrap">
-                <div className="relative max-w-sm w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                        placeholder="Filter by name, ID, or email..."
-                        value={filters.search}
-                        onChange={(e) => handleFilterChange('search', e.target.value)}
-                        className="pl-9 w-full"
-                    />
-                </div>
-                <Select value={filters.accessLevel} onValueChange={(v) => handleFilterChange('accessLevel', v)}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Filter by access level..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Access Levels</SelectItem>
-                        {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                <Button variant="ghost" onClick={clearFilters}>
-                    <X className="mr-2 h-4 w-4" /> Clear Filters
-                </Button>
+              <div className="relative max-w-sm w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Filter by name, ID, or email..."
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  className="pl-9 w-full"
+                />
+              </div>
+              <Select value={filters.accessLevel} onValueChange={(v) => handleFilterChange('accessLevel', v)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by access level..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Access Levels</SelectItem>
+                  {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" onClick={clearFilters}>
+                <X className="mr-2 h-4 w-4" /> Clear Filters
+              </Button>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">
-                     <Checkbox
-                        checked={filteredAndSortedUsers.length > 0 && selectedUsers.length === filteredAndSortedUsers.length}
-                        onCheckedChange={(value) =>
-                            setSelectedUsers(value ? filteredAndSortedUsers.map(item => item.id) : [])
-                        }
-                        aria-label="Select all"
+                    <Checkbox
+                      checked={filteredAndSortedUsers.length > 0 && selectedUsers.length === filteredAndSortedUsers.length}
+                      onCheckedChange={(value) =>
+                        setSelectedUsers(value ? filteredAndSortedUsers.map(item => item.id) : [])
+                      }
+                      aria-label="Select all"
                     />
                   </TableHead>
                   <SortableHeader columnId="empId" onSort={handleSort}>Emp ID</SortableHeader>
                   <SortableHeader columnId="name" onSort={handleSort}>Name</SortableHeader>
                   <SortableHeader columnId="email" onSort={handleSort}>Email</SortableHeader>
                   <SortableHeader columnId="accessLevel" onSort={handleSort}>Access Level</SortableHeader>
-                  <SortableHeader columnId="employmentStartDate" onSort={handleSort}>Joining Date</SortableHeader>
                   <SortableHeader columnId="isEnabled" onSort={handleSort}>Enabled</SortableHeader>
-                  <SortableHeader columnId="costAmount" onSort={handleSort}>Annual Cost</SortableHeader>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -565,25 +562,22 @@ export default function UsersPage() {
                 {filteredAndSortedUsers.map((user) => (
                   <TableRow key={user.id} data-state={selectedUsers.includes(user.id) && "selected"}>
                     <TableCell>
-                        <Checkbox
-                            checked={selectedUsers.includes(user.id)}
-                            onCheckedChange={(value) =>
-                                setSelectedUsers(
-                                    value
-                                    ? [...selectedUsers, user.id]
-                                    : selectedUsers.filter((id) => id !== user.id)
-                                )
-                            }
-                            aria-label="Select row"
-                        />
+                      <Checkbox
+                        checked={selectedUsers.includes(user.id)}
+                        onCheckedChange={(value) =>
+                          setSelectedUsers(
+                            value
+                              ? [...selectedUsers, user.id]
+                              : selectedUsers.filter((id) => id !== user.id)
+                          )
+                        }
+                        aria-label="Select row"
+                      />
                     </TableCell>
                     <TableCell className="font-medium">{user.empId}</TableCell>
                     <TableCell className="max-w-[150px] truncate" title={`${user.firstName} ${user.lastName}`}>{user.firstName} {user.lastName}</TableCell>
                     <TableCell className="max-w-[220px] truncate" title={user.email}>{user.email}</TableCell>
                     <TableCell>{user.accessLevel || 'N/A'}</TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
-                      {user.employmentStartDate ? format(parseISO(user.employmentStartDate), 'MMM d, yyyy') : '-'}
-                    </TableCell>
                     <TableCell>
                       {user.isEnabled === false ? (
                         <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 dark:text-amber-300 dark:border-amber-700 dark:bg-amber-900/30">
@@ -597,20 +591,11 @@ export default function UsersPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {user.costAmount !== undefined && user.costAmount !== null ? (
-                        <span>
-                          {user.costCurrency || 'USD'} {Number(user.costAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">N/A</span>
-                      )}
-                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDialogOpen(user)}
                           disabled={user.isEnabled === false && !isAdmin}
                           title={user.isEnabled === false && !isAdmin ? "Only Administrators can enable users" : undefined}
@@ -653,14 +638,14 @@ export default function UsersPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                   <FormField control={form.control} name="empId" render={({ field }) => (
+                  <FormField control={form.control} name="empId" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Emp ID *</FormLabel>
                       <FormControl><Input placeholder="E.g., E001" {...field} readOnly={!!editingUser} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                   <FormField control={form.control} name="email" render={({ field }) => (
+                  <FormField control={form.control} name="email" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Email *</FormLabel>
                       <FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl>
@@ -695,21 +680,21 @@ export default function UsersPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                   <FormField control={form.control} name="accessLevel" render={({ field }) => (
+                  <FormField control={form.control} name="accessLevel" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Access Level *</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select an access level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => (
-                              <SelectItem key={level} value={level}>{level}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an access level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => (
+                            <SelectItem key={level} value={level}>{level}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -777,14 +762,14 @@ export default function UsersPage() {
               </div>
               <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (editingUser ? 'Saving...' : 'Creating...') : (editingUser ? 'Save Changes' : 'Create User')}
+                  {isSubmitting ? (editingUser ? 'Saving...' : 'Creating...') : (editingUser ? 'Save Changes' : 'Create User')}
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      
+
       <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -795,7 +780,7 @@ export default function UsersPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
@@ -804,7 +789,7 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -815,7 +800,7 @@ export default function UsersPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleBulkDeleteConfirm}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
