@@ -247,47 +247,52 @@ export async function generateEmployees(
 }
 
 /**
- * Creates or retrieves portfolios.
+ * Creates brand-new dedicated studio portfolios.
+ * Test data is strictly isolated into newly created portfolios and never injected into existing ones.
  */
-export async function ensurePortfolios(
+export async function createStudioPortfolios(
   count: number,
   onProgress?: (message: string) => void
 ): Promise<Portfolio[]> {
   if (!db) throw new Error('Database is not initialized.');
 
-  onProgress?.('Ensuring portfolios...');
+  onProgress?.('Scanning portfolios to allocate new test portfolio IDs...');
   const portSnap = await getDocs(collection(db, 'portfolios'));
-  const existingPortfolios: Portfolio[] = [];
-  portSnap.forEach((d: any) => {
-    const data = d.data();
-    if (!data.isDeleted) {
-      existingPortfolios.push({ ...data, id: d.id } as Portfolio);
-    }
-  });
+  const existingIds = portSnap.docs
+    .filter((d: any) => d.id.startsWith('PF'))
+    .map((d: any) => parseInt(d.id.replace('PF', ''), 10))
+    .filter((n: number) => !isNaN(n));
 
-  if (existingPortfolios.length >= count) {
-    return existingPortfolios.slice(0, count);
-  }
-
-  const needed = count - existingPortfolios.length;
+  const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
   const created: Portfolio[] = [];
 
-  for (let i = 0; i < needed; i++) {
-    const template = PORTFOLIO_TEMPLATES[(existingPortfolios.length + i) % PORTFOLIO_TEMPLATES.length];
-    const portfolioId = `PF${String(existingPortfolios.length + i + 1).padStart(3, '0')}`;
+  for (let i = 0; i < count; i++) {
+    const nextNum = maxId + i + 1;
+    const portfolioId = `PF${String(nextNum).padStart(3, '0')}`;
+    const template = PORTFOLIO_TEMPLATES[i % PORTFOLIO_TEMPLATES.length];
     const newPort: Portfolio = {
       id: portfolioId,
-      name: `${template.name} ${existingPortfolios.length + i + 1}`,
+      name: `${template.name} (Studio ${nextNum})`,
       description: template.description,
       isDeleted: false,
     };
 
-    await setDoc(doc(db, 'portfolios', portfolioId), newPort);
+    onProgress?.(`Provisioning dedicated studio portfolio: ${newPort.name} (${portfolioId})...`);
+    await setDoc(doc(db, 'portfolios', portfolioId), {
+      ...newPort,
+      isTestData: true,
+      createdAt: new Date().toISOString(),
+    });
     created.push(newPort);
   }
 
-  return [...existingPortfolios, ...created];
+  return created;
 }
+
+/**
+ * Backward compatibility alias: always creates fresh dedicated portfolios.
+ */
+export const ensurePortfolios = createStudioPortfolios;
 
 /**
  * Generates projects and populates all subcollections with rich relational data.
@@ -334,6 +339,7 @@ export async function generateProjects(
       ? (i % 2 === 0 ? 'Fixed Bid' : 'T&M')
       : pricingModel;
 
+    // Use only newly created studio users
     const pmUsers = globalUsers.filter(u => u.accessLevel === 'Project Manager' || u.accessLevel === 'Lead');
     const assignedPm = pmUsers.length > 0 ? pmUsers[i % pmUsers.length].id : globalUsers[0]?.id;
 
@@ -380,14 +386,16 @@ export async function wipeWorkspaceTestData(
   opts: {
     wipeProjects: boolean;
     wipeUsers: boolean;
+    wipePortfolios?: boolean;
     onProgress?: (message: string) => void;
   }
-): Promise<{ deletedProjects: number; deletedUsers: number }> {
+): Promise<{ deletedProjects: number; deletedUsers: number; deletedPortfolios: number }> {
   if (!db) throw new Error('Database is not initialized.');
-  const { wipeProjects, wipeUsers, onProgress } = opts;
+  const { wipeProjects, wipeUsers, wipePortfolios = true, onProgress } = opts;
 
   let deletedProjects = 0;
   let deletedUsers = 0;
+  let deletedPortfolios = 0;
 
   // 1. Wipe Dummy Projects
   if (wipeProjects) {
@@ -413,7 +421,28 @@ export async function wipeWorkspaceTestData(
     }
   }
 
-  // 2. Wipe Test Users (Strictly Preserving Administrators)
+  // 2. Wipe Test Portfolios created by studio
+  if (wipePortfolios) {
+    onProgress?.('Scanning dedicated test portfolios to wipe...');
+    const portSnap = await getDocs(collection(db, 'portfolios'));
+    const portBatch = writeBatch(db);
+    let portCount = 0;
+    portSnap.forEach((d: any) => {
+      const data = d.data();
+      const isTestPort = data.isTestData === true || (data.name && data.name.includes('(Studio '));
+      if (isTestPort) {
+        portBatch.delete(d.ref);
+        deletedPortfolios++;
+        portCount++;
+      }
+    });
+    if (portCount > 0) {
+      onProgress?.(`Purging ${portCount} dedicated studio test portfolios...`);
+      await portBatch.commit();
+    }
+  }
+
+  // 3. Wipe Test Users (Strictly Preserving Administrators)
   if (wipeUsers) {
     onProgress?.('Scanning users to wipe...');
     const uSnap = await getDocs(collection(db, 'employees'));
@@ -445,6 +474,6 @@ export async function wipeWorkspaceTestData(
     }
   }
 
-  return { deletedProjects, deletedUsers };
+  return { deletedProjects, deletedUsers, deletedPortfolios };
 }
 

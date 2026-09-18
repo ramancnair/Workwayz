@@ -14,7 +14,6 @@ import { Settings, Trash2 } from 'lucide-react';
 import { collection, query, where, getDocs } from '@/lib/db-provider';
 import { db } from '@/lib/db-provider';
 import { usePermissions } from '@/hooks/use-permissions';
-import { DevTriggerButton } from '@/dev-tools';
 
 type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
@@ -147,7 +146,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
     return (
       <AuthGuard>
         {children}
-        <DevTriggerButton />
       </AuthGuard>
     );
   }
@@ -230,7 +228,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
           </div>
         </SidebarInset>
       </SidebarProvider>
-      <DevTriggerButton />
     </AuthGuard>
   );
 }

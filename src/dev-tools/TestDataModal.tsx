@@ -88,7 +88,7 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
     setProgressMsg('Starting test data generation pipeline...');
 
     try {
-      // 1. Generate / Ensure Users
+      // 1. Generate Dedicated Users
       setProgressMsg('Generating users & provisioning auth identities...');
       const createdUsers = await generateEmployees(
         config.userCount,
@@ -96,30 +96,21 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
         msg => setProgressMsg(msg)
       );
 
-      // Fetch all available global users so they can be assigned to project teams
-      const allUsersSnap = await getDocs(collection(db!, 'employees'));
-      const allUsers = allUsersSnap.docs.map((d: any) => ({ ...d.data(), id: d.id }));
+      // 2. Create Brand New Dedicated Portfolios (strictly isolated)
+      setProgressMsg('Preparing isolated demo portfolios...');
+      const resolvedPortfolios = await ensurePortfolios(
+        config.portfolioCount,
+        msg => setProgressMsg(msg)
+      );
+      const portfolioIdsToUse = resolvedPortfolios.map(p => p.id);
 
-      // 2. Ensure / Select Portfolios
-      let portfolioIdsToUse: string[] = [];
-      if (targetPortfolioId && targetPortfolioId !== 'auto') {
-        portfolioIdsToUse = [targetPortfolioId];
-      } else {
-        setProgressMsg('Preparing demo portfolios...');
-        const resolvedPortfolios = await ensurePortfolios(
-          config.portfolioCount,
-          msg => setProgressMsg(msg)
-        );
-        portfolioIdsToUse = resolvedPortfolios.map(p => p.id);
-      }
-
-      // 3. Generate Projects with all subcollections
+      // 3. Generate Projects with all subcollections (strictly using new users)
       setProgressMsg('Building projects with relational subcollections...');
       const createdProjects = await generateProjects({
         count: config.projectCount,
         portfolioIds: portfolioIdsToUse,
         pricingModel: config.pricingModel,
-        globalUsers: allUsers.length > 0 ? allUsers : createdUsers,
+        globalUsers: createdUsers,
         onProgress: msg => setProgressMsg(msg)
       });
 

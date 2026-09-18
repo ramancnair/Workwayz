@@ -4,16 +4,12 @@ import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/db-provider';
-import { collection, getDocs } from '@/lib/db-provider';
 import {
   Sparkles,
   Trash2,
@@ -27,37 +23,26 @@ import {
   CheckCircle2,
   AlertTriangle,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
 import {
-  useTestDataStudio,
   GeneratorConfig,
   PRESET_CONFIGS,
   generateEmployees,
-  ensurePortfolios,
+  createStudioPortfolios,
   generateProjects,
   wipeWorkspaceTestData,
-  TestDataModal,
 } from '@/dev-tools';
-import type { Portfolio } from '@/types';
 
 export default function TestDataStudioPage() {
   const { toast } = useToast();
-  const {
-    isEnabled: isTestDataStudioEnabled,
-    setStudioEnabled,
-    isModalOpen,
-    openStudio,
-    setIsModalOpen,
-  } = useTestDataStudio();
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<'presets' | 'custom'>('presets');
   const [selectedPreset, setSelectedPreset] = useState<'minimal' | 'standard' | 'stress'>('standard');
-  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
 
   // Configuration state
   const [config, setConfig] = useState<GeneratorConfig>(PRESET_CONFIGS.standard);
-  const [targetPortfolioId, setTargetPortfolioId] = useState<string>('auto');
 
   // Execution states
   const [isLoading, setIsLoading] = useState(false);
@@ -75,24 +60,6 @@ export default function TestDataStudioPage() {
         }
       } catch (e) {}
     }
-
-    // Load existing portfolios for dropdown selection
-    if (db) {
-      const fetchPortfolios = async () => {
-        try {
-          const snap = await getDocs(collection(db, 'portfolios'));
-          const list: Portfolio[] = [];
-          snap.forEach((d: any) => {
-            const data = d.data();
-            if (!data.isDeleted) list.push({ ...data, id: d.id });
-          });
-          setPortfolios(list);
-        } catch (err) {
-          console.warn('Failed to load portfolios for Test Data Studio', err);
-        }
-      };
-      fetchPortfolios();
-    }
   }, []);
 
   const applyPreset = (presetKey: 'minimal' | 'standard' | 'stress') => {
@@ -106,7 +73,7 @@ export default function TestDataStudioPage() {
     setProgressMsg('Starting test data generation pipeline...');
 
     try {
-      // 1. Generate / Ensure Users
+      // 1. Generate Dedicated Users (Only new users are used)
       setProgressMsg('Generating users & provisioning auth identities...');
       const createdUsers = await generateEmployees(
         config.userCount,
@@ -114,41 +81,32 @@ export default function TestDataStudioPage() {
         msg => setProgressMsg(msg)
       );
 
-      // Fetch all available global users
-      const allUsersSnap = await getDocs(collection(db!, 'employees'));
-      const allUsers = allUsersSnap.docs.map((d: any) => ({ ...d.data(), id: d.id }));
+      // 2. Create Brand New Dedicated Portfolios (strictly isolated)
+      setProgressMsg('Preparing isolated demo portfolios...');
+      const resolvedPortfolios = await createStudioPortfolios(
+        config.portfolioCount,
+        msg => setProgressMsg(msg)
+      );
+      const portfolioIdsToUse = resolvedPortfolios.map(p => p.id);
 
-      // 2. Ensure / Select Portfolios
-      let portfolioIdsToUse: string[] = [];
-      if (targetPortfolioId && targetPortfolioId !== 'auto') {
-        portfolioIdsToUse = [targetPortfolioId];
-      } else {
-        setProgressMsg('Preparing demo portfolios...');
-        const resolvedPortfolios = await ensurePortfolios(
-          config.portfolioCount,
-          msg => setProgressMsg(msg)
-        );
-        portfolioIdsToUse = resolvedPortfolios.map(p => p.id);
-      }
-
-      // 3. Generate Projects with all subcollections
+      // 3. Generate Projects with all subcollections (strictly using new users)
       setProgressMsg('Building projects with relational subcollections...');
       const createdProjects = await generateProjects({
         count: config.projectCount,
         portfolioIds: portfolioIdsToUse,
         pricingModel: config.pricingModel,
-        globalUsers: allUsers.length > 0 ? allUsers : createdUsers,
+        globalUsers: createdUsers,
         onProgress: msg => setProgressMsg(msg),
       });
 
       setStatusMessage({
         type: 'success',
-        text: `Successfully generated ${createdProjects.length} projects and ${createdUsers.length} users. Refreshing workspace...`,
+        text: `Successfully generated ${createdProjects.length} project(s) across ${resolvedPortfolios.length} isolated portfolio(s) using ${createdUsers.length} newly provisioned test user(s). Refreshing workspace...`,
       });
 
       toast({
         title: 'Test Data Studio Generation Complete',
-        description: `Populated ${createdProjects.length} project(s) across ${portfolioIdsToUse.length} portfolio(s).`,
+        description: `Populated ${createdProjects.length} project(s) across ${portfolioIdsToUse.length} new portfolio(s) using strictly new studio test users.`,
       });
 
       setTimeout(() => {
@@ -173,7 +131,7 @@ export default function TestDataStudioPage() {
 
   const handleWipe = async () => {
     const confirmed = window.confirm(
-      'Wipe test data? This will remove dummy autogenerated projects and mock users. Administrator user accounts will be safely kept.'
+      'Wipe test data? This will remove dummy autogenerated projects, studio test portfolios, and mock users. Real user accounts and genuine data are safely preserved.'
     );
     if (!confirmed) return;
 
@@ -182,20 +140,21 @@ export default function TestDataStudioPage() {
     setProgressMsg('Wiping dummy test data (Admins preserved)...');
 
     try {
-      const { deletedProjects, deletedUsers } = await wipeWorkspaceTestData({
+      const { deletedProjects, deletedUsers, deletedPortfolios } = await wipeWorkspaceTestData({
         wipeProjects: true,
         wipeUsers: true,
+        wipePortfolios: true,
         onProgress: msg => setProgressMsg(msg),
       });
 
       setStatusMessage({
         type: 'success',
-        text: `Cleaned up ${deletedProjects} project(s) and ${deletedUsers} mock user(s). Reloading workspace...`,
+        text: `Cleaned up ${deletedProjects} project(s), ${deletedPortfolios} test portfolio(s), and ${deletedUsers} mock user(s). Reloading workspace...`,
       });
 
       toast({
         title: 'Workspace Reset Complete',
-        description: `Wiped ${deletedProjects} projects and ${deletedUsers} test users. Admins preserved.`,
+        description: `Wiped ${deletedProjects} projects, ${deletedPortfolios} test portfolios, and ${deletedUsers} test users. Admins preserved.`,
       });
 
       setTimeout(() => {
@@ -219,10 +178,9 @@ export default function TestDataStudioPage() {
   };
 
   // Estimated stats for live summary
-  const estPortfolios = targetPortfolioId === 'auto' ? config.portfolioCount : 1;
+  const estPortfolios = config.portfolioCount;
   const estProjects = config.projectCount;
   const estWorkItems = estProjects * 8;
-  const estSprints = estProjects * 3;
   const estTestCycles = estProjects * 3;
 
   if (!isAdmin) {
@@ -244,51 +202,7 @@ export default function TestDataStudioPage() {
       <PageHeader
         title="Test Data Studio"
         description="Configure, rapidly generate, or wipe relationally-linked mock datasets across portfolios, projects, and users."
-      >
-        <Button
-          variant="outline"
-          onClick={() => openStudio()}
-          className="gap-2"
-        >
-          <Sparkles className="w-4 h-4 text-primary" />
-          Launch Popup Studio
-        </Button>
-      </PageHeader>
-
-      {/* Global Floating Studio Launcher Configuration Card */}
-      <Card>
-        <CardHeader className="pb-3 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <CardTitle className="text-base">
-                  Global Floating Studio Launcher
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Display the floating Test Data Studio button and enable global shortcut across all application screens.
-                </CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant={isTestDataStudioEnabled ? 'default' : 'secondary'}>
-                {isTestDataStudioEnabled ? 'Active' : 'Disabled'}
-              </Badge>
-              <Switch
-                checked={isTestDataStudioEnabled}
-                onCheckedChange={(checked) => setStudioEnabled(checked)}
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            When enabled, the floating <strong>Test Data Studio</strong> launcher is visible in the bottom-right corner across all application pages with global keyboard shortcut <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted rounded border border-border">Ctrl+Shift+D</kbd> (or <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted rounded border border-border">Cmd+Shift+D</kbd>).
-          </p>
-        </CardContent>
-      </Card>
+      />
 
       {/* Status Notification Banner */}
       {statusMessage && (
@@ -346,44 +260,21 @@ export default function TestDataStudioPage() {
           </div>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
-          {/* Target Portfolio Destination */}
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Target Portfolio Destination
-            </Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setTargetPortfolioId('auto')}
-                className={`p-3 rounded-md border text-left text-xs transition-colors flex items-center gap-3 ${
-                  targetPortfolioId === 'auto'
-                    ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary/30'
-                    : 'border-border bg-card text-muted-foreground hover:border-primary/40'
-                }`}
-              >
-                <Briefcase className={`w-4 h-4 shrink-0 ${targetPortfolioId === 'auto' ? 'text-primary' : 'text-muted-foreground'}`} />
-                <div>
-                  <div className="font-medium text-foreground">Auto-create / Balance Portfolios</div>
-                  <div className="text-[11px] text-muted-foreground">Scaffolds demo portfolios automatically</div>
-                </div>
-              </button>
-
-              <Select
-                value={targetPortfolioId}
-                onValueChange={(val) => setTargetPortfolioId(val)}
-              >
-                <SelectTrigger className="h-full min-h-[48px]">
-                  <SelectValue placeholder="Select target portfolio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto-create / Balance Portfolios</SelectItem>
-                  {portfolios.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} ({p.id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Dedicated Studio Portfolio Isolation Callout */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-foreground">Dedicated Studio Portfolios (Strict Isolation)</span>
+                <Badge variant="outline" className="text-[10px] text-primary border-primary/30 bg-primary/10">
+                  Isolated Environment
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                All generated test data is strictly restricted to brand-new portfolios and projects created by the studio. Furthermore, all project team members, assignees, and worklog hours are strictly limited to newly created studio test users. Existing portfolios, real employees, and genuine worklogs remain completely untouched.
+              </p>
             </div>
           </div>
 
@@ -411,7 +302,7 @@ export default function TestDataStudioPage() {
                   </p>
                   <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Portfolios:</span> <span className="font-semibold text-foreground">1</span>
+                      <span>Portfolios:</span> <span className="font-semibold text-foreground">1 New</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Projects:</span> <span className="font-semibold text-foreground">2</span>
@@ -453,7 +344,7 @@ export default function TestDataStudioPage() {
                   </p>
                   <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Portfolios:</span> <span className="font-semibold text-foreground">2</span>
+                      <span>Portfolios:</span> <span className="font-semibold text-foreground">2 New</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Projects:</span> <span className="font-semibold text-foreground">5</span>
@@ -492,7 +383,7 @@ export default function TestDataStudioPage() {
                   </p>
                   <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Portfolios:</span> <span className="font-semibold text-foreground">4</span>
+                      <span>Portfolios:</span> <span className="font-semibold text-foreground">4 New</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Projects:</span> <span className="font-semibold text-foreground">12</span>
@@ -539,7 +430,7 @@ export default function TestDataStudioPage() {
 
                   <div>
                     <div className="flex justify-between text-muted-foreground mb-2">
-                      <span>Number of Portfolios:</span>
+                      <span>Number of New Portfolios:</span>
                       <Badge variant="outline" className="font-mono text-xs">{config.portfolioCount}</Badge>
                     </div>
                     <Slider
@@ -581,7 +472,7 @@ export default function TestDataStudioPage() {
                 <div className="space-y-4 text-xs">
                   <div>
                     <div className="flex justify-between text-muted-foreground mb-2">
-                      <span>Total Members to Generate:</span>
+                      <span>Total New Members to Generate:</span>
                       <Badge variant="outline" className="font-mono text-xs">{config.userCount} Members</Badge>
                     </div>
                     <Slider
@@ -593,8 +484,11 @@ export default function TestDataStudioPage() {
                     />
                   </div>
 
-                  <div className="p-3 bg-card rounded-md border border-border text-[11px] text-muted-foreground leading-relaxed">
-                    Generates enterprise profiles across Administrator, Senior Management, Project Manager, Lead, Team Member, and PMO. Each user is assigned cost rates ($60k - $120k) and auto-provisioned into the Auth Identity pool.
+                  <div className="p-3 bg-card rounded-md border border-border text-[11px] text-muted-foreground leading-relaxed flex items-start gap-2">
+                    <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      Generates enterprise profiles across Administrator, Senior Management, Project Manager, Lead, and Team Member. Only these newly provisioned members are assigned to project teams, keeping real staff and actual worklogs unaffected.
+                    </div>
                   </div>
                 </div>
               </div>
@@ -609,11 +503,11 @@ export default function TestDataStudioPage() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <div className="bg-card border border-border rounded-md p-3 text-center">
                 <div className="text-xl font-bold text-foreground">{estPortfolios}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">Portfolios</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">New Portfolios</div>
               </div>
               <div className="bg-card border border-border rounded-md p-3 text-center">
                 <div className="text-xl font-bold text-foreground">{estProjects}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">Projects</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">New Projects</div>
               </div>
               <div className="bg-card border border-border rounded-md p-3 text-center">
                 <div className="text-xl font-bold text-foreground">~{estWorkItems}</div>
@@ -625,7 +519,7 @@ export default function TestDataStudioPage() {
               </div>
               <div className="bg-card border border-border rounded-md p-3 text-center">
                 <div className="text-xl font-bold text-foreground">{config.userCount}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">Users (Auth Sync)</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">New Users (Auth Sync)</div>
               </div>
             </div>
           </div>
@@ -660,9 +554,6 @@ export default function TestDataStudioPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Modal Popup */}
-      <TestDataModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 }

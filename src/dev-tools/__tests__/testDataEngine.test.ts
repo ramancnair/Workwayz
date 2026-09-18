@@ -37,5 +37,11 @@ describe('TestDataStudio Engine & Presets', () => {
       expect(preset.roleDistribution?.Administrator).toBeGreaterThanOrEqual(1);
     }
   });
+
+  it('should export createStudioPortfolios and ensurePortfolios', async () => {
+    const { createStudioPortfolios, ensurePortfolios } = await import('../testDataEngine');
+    expect(createStudioPortfolios).toBeDefined();
+    expect(ensurePortfolios).toBe(createStudioPortfolios);
+  });
 });
 
