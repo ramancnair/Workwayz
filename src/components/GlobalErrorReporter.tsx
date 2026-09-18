@@ -14,7 +14,7 @@ export function GlobalErrorReporter() {
   });
 
   useEffect(() => {
-    const sendLog = (message: string, stack?: string) => {
+    const sendLog = (message: string, stack?: string, errorName?: string, errorCode?: string) => {
       const now = Date.now();
       // De-duplicate identical errors firing repeatedly within 5 seconds
       if (
@@ -26,6 +26,8 @@ export function GlobalErrorReporter() {
       lastErrorRef.current = { message, timestamp: now };
 
       const payload = {
+        errorName: errorName || '',
+        errorCode: errorCode || '',
         errorMessage: message,
         errorStack: stack || '',
         pageUrl: window.location.href,
@@ -62,19 +64,32 @@ export function GlobalErrorReporter() {
       ) {
         return;
       }
-      sendLog(
-        event.message || 'Window runtime exception',
-        event.error?.stack || `${event.filename}:${event.lineno}:${event.colno}`
-      );
+
+      const err = event.error;
+      const errorName = err?.name || 'WindowError';
+      const errorCode = (err as any)?.code || '';
+      const rawMessage = event.message || err?.message || 'Window runtime exception';
+      const fullMessage = errorName && !rawMessage.startsWith(errorName)
+        ? `${errorName}: ${rawMessage}`
+        : rawMessage;
+      const stack = err?.stack || `${event.filename}:${event.lineno}:${event.colno}`;
+
+      sendLog(fullMessage, stack, errorName, errorCode);
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const reason = event.reason;
+      let errorName = 'UnhandledRejection';
+      let errorCode = '';
       let msg = 'Unhandled Promise Rejection';
       let stack = '';
 
       if (reason instanceof Error) {
-        msg = reason.message;
+        errorName = reason.name || 'UnhandledRejection';
+        errorCode = (reason as any).code || '';
+        msg = errorName && !reason.message.startsWith(errorName)
+          ? `${errorName}: ${reason.message}`
+          : reason.message;
         stack = reason.stack || '';
       } else if (typeof reason === 'string') {
         msg = reason;
@@ -93,7 +108,7 @@ export function GlobalErrorReporter() {
         return;
       }
 
-      sendLog(`Unhandled Promise Rejection: ${msg}`, stack);
+      sendLog(`Unhandled Promise Rejection: ${msg}`, stack, errorName, errorCode);
     };
 
     window.addEventListener('error', handleWindowError);

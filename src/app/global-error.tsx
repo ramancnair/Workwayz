@@ -9,15 +9,23 @@ export default function GlobalError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
+  error: Error & { digest?: string; code?: string };
   reset: () => void;
 }) {
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
+  const errorName = error.name || 'FatalError';
+  const errorCode = error.digest || (error as any).code || '';
+  const fullMessage = error.name && !error.message?.startsWith(error.name)
+    ? `${error.name}: ${error.message || 'Root layout failure'}`
+    : error.message || 'Fatal Root Application Error';
+
   useEffect(() => {
     try {
       const payload = {
-        errorMessage: error.message || 'Root global layout error',
+        errorName,
+        errorCode,
+        errorMessage: fullMessage,
         errorStack: error.stack || '',
         pageUrl: typeof window !== 'undefined' ? window.location.href : '',
         browserInfo: typeof navigator !== 'undefined' ? navigator.userAgent : '',
@@ -27,11 +35,18 @@ export default function GlobalError({
 
       if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
         navigator.sendBeacon('/api/report-issue', JSON.stringify(payload));
+      } else {
+        fetch('/api/report-issue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        }).catch(() => {});
       }
     } catch {
       // ignore
     }
-  }, [error]);
+  }, [error, errorName, errorCode, fullMessage]);
 
   return (
     <html lang="en">
@@ -45,6 +60,12 @@ export default function GlobalError({
           <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
             ProjectFlow encountered a critical issue while initializing the root layout.
           </p>
+
+          {error.digest && (
+            <div className="mb-6 px-3 py-1 bg-muted/60 text-muted-foreground text-xs font-mono rounded border">
+              Incident Digest: {error.digest}
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
             <Button onClick={() => reset()} variant="outline" className="gap-2">
@@ -62,7 +83,10 @@ export default function GlobalError({
             open={reportModalOpen}
             onOpenChange={setReportModalOpen}
             initialError={{
-              message: error.message || 'Fatal Root Application Error',
+              name: errorName,
+              code: errorCode,
+              digest: error.digest,
+              message: fullMessage,
               stack: error.stack,
             }}
           />

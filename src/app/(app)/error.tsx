@@ -10,16 +10,24 @@ export default function AppSegmentErrorBoundary({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
+  error: Error & { digest?: string; code?: string };
   reset: () => void;
 }) {
   const [reportModalOpen, setReportModalOpen] = useState(false);
+
+  const errorName = error.name || 'Error';
+  const errorCode = error.digest || (error as any).code || '';
+  const fullMessage = error.name && !error.message?.startsWith(error.name)
+    ? `${error.name}: ${error.message || 'Render failure'}`
+    : error.message || 'Unknown render failure';
 
   // Silently record the crash in local logs/ directory on mount
   useEffect(() => {
     try {
       const payload = {
-        errorMessage: error.message || 'Unknown render failure',
+        errorName,
+        errorCode,
+        errorMessage: fullMessage,
         errorStack: error.stack || '',
         pageUrl: typeof window !== 'undefined' ? window.location.href : '',
         browserInfo: typeof navigator !== 'undefined' ? navigator.userAgent : '',
@@ -40,7 +48,7 @@ export default function AppSegmentErrorBoundary({
     } catch {
       // ignore telemetry errors
     }
-  }, [error]);
+  }, [error, errorName, errorCode, fullMessage]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center min-h-[65vh] p-6 text-center animate-in fade-in duration-300">
@@ -85,7 +93,10 @@ export default function AppSegmentErrorBoundary({
         open={reportModalOpen}
         onOpenChange={setReportModalOpen}
         initialError={{
-          message: error.message || 'Render crash in (app) segment',
+          name: errorName,
+          code: errorCode,
+          digest: error.digest,
+          message: fullMessage,
           stack: error.stack,
         }}
       />

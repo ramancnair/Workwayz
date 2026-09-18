@@ -19,8 +19,12 @@ interface ReportIssueModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialError?: {
+    name?: string;
+    code?: string;
+    digest?: string;
     message: string;
     stack?: string;
+    componentStack?: string;
   } | null;
 }
 
@@ -61,9 +65,19 @@ export function ReportIssueModal({
     setIsSubmitting(true);
 
     try {
+      const errorName = initialError?.name || '';
+      const errorCode = initialError?.code || initialError?.digest || '';
+      const errorMessage = initialError?.message || 'Manual user-reported issue';
+      const fullErrorMessage = errorName && !errorMessage.startsWith(errorName)
+        ? `${errorName}: ${errorMessage}`
+        : errorMessage;
+
       const payload = {
-        errorMessage: initialError?.message || 'Manual user-reported issue',
+        errorName,
+        errorCode,
+        errorMessage: fullErrorMessage,
         errorStack: initialError?.stack || '',
+        componentStack: initialError?.componentStack || '',
         userDescription,
         userEmail,
         pageUrl: typeof window !== 'undefined' ? window.location.href : '',
@@ -216,12 +230,22 @@ export function ReportIssueModal({
                 </button>
 
                 {showTechnicalDetails && (
-                  <div className="space-y-1 pt-1 border-t mt-1 font-mono text-[11px] text-muted-foreground overflow-hidden">
-                    <p className="font-semibold text-destructive truncate">
-                      {initialError.message}
-                    </p>
+                  <div className="space-y-2 pt-2 border-t mt-1 font-mono text-[11px] text-muted-foreground overflow-hidden">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-destructive">
+                        {initialError.name && !initialError.message.startsWith(initialError.name)
+                          ? `${initialError.name}: `
+                          : ''}
+                        {initialError.message}
+                      </p>
+                      {(initialError.digest || initialError.code) && (
+                        <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground border">
+                          Code: {initialError.code || initialError.digest}
+                        </span>
+                      )}
+                    </div>
                     {initialError.stack && (
-                      <pre className="p-2 bg-background rounded border max-h-32 overflow-x-auto overflow-y-auto whitespace-pre">
+                      <pre className="p-2 bg-background rounded border max-h-40 overflow-x-auto overflow-y-auto whitespace-pre text-[10px] leading-relaxed">
                         {initialError.stack}
                       </pre>
                     )}

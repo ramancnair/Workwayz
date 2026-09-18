@@ -8,8 +8,11 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
+      errorName = '',
+      errorCode = '',
       errorMessage = 'Unknown application error',
       errorStack = '',
+      componentStack = '',
       userDescription = '',
       pageUrl = '',
       browserInfo = '',
@@ -23,10 +26,18 @@ export async function POST(req: Request) {
     const userAgent = req.headers.get('user-agent') || browserInfo || 'Unknown';
     const clientIp = req.headers.get('x-forwarded-for') || '127.0.0.1';
 
+    // Normalize error message: prepend errorName if not already present
+    const normalizedErrorMessage = errorName && !errorMessage.startsWith(errorName)
+      ? `${errorName}: ${errorMessage}`
+      : errorMessage;
+
     // 1. Always record in our local 30-day rotating log file
-    logger.error(`[Application Error Report] ${errorMessage}`, {
-      errorMessage,
+    logger.error(`[Application Error Report] ${normalizedErrorMessage}`, {
+      errorName,
+      errorCode,
+      errorMessage: normalizedErrorMessage,
       errorStack,
+      componentStack,
       userDescription,
       pageUrl,
       userAgent,
@@ -42,8 +53,11 @@ export async function POST(req: Request) {
     // 2. Submit to GitHub Issues if requested and not a silent telemetry ping
     if (submitToGitHub && !silent) {
       gitHubResult = await createGitHubIssue({
-        errorMessage,
+        errorName,
+        errorCode,
+        errorMessage: normalizedErrorMessage,
         errorStack,
+        componentStack,
         userDescription,
         pageUrl,
         browserInfo: userAgent,

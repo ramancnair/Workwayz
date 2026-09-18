@@ -10,12 +10,269 @@ import {
   collection,
   doc,
   getDocs,
+  getDoc,
   setDoc,
+  deleteDoc,
   writeBatch,
 } from '@/lib/db-provider';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { generateFullProjectData } from '@/lib/project-autogen';
 import type { User, Portfolio, Project, AccessLevel, PricingModel } from '@/types';
+
+export const STUDIO_LOG_STORAGE_KEY = 'pf_test_data_studio_log';
+
+export interface StudioProjectRef {
+  id: string;
+  name: string;
+  portfolioId: string;
+}
+
+export interface StudioPortfolioRef {
+  id: string;
+  name: string;
+}
+
+export interface StudioUserRef {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  accessLevel?: AccessLevel | string;
+  role?: string;
+}
+
+export interface StudioLogBatch {
+  batchId: string;
+  timestamp: string;
+  preset?: string;
+  projects: StudioProjectRef[];
+  portfolios: StudioPortfolioRef[];
+  users: StudioUserRef[];
+}
+
+export interface StudioLog {
+  version: number;
+  lastUpdated: string;
+  batches: StudioLogBatch[];
+}
+
+/**
+ * Extracts a consolidated, deduplicated set of all active studio assets across all batches in the log.
+ */
+export function getActiveStudioItems(log: StudioLog | null | undefined): {
+  projectIds: string[];
+  portfolioIds: string[];
+  userIds: string[];
+  projects: StudioProjectRef[];
+  portfolios: StudioPortfolioRef[];
+  users: StudioUserRef[];
+} {
+  if (!log || !Array.isArray(log.batches) || log.batches.length === 0) {
+    return {
+      projectIds: [],
+      portfolioIds: [],
+      userIds: [],
+      projects: [],
+      portfolios: [],
+      users: [],
+    };
+  }
+
+  const projectMap = new Map<string, StudioProjectRef>();
+  const portfolioMap = new Map<string, StudioPortfolioRef>();
+  const userMap = new Map<string, StudioUserRef>();
+
+  for (const batch of log.batches) {
+    for (const proj of batch.projects || []) {
+      if (proj.id) projectMap.set(proj.id, proj);
+    }
+    for (const port of batch.portfolios || []) {
+      if (port.id) portfolioMap.set(port.id, port);
+    }
+    for (const usr of batch.users || []) {
+      if (usr.id) userMap.set(usr.id, usr);
+    }
+  }
+
+  return {
+    projectIds: Array.from(projectMap.keys()),
+    portfolioIds: Array.from(portfolioMap.keys()),
+    userIds: Array.from(userMap.keys()),
+    projects: Array.from(projectMap.values()),
+    portfolios: Array.from(portfolioMap.values()),
+    users: Array.from(userMap.values()),
+  };
+}
+
+/**
+ * Retrieves the persistent Studio Log from Firestore/Supabase, falling back to localStorage cache.
+ */
+export async function getStudioLog(): Promise<StudioLog | null> {
+  // 1. Check Firestore / DB
+  if (db) {
+    try {
+      const logSnap = await getDoc(doc(db, 'settings', 'test_data_studio_log'));
+      if (logSnap && typeof logSnap.exists === 'function' ? logSnap.exists() : logSnap.data) {
+        const data = (typeof logSnap.data === 'function' ? logSnap.data() : logSnap.data) as StudioLog;
+        if (data && Array.isArray(data.batches)) {
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(STUDIO_LOG_STORAGE_KEY, JSON.stringify(data));
+            } catch {}
+          }
+          return data;
+        }
+      }
+    } catch (err) {
+      console.warn('[testDataEngine] Failed to fetch studio log from DB:', err);
+    }
+  }
+
+  // 2. Fallback to localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem(STUDIO_LOG_STORAGE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as StudioLog;
+        if (parsed && Array.isArray(parsed.batches)) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('[testDataEngine] Failed to read cached studio log from localStorage:', e);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Records newly generated studio assets into the persistent Studio Log manifest.
+ */
+export async function recordStudioLog(params: {
+  projects?: Project[] | StudioProjectRef[];
+  portfolios?: Portfolio[] | StudioPortfolioRef[];
+  users?: User[] | StudioUserRef[];
+  preset?: string;
+}): Promise<StudioLog> {
+  const existingLog = (await getStudioLog()) || {
+    version: 1,
+    lastUpdated: new Date().toISOString(),
+    batches: [],
+  };
+
+  const newBatch: StudioLogBatch = {
+    batchId: `batch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    timestamp: new Date().toISOString(),
+    preset: params.preset,
+    projects: (params.projects || []).map(p => ({
+      id: p.id,
+      name: p.name,
+      portfolioId: (p as any).portfolioId || '',
+    })),
+    portfolios: (params.portfolios || []).map(p => ({
+      id: p.id,
+      name: p.name,
+    })),
+    users: (params.users || []).map(u => ({
+      id: u.id,
+      email: u.email,
+      firstName: (u as any).firstName,
+      lastName: (u as any).lastName,
+      accessLevel: u.accessLevel,
+      role: (u as any).role,
+    })),
+  };
+
+  const updatedLog: StudioLog = {
+    version: 1,
+    lastUpdated: new Date().toISOString(),
+    batches: [...(existingLog.batches || []), newBatch],
+  };
+
+  // Sync to localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STUDIO_LOG_STORAGE_KEY, JSON.stringify(updatedLog));
+    } catch (e) {
+      console.warn('[testDataEngine] Failed to cache studio log in localStorage:', e);
+    }
+  }
+
+  // Persist to DB
+  if (db) {
+    try {
+      await setDoc(doc(db, 'settings', 'test_data_studio_log'), updatedLog);
+    } catch (err) {
+      console.error('[testDataEngine] Failed to save studio log to DB:', err);
+    }
+  }
+
+  return updatedLog;
+}
+
+/**
+ * Clears and removes the persistent Studio Log after successful deletion.
+ */
+export async function clearStudioLog(): Promise<void> {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(STUDIO_LOG_STORAGE_KEY);
+    } catch (e) {}
+  }
+
+  if (db) {
+    try {
+      await deleteDoc(doc(db, 'settings', 'test_data_studio_log'));
+    } catch (err) {
+      console.warn('[testDataEngine] Failed to delete studio log doc from DB:', err);
+    }
+  }
+}
+
+/**
+ * Removes a specific generation run batch from the Studio Log.
+ * If no batches remain, clears the log completely.
+ */
+export async function removeStudioBatch(batchId: string): Promise<StudioLog | null> {
+  const currentLog = await getStudioLog();
+  if (!currentLog || !Array.isArray(currentLog.batches)) {
+    await clearStudioLog();
+    return null;
+  }
+
+  const remainingBatches = currentLog.batches.filter(b => b.batchId !== batchId);
+  if (remainingBatches.length === 0) {
+    await clearStudioLog();
+    return null;
+  }
+
+  const updatedLog: StudioLog = {
+    version: currentLog.version || 1,
+    lastUpdated: new Date().toISOString(),
+    batches: remainingBatches,
+  };
+
+  // Sync to localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STUDIO_LOG_STORAGE_KEY, JSON.stringify(updatedLog));
+    } catch (e) {
+      console.warn('[testDataEngine] Failed to cache updated studio log in localStorage:', e);
+    }
+  }
+
+  // Persist to DB
+  if (db) {
+    try {
+      await setDoc(doc(db, 'settings', 'test_data_studio_log'), updatedLog);
+    } catch (err) {
+      console.error('[testDataEngine] Failed to update studio log in DB:', err);
+    }
+  }
+
+  return updatedLog;
+}
 
 // Realistic Name Banks for Generating Portfolios & Projects
 const PORTFOLIO_TEMPLATES = [
@@ -136,6 +393,7 @@ async function createAuthIdentity(email: string, firstName: string, lastName: st
 
 /**
  * Generates employees and registers them in both Firestore and Auth identity pool.
+ * Stamps each record with createdByStudio: true and isTestData: true.
  */
 export async function generateEmployees(
   totalCount: number,
@@ -232,7 +490,12 @@ export async function generateEmployees(
       };
 
       const userRef = doc(db, 'employees', empId);
-      batch.set(userRef, newUser);
+      batch.set(userRef, {
+        ...newUser,
+        isTestData: true,
+        createdByStudio: true,
+        createdAt: new Date().toISOString(),
+      });
       createdUsers.push(newUser);
 
       // Provision identity asynchronously
@@ -281,6 +544,7 @@ export async function createStudioPortfolios(
     await setDoc(doc(db, 'portfolios', portfolioId), {
       ...newPort,
       isTestData: true,
+      createdByStudio: true,
       createdAt: new Date().toISOString(),
     });
     created.push(newPort);
@@ -296,6 +560,7 @@ export const ensurePortfolios = createStudioPortfolios;
 
 /**
  * Generates projects and populates all subcollections with rich relational data.
+ * Stamps projects with createdByStudio: true and isTestData: true.
  */
 export async function generateProjects(
   opts: {
@@ -361,7 +626,12 @@ export async function generateProjects(
     };
 
     onProgress?.(`Writing root project document (${i + 1}/${count}): ${projectId}...`);
-    await setDoc(projectRef, projectData);
+    await setDoc(projectRef, {
+      ...projectData,
+      isTestData: true,
+      createdByStudio: true,
+      createdAt: new Date().toISOString(),
+    });
 
     onProgress?.(`Populating subcollections for ${projectId} (Kanban, Sprints, Stories, Test Cycles, RAID)...`);
     await generateFullProjectData({
@@ -380,42 +650,206 @@ export async function generateProjects(
 }
 
 /**
- * Wipes autogenerated dummy projects and mock test users while preserving Administrator accounts.
+ * Wipes only the test data created in a specific Studio generation run/batch.
+ * Leaves test data from other studio runs, as well as genuine workspace data, untouched.
+ * Removes this batch from the Studio Log after successful deletion.
  */
-export async function wipeWorkspaceTestData(
-  opts: {
-    wipeProjects: boolean;
-    wipeUsers: boolean;
+export async function wipeStudioBatch(
+  batchId: string,
+  opts?: {
+    wipeProjects?: boolean;
+    wipeUsers?: boolean;
     wipePortfolios?: boolean;
     onProgress?: (message: string) => void;
   }
 ): Promise<{ deletedProjects: number; deletedUsers: number; deletedPortfolios: number }> {
   if (!db) throw new Error('Database is not initialized.');
-  const { wipeProjects, wipeUsers, wipePortfolios = true, onProgress } = opts;
+  const { wipeProjects = true, wipeUsers = true, wipePortfolios = true, onProgress } = opts || {};
+
+  onProgress?.(`Locating studio log for run ${batchId}...`);
+  const studioLog = await getStudioLog();
+  const batch = studioLog?.batches?.find(b => b.batchId === batchId);
+
+  if (!batch) {
+    onProgress?.(`No studio log found for run ${batchId}.`);
+    return { deletedProjects: 0, deletedUsers: 0, deletedPortfolios: 0 };
+  }
+
+  // Cross-check other active batches so we don't accidentally delete an entity shared across batches
+  const otherBatches = (studioLog?.batches || []).filter(b => b.batchId !== batchId);
+  const otherProjectIds = new Set(otherBatches.flatMap(b => (b.projects || []).map(p => p.id)));
+  const otherPortfolioIds = new Set(otherBatches.flatMap(b => (b.portfolios || []).map(p => p.id)));
+  const otherUserIds = new Set(otherBatches.flatMap(b => (b.users || []).map(u => u.id)));
+
+  let currentAdminEmail = '';
+  let currentAdminId = '';
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('projectflow_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        currentAdminEmail = parsed.email || '';
+        currentAdminId = parsed.id || parsed.empId || '';
+      }
+    } catch {}
+  }
+
+  let deletedProjects = 0;
+  let deletedPortfolios = 0;
+  let deletedUsers = 0;
+
+  // 1. Delete Projects in this batch
+  if (wipeProjects) {
+    const projectsToDelete = (batch.projects || []).filter(p => !otherProjectIds.has(p.id));
+    onProgress?.(`Purging ${projectsToDelete.length} project(s) from run ${batchId}...`);
+    for (let i = 0; i < projectsToDelete.length; i++) {
+      const pid = projectsToDelete[i].id;
+      onProgress?.(`Deleting project ${i + 1}/${projectsToDelete.length}: ${pid}...`);
+      await deleteProjectAndSubcollections(pid);
+      deletedProjects++;
+    }
+  }
+
+  // 2. Delete Portfolios in this batch
+  if (wipePortfolios) {
+    const portfoliosToDelete = (batch.portfolios || []).filter(p => !otherPortfolioIds.has(p.id));
+    if (portfoliosToDelete.length > 0) {
+      onProgress?.(`Purging ${portfoliosToDelete.length} portfolio(s) from run ${batchId}...`);
+      const portBatch = writeBatch(db);
+      for (const port of portfoliosToDelete) {
+        portBatch.delete(doc(db, 'portfolios', port.id));
+        deletedPortfolios++;
+      }
+      await portBatch.commit();
+    }
+  }
+
+  // 3. Delete Users in this batch (including studio admins)
+  if (wipeUsers) {
+    const usersToDelete = (batch.users || []).filter(u => {
+      if (otherUserIds.has(u.id)) return false;
+      const isCurrentAdmin =
+        (currentAdminEmail && u.email?.toLowerCase() === currentAdminEmail.toLowerCase()) ||
+        (currentAdminId && u.id === currentAdminId);
+      return !isCurrentAdmin;
+    });
+
+    if (usersToDelete.length > 0) {
+      onProgress?.(`Purging ${usersToDelete.length} user(s) (including studio admins) from run ${batchId}...`);
+      const userBatch = writeBatch(db);
+      for (const user of usersToDelete) {
+        userBatch.delete(doc(db, 'employees', user.id));
+        deletedUsers++;
+        if (user.email) {
+          try {
+            fetch(`/api/users?email=${encodeURIComponent(user.email)}`, { method: 'DELETE' }).catch(() => {});
+          } catch {}
+        }
+      }
+      await userBatch.commit();
+    }
+  }
+
+  // 4. Remove this specific run batch from the Studio Log
+  onProgress?.(`Updating studio log to remove run ${batchId}...`);
+  await removeStudioBatch(batchId);
+  onProgress?.(`Run ${batchId} successfully removed.`);
+
+  return { deletedProjects, deletedUsers, deletedPortfolios };
+}
+
+/**
+ * Wipes only the test data created by Test Data Studio by reading and validating
+ * against the Studio Log manifest.
+ *
+ * Rules:
+ * 1. Projects: ONLY projects created by the studio are deleted. Pre-existing projects
+ *    in pre-existing portfolios are 100% protected.
+ * 2. Portfolios: ONLY portfolios created by the studio are deleted.
+ * 3. Users: ONLY users created by the studio are deleted. Even if the studio created
+ *    admin accounts, those studio admins are deleted. Original users (whether admins,
+ *    PMs, developers, leads, etc.) are strictly left untouched.
+ * 4. If batchId is provided, wipes only that specific generation run and removes its entry.
+ *    Otherwise, wipes all batches across all runs and clears the log manifest.
+ */
+export async function wipeWorkspaceTestData(
+  opts: {
+    batchId?: string;
+    wipeProjects?: boolean;
+    wipeUsers?: boolean;
+    wipePortfolios?: boolean;
+    onProgress?: (message: string) => void;
+  } = {}
+): Promise<{ deletedProjects: number; deletedUsers: number; deletedPortfolios: number }> {
+  if (opts?.batchId) {
+    return wipeStudioBatch(opts.batchId, opts);
+  }
+
+  if (!db) throw new Error('Database is not initialized.');
+  const { wipeProjects = true, wipeUsers = true, wipePortfolios = true, onProgress } = opts;
 
   let deletedProjects = 0;
   let deletedUsers = 0;
   let deletedPortfolios = 0;
 
-  // 1. Wipe Dummy Projects
-  if (wipeProjects) {
-    onProgress?.('Scanning projects to wipe...');
-    const pSnap = await getDocs(collection(db, 'projects'));
-    const projectsToDelete: string[] = [];
+  onProgress?.('Reading and validating Studio test data manifest...');
+  const studioLog = await getStudioLog();
+  const activeItems = getActiveStudioItems(studioLog);
 
-    pSnap.forEach((d: any) => {
-      const data = d.data();
-      // Target autogenerated projects or all non-locked projects
-      const isAutogen = (data.name && (data.name.includes('Autogen') || data.name.includes('Batch') || data.statusComments?.includes('Autogenerated'))) || d.id.startsWith('P');
-      if (isAutogen) {
-        projectsToDelete.push(d.id);
+  // Get current logged-in user email and id to protect the active admin session
+  let currentAdminEmail = '';
+  let currentAdminId = '';
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('projectflow_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        currentAdminEmail = parsed.email || '';
+        currentAdminId = parsed.id || parsed.empId || '';
       }
-    });
+    } catch {}
+  }
 
-    onProgress?.(`Purging ${projectsToDelete.length} dummy projects and their subcollections...`);
+  // 1. Wipe Test Projects
+  if (wipeProjects) {
+    let projectsToDelete: string[] = [];
+
+    if (activeItems.projectIds.length > 0) {
+      // Validate projects strictly against the studio log
+      onProgress?.(`Validating ${activeItems.projectIds.length} logged studio project(s)...`);
+      for (const pid of activeItems.projectIds) {
+        try {
+          const pDoc = await getDoc(doc(db, 'projects', pid));
+          if (pDoc && (typeof pDoc.exists === 'function' ? pDoc.exists() : pDoc.data)) {
+            projectsToDelete.push(pid);
+          }
+        } catch {
+          // If error checking or already gone, include to ensure cleanup
+          projectsToDelete.push(pid);
+        }
+      }
+    } else {
+      // Fallback if no log exists: ONLY target projects explicitly tagged by the studio!
+      // NEVER use d.id.startsWith('P') which caused deletion of genuine projects.
+      onProgress?.('No studio log found. Scanning exclusively for explicit studio-tagged projects...');
+      const pSnap = await getDocs(collection(db, 'projects'));
+      pSnap.forEach((d: any) => {
+        const data = typeof d.data === 'function' ? d.data() : d;
+        const isStudioProject =
+          data.createdByStudio === true ||
+          (data.isTestData === true &&
+            (data.statusComments?.includes('Autogenerated testing baseline via Test Data Studio') ||
+             (data.name && (data.name.includes('(Batch ') || data.name.includes('Autogen')))));
+        if (isStudioProject) {
+          projectsToDelete.push(d.id);
+        }
+      });
+    }
+
+    onProgress?.(`Purging ${projectsToDelete.length} studio project(s) and subcollections...`);
     for (let i = 0; i < projectsToDelete.length; i++) {
       const pid = projectsToDelete[i];
-      onProgress?.(`Deleting project ${i + 1}/${projectsToDelete.length}: ${pid}...`);
+      onProgress?.(`Deleting studio project ${i + 1}/${projectsToDelete.length}: ${pid}...`);
       await deleteProjectAndSubcollections(pid);
       deletedProjects++;
     }
@@ -423,57 +857,120 @@ export async function wipeWorkspaceTestData(
 
   // 2. Wipe Test Portfolios created by studio
   if (wipePortfolios) {
-    onProgress?.('Scanning dedicated test portfolios to wipe...');
-    const portSnap = await getDocs(collection(db, 'portfolios'));
-    const portBatch = writeBatch(db);
-    let portCount = 0;
-    portSnap.forEach((d: any) => {
-      const data = d.data();
-      const isTestPort = data.isTestData === true || (data.name && data.name.includes('(Studio '));
-      if (isTestPort) {
-        portBatch.delete(d.ref);
-        deletedPortfolios++;
-        portCount++;
+    let portfoliosToDelete: string[] = [];
+
+    if (activeItems.portfolioIds.length > 0) {
+      onProgress?.(`Validating ${activeItems.portfolioIds.length} logged studio portfolio(s)...`);
+      for (const portId of activeItems.portfolioIds) {
+        try {
+          const portDoc = await getDoc(doc(db, 'portfolios', portId));
+          if (portDoc && (typeof portDoc.exists === 'function' ? portDoc.exists() : portDoc.data)) {
+            portfoliosToDelete.push(portId);
+          }
+        } catch {
+          portfoliosToDelete.push(portId);
+        }
       }
-    });
-    if (portCount > 0) {
-      onProgress?.(`Purging ${portCount} dedicated studio test portfolios...`);
+    } else {
+      // Fallback: strictly check for explicit studio tags / names
+      onProgress?.('No studio log found. Scanning exclusively for dedicated studio test portfolios...');
+      const portSnap = await getDocs(collection(db, 'portfolios'));
+      portSnap.forEach((d: any) => {
+        const data = typeof d.data === 'function' ? d.data() : d;
+        const isStudioPort =
+          data.createdByStudio === true ||
+          data.isTestData === true ||
+          (data.name && data.name.includes('(Studio '));
+        if (isStudioPort) {
+          portfoliosToDelete.push(d.id);
+        }
+      });
+    }
+
+    if (portfoliosToDelete.length > 0) {
+      onProgress?.(`Purging ${portfoliosToDelete.length} studio test portfolio(s)...`);
+      const portBatch = writeBatch(db);
+      for (const portId of portfoliosToDelete) {
+        portBatch.delete(doc(db, 'portfolios', portId));
+        deletedPortfolios++;
+      }
       await portBatch.commit();
     }
   }
 
-  // 3. Wipe Test Users (Strictly Preserving Administrators)
+  // 3. Wipe Test Users created by studio
+  // CRITICAL REQUIREMENT:
+  // - Studio-created admin users MUST be deleted.
+  // - Original users (whether Admin, PM, Developer, Lead, etc.) MUST be left untouched!
   if (wipeUsers) {
-    onProgress?.('Scanning users to wipe...');
-    const uSnap = await getDocs(collection(db, 'employees'));
-    const batch = writeBatch(db);
-    let batchCount = 0;
+    let usersToDelete: StudioUserRef[] = [];
 
-    // Get current logged-in user email if available
-    let currentAdminEmail = '';
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('projectflow_user');
-        if (stored) currentAdminEmail = JSON.parse(stored).email || '';
-      } catch { }
+    if (activeItems.users.length > 0) {
+      onProgress?.(`Validating ${activeItems.users.length} logged studio user(s)...`);
+      for (const user of activeItems.users) {
+        // Protect the active logged-in admin session as a safety safeguard
+        if (
+          (currentAdminEmail && user.email?.toLowerCase() === currentAdminEmail.toLowerCase()) ||
+          (currentAdminId && user.id === currentAdminId)
+        ) {
+          console.warn(`[testDataEngine] Safeguarding currently logged-in admin from deletion: ${user.email}`);
+          continue;
+        }
+        usersToDelete.push(user);
+      }
+    } else {
+      // Fallback if no log exists: ONLY target users explicitly stamped with createdByStudio
+      // OR users with explicit studio test emails: e.g. @projectflow.io AND with isTestData flag.
+      // NEVER delete genuine employees who lack studio markers!
+      onProgress?.('No studio log found. Scanning exclusively for studio-tagged test users...');
+      const uSnap = await getDocs(collection(db, 'employees'));
+      uSnap.forEach((d: any) => {
+        const data = typeof d.data === 'function' ? d.data() : d;
+        const isCurrentAdmin =
+          (currentAdminEmail && data.email?.toLowerCase() === currentAdminEmail.toLowerCase()) ||
+          (currentAdminId && d.id === currentAdminId);
+
+        if (isCurrentAdmin) return;
+
+        const isStudioUser =
+          data.createdByStudio === true ||
+          (data.isTestData === true && data.email?.includes('@projectflow.io'));
+
+        if (isStudioUser) {
+          usersToDelete.push({
+            id: d.id,
+            email: data.email,
+            accessLevel: data.accessLevel,
+            role: data.role,
+          });
+        }
+      });
     }
 
-    uSnap.forEach((d: any) => {
-      const data = d.data();
-      const isAdmin = data.accessLevel === 'Administrator' || data.role === 'Administrator' || data.email === currentAdminEmail || data.email?.includes('admin');
-      if (!isAdmin) {
-        batch.delete(d.ref);
+    if (usersToDelete.length > 0) {
+      onProgress?.(`Purging ${usersToDelete.length} studio user(s) (including studio admins)...`);
+      const userBatch = writeBatch(db);
+      for (const user of usersToDelete) {
+        userBatch.delete(doc(db, 'employees', user.id));
         deletedUsers++;
-        batchCount++;
-      }
-    });
 
-    if (batchCount > 0) {
-      onProgress?.(`Purging ${batchCount} mock users (Admins protected)...`);
-      await batch.commit();
+        // Clean up auth pool identity if email is present
+        if (user.email) {
+          try {
+            fetch(`/api/users?email=${encodeURIComponent(user.email)}`, { method: 'DELETE' }).catch(() => {});
+          } catch {}
+        }
+      }
+      await userBatch.commit();
     }
   }
 
+  // 4. Remove the Studio Log after successful deletion
+  onProgress?.('Cleaning up studio creation log manifest...');
+  await clearStudioLog();
+  onProgress?.('Test data cleanup complete.');
+
   return { deletedProjects, deletedUsers, deletedPortfolios };
 }
+
 
