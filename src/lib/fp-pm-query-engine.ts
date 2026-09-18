@@ -1095,128 +1095,179 @@ export function executeFpPmQuery(
     };
   }
 
-  // --- 7. DEFAULT: STORIES & BACKLOG WORK ITEMS BREAKDOWN ---
-  const statusCounts: Record<string, number> = {
-    'To Do': 0,
-    'In Progress': 0,
-    'In Review': 0,
-    Done: 0,
-    Blocked: 0,
-  };
+  // --- 7. STORIES & BACKLOG WORK ITEMS BREAKDOWN ---
+  if (isStoryQuery) {
+    const statusCounts: Record<string, number> = {
+      'To Do': 0,
+      'In Progress': 0,
+      'In Review': 0,
+      Done: 0,
+      Blocked: 0,
+    };
 
-  const rows = activeStories.map((st: any) => {
-    const rawStatus = st.status || 'To Do';
-    const normStatus =
-      rawStatus === 'Done' || rawStatus === 'Completed' || rawStatus === 'Closed'
-        ? 'Done'
-        : rawStatus === 'In Progress' || rawStatus === 'In Dev'
-        ? 'In Progress'
-        : rawStatus === 'In Review' || rawStatus === 'Testing' || rawStatus === 'QA'
-        ? 'In Review'
-        : rawStatus === 'Blocked'
-        ? 'Blocked'
-        : 'To Do';
+    const rows = activeStories.map((st: any) => {
+      const rawStatus = st.status || 'To Do';
+      const normStatus =
+        rawStatus === 'Done' || rawStatus === 'Completed' || rawStatus === 'Closed'
+          ? 'Done'
+          : rawStatus === 'In Progress' || rawStatus === 'In Dev'
+          ? 'In Progress'
+          : rawStatus === 'In Review' || rawStatus === 'Testing' || rawStatus === 'QA'
+          ? 'In Review'
+          : rawStatus === 'Blocked'
+          ? 'Blocked'
+          : 'To Do';
 
-    statusCounts[normStatus] = (statusCounts[normStatus] || 0) + 1;
+      statusCounts[normStatus] = (statusCounts[normStatus] || 0) + 1;
+
+      return {
+        id: st.id,
+        storyId: st.storyId || st.id,
+        title: st.title || 'Untitled Story',
+        itemType: st.itemType || 'Story',
+        status: normStatus,
+        priority: st.priority || 'Medium',
+        storyPoints: Number(st.storyPoints) || Number(st.estimate) || 1,
+        assignee: st.assigneeName || st.assignedTo || 'Unassigned',
+        link: `/projects/${projectId}/development/kanban`,
+      };
+    });
+
+    const chartData = Object.entries(statusCounts).map(([status, count]) => ({
+      name: status,
+      count,
+    }));
+
+    const totalStoriesCount = activeStories.length;
+    const completedCount = statusCounts['Done'] || 0;
+    const inProgressCount = (statusCounts['In Progress'] || 0) + (statusCounts['In Review'] || 0);
+    const blockedCount = statusCounts['Blocked'] || 0;
+    const progressPercent = totalStoriesCount > 0 ? Math.round((completedCount / totalStoriesCount) * 100) : 0;
+
+    const kpis: FpKpiCard[] = [
+      {
+        id: 'kpi-total-items',
+        label: 'Total Work Items',
+        value: totalStoriesCount,
+        subtext: `${completedCount} completed (${progressPercent}%)`,
+        status: 'positive',
+      },
+      {
+        id: 'kpi-in-flight',
+        label: 'In Progress / Review',
+        value: inProgressCount,
+        subtext: 'Active development pipeline',
+        status: 'neutral',
+      },
+      {
+        id: 'kpi-blocked',
+        label: 'Blocked Items',
+        value: blockedCount,
+        subtext: blockedCount > 0 ? 'Requires unblocking' : 'Zero blockers',
+        status: blockedCount > 0 ? 'negative' : 'positive',
+      },
+      {
+        id: 'kpi-overall-rag',
+        label: 'Overall Health',
+        value: overallHealth,
+        subtext: `Pricing: ${pricingModel}`,
+        status: overallHealth === 'Green' ? 'positive' : overallHealth === 'Amber' ? 'warning' : 'negative',
+      },
+    ];
 
     return {
-      id: st.id,
-      storyId: st.storyId || st.id,
-      title: st.title || 'Untitled Story',
-      itemType: st.itemType || 'Story',
-      status: normStatus,
-      priority: st.priority || 'Medium',
-      storyPoints: Number(st.storyPoints) || Number(st.estimate) || 1,
-      assignee: st.assigneeName || st.assignedTo || 'Unassigned',
-      link: `/projects/${projectId}/development/kanban`,
+      success: true,
+      query: queryText,
+      title: `Work Items & Backlog Status - ${projectName}`,
+      intent: 'stories_and_backlog',
+      executiveSummary: [
+        `Project "${projectName}" contains ${totalStoriesCount} active story and task record(s).`,
+        `Overall completion rate is ${progressPercent}% (${completedCount} delivered, ${inProgressCount} in progress).`,
+        blockedCount > 0
+          ? `Warning: ${blockedCount} work item(s) are marked as Blocked.`
+          : 'Zero items are currently blocked.',
+        `Active project delivery health is classified as ${overallHealth}.`,
+      ],
+      kpis,
+      chart: {
+        type: 'pie',
+        title: 'Work Items by Status',
+        description: 'Distribution across workflow columns',
+        dataKey: 'count',
+        categoryKey: 'name',
+        data: chartData,
+        colors: ['#94a3b8', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444'],
+      },
+      table: {
+        columns: [
+          { key: 'storyId', label: 'ID', type: 'text' },
+          { key: 'title', label: 'Title', type: 'link' },
+          { key: 'itemType', label: 'Type', type: 'badge' },
+          { key: 'status', label: 'Status', type: 'badge' },
+          { key: 'priority', label: 'Priority', type: 'badge' },
+          { key: 'storyPoints', label: 'Points', type: 'number' },
+          { key: 'assignee', label: 'Assignee', type: 'text' },
+        ],
+        rows,
+        defaultSortKey: 'status',
+        defaultSortDir: 'asc',
+      },
+      audit: baseAudit,
+      followUpSuggestions: [
+        'Show current sprint progress and velocity',
+        'List open bugs and defect severity breakdown',
+        'List critical risks, blockers and open issues',
+        'Show team workload and planned vs logged hours',
+      ],
     };
-  });
+  }
 
-  const chartData = Object.entries(statusCounts).map(([status, count]) => ({
-    name: status,
-    count,
-  }));
-
-  const totalStoriesCount = activeStories.length;
-  const completedCount = statusCounts['Done'] || 0;
-  const inProgressCount = (statusCounts['In Progress'] || 0) + (statusCounts['In Review'] || 0);
-  const blockedCount = statusCounts['Blocked'] || 0;
-  const progressPercent = totalStoriesCount > 0 ? Math.round((completedCount / totalStoriesCount) * 100) : 0;
-
-  const kpis: FpKpiCard[] = [
-    {
-      id: 'kpi-total-items',
-      label: 'Total Work Items',
-      value: totalStoriesCount,
-      subtext: `${completedCount} completed (${progressPercent}%)`,
-      status: 'positive',
-    },
-    {
-      id: 'kpi-in-flight',
-      label: 'In Progress / Review',
-      value: inProgressCount,
-      subtext: 'Active development pipeline',
-      status: 'neutral',
-    },
-    {
-      id: 'kpi-blocked',
-      label: 'Blocked Items',
-      value: blockedCount,
-      subtext: blockedCount > 0 ? 'Requires unblocking' : 'Zero blockers',
-      status: blockedCount > 0 ? 'negative' : 'positive',
-    },
-    {
-      id: 'kpi-overall-rag',
-      label: 'Overall Health',
-      value: overallHealth,
-      subtext: `Pricing: ${pricingModel}`,
-      status: overallHealth === 'Green' ? 'positive' : overallHealth === 'Amber' ? 'warning' : 'negative',
-    },
-  ];
-
+  // --- 8. INDETERMINISTIC RESULTS (FALLBACK) ---
   return {
     success: true,
     query: queryText,
-    title: `Work Items & Backlog Status - ${projectName}`,
-    intent: 'stories_and_backlog',
+    title: 'Indeterministic Query',
+    intent: 'unsupported_or_off_topic',
     executiveSummary: [
-      `Project "${projectName}" contains ${totalStoriesCount} active story and task record(s).`,
-      `Overall completion rate is ${progressPercent}% (${completedCount} delivered, ${inProgressCount} in progress).`,
-      blockedCount > 0
-        ? `Warning: ${blockedCount} work item(s) are marked as Blocked.`
-        : 'Zero items are currently blocked.',
-      `Active project delivery health is classified as ${overallHealth}.`,
+      `Could not determine a specific project intent for: "${queryText}".`,
+      'The FP PM Dash deterministic engine could not match your query to a supported project category (like sprints, bugs, RAID, team workload, or financials).',
+      'Please try rephrasing your question using one of the supported query topics below.',
     ],
-    kpis,
+    kpis: [
+      { id: 'kpi-0', label: 'Intent Match', value: 'Failed', status: 'negative', subtext: 'Query indeterministic' },
+      { id: 'kpi-1', label: 'Active Stories', value: activeStories.length, status: 'positive', subtext: 'Available for querying' },
+    ],
     chart: {
-      type: 'pie',
-      title: 'Work Items by Status',
-      description: 'Distribution across workflow columns',
+      type: 'none',
+      title: 'No Visual Data',
       dataKey: 'count',
-      categoryKey: 'name',
-      data: chartData,
-      colors: ['#94a3b8', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444'],
+      categoryKey: 'category',
+      data: [],
     },
     table: {
       columns: [
-        { key: 'storyId', label: 'ID', type: 'text' },
-        { key: 'title', label: 'Title', type: 'link' },
-        { key: 'itemType', label: 'Type', type: 'badge' },
-        { key: 'status', label: 'Status', type: 'badge' },
-        { key: 'priority', label: 'Priority', type: 'badge' },
-        { key: 'storyPoints', label: 'Points', type: 'number' },
-        { key: 'assignee', label: 'Assignee', type: 'text' },
+        { key: 'topic', label: 'Supported Project Subject' },
+        { key: 'sampleQuery', label: 'Example Question' },
       ],
-      rows,
-      defaultSortKey: 'status',
-      defaultSortDir: 'asc',
+      rows: [
+        { topic: 'Sprint Delivery', sampleQuery: 'Show current sprint progress and velocity' },
+        { topic: 'Stories & Tasks', sampleQuery: 'Show stories and tasks grouped by status' },
+        { topic: 'Defects & Quality', sampleQuery: 'List open bugs and defect severity breakdown' },
+        { topic: 'RAID Governance', sampleQuery: 'List critical risks, blockers and open issues' },
+        { topic: 'Team Workload', sampleQuery: 'Show team workload and planned vs logged hours' },
+        { topic: 'Financials & Valuation', sampleQuery: 'Project valuation and milestone payments' },
+      ],
     },
-    audit: baseAudit,
+    audit: {
+      ...baseAudit,
+      recordsAnalyzed: 0,
+      confidence: 'Fallback / Indeterministic',
+    },
     followUpSuggestions: [
       'Show current sprint progress and velocity',
+      'Show stories and tasks grouped by status',
       'List open bugs and defect severity breakdown',
       'List critical risks, blockers and open issues',
-      'Show team workload and planned vs logged hours',
     ],
   };
 }

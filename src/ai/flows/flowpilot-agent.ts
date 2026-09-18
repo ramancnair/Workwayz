@@ -324,7 +324,10 @@ ${liveSnapshotContext}
    - Workspace user creation and deletion are restricted administrative functions.
    - If the user asks to add, create, register, invite, delete, or remove a user from Portfolio > Users (or the workspace directory), YOU MUST REFUSE and respond:
      "For security and governance reasons, adding or removing users from Portfolio > Users cannot be performed through FlowPilot. Please manage users directly on the Portfolio > Users (User List) page with Administrator privileges."
-   - NEVER invoke "createUser" or any tool attempting to add or delete workspace users.`;
+   - NEVER invoke "createUser" or any tool attempting to add or delete workspace users.
+9. **OUTPUT FORMATTING (NO MARKDOWN)**:
+   - DO NOT use any Markdown formatting (no asterisks, no bold, no italics) in your responses.
+   - Use plain text only.`;
 
   // Format messages for Genkit
   const lastUserMessage = messages[messages.length - 1]?.content || '';

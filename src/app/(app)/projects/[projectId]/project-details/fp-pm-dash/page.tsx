@@ -559,6 +559,19 @@ export default function FpPmDashboardPage() {
                   </button>
                 )}
               </div>
+              {response && (
+                <Button
+                  onClick={() => {
+                    setResponse(null);
+                    setSearchQuery('');
+                  }}
+                  variant="outline"
+                  className="h-10 px-4 gap-2 shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10 cursor-pointer shadow-sm"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Clear Output
+                </Button>
+              )}
               <Button
                 onClick={() => handleRunQuery(searchQuery)}
                 disabled={isLoading || !searchQuery.trim()}

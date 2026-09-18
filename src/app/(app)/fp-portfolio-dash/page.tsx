@@ -483,40 +483,56 @@ export default function FpDashboardPage() {
               e.preventDefault();
               handleRunQuery(searchQuery);
             }}
-            className="relative flex items-center"
+            className="flex flex-col sm:flex-row gap-2 relative"
           >
-            <div className="absolute left-4 text-primary pointer-events-none">
-              <Search className="h-5 w-5" />
+            <div className="relative flex-1">
+              <div className="absolute left-4 top-[17px] text-primary pointer-events-none">
+                <Search className="h-5 w-5" />
+              </div>
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Ask FP Portfolio Dash (e.g. 'Show project health status', 'Compare Fixed Bid vs T&M', 'What are our top risks?')..."
+                className="h-14 pl-12 pr-12 rounded-xl text-base bg-card/70 border-border/80 shadow-md focus-visible:ring-2 focus-visible:ring-primary/50 transition-all placeholder:text-muted-foreground/70"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-[17px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
             </div>
-            <Input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Ask FP Portfolio Dash (e.g. 'Show project health status', 'Compare Fixed Bid vs T&M', 'What are our top risks?')..."
-              className="h-14 pl-12 pr-32 rounded-xl text-base bg-card/70 border-border/80 shadow-md focus-visible:ring-2 focus-visible:ring-primary/50 transition-all placeholder:text-muted-foreground/70"
-            />
-            {searchQuery && (
-              <button
+            {response && (
+              <Button
                 type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-24 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => {
+                  setResponse(null);
+                  setSearchQuery('');
+                }}
+                variant="outline"
+                className="h-14 px-5 rounded-xl gap-2 shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10 shadow-sm cursor-pointer"
               >
-                <X className="h-4 w-4" />
-              </button>
+                <XCircle className="h-5 w-5" />
+                Clear Output
+              </Button>
             )}
             <Button
               type="submit"
               disabled={isLoading || !searchQuery.trim()}
-              className="absolute right-2 h-10 px-5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow flex items-center gap-2"
+              className="h-14 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md flex items-center gap-2 shrink-0 cursor-pointer"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Querying...
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className="h-5 w-5" />
                   Ask AI
                 </>
               )}
