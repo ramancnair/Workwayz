@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useProject } from '@/context/ProjectContext';
 import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
@@ -64,6 +65,9 @@ import { executeFpPmQuery, type FpPmProjectData } from '@/lib/fp-pm-query-engine
 import { cn } from '@/lib/utils';
 import { FpModelSelector } from '@/components/fp-dashboard/FpModelSelector';
 import { FpFallbackAlert } from '@/components/fp-dashboard/FpFallbackAlert';
+import { ScheduleCronModal } from '@/components/cron-jobs/ScheduleCronModal';
+import { CronJobsList } from '@/components/cron-jobs/CronJobsList';
+import { loadCronJobs } from '@/lib/cron-jobs-service';
 
 const PALETTE = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
@@ -116,6 +120,7 @@ const PRESET_PROMPTS = [
 ];
 
 export default function FpPmDashboardPage() {
+  const params = useParams();
   const {
     project,
     stories,
@@ -134,6 +139,8 @@ export default function FpPmDashboardPage() {
     impactedSystems,
   } = useProject();
 
+  const currentProjectId = (params?.projectId as string) || project?.id || '';
+
   const [portfolios, setPortfolios] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -144,6 +151,21 @@ export default function FpPmDashboardPage() {
   const [tableFilter, setTableFilter] = useState<string>('');
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const [dashboardTab, setDashboardTab] = useState<'analytics' | 'cron-jobs'>('analytics');
+  const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
+  const [cronJobsCount, setCronJobsCount] = useState<number>(0);
+
+  const loadCronJobsCount = useCallback(async () => {
+    try {
+      const list = await loadCronJobs({ scope: 'project', projectId: currentProjectId });
+      setCronJobsCount(list.length);
+    } catch {}
+  }, [currentProjectId]);
+
+  useEffect(() => {
+    loadCronJobsCount();
+  }, [loadCronJobsCount]);
   const [selectedModel, setSelectedModel] = useState<string>('gemini-3.5-flash');
   const [, startTransition] = useTransition();
 
@@ -526,7 +548,50 @@ export default function FpPmDashboardPage() {
           </div>
         </div>
 
-        {/* AI Query Bar */}
+        {/* Primary Dashboard Tabs: Analytics vs Scheduled Cron Jobs */}
+        <div className="flex items-center gap-2 border-b border-border pb-1">
+          <button
+            type="button"
+            onClick={() => setDashboardTab('analytics')}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-semibold border-b-2 transition-all cursor-pointer',
+              dashboardTab === 'analytics'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Sparkles className="h-4 w-4" />
+            PM Analytics & Reports
+          </button>
+          <button
+            type="button"
+            onClick={() => setDashboardTab('cron-jobs')}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-semibold border-b-2 transition-all cursor-pointer',
+              dashboardTab === 'cron-jobs'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Clock className="h-4 w-4" />
+            Scheduled Cron Jobs
+            {cronJobsCount > 0 && (
+              <Badge variant="secondary" className="text-[11px] px-1.5 py-0 h-4 rounded-full font-mono bg-primary/15 text-primary">
+                {cronJobsCount}
+              </Badge>
+            )}
+          </button>
+        </div>
+
+        {dashboardTab === 'cron-jobs' ? (
+          <CronJobsList
+            scope="project"
+            projectId={currentProjectId}
+            onJobChange={loadCronJobsCount}
+          />
+        ) : (
+          <>
+            {/* Hero AI Search Bar */}
         <Card className="bg-card/50 backdrop-blur-sm border-primary/20 shadow-md">
           <CardContent className="p-4 space-y-3">
             <div className="flex flex-col sm:flex-row gap-2">
@@ -762,6 +827,15 @@ export default function FpPmDashboardPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowScheduleModal(true)}
+                  className="h-8 px-3 text-xs gap-1.5 border-primary/40 text-primary hover:bg-primary/10 shadow-sm"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Convert to Cron Job
+                </Button>
                 <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
                   <TabsList className="h-8">
                     <TabsTrigger value="split" className="text-xs px-2.5">
@@ -1052,6 +1126,26 @@ export default function FpPmDashboardPage() {
               </div>
             )}
           </div>
+        )}
+          </>
+        )}
+
+        {/* Convert to Cron Job Modal */}
+        {response && (
+          <ScheduleCronModal
+            open={showScheduleModal}
+            onOpenChange={setShowScheduleModal}
+            initialQuery={response.query || searchQuery}
+            initialTitle={response.title}
+            scope="project"
+            projectId={currentProjectId}
+            projectName={project?.name}
+            modelId={selectedModel}
+            onJobCreated={() => {
+              loadCronJobsCount();
+              setDashboardTab('cron-jobs');
+            }}
+          />
         )}
       </div>
     </div>

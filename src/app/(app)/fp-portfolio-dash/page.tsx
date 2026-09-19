@@ -52,6 +52,7 @@ import {
   Info,
   BarChart3,
   PieChart as PieIcon,
+  Clock,
 } from 'lucide-react';
 import { db, collection, getDocs } from '@/lib/db-provider';
 import type { Portfolio } from '@/types';
@@ -60,6 +61,9 @@ import { executeFpQuery } from '@/lib/fp-query-engine';
 import { cn } from '@/lib/utils';
 import { FpModelSelector } from '@/components/fp-dashboard/FpModelSelector';
 import { FpFallbackAlert } from '@/components/fp-dashboard/FpFallbackAlert';
+import { ScheduleCronModal } from '@/components/cron-jobs/ScheduleCronModal';
+import { CronJobsList } from '@/components/cron-jobs/CronJobsList';
+import { loadCronJobs } from '@/lib/cron-jobs-service';
 
 const PM_PALETTE = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
@@ -128,6 +132,21 @@ export default function FpDashboardPage() {
     projects: [],
     employees: [],
   });
+
+  const [dashboardTab, setDashboardTab] = useState<'analytics' | 'cron-jobs'>('analytics');
+  const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
+  const [cronJobsCount, setCronJobsCount] = useState<number>(0);
+
+  const loadCronJobsCount = useCallback(async () => {
+    try {
+      const list = await loadCronJobs({ scope: 'portfolio' });
+      setCronJobsCount(list.length);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    loadCronJobsCount();
+  }, [loadCronJobsCount]);
 
   // Load portfolios, projects, and employees on mount for authenticated client
   useEffect(() => {
@@ -471,7 +490,50 @@ export default function FpDashboardPage() {
           </div>
         </div>
 
-        {/* Hero AI Search Bar */}
+        {/* Primary Dashboard Tabs: Analytics vs Scheduled Cron Jobs */}
+        <div className="flex items-center gap-2 border-b border-border pb-1">
+          <button
+            type="button"
+            onClick={() => setDashboardTab('analytics')}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-semibold border-b-2 transition-all cursor-pointer',
+              dashboardTab === 'analytics'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Sparkles className="h-4 w-4" />
+            Analytics & Reports
+          </button>
+          <button
+            type="button"
+            onClick={() => setDashboardTab('cron-jobs')}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-semibold border-b-2 transition-all cursor-pointer',
+              dashboardTab === 'cron-jobs'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Clock className="h-4 w-4" />
+            Scheduled Cron Jobs
+            {cronJobsCount > 0 && (
+              <Badge variant="secondary" className="text-[11px] px-1.5 py-0 h-4 rounded-full font-mono bg-primary/15 text-primary">
+                {cronJobsCount}
+              </Badge>
+            )}
+          </button>
+        </div>
+
+        {dashboardTab === 'cron-jobs' ? (
+          <CronJobsList
+            scope="portfolio"
+            portfolioId={selectedPortfolioId}
+            onJobChange={loadCronJobsCount}
+          />
+        ) : (
+          <>
+            {/* Hero AI Search Bar */}
         <div className="relative">
           <form
             onSubmit={(e) => {
@@ -723,6 +785,15 @@ export default function FpDashboardPage() {
               </Tabs>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowScheduleModal(true)}
+                  className="h-8 px-3 text-xs gap-1.5 border-primary/40 text-primary hover:bg-primary/10 shadow-sm"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Convert to Cron Job
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1095,6 +1166,25 @@ export default function FpDashboardPage() {
               </div>
             )}
           </div>
+        )}
+          </>
+        )}
+
+        {/* Convert to Cron Job Modal */}
+        {response && (
+          <ScheduleCronModal
+            open={showScheduleModal}
+            onOpenChange={setShowScheduleModal}
+            initialQuery={response.query || searchQuery}
+            initialTitle={response.title}
+            scope="portfolio"
+            portfolioId={selectedPortfolioId}
+            modelId={selectedModel}
+            onJobCreated={() => {
+              loadCronJobsCount();
+              setDashboardTab('cron-jobs');
+            }}
+          />
         )}
       </div>
     </div>

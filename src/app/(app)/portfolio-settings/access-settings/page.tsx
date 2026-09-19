@@ -225,6 +225,7 @@ const pageSections: PageSection[] = [
           'Setup Wizard',
           'Archive',
           'Test Data Studio',
+          'Cron Jobs',
         ],
       },
       {

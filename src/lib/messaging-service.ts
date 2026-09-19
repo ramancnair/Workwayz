@@ -146,22 +146,30 @@ export async function sendInternalMessage(
       return { success: false, error: 'No valid recipients selected.' };
     }
 
-    const messageData = {
-      senderId: senderEmpId,
-      senderName: payload.sender.name || 'User',
-      senderEmail: payload.sender.email,
-      senderAvatar: payload.sender.avatar || '',
-      recipients: payload.recipients,
-      recipientUserIds: Array.from(allRecipientUserIds),
-      distroIds: Array.from(distroIds),
-      subject: payload.subject.trim() || '(No Subject)',
-      body: payload.body.trim(),
-      createdAt: new Date().toISOString(),
-      readBy: [],
-      starredBy: [],
-      deletedBy: [],
-      replyToId: payload.replyToId || null,
-    };
+    const messageData = JSON.parse(
+      JSON.stringify({
+        senderId: senderEmpId,
+        senderName: payload.sender.name || 'User',
+        senderEmail: payload.sender.email,
+        senderAvatar: payload.sender.avatar || '',
+        recipients: (payload.recipients || []).map((r) => {
+          const item: Record<string, any> = { id: r.id, type: r.type, name: r.name };
+          if (r.email) item.email = r.email;
+          if (r.avatar) item.avatar = r.avatar;
+          if (r.projectName) item.projectName = r.projectName;
+          return item;
+        }),
+        recipientUserIds: Array.from(allRecipientUserIds),
+        distroIds: Array.from(distroIds),
+        subject: payload.subject.trim() || '(No Subject)',
+        body: payload.body.trim(),
+        createdAt: new Date().toISOString(),
+        readBy: [],
+        starredBy: [],
+        deletedBy: [],
+        replyToId: payload.replyToId || null,
+      })
+    );
 
     const docRef = await addDoc(collection(db, 'messages'), messageData);
     return { success: true, messageId: docRef.id };

@@ -120,6 +120,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (hasAccess('AI Config')) return '/portfolio-settings/ai-config';
         if (hasAccess('Archive')) return '/portfolio-settings/archive';
         if (hasAccess('Test Data Studio')) return '/portfolio-settings/test-data-studio';
+        if (hasAccess('Cron Jobs')) return '/portfolio-settings/cron-jobs';
         return '/portfolio-settings';
       case 'trash':
         return '/portfolio-trash';
@@ -194,7 +195,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 <Link href={getDefaultRouteForTab('holidays')}>Holidays</Link>
                               </TabsTrigger>
                             )}
-                            {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive') || hasAccess('Test Data Studio')) && (
+                            {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive') || hasAccess('Test Data Studio') || hasAccess('Cron Jobs')) && (
                               <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                                 <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center gap-1.5">
                                   <Settings className="h-4 w-4" />

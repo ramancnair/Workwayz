@@ -22,6 +22,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { MessageReportRenderer } from './MessageReportRenderer';
 
 interface MessageDetailProps {
   message: InternalMessage | null;
@@ -285,9 +286,9 @@ export function MessageDetail({
 
         <Separator />
 
-        {/* Message Body */}
-        <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap font-sans break-words selection:bg-primary/20">
-          {message.body}
+        {/* Message Body with Rich Report & Interactive Chart Rendering */}
+        <div className="text-sm leading-relaxed text-foreground selection:bg-primary/20">
+          <MessageReportRenderer body={message.body} />
         </div>
       </div>
     </div>
