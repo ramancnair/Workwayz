@@ -1,6 +1,10 @@
 name: Publish Release Artifacts
 
 on:
+  push:
+    tags:
+      - 'v*'
+      - 'release-*'
   release:
     types: [published]
 
