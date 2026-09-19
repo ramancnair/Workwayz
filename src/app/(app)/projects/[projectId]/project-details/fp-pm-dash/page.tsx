@@ -813,6 +813,13 @@ export default function FpPmDashboardPage() {
                                 color: 'hsl(var(--popover-foreground))',
                                 fontSize: '12px',
                               }}
+                              itemStyle={{
+                                color: 'hsl(var(--popover-foreground))',
+                              }}
+                              labelStyle={{
+                                color: 'hsl(var(--popover-foreground))',
+                                fontWeight: 600,
+                              }}
                             />
                             <Legend wrapperStyle={{ fontSize: '11px' }} />
                             <Pie
@@ -855,12 +862,20 @@ export default function FpPmDashboardPage() {
                             />
                             <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
                             <Tooltip
+                              cursor={{ fill: 'hsl(var(--muted) / 0.25)' }}
                               contentStyle={{
                                 backgroundColor: 'hsl(var(--popover))',
                                 borderColor: 'hsl(var(--border))',
                                 borderRadius: '8px',
                                 color: 'hsl(var(--popover-foreground))',
                                 fontSize: '12px',
+                              }}
+                              itemStyle={{
+                                color: 'hsl(var(--popover-foreground))',
+                              }}
+                              labelStyle={{
+                                color: 'hsl(var(--popover-foreground))',
+                                fontWeight: 600,
                               }}
                             />
                             <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />

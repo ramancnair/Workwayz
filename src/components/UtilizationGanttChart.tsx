@@ -32,11 +32,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     }
 
     return (
-      <div className="bg-background border rounded-md p-2 shadow-md text-sm">
-        <p className="font-bold">{data.projectName}</p>
+      <div className="bg-popover text-popover-foreground border border-border rounded-md p-2 shadow-md text-sm">
+        <p className="font-bold text-popover-foreground">{data.projectName}</p>
         <p className="font-semibold text-muted-foreground">{isPlanned ? 'Planned' : 'Actual'}</p>
-        <p>{format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')}</p>
-        <p>Duration: {data.duration} {data.duration === 1 ? 'day' : 'days'}</p>
+        <p className="text-popover-foreground">{format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')}</p>
+        <p className="text-popover-foreground">Duration: {data.duration} {data.duration === 1 ? 'day' : 'days'}</p>
       </div>
     );
   }

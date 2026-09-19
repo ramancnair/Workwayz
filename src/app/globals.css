@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -159,38 +158,44 @@ body {
   /* ── Blue Combo: dark navy + periwinkle ── */
   .blue {
     /* Main surfaces — dark navy (right swatch of the circled combo) */
-    --background:         237 52% 14%;   /* #121638 – deep navy          */
-    --foreground:         230 50% 94%;   /* near-white                   */
+    --background: 237 52% 14%;
+    /* #121638 – deep navy          */
+    --foreground: 230 50% 94%;
+    /* near-white                   */
 
-    --card:               237 48% 19%;   /* #191F4A – slightly lighter   */
-    --card-foreground:    230 50% 94%;
+    --card: 237 48% 19%;
+    /* #191F4A – slightly lighter   */
+    --card-foreground: 230 50% 94%;
 
-    --popover:            237 48% 19%;
+    --popover: 237 48% 19%;
     --popover-foreground: 230 50% 94%;
 
     /* Primary — periwinkle (left swatch of the circled combo) */
-    --primary:            234 55% 62%;   /* #6268CB – periwinkle blue    */
+    --primary: 234 55% 62%;
+    /* #6268CB – periwinkle blue    */
     --primary-foreground: 0 0% 100%;
 
-    --secondary:          237 44% 27%;   /* #252B62 – mid navy           */
+    --secondary: 237 44% 27%;
+    /* #252B62 – mid navy           */
     --secondary-foreground: 230 50% 94%;
 
-    --muted:              237 44% 25%;
-    --muted-foreground:   230 30% 62%;
+    --muted: 237 44% 25%;
+    --muted-foreground: 230 30% 62%;
 
-    --accent:             237 44% 27%;
-    --accent-foreground:  230 50% 94%;
+    --accent: 237 44% 27%;
+    --accent-foreground: 230 50% 94%;
 
-    --destructive:        0 84.2% 60.2%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border:             237 40% 28%;
-    --input:              237 44% 30%;   /* mid-navy — visible on dark sidebar */
-    --ring:               234 55% 62%;
+    --border: 237 40% 28%;
+    --input: 237 44% 30%;
+    /* mid-navy — visible on dark sidebar */
+    --ring: 234 55% 62%;
 
     /* Topbar — darkest layer */
-    --topbar-background:  237 62% 9%;
-    --topbar-foreground:  230 50% 92%;
+    --topbar-background: 237 62% 9%;
+    --topbar-foreground: 230 50% 92%;
 
     /* Charts */
     --chart-1: 234 55% 62%;
@@ -200,14 +205,14 @@ body {
     --chart-5: 220 60% 50%;
 
     /* Sidebar — darkest layer, same as topbar */
-    --sidebar-background:         237 62% 9%;
-    --sidebar-foreground:         230 50% 90%;
-    --sidebar-primary:            234 55% 62%;
+    --sidebar-background: 237 62% 9%;
+    --sidebar-foreground: 230 50% 90%;
+    --sidebar-primary: 234 55% 62%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent:             237 50% 20%;
-    --sidebar-accent-foreground:  230 50% 94%;
-    --sidebar-border:             237 55% 14%;
-    --sidebar-ring:               234 55% 62%;
+    --sidebar-accent: 237 50% 20%;
+    --sidebar-accent-foreground: 230 50% 94%;
+    --sidebar-border: 237 55% 14%;
+    --sidebar-ring: 234 55% 62%;
 
     --shadow-color: 237 70% 4%;
     --shadow-strength: 35%;
@@ -218,6 +223,7 @@ body {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -249,12 +255,72 @@ body {
   aside select,
   aside textarea {
     background-color: hsl(var(--sidebar-accent)) !important;
-    border-color:     hsl(var(--sidebar-border, var(--border))) !important;
-    color:            hsl(var(--sidebar-foreground)) !important;
+    border-color: hsl(var(--sidebar-border, var(--border))) !important;
+    color: hsl(var(--sidebar-foreground)) !important;
   }
 
   [data-sidebar] input::placeholder,
   aside input::placeholder {
     color: hsl(var(--muted-foreground));
+  }
+
+  /* ── Recharts Tooltip Theme & Readability Overrides ───────────────────
+     In non-light themes (dark, blue, green), Recharts default Tooltip injects
+     hardcoded `#333333` inline styles on .recharts-tooltip-item.
+     These rules force high contrast, theme-harmonious popover styling across
+     all Recharts instances (bar, pie, line, area, and AI generated charts). */
+  .recharts-default-tooltip {
+    background-color: hsl(var(--popover)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: 8px !important;
+    color: hsl(var(--popover-foreground)) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.4) !important;
+    padding: 8px 12px !important;
+  }
+
+  .recharts-tooltip-label {
+    color: hsl(var(--popover-foreground)) !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .recharts-tooltip-item-list {
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style: none !important;
+  }
+
+  .recharts-tooltip-item {
+    color: hsl(var(--popover-foreground)) !important;
+    font-size: 12px !important;
+    padding: 2px 0 !important;
+  }
+
+  .recharts-tooltip-item-name {
+    color: hsl(var(--popover-foreground)) !important;
+    opacity: 0.9 !important;
+    font-weight: 500 !important;
+  }
+
+  .recharts-tooltip-item-separator {
+    color: hsl(var(--popover-foreground)) !important;
+    opacity: 0.7 !important;
+    padding: 0 4px !important;
+  }
+
+  .recharts-tooltip-item-value {
+    color: hsl(var(--popover-foreground)) !important;
+    font-weight: 600 !important;
+  }
+
+  .recharts-tooltip-item-unit {
+    color: hsl(var(--muted-foreground)) !important;
+    margin-left: 2px !important;
+  }
+
+  .recharts-tooltip-cursor {
+    fill: hsl(var(--muted) / 0.25) !important;
+    stroke: hsl(var(--border)) !important;
   }
 }

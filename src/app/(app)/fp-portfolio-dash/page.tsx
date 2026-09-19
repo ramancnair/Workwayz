@@ -807,11 +807,18 @@ export default function FpDashboardPage() {
                         <PieChart>
                           <Tooltip
                             contentStyle={{
-                              backgroundColor: 'hsl(var(--card))',
+                              backgroundColor: 'hsl(var(--popover))',
                               borderColor: 'hsl(var(--border))',
                               borderRadius: '8px',
-                              color: 'hsl(var(--foreground))',
+                              color: 'hsl(var(--popover-foreground))',
                               fontSize: '12px',
+                            }}
+                            itemStyle={{
+                              color: 'hsl(var(--popover-foreground))',
+                            }}
+                            labelStyle={{
+                              color: 'hsl(var(--popover-foreground))',
+                              fontWeight: 600,
                             }}
                           />
                           <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -863,12 +870,20 @@ export default function FpDashboardPage() {
                             tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                           />
                           <Tooltip
+                            cursor={{ fill: 'hsl(var(--muted) / 0.25)' }}
                             contentStyle={{
-                              backgroundColor: 'hsl(var(--card))',
+                              backgroundColor: 'hsl(var(--popover))',
                               borderColor: 'hsl(var(--border))',
                               borderRadius: '8px',
-                              color: 'hsl(var(--foreground))',
+                              color: 'hsl(var(--popover-foreground))',
                               fontSize: '12px',
+                            }}
+                            itemStyle={{
+                              color: 'hsl(var(--popover-foreground))',
+                            }}
+                            labelStyle={{
+                              color: 'hsl(var(--popover-foreground))',
+                              fontWeight: 600,
                             }}
                           />
                           <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -898,12 +913,20 @@ export default function FpDashboardPage() {
                             tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                           />
                           <Tooltip
+                            cursor={{ fill: 'hsl(var(--muted) / 0.25)' }}
                             contentStyle={{
-                              backgroundColor: 'hsl(var(--card))',
+                              backgroundColor: 'hsl(var(--popover))',
                               borderColor: 'hsl(var(--border))',
                               borderRadius: '8px',
-                              color: 'hsl(var(--foreground))',
+                              color: 'hsl(var(--popover-foreground))',
                               fontSize: '12px',
+                            }}
+                            itemStyle={{
+                              color: 'hsl(var(--popover-foreground))',
+                            }}
+                            labelStyle={{
+                              color: 'hsl(var(--popover-foreground))',
+                              fontWeight: 600,
                             }}
                           />
                           <Legend wrapperStyle={{ fontSize: '12px' }} />

@@ -43,10 +43,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-background border rounded-md p-2 shadow-md text-sm">
-        <p className="font-bold">{label}</p>
-        <p>Status: <span className="font-semibold">{data.status}</span></p>
-        <p>Hours Logged: {data.actualHours.toFixed(1)}</p>
+      <div className="bg-popover text-popover-foreground border border-border rounded-md p-2 shadow-md text-sm">
+        <p className="font-bold text-popover-foreground">{label}</p>
+        <p className="text-popover-foreground">Status: <span className="font-semibold">{data.status}</span></p>
+        <p className="text-popover-foreground">Hours Logged: {data.actualHours.toFixed(1)}</p>
         {data.actualHours > 0 && <p className="text-xs text-muted-foreground mt-1">Click to view details</p>}
       </div>
     );
