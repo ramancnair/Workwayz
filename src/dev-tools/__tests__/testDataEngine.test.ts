@@ -9,6 +9,8 @@ import {
   wipeStudioBatch,
   STUDIO_LOG_STORAGE_KEY,
   StudioLog,
+  getInstanceId,
+  getStudioLogStorageKey,
 } from '../testDataEngine';
 
 describe('TestDataStudio Engine & Presets', () => {
@@ -267,6 +269,36 @@ describe('Studio Creation Log & Asset Tracking', () => {
     const logAfterRemovingRun2 = await removeStudioBatch(batchId2);
     expect(logAfterRemovingRun2).toBeNull();
     expect(localStorage.getItem(STUDIO_LOG_STORAGE_KEY)).toBeNull();
+  });
+
+  it('should isolate test runs by instanceId and ignore runs from other instances', async () => {
+    const currentInst = getInstanceId();
+    expect(currentInst).toBeDefined();
+    expect(getStudioLogStorageKey(currentInst)).toBe(`pf_test_data_studio_log_${currentInst}`);
+
+    // Create a foreign run from another instance
+    const foreignBatch = {
+      batchId: 'foreign_batch_123',
+      instanceId: 'other_instance_999',
+      timestamp: new Date().toISOString(),
+      preset: 'standard',
+      projects: [{ id: 'P2609999', name: 'Foreign Project', portfolioId: 'PF999' }],
+      portfolios: [{ id: 'PF999', name: 'Foreign Portfolio' }],
+      users: [{ id: 'E999', email: 'foreign@company.com' }],
+    };
+
+    const foreignLog: StudioLog = {
+      version: 1,
+      lastUpdated: new Date().toISOString(),
+      batches: [foreignBatch],
+    };
+
+    // Storing foreign log in storage
+    localStorage.setItem(getStudioLogStorageKey(currentInst), JSON.stringify(foreignLog));
+
+    // getStudioLog should filter out runs from other instances
+    const retrieved = await getStudioLog();
+    expect(retrieved).toBeNull();
   });
 });
 

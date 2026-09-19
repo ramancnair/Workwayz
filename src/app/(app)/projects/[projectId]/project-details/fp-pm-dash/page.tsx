@@ -309,16 +309,7 @@ export default function FpPmDashboardPage() {
     }
   }, [project?.id, projectData, selectedModel]);
 
-  // Run or refresh query on mount and when project data finishes loading
-  useEffect(() => {
-    if (project?.id) {
-      handleRunQuery(searchQuery || PRESET_PROMPTS[0].query);
-    }
-  }, [
-    project?.id,
-    handleRunQuery,
-    searchQuery,
-  ]);
+  // Do not run any query by default on mount - wait for user search or preset click
 
   const handleCopySummary = () => {
     if (!response || !response.executiveSummary) return;
@@ -502,8 +493,8 @@ export default function FpPmDashboardPage() {
                 selectedModel={selectedModel}
                 onModelChange={(newModel) => {
                   setSelectedModel(newModel);
-                  if (searchQuery || PRESET_PROMPTS[0]?.query) {
-                    handleRunQuery(searchQuery || PRESET_PROMPTS[0].query, newModel);
+                  if (response && searchQuery.trim()) {
+                    handleRunQuery(searchQuery, newModel);
                   }
                 }}
               />
@@ -616,6 +607,21 @@ export default function FpPmDashboardPage() {
             <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
             <span>{errorMsg}</span>
           </div>
+        )}
+
+        {/* Loading Skeleton */}
+        {isLoading && (
+          <Card className="border border-border/60 bg-card/40 backdrop-blur-sm p-8 text-center space-y-4">
+            <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 text-primary animate-pulse">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Analyzing Project Records...</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                Synthesizing sprints, tasks, bugs, RAID logs, team workload, and milestone payments.
+              </p>
+            </div>
+          </Card>
         )}
 
         {/* Main Response Area */}

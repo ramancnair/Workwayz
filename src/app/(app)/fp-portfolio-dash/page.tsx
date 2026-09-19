@@ -272,12 +272,7 @@ export default function FpDashboardPage() {
     }
   }, [selectedPortfolioId, dbData, selectedModel]);
 
-  // Run initial query once data has loaded
-  useEffect(() => {
-    if (dataLoaded) {
-      handleRunQuery(PRESET_PROMPTS[0].query, 'all');
-    }
-  }, [dataLoaded, handleRunQuery]);
+  // Do not run any query by default on mount - wait for user search or preset click
 
   const handleCopySummary = () => {
     if (!response || !response.executiveSummary) return;
@@ -442,7 +437,7 @@ export default function FpDashboardPage() {
                 selectedModel={selectedModel}
                 onModelChange={(newModel) => {
                   setSelectedModel(newModel);
-                  if (searchQuery) {
+                  if (response && searchQuery.trim()) {
                     handleRunQuery(searchQuery, selectedPortfolioId, newModel);
                   }
                 }}
@@ -455,7 +450,7 @@ export default function FpDashboardPage() {
                 value={selectedPortfolioId}
                 onValueChange={(val) => {
                   setSelectedPortfolioId(val);
-                  if (searchQuery) {
+                  if (response && searchQuery.trim()) {
                     handleRunQuery(searchQuery, val);
                   }
                 }}

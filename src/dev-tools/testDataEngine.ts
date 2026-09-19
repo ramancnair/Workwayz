@@ -20,6 +20,34 @@ import { generateFullProjectData } from '@/lib/project-autogen';
 import type { User, Portfolio, Project, AccessLevel, PricingModel } from '@/types';
 
 export const STUDIO_LOG_STORAGE_KEY = 'pf_test_data_studio_log';
+const INSTANCE_STORAGE_KEY = 'pf_instance_id';
+
+/**
+ * Returns a stable, persistent unique identifier for the current local installation / client instance.
+ * Ensures test data generation runs in one instance are strictly isolated and never leak to other instances.
+ */
+export function getInstanceId(): string {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_INSTANCE_ID || 'server_instance';
+  }
+  try {
+    let instId = localStorage.getItem(INSTANCE_STORAGE_KEY);
+    if (!instId) {
+      instId = process.env.NEXT_PUBLIC_INSTANCE_ID || `inst_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem(INSTANCE_STORAGE_KEY, instId);
+    }
+    return instId;
+  } catch {
+    return 'browser_instance';
+  }
+}
+
+/**
+ * Returns the storage key partitioned by the active client instance.
+ */
+export function getStudioLogStorageKey(instanceId = getInstanceId()): string {
+  return `pf_test_data_studio_log_${instanceId}`;
+}
 
 export interface StudioProjectRef {
   id: string;
@@ -43,6 +71,7 @@ export interface StudioUserRef {
 
 export interface StudioLogBatch {
   batchId: string;
+  instanceId?: string;
   timestamp: string;
   preset?: string;
   projects: StudioProjectRef[];
@@ -105,37 +134,57 @@ export function getActiveStudioItems(log: StudioLog | null | undefined): {
 }
 
 /**
- * Retrieves the persistent Studio Log from Firestore/Supabase, falling back to localStorage cache.
+ * Retrieves the persistent Studio Log strictly isolated to the current instance.
+ * Validates that logged projects/portfolios actually exist in the database and cleans up
+ * any legacy unpartitioned logs from other instances.
  */
 export async function getStudioLog(): Promise<StudioLog | null> {
-  // 1. Check Firestore / DB
+  const instanceId = getInstanceId();
+  const instanceStorageKey = getStudioLogStorageKey(instanceId);
+
+  // 1. One-time purge of legacy shared global doc if present in DB
   if (db) {
     try {
-      const logSnap = await getDoc(doc(db, 'settings', 'test_data_studio_log'));
-      if (logSnap && typeof logSnap.exists === 'function' ? logSnap.exists() : logSnap.data) {
+      const legacyRef = doc(db, 'settings', 'test_data_studio_log');
+      const legacySnap = await getDoc(legacyRef);
+      if (legacySnap && (typeof legacySnap.exists === 'function' ? legacySnap.exists() : legacySnap.data)) {
+        await deleteDoc(legacyRef).catch(() => {});
+      }
+    } catch {}
+  }
+
+  // 2. Clear legacy unpartitioned localStorage cache if present
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(STUDIO_LOG_STORAGE_KEY);
+    } catch {}
+  }
+
+  let logData: StudioLog | null = null;
+
+  // 3. Fetch instance-isolated log from database
+  if (db) {
+    try {
+      const logSnap = await getDoc(doc(db, 'settings', `test_data_studio_log_${instanceId}`));
+      if (logSnap && (typeof logSnap.exists === 'function' ? logSnap.exists() : logSnap.data)) {
         const data = (typeof logSnap.data === 'function' ? logSnap.data() : logSnap.data) as StudioLog;
         if (data && Array.isArray(data.batches)) {
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem(STUDIO_LOG_STORAGE_KEY, JSON.stringify(data));
-            } catch {}
-          }
-          return data;
+          logData = data;
         }
       }
     } catch (err) {
-      console.warn('[testDataEngine] Failed to fetch studio log from DB:', err);
+      console.warn('[testDataEngine] Failed to fetch instance studio log from DB:', err);
     }
   }
 
-  // 2. Fallback to localStorage
-  if (typeof window !== 'undefined') {
+  // 4. Fallback to instance-isolated localStorage
+  if (!logData && typeof window !== 'undefined') {
     try {
-      const cached = localStorage.getItem(STUDIO_LOG_STORAGE_KEY);
+      const cached = localStorage.getItem(instanceStorageKey);
       if (cached) {
         const parsed = JSON.parse(cached) as StudioLog;
         if (parsed && Array.isArray(parsed.batches)) {
-          return parsed;
+          logData = parsed;
         }
       }
     } catch (e) {
@@ -143,7 +192,71 @@ export async function getStudioLog(): Promise<StudioLog | null> {
     }
   }
 
-  return null;
+  if (!logData || !Array.isArray(logData.batches) || logData.batches.length === 0) {
+    return null;
+  }
+
+  // 5. Verification: Filter to batches belonging strictly to this instance AND confirm entities exist
+  const validBatches: StudioLogBatch[] = [];
+  for (const batch of logData.batches) {
+    // Exclude batches tagged with a different instance ID
+    if (batch.instanceId && batch.instanceId !== instanceId) {
+      continue;
+    }
+
+    if (db) {
+      let hasLiveEntity = false;
+      const projectsToCheck = (batch.projects || []).slice(0, 3);
+      for (const proj of projectsToCheck) {
+        try {
+          const pDoc = await getDoc(doc(db, 'projects', proj.id));
+          if (pDoc && (typeof pDoc.exists === 'function' ? pDoc.exists() : pDoc.data)) {
+            hasLiveEntity = true;
+            break;
+          }
+        } catch {}
+      }
+
+      if (!hasLiveEntity && (batch.portfolios || []).length > 0) {
+        const portsToCheck = (batch.portfolios || []).slice(0, 2);
+        for (const port of portsToCheck) {
+          try {
+            const portDoc = await getDoc(doc(db, 'portfolios', port.id));
+            if (portDoc && (typeof portDoc.exists === 'function' ? portDoc.exists() : portDoc.data)) {
+              hasLiveEntity = true;
+              break;
+            }
+          } catch {}
+        }
+      }
+
+      if (hasLiveEntity || (batch.projects?.length === 0 && batch.portfolios?.length === 0)) {
+        validBatches.push(batch);
+      }
+    } else {
+      validBatches.push(batch);
+    }
+  }
+
+  if (validBatches.length === 0) {
+    await clearStudioLog();
+    return null;
+  }
+
+  const cleanedLog: StudioLog = {
+    ...logData,
+    batches: validBatches,
+  };
+
+  // Sync caches
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(instanceStorageKey, JSON.stringify(cleanedLog));
+      localStorage.setItem(STUDIO_LOG_STORAGE_KEY, JSON.stringify(cleanedLog));
+    } catch {}
+  }
+
+  return cleanedLog;
 }
 
 /**
@@ -155,6 +268,9 @@ export async function recordStudioLog(params: {
   users?: User[] | StudioUserRef[];
   preset?: string;
 }): Promise<StudioLog> {
+  const instanceId = getInstanceId();
+  const instanceStorageKey = getStudioLogStorageKey(instanceId);
+
   const existingLog = (await getStudioLog()) || {
     version: 1,
     lastUpdated: new Date().toISOString(),
@@ -163,6 +279,7 @@ export async function recordStudioLog(params: {
 
   const newBatch: StudioLogBatch = {
     batchId: `batch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    instanceId,
     timestamp: new Date().toISOString(),
     preset: params.preset,
     projects: (params.projects || []).map(p => ({
@@ -193,16 +310,17 @@ export async function recordStudioLog(params: {
   // Sync to localStorage
   if (typeof window !== 'undefined') {
     try {
+      localStorage.setItem(instanceStorageKey, JSON.stringify(updatedLog));
       localStorage.setItem(STUDIO_LOG_STORAGE_KEY, JSON.stringify(updatedLog));
     } catch (e) {
       console.warn('[testDataEngine] Failed to cache studio log in localStorage:', e);
     }
   }
 
-  // Persist to DB
+  // Persist to DB scoped by instance
   if (db) {
     try {
-      await setDoc(doc(db, 'settings', 'test_data_studio_log'), updatedLog);
+      await setDoc(doc(db, 'settings', `test_data_studio_log_${instanceId}`), updatedLog);
     } catch (err) {
       console.error('[testDataEngine] Failed to save studio log to DB:', err);
     }
@@ -215,14 +333,19 @@ export async function recordStudioLog(params: {
  * Clears and removes the persistent Studio Log after successful deletion.
  */
 export async function clearStudioLog(): Promise<void> {
+  const instanceId = getInstanceId();
+  const instanceStorageKey = getStudioLogStorageKey(instanceId);
+
   if (typeof window !== 'undefined') {
     try {
+      localStorage.removeItem(instanceStorageKey);
       localStorage.removeItem(STUDIO_LOG_STORAGE_KEY);
     } catch (e) {}
   }
 
   if (db) {
     try {
+      await deleteDoc(doc(db, 'settings', `test_data_studio_log_${instanceId}`));
       await deleteDoc(doc(db, 'settings', 'test_data_studio_log'));
     } catch (err) {
       console.warn('[testDataEngine] Failed to delete studio log doc from DB:', err);
@@ -235,6 +358,9 @@ export async function clearStudioLog(): Promise<void> {
  * If no batches remain, clears the log completely.
  */
 export async function removeStudioBatch(batchId: string): Promise<StudioLog | null> {
+  const instanceId = getInstanceId();
+  const instanceStorageKey = getStudioLogStorageKey(instanceId);
+
   const currentLog = await getStudioLog();
   if (!currentLog || !Array.isArray(currentLog.batches)) {
     await clearStudioLog();
@@ -256,16 +382,17 @@ export async function removeStudioBatch(batchId: string): Promise<StudioLog | nu
   // Sync to localStorage
   if (typeof window !== 'undefined') {
     try {
+      localStorage.setItem(instanceStorageKey, JSON.stringify(updatedLog));
       localStorage.setItem(STUDIO_LOG_STORAGE_KEY, JSON.stringify(updatedLog));
     } catch (e) {
       console.warn('[testDataEngine] Failed to cache updated studio log in localStorage:', e);
     }
   }
 
-  // Persist to DB
+  // Persist to DB scoped by instance
   if (db) {
     try {
-      await setDoc(doc(db, 'settings', 'test_data_studio_log'), updatedLog);
+      await setDoc(doc(db, 'settings', `test_data_studio_log_${instanceId}`), updatedLog);
     } catch (err) {
       console.error('[testDataEngine] Failed to update studio log in DB:', err);
     }
@@ -494,6 +621,7 @@ export async function generateEmployees(
         ...newUser,
         isTestData: true,
         createdByStudio: true,
+        instanceId: getInstanceId(),
         createdAt: new Date().toISOString(),
       });
       createdUsers.push(newUser);
@@ -545,6 +673,7 @@ export async function createStudioPortfolios(
       ...newPort,
       isTestData: true,
       createdByStudio: true,
+      instanceId: getInstanceId(),
       createdAt: new Date().toISOString(),
     });
     created.push(newPort);
@@ -630,6 +759,7 @@ export async function generateProjects(
       ...projectData,
       isTestData: true,
       createdByStudio: true,
+      instanceId: getInstanceId(),
       createdAt: new Date().toISOString(),
     });
 
@@ -835,11 +965,13 @@ export async function wipeWorkspaceTestData(
       const pSnap = await getDocs(collection(db, 'projects'));
       pSnap.forEach((d: any) => {
         const data = typeof d.data === 'function' ? d.data() : d;
+        const isThisInstance = !data.instanceId || data.instanceId === getInstanceId();
         const isStudioProject =
-          data.createdByStudio === true ||
-          (data.isTestData === true &&
-            (data.statusComments?.includes('Autogenerated testing baseline via Test Data Studio') ||
-             (data.name && (data.name.includes('(Batch ') || data.name.includes('Autogen')))));
+          isThisInstance &&
+          (data.createdByStudio === true ||
+            (data.isTestData === true &&
+              (data.statusComments?.includes('Autogenerated testing baseline via Test Data Studio') ||
+               (data.name && (data.name.includes('(Batch ') || data.name.includes('Autogen'))))));
         if (isStudioProject) {
           projectsToDelete.push(d.id);
         }
