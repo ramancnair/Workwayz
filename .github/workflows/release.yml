@@ -30,11 +30,35 @@ jobs:
           gzip -9 /tmp/projectflow-web-image.tar
           mv /tmp/projectflow-web-image.tar.gz ./projectflow-web-image-v${{ github.ref_name }}.tar.gz
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Standalone ZIP
+        run: |
+          npm ci
+          npm run build
+          mkdir -p ./release-standalone/projectflow
+          # Copy standalone output
+          cp -r .next/standalone/* ./release-standalone/projectflow/
+          # Copy static files (standalone needs this)
+          mkdir -p ./release-standalone/projectflow/.next
+          cp -r .next/static ./release-standalone/projectflow/.next/
+          cp -r public ./release-standalone/projectflow/
+          # Copy scripts
+          cp -r scripts ./release-standalone/projectflow/
+          cp package.json ./release-standalone/projectflow/
+          # Zip it up
+          cd ./release-standalone
+          zip -r ../projectflow-standalone-v${{ github.ref_name }}.zip projectflow/
+
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             projectflow-web-image-v${{ github.ref_name }}.tar.gz
+            projectflow-standalone-v${{ github.ref_name }}.zip
             docker-compose.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

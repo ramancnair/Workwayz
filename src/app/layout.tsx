@@ -7,6 +7,7 @@ import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 import { GlobalErrorReporter } from "@/components/GlobalErrorReporter";
 import { FlowPilotWidgetClient } from "@/components/flowpilot/FlowPilotWidgetClient";
+import { MaintenanceInterceptor } from "@/components/MaintenanceInterceptor";
 
 export const metadata: Metadata = {
   title: 'ProjectFlow',
@@ -36,6 +37,7 @@ export default function RootLayout({
         >
           <GlobalErrorReporter />
           <SupabaseBootstrap />
+          <MaintenanceInterceptor />
           <SetupInterceptor />
           {children}
           <FlowPilotWidgetClient />
