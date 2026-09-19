@@ -5,8 +5,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -21,123 +21,175 @@ import {
   Check,
   Search,
   Trash2,
-  FileCode,
-  Layers,
   Database,
+  X,
 } from 'lucide-react';
-import { StudioLog, getActiveStudioItems } from './testDataEngine';
+import {
+  StudioLog,
+  StudioLogBatch,
+  StudioProjectRef,
+  StudioPortfolioRef,
+  StudioUserRef,
+  getActiveStudioItems,
+} from './testDataEngine';
 
 interface StudioLogViewerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  studioLog: StudioLog | null;
+  batch?: StudioLogBatch | null;
+  runNumber?: number;
+  studioLog?: StudioLog | null;
   onWipeBatch?: (batchId: string) => void;
 }
 
 export function StudioLogViewerModal({
   open,
   onOpenChange,
+  batch,
+  runNumber,
   studioLog,
   onWipeBatch,
 }: StudioLogViewerModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState('all-items');
+  const [activeTab, setActiveTab] = useState<'items' | 'raw-json'>('items');
 
-  const activeItems = getActiveStudioItems(studioLog);
-  const totalItems =
-    activeItems.projectIds.length +
-    activeItems.portfolioIds.length +
-    activeItems.userIds.length;
+  // If a specific batch is provided, scope everything to that batch; otherwise fallback to the consolidated log
+  const projects: StudioProjectRef[] = batch
+    ? batch.projects || []
+    : getActiveStudioItems(studioLog).projects;
+
+  const portfolios: StudioPortfolioRef[] = batch
+    ? batch.portfolios || []
+    : getActiveStudioItems(studioLog).portfolios;
+
+  const users: StudioUserRef[] = batch
+    ? batch.users || []
+    : getActiveStudioItems(studioLog).users;
+
+  const totalItems = projects.length + portfolios.length + users.length;
+  const adminUsersCount = users.filter(
+    (u) => u.accessLevel === 'Administrator' || u.role === 'Administrator'
+  ).length;
+
+  const jsonPayload = batch || studioLog;
 
   const handleCopyJson = () => {
-    if (!studioLog) return;
-    navigator.clipboard.writeText(JSON.stringify(studioLog, null, 2));
+    if (!jsonPayload) return;
+    navigator.clipboard.writeText(JSON.stringify(jsonPayload, null, 2));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const query = searchQuery.toLowerCase().trim();
 
-  const filteredProjects = activeItems.projects.filter(
+  const filteredProjects = projects.filter(
     (p) =>
       p.id.toLowerCase().includes(query) ||
       p.name.toLowerCase().includes(query) ||
       (p.portfolioId && p.portfolioId.toLowerCase().includes(query))
   );
 
-  const filteredPortfolios = activeItems.portfolios.filter(
+  const filteredPortfolios = portfolios.filter(
     (p) =>
       p.id.toLowerCase().includes(query) ||
       p.name.toLowerCase().includes(query)
   );
 
-  const filteredUsers = activeItems.users.filter(
+  const filteredUsers = users.filter(
     (u) =>
       u.id.toLowerCase().includes(query) ||
-      u.name.toLowerCase().includes(query) ||
+      (u.firstName && u.firstName.toLowerCase().includes(query)) ||
+      (u.lastName && u.lastName.toLowerCase().includes(query)) ||
       u.email.toLowerCase().includes(query) ||
       (u.accessLevel && u.accessLevel.toLowerCase().includes(query))
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] flex flex-col p-0 overflow-hidden" bypassScrollWrapper>
         {/* Header */}
-        <div className="p-5 border-b bg-muted/20 space-y-2">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+        <div className="p-5 border-b bg-muted/20 space-y-2 shrink-0 relative">
+          <div className="flex items-center justify-between gap-3 pr-10 flex-wrap">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
                 <ShieldCheck className="w-5 h-5" />
               </div>
-              <div>
-                <DialogTitle className="text-lg font-bold">
-                  Test Data Studio Log & Manifest
+              <div className="min-w-0">
+                <DialogTitle className="text-lg font-bold truncate">
+                  {batch
+                    ? `Run #${runNumber ?? 1} Creation Log`
+                    : 'Test Data Studio Log & Manifest'}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Persistent registry tracking all mock data created by generation runs.
+                  {batch
+                    ? `Generated on ${new Date(batch.timestamp).toLocaleString()}${
+                        batch.preset ? ` (${batch.preset.toUpperCase()} Preset)` : ''
+                      }`
+                    : 'Persistent registry tracking all mock data created by generation runs.'}
                 </DialogDescription>
               </div>
             </div>
-            <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
-              {totalItems} Tracked Items ({studioLog?.batches?.length || 0} Runs)
-            </Badge>
+            <div className="flex items-center gap-2 shrink-0">
+              {batch?.preset && (
+                <Badge variant="outline" className="text-xs uppercase">
+                  {batch.preset}
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                {totalItems} Items Created
+              </Badge>
+            </div>
           </div>
 
-          {/* Storage Locations Notice */}
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap pt-1 font-mono">
-            <span className="flex items-center gap-1">
-              <Database className="w-3.5 h-3.5 text-blue-500" />
-              Firestore: <code className="text-foreground">settings/test_data_studio_log</code>
+          <DialogClose className="absolute right-4 top-4 shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-sm transition-all hover:bg-secondary/80 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+            <X className="h-3.5 w-3.5" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+
+          {/* Quick Metrics Bar */}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap pt-1 font-medium">
+            <span className="flex items-center gap-1.5 text-foreground">
+              <Briefcase className="w-3.5 h-3.5 text-primary" />
+              {projects.length} Projects
             </span>
             <span>•</span>
-            <span>
-              Cache: <code className="text-foreground">localStorage: projectflow_test_studio_manifest</code>
+            <span className="flex items-center gap-1.5 text-foreground">
+              <FolderKanban className="w-3.5 h-3.5 text-blue-500" />
+              {portfolios.length} Portfolios
             </span>
+            <span>•</span>
+            <span className="flex items-center gap-1.5 text-foreground">
+              <Users className="w-3.5 h-3.5 text-emerald-500" />
+              {users.length} Users {adminUsersCount > 0 ? `(${adminUsersCount} Admin)` : ''}
+            </span>
+            {batch?.batchId && (
+              <>
+                <span>•</span>
+                <span className="font-mono text-[10px] text-muted-foreground">ID: {batch.batchId}</span>
+              </>
+            )}
           </div>
         </div>
 
         {/* Content Tabs */}
         <div className="flex-1 overflow-hidden flex flex-col p-5 space-y-3">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-2 flex-wrap pb-1">
-              <TabsList className="grid grid-cols-3 w-full sm:w-auto">
-                <TabsTrigger value="all-items" className="text-xs">
-                  All Assets ({totalItems})
-                </TabsTrigger>
-                <TabsTrigger value="by-run" className="text-xs">
-                  By Run ({studioLog?.batches?.length || 0})
+              <TabsList className="grid grid-cols-2 w-full sm:w-auto">
+                <TabsTrigger value="items" className="text-xs">
+                  Created Assets ({totalItems})
                 </TabsTrigger>
                 <TabsTrigger value="raw-json" className="text-xs">
                   Raw JSON
                 </TabsTrigger>
               </TabsList>
 
-              {activeTab === 'all-items' && (
-                <div className="relative w-full sm:w-56 mt-2 sm:mt-0">
+              {activeTab === 'items' && (
+                <div className="relative w-full sm:w-64 mt-2 sm:mt-0">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                   <Input
-                    placeholder="Search by ID, name, email..."
+                    placeholder="Search ID, name, email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-8 pl-8 text-xs"
@@ -165,8 +217,8 @@ export function StudioLogViewerModal({
               )}
             </div>
 
-            {/* TAB 1: ALL ASSETS */}
-            <TabsContent value="all-items" className="flex-1 overflow-y-auto space-y-4 pr-1 mt-3">
+            {/* TAB 1: CREATED ASSETS */}
+            <TabsContent value="items" className="flex-1 overflow-y-auto space-y-4 pr-1 mt-3">
               {/* Projects */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold text-foreground uppercase tracking-wider">
@@ -182,7 +234,7 @@ export function StudioLogViewerModal({
                     {filteredProjects.map((p) => (
                       <div
                         key={p.id}
-                        className="bg-card border rounded p-2.5 text-xs flex flex-col justify-between space-y-1"
+                        className="bg-card border rounded p-2.5 text-xs flex flex-col justify-between space-y-1.5 shadow-sm"
                       >
                         <div className="flex items-center justify-between gap-1">
                           <code className="font-bold text-primary text-[11px]">{p.id}</code>
@@ -216,12 +268,12 @@ export function StudioLogViewerModal({
                     {filteredPortfolios.map((port) => (
                       <div
                         key={port.id}
-                        className="bg-card border rounded p-2.5 text-xs flex items-center justify-between gap-2"
+                        className="bg-card border rounded p-2.5 text-xs flex items-center justify-between gap-2 shadow-sm"
                       >
-                        <span className="text-foreground font-medium truncate" title={port.name}>
+                        <p className="text-foreground font-medium truncate" title={port.name}>
                           {port.name}
-                        </span>
-                        <code className="font-mono text-blue-600 dark:text-blue-400 text-[11px] shrink-0">
+                        </p>
+                        <code className="font-bold text-blue-600 dark:text-blue-400 text-[11px] shrink-0 font-mono">
                           {port.id}
                         </code>
                       </div>
@@ -234,8 +286,13 @@ export function StudioLogViewerModal({
               <div className="space-y-2 pt-2 border-t">
                 <div className="flex items-center justify-between text-xs font-semibold text-foreground uppercase tracking-wider">
                   <span className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-green-500" />
+                    <Users className="w-3.5 h-3.5 text-emerald-500" />
                     Users ({filteredUsers.length})
+                    {adminUsersCount > 0 && (
+                      <span className="text-amber-600 dark:text-amber-400 font-normal ml-1">
+                        ({adminUsersCount} Administrator)
+                      </span>
+                    )}
                   </span>
                 </div>
                 {filteredUsers.length === 0 ? (
@@ -245,13 +302,19 @@ export function StudioLogViewerModal({
                     {filteredUsers.map((u) => {
                       const isAdmin =
                         u.accessLevel === 'Administrator' || u.role === 'Administrator';
+                      const displayName =
+                        `${u.firstName || ''} ${u.lastName || ''}`.trim() ||
+                        u.email?.split('@')[0] ||
+                        u.id;
                       return (
                         <div
                           key={u.id}
-                          className="bg-card border rounded p-2.5 text-xs space-y-1"
+                          className={`bg-card border rounded p-2.5 text-xs flex flex-col justify-between space-y-1.5 shadow-sm ${
+                            isAdmin ? 'border-amber-500/40 bg-amber-500/5' : ''
+                          }`}
                         >
                           <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-foreground truncate">{u.name}</span>
+                            <span className="font-semibold text-foreground truncate">{displayName}</span>
                             <Badge
                               variant={isAdmin ? 'default' : 'secondary'}
                               className={`text-[10px] ${
@@ -275,102 +338,45 @@ export function StudioLogViewerModal({
               </div>
             </TabsContent>
 
-            {/* TAB 2: BY RUN */}
-            <TabsContent value="by-run" className="flex-1 overflow-y-auto space-y-3 pr-1 mt-3">
-              {(studioLog?.batches || []).length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-6 text-center">
-                  No generation runs logged yet.
-                </p>
-              ) : (
-                (studioLog?.batches || []).map((b, idx) => {
-                  const batchAdmins =
-                    b.users?.filter(
-                      (u) => u.accessLevel === 'Administrator' || u.role === 'Administrator'
-                    ).length || 0;
-
-                  return (
-                    <div
-                      key={b.batchId}
-                      className="border rounded-lg bg-card p-3.5 space-y-3 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-foreground">
-                            Run #{idx + 1}
-                          </span>
-                          {b.preset && (
-                            <Badge variant="outline" className="uppercase text-[10px]">
-                              {b.preset} Preset
-                            </Badge>
-                          )}
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {new Date(b.timestamp).toLocaleString()}
-                          </span>
-                        </div>
-
-                        {onWipeBatch && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onWipeBatch(b.batchId)}
-                            className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 gap-1.5"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete Run #{idx + 1}
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Assets in this run */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                        <div className="bg-muted/40 rounded p-2 border">
-                          <span className="text-[11px] text-muted-foreground block mb-1">
-                            Projects ({b.projects?.length || 0})
-                          </span>
-                          <p className="font-mono text-[11px] text-foreground truncate">
-                            {b.projects?.map((p) => p.id).join(', ') || 'None'}
-                          </p>
-                        </div>
-                        <div className="bg-muted/40 rounded p-2 border">
-                          <span className="text-[11px] text-muted-foreground block mb-1">
-                            Portfolios ({b.portfolios?.length || 0})
-                          </span>
-                          <p className="font-mono text-[11px] text-foreground truncate">
-                            {b.portfolios?.map((port) => port.id).join(', ') || 'None'}
-                          </p>
-                        </div>
-                        <div className="bg-muted/40 rounded p-2 border">
-                          <span className="text-[11px] text-muted-foreground block mb-1">
-                            Users ({b.users?.length || 0})
-                            {batchAdmins > 0 && (
-                              <span className="text-amber-600 dark:text-amber-400 font-semibold ml-1">
-                                ({batchAdmins} Admin)
-                              </span>
-                            )}
-                          </span>
-                          <p className="font-mono text-[11px] text-foreground truncate">
-                            {b.users?.map((u) => u.id).join(', ') || 'None'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </TabsContent>
-
-            {/* TAB 3: RAW JSON */}
+            {/* TAB 2: RAW JSON */}
             <TabsContent value="raw-json" className="flex-1 overflow-hidden flex flex-col mt-3">
               <div className="text-xs text-muted-foreground mb-2 flex items-center justify-between">
                 <span>
-                  The raw JSON manifest stored in Firestore (<code>settings/test_data_studio_log</code>)
+                  Exact JSON payload for this generation run:
                 </span>
               </div>
               <pre className="flex-1 overflow-auto p-3 bg-muted/60 border rounded-lg font-mono text-[11px] text-foreground leading-relaxed whitespace-pre select-all">
-                {JSON.stringify(studioLog, null, 2)}
+                {JSON.stringify(jsonPayload, null, 2)}
               </pre>
             </TabsContent>
           </Tabs>
+        </div>
+
+        {/* Footer */}
+        <div className="p-3 px-5 border-t bg-muted/20 flex items-center justify-between shrink-0">
+          {onWipeBatch && batch?.batchId ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onWipeBatch(batch.batchId);
+                onOpenChange(false);
+              }}
+              className="text-destructive hover:bg-destructive/10 border-destructive/30 text-xs h-8 gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete This Run
+            </Button>
+          ) : (
+            <div />
+          )}
+
+          <DialogClose asChild>
+            <Button variant="outline" size="sm" className="h-8 text-xs">
+              Close
+            </Button>
+          </DialogClose>
         </div>
       </DialogContent>
     </Dialog>

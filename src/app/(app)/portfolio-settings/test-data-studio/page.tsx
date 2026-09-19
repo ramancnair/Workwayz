@@ -37,6 +37,7 @@ import {
   recordStudioLog,
   getActiveStudioItems,
   StudioLog,
+  StudioLogBatch,
   StudioLogViewerModal,
 } from '@/dev-tools';
 
@@ -57,6 +58,7 @@ export default function TestDataStudioPage() {
   const activeItems = getActiveStudioItems(studioLog);
   const hasActiveStudioData = activeItems.projectIds.length > 0 || activeItems.portfolioIds.length > 0 || activeItems.userIds.length > 0;
   const [showLogViewer, setShowLogViewer] = useState(false);
+  const [selectedRun, setSelectedRun] = useState<{ batch: StudioLogBatch; runNumber: number } | null>(null);
 
   // Execution states
   const [isLoading, setIsLoading] = useState(false);
@@ -403,78 +405,11 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                     Tracked ({activeItems.projectIds.length + activeItems.portfolioIds.length + activeItems.userIds.length} items)
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  {studioLog?.lastUpdated && (
-                    <span className="text-[11px] text-muted-foreground">
-                      Last logged: {new Date(studioLog.lastUpdated).toLocaleTimeString()}
-                    </span>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowLogViewer(true)}
-                    className="h-7 text-xs gap-1.5 border-amber-500/30 hover:bg-amber-500/10 text-foreground font-medium"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-amber-500" />
-                    View Full Log
-                  </Button>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                The studio is actively tracking the following items created by recent generation runs. Clicking <strong>Wipe Studio Test Data</strong> reads this manifest to purge only these IDs and will remove studio-created admin users, while strictly leaving original users, existing projects, and existing portfolios untouched.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                <div
-                  onClick={() => setShowLogViewer(true)}
-                  className="bg-card border border-border hover:border-amber-500/50 hover:bg-muted/40 cursor-pointer rounded p-2.5 text-xs transition-colors group"
-                >
-                  <div className="font-semibold text-foreground flex items-center justify-between mb-1">
-                    <span className="group-hover:text-primary transition-colors">Projects:</span>
-                    <Badge variant="secondary" className="text-[10px]">{activeItems.projectIds.length}</Badge>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground font-mono truncate">
-                    {activeItems.projectIds.slice(0, 3).join(', ')}{activeItems.projectIds.length > 3 ? ` +${activeItems.projectIds.length - 3} more` : ''}
-                  </div>
-                  <span className="text-[10px] text-primary/80 group-hover:underline mt-1 block">
-                    Inspect all {activeItems.projectIds.length} projects &rarr;
+                {studioLog?.lastUpdated && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Last logged: {new Date(studioLog.lastUpdated).toLocaleTimeString()}
                   </span>
-                </div>
-                <div
-                  onClick={() => setShowLogViewer(true)}
-                  className="bg-card border border-border hover:border-amber-500/50 hover:bg-muted/40 cursor-pointer rounded p-2.5 text-xs transition-colors group"
-                >
-                  <div className="font-semibold text-foreground flex items-center justify-between mb-1">
-                    <span className="group-hover:text-primary transition-colors">Portfolios:</span>
-                    <Badge variant="secondary" className="text-[10px]">{activeItems.portfolioIds.length}</Badge>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground font-mono truncate">
-                    {activeItems.portfolioIds.slice(0, 3).join(', ')}{activeItems.portfolioIds.length > 3 ? ` +${activeItems.portfolioIds.length - 3} more` : ''}
-                  </div>
-                  <span className="text-[10px] text-primary/80 group-hover:underline mt-1 block">
-                    Inspect all {activeItems.portfolioIds.length} portfolios &rarr;
-                  </span>
-                </div>
-                <div
-                  onClick={() => setShowLogViewer(true)}
-                  className="bg-card border border-border hover:border-amber-500/50 hover:bg-muted/40 cursor-pointer rounded p-2.5 text-xs transition-colors group"
-                >
-                  <div className="font-semibold text-foreground flex items-center justify-between mb-1">
-                    <span className="group-hover:text-primary transition-colors">Users:</span>
-                    <Badge variant="secondary" className="text-[10px]">{activeItems.userIds.length}</Badge>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground font-mono truncate">
-                    {activeItems.users.filter(u => u.accessLevel === 'Administrator').length > 0 && (
-                      <span className="text-amber-600 dark:text-amber-400 font-semibold mr-1">
-                        ({activeItems.users.filter(u => u.accessLevel === 'Administrator').length} Admin)
-                      </span>
-                    )}
-                    {activeItems.userIds.slice(0, 3).join(', ')}{activeItems.userIds.length > 3 ? ` +${activeItems.userIds.length - 3} more` : ''}
-                  </div>
-                  <span className="text-[10px] text-primary/80 group-hover:underline mt-1 block">
-                    Inspect all {activeItems.userIds.length} users &rarr;
-                  </span>
-                </div>
+                )}
               </div>
 
               {/* Distinct Generation Runs Breakdown */}
@@ -510,17 +445,32 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                             <span>{b.users?.length || 0} Users {batchAdmins > 0 ? `(${batchAdmins} Admin)` : ''}</span>
                           </div>
                         </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={isLoading}
-                          onClick={() => handleWipeBatch(b.batchId)}
-                          className="text-destructive hover:bg-destructive/10 border-destructive/30 text-xs h-7 gap-1.5 shrink-0"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Delete Run #{idx + 1}
-                        </Button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRun({ batch: b, runNumber: idx + 1 });
+                              setShowLogViewer(true);
+                            }}
+                            className="h-7 text-xs gap-1.5 border-border hover:bg-muted text-foreground font-medium"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                            View Log
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isLoading}
+                            onClick={() => handleWipeBatch(b.batchId)}
+                            className="text-destructive hover:bg-destructive/10 border-destructive/30 text-xs h-7 gap-1.5"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Delete Run #{idx + 1}
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
@@ -821,6 +771,8 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
       <StudioLogViewerModal
         open={showLogViewer}
         onOpenChange={setShowLogViewer}
+        batch={selectedRun?.batch}
+        runNumber={selectedRun?.runNumber}
         studioLog={studioLog}
         onWipeBatch={handleWipeBatch}
       />

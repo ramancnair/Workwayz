@@ -37,6 +37,7 @@ import {
   recordStudioLog,
   getActiveStudioItems,
   StudioLog,
+  StudioLogBatch,
 } from './testDataEngine';
 import { StudioLogViewerModal } from './StudioLogViewerModal';
 import type { Portfolio } from '@/types';
@@ -57,6 +58,9 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
   const [studioLog, setStudioLog] = useState<StudioLog | null>(null);
   const [loadingLog, setLoadingLog] = useState(true);
 
+  const [showLogViewer, setShowLogViewer] = useState(false);
+  const [selectedRun, setSelectedRun] = useState<{ batch: StudioLogBatch; runNumber: number } | null>(null);
+
   // Configuration state
   const [config, setConfig] = useState<GeneratorConfig>(PRESET_CONFIGS.standard);
   const [targetPortfolioId, setTargetPortfolioId] = useState<string>('auto');
@@ -65,7 +69,6 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [progressMsg, setProgressMsg] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [showLogViewer, setShowLogViewer] = useState(false);
 
   // Load existing portfolios and studio log
   useEffect(() => {
@@ -381,27 +384,12 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                   Tracked ({activeItems.projectIds.length + activeItems.portfolioIds.length + activeItems.userIds.length} items)
                 </Badge>
               </div>
-              <div className="flex items-center gap-2">
-                {studioLog?.lastUpdated && (
-                  <span className="text-[10px] text-muted-foreground">
-                    Logged: {new Date(studioLog.lastUpdated).toLocaleTimeString()}
-                  </span>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowLogViewer(true)}
-                  className="h-6 text-[11px] px-2 gap-1 border-amber-500/30 hover:bg-amber-500/10 text-foreground"
-                >
-                  <Eye className="w-3 h-3 text-amber-500" />
-                  View Full Log
-                </Button>
-              </div>
+              {studioLog?.lastUpdated && (
+                <span className="text-[10px] text-muted-foreground">
+                  Logged: {new Date(studioLog.lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Active test data tracked: <strong>{activeItems.projectIds.length}</strong> project(s), <strong>{activeItems.portfolioIds.length}</strong> portfolio(s), <strong>{activeItems.userIds.length}</strong> user(s) (including studio admins). Wiping will strictly delete these items, preserving original users and genuine projects.
-            </p>
 
             {/* Distinct Generation Runs Breakdown */}
             <div className="space-y-2 pt-2 border-t border-amber-500/20">
@@ -436,17 +424,32 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                           <span>{b.users?.length || 0} Users {batchAdmins > 0 ? `(${batchAdmins} Admin)` : ''}</span>
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={isLoading}
-                        onClick={() => handleWipeBatch(b.batchId)}
-                        className="text-destructive hover:bg-destructive/10 border-destructive/30 text-[11px] h-6 px-2 gap-1 shrink-0"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Delete Run #{idx + 1}
-                      </Button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedRun({ batch: b, runNumber: idx + 1 });
+                            setShowLogViewer(true);
+                          }}
+                          className="h-6 text-[11px] px-2 gap-1 border-border hover:bg-muted text-foreground"
+                        >
+                          <Eye className="w-3 h-3 text-muted-foreground" />
+                          View Log
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isLoading}
+                          onClick={() => handleWipeBatch(b.batchId)}
+                          className="text-destructive hover:bg-destructive/10 border-destructive/30 text-[11px] h-6 px-2 gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete Run #{idx + 1}
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -797,6 +800,8 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
         <StudioLogViewerModal
           open={showLogViewer}
           onOpenChange={setShowLogViewer}
+          batch={selectedRun?.batch}
+          runNumber={selectedRun?.runNumber}
           studioLog={studioLog}
           onWipeBatch={handleWipeBatch}
         />
