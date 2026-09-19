@@ -2,42 +2,23 @@
 -- ProjectFlow Complete Database Schema for Supabase (QA Branch / Cloud & Docker)
 -- ==============================================================================
 -- This script provisions the complete schema for ProjectFlow, covering:
---  1. NoSQL Firebase Compatibility layer (for Firestore emulator & adapter)
---  2. Portfolios & Global Settings
---  3. Employees & Access Control
---  4. Projects & Project Members
---  5. Work Items: Epics, Sprints, Kanban, Stories (with QA defect tracking)
---  6. Quality Assurance: Test Cases, Test Plans, Test Cycles & Execution
---  7. Initial Estimation: Initial Impacted Systems & Initial Horizontals
---  8. Production RAID Logs: Risks, Assumptions, Issues, Dependencies
---  9. Worklogs & Timesheets
--- 10. Releases, Payment Milestones, Documents, Repositories, Environments, Fixed Costs
+--  1. Portfolios & Global Settings
+--  2. Employees & Access Control
+--  3. Projects & Project Members
+--  4. Work Items: Epics, Sprints, Kanban, Stories (with QA defect tracking)
+--  5. Quality Assurance: Test Cases, Test Plans, Test Cycles & Execution
+--  6. Initial Estimation: Initial Impacted Systems & Initial Horizontals
+--  7. Production RAID Logs: Risks, Assumptions, Issues, Dependencies
+--  8. Worklogs & Timesheets
+--  9. Releases, Payment Milestones, Documents, Repositories, Environments, Fixed Costs
+-- 10. Internal Messaging & Notifications
 -- 11. Row-Level Security (RLS) & Realtime Subscriptions
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ==============================================================================
--- 1. NO-SQL FIREBASE COMPATIBILITY LAYER (Used by supabase-firestore-adapter)
--- ==============================================================================
-
-CREATE TABLE IF NOT EXISTS public.firebase_compat (
-    path TEXT PRIMARY KEY,
-    collection_name TEXT NOT NULL,
-    project_id TEXT,
-    data JSONB NOT NULL DEFAULT '{}'::JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_firebase_compat_collection 
-ON public.firebase_compat(project_id, collection_name);
-
-CREATE INDEX IF NOT EXISTS idx_firebase_compat_data 
-ON public.firebase_compat USING GIN (data);
-
--- ==============================================================================
--- 2. ROOT ENTITIES: Portfolios, Employees, Global Settings & Holidays
+-- 1. ROOT ENTITIES: Portfolios, Employees, Global Settings & Holidays
 -- ==============================================================================
 
 -- Portfolios table (Top-level container for projects)
@@ -122,7 +103,10 @@ CREATE TABLE IF NOT EXISTS public.project_settings (
     "storyPointToHours" NUMERIC DEFAULT 8,
     "allocatedPaidLeavesPerYear" NUMERIC DEFAULT 18,
     "allowCarryOver" BOOLEAN DEFAULT FALSE,
-    "carryOverLimit" NUMERIC DEFAULT 0
+    "carryOverLimit" NUMERIC DEFAULT 0,
+    "testDataStudioEnabled" BOOLEAN DEFAULT FALSE,
+    "studioLog" JSONB DEFAULT '[]'::JSONB,
+    "data" JSONB DEFAULT '{}'::JSONB
 );
 
 -- ==============================================================================
@@ -552,6 +536,32 @@ CREATE TABLE IF NOT EXISTS public.fixed_costs (
 );
 
 -- ==============================================================================
+-- 10. INTERNAL MESSAGING & NOTIFICATIONS
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS public.messages (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+    "senderId" TEXT NOT NULL,
+    "senderName" TEXT NOT NULL,
+    "senderEmail" TEXT,
+    "senderAvatar" TEXT,
+    recipients JSONB DEFAULT '[]'::JSONB,
+    "recipientUserIds" TEXT[] DEFAULT '{}',
+    "distroIds" TEXT[] DEFAULT '{}',
+    subject TEXT DEFAULT '(No Subject)',
+    body TEXT DEFAULT '',
+    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+    "readBy" TEXT[] DEFAULT '{}',
+    "starredBy" TEXT[] DEFAULT '{}',
+    "deletedBy" TEXT[] DEFAULT '{}',
+    "purgedBy" TEXT[] DEFAULT '{}',
+    "replyToId" TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON public.messages("senderId");
+
+-- ==============================================================================
 -- 11. PERMISSIONS, ROW LEVEL SECURITY (RLS) & REALTIME
 -- ==============================================================================
 
@@ -582,7 +592,6 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE 
-            public.firebase_compat,
             public.projects,
             public.stories,
             public.sprints,
@@ -590,9 +599,11 @@ BEGIN
             public.employees,
             public.test_cases,
             public.test_cycles,
-            public.test_cycle_test_cases;
+            public.test_cycle_test_cases,
+            public.messages;
     END IF;
 EXCEPTION
     WHEN duplicate_object THEN NULL;
     WHEN undefined_table THEN NULL;
 END $$;
+

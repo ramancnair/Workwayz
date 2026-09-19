@@ -205,11 +205,13 @@ export function parsePathDetails(fullPath: string) {
     } else if (parts[0] === 'settings' && parts.length > 1) {
         if (parts[1] === 'archiveSettings' || parts[1] === 'archive_settings') {
             collectionName = 'archive_settings';
-        } else if (parts[1] === 'accessControlSettings' || parts[1] === 'accessSettings' || parts[1] === 'access_control_settings') {
+        } else if (parts[1] === 'accessControlSettings' || parts[1] === 'accessSettings' || parts[1] === 'access_control_settings' || parts[1] === 'accessControl' || parts[1] === 'access_control') {
             collectionName = 'access_control_settings';
         } else {
             collectionName = 'project_settings';
         }
+    } else if (parts[0] === 'accessControl' || parts[0] === 'access_control') {
+        collectionName = 'access_control_settings';
     } else {
         collectionName = parts[0];
     }
@@ -229,11 +231,15 @@ export const COLLECTION_TO_TABLE: Record<string, string> = {
     allUsers: 'employees',
     projects: 'projects',
     holidays: 'holidays',
+    customHolidays: 'holidays',
+    custom_holidays: 'holidays',
 
     // Settings
     settings: 'project_settings',
     projectSettings: 'project_settings',
     project_settings: 'project_settings',
+    accessControl: 'access_control_settings',
+    access_control: 'access_control_settings',
     accessControlSettings: 'access_control_settings',
     access_control_settings: 'access_control_settings',
     accessSettings: 'access_control_settings',
@@ -284,6 +290,8 @@ export const COLLECTION_TO_TABLE: Record<string, string> = {
     documents: 'project_documents',
     projectDocuments: 'project_documents',
     project_documents: 'project_documents',
+    pmoDocuments: 'project_documents',
+    pmo_documents: 'project_documents',
     paymentMilestones: 'payment_milestones',
     payment_milestones: 'payment_milestones',
     codeRepositories: 'code_repositories',
@@ -293,6 +301,9 @@ export const COLLECTION_TO_TABLE: Record<string, string> = {
     fixed_costs: 'fixed_costs',
     projectMembers: 'project_members',
     project_members: 'project_members',
+
+    // Messages
+    messages: 'messages',
 };
 
 export function resolveTableName(rawName: string): string {
@@ -304,7 +315,7 @@ export function resolveTableName(rawName: string): string {
     if (COLLECTION_TO_TABLE[snake]) {
         return COLLECTION_TO_TABLE[snake];
     }
-    return 'firebase_compat';
+    return snake;
 }
 
 export const TABLE_COLUMNS: Record<string, string[]> = {
@@ -313,7 +324,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     access_control_settings: ['id', 'pageAccess', 'crudAccess'],
     archive_settings: ['id', 'autoArchiveCompletedProjects', 'autoArchiveAfterMonths', 'autoDeleteArchivedProjects', 'autoDeleteAfterMonths', 'customDeleteMonths'],
     holidays: ['id', 'projectId', 'date', 'description', 'type'],
-    project_settings: ['id', 'projectId', 'weeklyOffDays', 'sprintDurationInWeeks', 'sprintStartDay', 'overrideGlobalHolidays', 'manMonthToDays', 'manDayToHours', 'storyPointToHours', 'allocatedPaidLeavesPerYear', 'allowCarryOver', 'carryOverLimit'],
+    project_settings: ['id', 'projectId', 'weeklyOffDays', 'sprintDurationInWeeks', 'sprintStartDay', 'overrideGlobalHolidays', 'manMonthToDays', 'manDayToHours', 'storyPointToHours', 'allocatedPaidLeavesPerYear', 'allowCarryOver', 'carryOverLimit', 'testDataStudioEnabled', 'studioLog', 'runs', 'totalProjectsCreated', 'totalPortfoliosCreated', 'totalUsersCreated', 'data'],
     projects: ['id', 'name', 'portfolioId', 'summary', 'description', 'projectManagerId', 'pricingModel', 'status', 'startDate', 'endDate', 'overallStatus', 'scopeStatus', 'costStatus', 'timeStatus', 'statusComments', 'statusHistory', 'isArchived', 'archivedAt', 'projectValue', 'isProjectValueOverridden', 'monthlyBilledValue', 'pmoApproval', 'isDeleted', 'deletedAt', 'created_at'],
     project_members: ['id', 'projectId', 'employeeId', 'role', 'onboardingDate', 'offloadingDate', 'billedRate', 'costRate', 'availability'],
     epics: ['id', 'projectId', 'title', 'description', 'created_at'],
@@ -341,6 +352,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     code_repositories: ['id', 'projectId', 'name', 'url', 'expiryDate'],
     environments: ['id', 'projectId', 'name', 'order', 'url', 'renewalDate'],
     fixed_costs: ['id', 'projectId', 'name', 'cost', 'type'],
+    messages: ['id', 'senderId', 'senderName', 'senderEmail', 'senderAvatar', 'recipients', 'recipientUserIds', 'distroIds', 'subject', 'body', 'createdAt', 'readBy', 'starredBy', 'deletedBy', 'purgedBy', 'replyToId'],
 };
 
 export function sanitizeForTable(tableName: string, data: any): any {
@@ -379,31 +391,20 @@ export const addDoc = async (colRef: any, data: any) => {
     const { projectId, testCycleId, testPlanId, collectionName } = parsePathDetails(fullPath);
     const tableName = resolveTableName(collectionName);
 
-    if (tableName !== 'firebase_compat') {
-        let insertData: any = { ...data, id: docId };
-        if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
-            insertData.projectId = projectId;
-        }
-        if (testCycleId) {
-            insertData.testCycleId = testCycleId;
-        }
-        if (testPlanId) {
-            insertData.testPlanId = testPlanId;
-        }
-
-        const sanitized = sanitizeForTable(tableName, insertData);
-        const { error } = await supabase!.from(tableName).insert([sanitized]);
-        if (error) throw error;
-    } else {
-        const { error } = await supabase!.from('firebase_compat').upsert({
-            collection_name: collectionName,
-            path: fullPath,
-            project_id: projectId,
-            data: data,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'path' });
-        if (error) throw error;
+    let insertData: any = { ...data, id: docId };
+    if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
+        insertData.projectId = projectId;
     }
+    if (testCycleId) {
+        insertData.testCycleId = testCycleId;
+    }
+    if (testPlanId) {
+        insertData.testPlanId = testPlanId;
+    }
+
+    const sanitized = sanitizeForTable(tableName, insertData);
+    const { error } = await supabase!.from(tableName).insert([sanitized]);
+    if (error) throw error;
 
     scheduleListenerNotification(fullPath);
     return { id: docId, path: fullPath };
@@ -415,47 +416,36 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
     const tableName = resolveTableName(collectionName);
     const docId = fullPath.split('/').pop();
 
-    if (tableName !== 'firebase_compat') {
-        let upsertData: any = { ...data, id: docId };
-        if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
-            upsertData.projectId = projectId;
-        }
-        if (testCycleId) {
-            upsertData.testCycleId = testCycleId;
-        }
-        if (testPlanId) {
-            upsertData.testPlanId = testPlanId;
-        }
+    let upsertData: any = { ...data, id: docId };
+    if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
+        upsertData.projectId = projectId;
+    }
+    if (testCycleId) {
+        upsertData.testCycleId = testCycleId;
+    }
+    if (testPlanId) {
+        upsertData.testPlanId = testPlanId;
+    }
 
-        if (options?.merge) {
-            const { data: existing } = await supabase!.from(tableName).select('*').eq('id', docId).single();
-            if (existing) {
-                let mergedData: any = { ...existing };
-                for (const key in upsertData) {
-                    if (upsertData[key] && upsertData[key].type === 'arrayUnion') {
-                        const currentArr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
-                        mergedData[key] = [...currentArr, ...upsertData[key].elements];
-                    } else if (upsertData[key] && upsertData[key].type === 'arrayRemove') {
-                        const currentArr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
-                        const toRemove = JSON.stringify(upsertData[key].elements);
-                        mergedData[key] = currentArr.filter((el: any) => !toRemove.includes(JSON.stringify(el)));
-                    } else {
-                        mergedData[key] = upsertData[key];
-                    }
+    if (options?.merge) {
+        const { data: existing } = await supabase!.from(tableName).select('*').eq('id', docId).single();
+        if (existing) {
+            let mergedData: any = { ...existing };
+            for (const key in upsertData) {
+                if (upsertData[key] && upsertData[key].type === 'arrayUnion') {
+                    const currentArr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
+                    mergedData[key] = [...currentArr, ...upsertData[key].elements];
+                } else if (upsertData[key] && upsertData[key].type === 'arrayRemove') {
+                    const currentArr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
+                    const toRemove = JSON.stringify(upsertData[key].elements);
+                    mergedData[key] = currentArr.filter((el: any) => !toRemove.includes(JSON.stringify(el)));
+                } else {
+                    mergedData[key] = upsertData[key];
                 }
-                const sanitized = sanitizeForTable(tableName, mergedData);
-                const { error } = await supabase!.from(tableName).update(sanitized).eq('id', docId);
-                if (error) throw error;
-            } else {
-                for (const key in upsertData) {
-                    if (upsertData[key] && (upsertData[key].type === 'arrayUnion' || upsertData[key].type === 'arrayRemove')) {
-                        upsertData[key] = upsertData[key].type === 'arrayUnion' ? upsertData[key].elements : [];
-                    }
-                }
-                const sanitized = sanitizeForTable(tableName, upsertData);
-                const { error } = await supabase!.from(tableName).insert([sanitized]);
-                if (error) throw error;
             }
+            const sanitized = sanitizeForTable(tableName, mergedData);
+            const { error } = await supabase!.from(tableName).update(sanitized).eq('id', docId);
+            if (error) throw error;
         } else {
             for (const key in upsertData) {
                 if (upsertData[key] && (upsertData[key].type === 'arrayUnion' || upsertData[key].type === 'arrayRemove')) {
@@ -463,44 +453,18 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
                 }
             }
             const sanitized = sanitizeForTable(tableName, upsertData);
-            const { error } = await supabase!.from(tableName).upsert(sanitized, { onConflict: 'id' });
+            const { error } = await supabase!.from(tableName).insert([sanitized]);
             if (error) throw error;
         }
     } else {
-        if (options?.merge) {
-            const { data: existing } = await supabase!.from('firebase_compat').select('data').eq('path', fullPath).single();
-            let mergedData = existing ? { ...existing.data } : {};
-            
-            for (const key in data) {
-                if (data[key] && data[key].type === 'arrayUnion') {
-                    const currentArr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
-                    mergedData[key] = [...currentArr, ...data[key].elements];
-                } else if (data[key] && data[key].type === 'arrayRemove') {
-                    const currentArr = Array.isArray(mergedData[key]) ? mergedData[key] : [];
-                    const toRemove = JSON.stringify(data[key].elements);
-                    mergedData[key] = currentArr.filter((el: any) => !toRemove.includes(JSON.stringify(el)));
-                } else {
-                    mergedData[key] = data[key];
-                }
+        for (const key in upsertData) {
+            if (upsertData[key] && (upsertData[key].type === 'arrayUnion' || upsertData[key].type === 'arrayRemove')) {
+                upsertData[key] = upsertData[key].type === 'arrayUnion' ? upsertData[key].elements : [];
             }
-            const { error } = await supabase!.from('firebase_compat').upsert({
-                path: fullPath,
-                collection_name: collectionName,
-                project_id: projectId,
-                data: mergedData,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'path' });
-            if (error) throw error;
-        } else {
-            const { error } = await supabase!.from('firebase_compat').upsert({
-                path: fullPath,
-                collection_name: collectionName,
-                project_id: projectId,
-                data: data,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'path' });
-            if (error) throw error;
         }
+        const sanitized = sanitizeForTable(tableName, upsertData);
+        const { error } = await supabase!.from(tableName).upsert(sanitized, { onConflict: 'id' });
+        if (error) throw error;
     }
 
     scheduleListenerNotification(fullPath);
@@ -516,13 +480,8 @@ export const deleteDoc = async (docRef: any) => {
     const tableName = resolveTableName(collectionName);
     const docId = pathStr.split('/').pop();
 
-    if (tableName !== 'firebase_compat') {
-        const { error } = await supabase!.from(tableName).delete().eq('id', docId);
-        if (error) throw error;
-    } else {
-        const { error } = await supabase!.from('firebase_compat').delete().eq('path', pathStr);
-        if (error) throw error;
-    }
+    const { error } = await supabase!.from(tableName).delete().eq('id', docId);
+    if (error) throw error;
     
     scheduleListenerNotification(pathStr);
 };
@@ -536,23 +495,13 @@ export const getDoc = async (docRef: any) => {
     const tableName = resolveTableName(collectionName);
     const docId = fullPath.split('/').pop();
 
-    if (tableName !== 'firebase_compat') {
-        const { data, error } = await supabase!.from(tableName).select('*').eq('id', docId).single();
-        if (error && error.code !== 'PGRST116') throw error;
-        return {
-            id: docId,
-            exists: () => !!data,
-            data: () => data ? hydrateData(data) : undefined
-        };
-    } else {
-        const { data, error } = await supabase!.from('firebase_compat').select('*').eq('path', fullPath).single();
-        if (error && error.code !== 'PGRST116') throw error;
-        return {
-            id: docId,
-            exists: () => !!data,
-            data: () => data ? hydrateData(data.data) : undefined
-        };
-    }
+    const { data, error } = await supabase!.from(tableName).select('*').eq('id', docId).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return {
+        id: docId,
+        exists: () => !!data,
+        data: () => data ? hydrateData(data) : undefined
+    };
 };
 
 export const query = (colRef: any, ...constraints: any[]) => {
@@ -574,134 +523,72 @@ export const getDocs = async (queryRef: any) => {
     const tableName = resolveTableName(targetCollection);
     let request = supabase!.from(tableName).select('*');
 
-    if (tableName !== 'firebase_compat') {
-        if (testCycleId) {
-            request = request.eq('testCycleId', testCycleId);
-        }
-        if (testPlanId) {
-            request = request.eq('testPlanId', testPlanId);
-        }
-        if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
-            request = request.eq('projectId', projectId);
-        }
-
-        if (queryRef.constraints) {
-            const colList = TABLE_COLUMNS[tableName];
-            const allowed = colList ? new Set(colList) : null;
-
-            for (const c of queryRef.constraints) {
-                if (c.type === 'where') {
-                    let field = c.fieldPath;
-                    if (allowed && !allowed.has(field)) {
-                        if (field === 'createdAt' && allowed.has('created_at')) field = 'created_at';
-                        else if (field === 'created_at' && allowed.has('createdAt')) field = 'createdAt';
-                        else if (field === 'updatedAt' && allowed.has('updated_at')) field = 'updated_at';
-                        else if (field === 'updated_at' && allowed.has('updatedAt')) field = 'updatedAt';
-                    }
-
-                    if (c.opStr === '==') {
-                        request = request.eq(field, serializeValue(c.value));
-                    }
-                }
-            }
-        }
-
-        const { data, error } = await request;
-        if (error) throw error;
-
-        let filteredData = data || [];
-
-        // Apply != constraints in memory
-        if (queryRef.constraints) {
-            for (const c of queryRef.constraints) {
-                if (c.type === 'where' && c.opStr === '!=') {
-                    filteredData = filteredData.filter((row: any) => {
-                        let val = row[c.fieldPath];
-                        if (val === undefined && c.fieldPath === 'createdAt') val = row['created_at'];
-                        if (val === undefined && c.fieldPath === 'created_at') val = row['createdAt'];
-                        if (val === undefined && c.fieldPath === 'updatedAt') val = row['updated_at'];
-                        if (val === undefined && c.fieldPath === 'updated_at') val = row['updatedAt'];
-                        return val !== c.value;
-                    });
-                }
-            }
-        }
-
-        const docs = filteredData.map((row: any) => {
-            return {
-                id: row.id,
-                ref: { path: queryRef.path ? `${queryRef.path}/${row.id}` : `${targetCollection}/${row.id}` },
-                data: () => hydrateData(row)
-            };
-        });
-
-        return {
-            size: docs.length,
-            empty: docs.length === 0,
-            docs,
-            forEach: (cb: any) => docs.forEach(cb)
-        };
-    } else {
-        // firebase_compat fallback
-        let targetDepth = 0;
-        if (queryRef.type === 'collectionGroup') {
-            request = request.eq('collection_name', targetCollection);
-        } else if (queryRef.path) {
-            targetDepth = queryRef.path.split('/').length + 1;
-            request = request.eq('collection_name', targetCollection).like('path', `${queryRef.path}/%`);
-        }
-
-        if (queryRef.constraints) {
-            for (const c of queryRef.constraints) {
-                if (c.type === 'where') {
-                    if (c.opStr === '==') {
-                        if (typeof c.value === 'string') {
-                            request = request.eq(`data->>${c.fieldPath}`, c.value);
-                        } else if (typeof c.value === 'boolean') {
-                            request = request.eq(`data->${c.fieldPath}`, c.value);
-                        } else {
-                            request = request.eq(`data->${c.fieldPath}`, c.value);
-                        }
-                    }
-                }
-            }
-        }
-
-        const { data, error } = await request;
-        if (error) throw error;
-
-        let filteredData = data || [];
-        if (targetDepth > 0) {
-            filteredData = filteredData.filter((row: any) => row.path.split('/').length === targetDepth);
-        }
-
-        if (queryRef.constraints) {
-            for (const c of queryRef.constraints) {
-                if (c.type === 'where' && c.opStr === '!=') {
-                    filteredData = filteredData.filter((row: any) => {
-                        const val = row.data ? row.data[c.fieldPath] : undefined;
-                        return val !== c.value;
-                    });
-                }
-            }
-        }
-
-        const docs = filteredData.map((row: any) => {
-            const docId = row.path.split('/').pop();
-            return {
-                id: docId,
-                ref: { path: row.path },
-                data: () => hydrateData(row.data)
-            };
-        });
-
-        return {
-            size: docs.length,
-            empty: docs.length === 0,
-            docs,
-            forEach: (cb: any) => docs.forEach(cb)
-        };
+    if (testCycleId) {
+        request = request.eq('testCycleId', testCycleId);
     }
+    if (testPlanId) {
+        request = request.eq('testPlanId', testPlanId);
+    }
+    if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
+        request = request.eq('projectId', projectId);
+    }
+
+    if (queryRef.constraints) {
+        const colList = TABLE_COLUMNS[tableName];
+        const allowed = colList ? new Set(colList) : null;
+
+        for (const c of queryRef.constraints) {
+            if (c.type === 'where') {
+                let field = c.fieldPath;
+                if (allowed && !allowed.has(field)) {
+                    if (field === 'createdAt' && allowed.has('created_at')) field = 'created_at';
+                    else if (field === 'created_at' && allowed.has('createdAt')) field = 'createdAt';
+                    else if (field === 'updatedAt' && allowed.has('updated_at')) field = 'updated_at';
+                    else if (field === 'updated_at' && allowed.has('updatedAt')) field = 'updatedAt';
+                }
+
+                if (c.opStr === '==') {
+                    request = request.eq(field, serializeValue(c.value));
+                }
+            }
+        }
+    }
+
+    const { data, error } = await request;
+    if (error) throw error;
+
+    let filteredData = data || [];
+
+    // Apply != constraints in memory
+    if (queryRef.constraints) {
+        for (const c of queryRef.constraints) {
+            if (c.type === 'where' && c.opStr === '!=') {
+                filteredData = filteredData.filter((row: any) => {
+                    let val = row[c.fieldPath];
+                    if (val === undefined && c.fieldPath === 'createdAt') val = row['created_at'];
+                    if (val === undefined && c.fieldPath === 'created_at') val = row['createdAt'];
+                    if (val === undefined && c.fieldPath === 'updatedAt') val = row['updated_at'];
+                    if (val === undefined && c.fieldPath === 'updated_at') val = row['updatedAt'];
+                    return val !== c.value;
+                });
+            }
+        }
+    }
+
+    const docs = filteredData.map((row: any) => {
+        return {
+            id: row.id,
+            ref: { path: queryRef.path ? `${queryRef.path}/${row.id}` : `${targetCollection}/${row.id}` },
+            data: () => hydrateData(row)
+        };
+    });
+
+    return {
+        size: docs.length,
+        empty: docs.length === 0,
+        docs,
+        forEach: (cb: any) => docs.forEach(cb)
+    };
 };
 
 // ============================================================================
@@ -752,8 +639,7 @@ const TABLE_DEPENDENCY_ORDER: Record<string, number> = {
 
     worklogs: 4,
     worklog_submissions: 4,
-
-    firebase_compat: 5,
+    messages: 4,
 };
 
 export const writeBatch = (dbInstance: any) => {
@@ -857,35 +743,14 @@ export const onSnapshot = (ref: any, onNext: (snapshot: any) => void, onError?: 
         const tableName = resolveTableName(collectionName);
         const channelName = `realtime_${identifier.replace(/[^a-zA-Z0-9]/g, '_')}_${channelCounter++}`;
 
-        if (tableName !== 'firebase_compat') {
-            channel = supabase!.channel(channelName)
-                .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, (payload: any) => {
-                    const changedId = payload.new?.id || payload.old?.id;
-                    const docPath = ref.path ? (ref.path.split('/').length % 2 === 0 ? ref.path : `${ref.path}/${changedId}`) : `${collectionName}/${changedId}`;
-                    
-                    const isExactDoc = ref.type === 'doc' && ref.path.endsWith(changedId);
-                    const isDirectChild = ref.type !== 'doc' && ref.path && docPath.startsWith(ref.path);
-                    const isMatchingGroup = ref.type === 'collectionGroup' && tableName === resolveTableName(ref.collectionId);
-
-                    if (isExactDoc || isDirectChild || isMatchingGroup) {
-                        if (ref.type === 'doc') {
-                            getDoc(ref).then(onNext).catch(err => { if (onError) onError(err); });
-                        } else {
-                            getDocs(ref).then(onNext).catch(err => { if (onError) onError(err); });
-                        }
-                    }
-                })
-                .subscribe();
-        } else {
-            channel = supabase!.channel(channelName)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'firebase_compat' }, (payload: any) => {
-                const changedPath = payload.new?.path || payload.old?.path || '';
-                const isExactDoc = ref.type === 'doc' && changedPath === ref.path;
-                const isDirectChild = ref.type !== 'doc' && ref.path &&
-                    changedPath.startsWith(ref.path + '/') &&
-                    changedPath.split('/').length === ref.path.split('/').length + 1;
-                const isMatchingGroup = ref.type === 'collectionGroup' &&
-                    (payload.new?.collection_name === ref.collectionId || payload.old?.collection_name === ref.collectionId);
+        channel = supabase!.channel(channelName)
+            .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, (payload: any) => {
+                const changedId = payload.new?.id || payload.old?.id;
+                const docPath = ref.path ? (ref.path.split('/').length % 2 === 0 ? ref.path : `${ref.path}/${changedId}`) : `${collectionName}/${changedId}`;
+                
+                const isExactDoc = ref.type === 'doc' && ref.path.endsWith(changedId);
+                const isDirectChild = ref.type !== 'doc' && ref.path && docPath.startsWith(ref.path);
+                const isMatchingGroup = ref.type === 'collectionGroup' && tableName === resolveTableName(ref.collectionId);
 
                 if (isExactDoc || isDirectChild || isMatchingGroup) {
                     if (ref.type === 'doc') {
@@ -896,7 +761,6 @@ export const onSnapshot = (ref: any, onNext: (snapshot: any) => void, onError?: 
                 }
             })
             .subscribe();
-        }
     } catch (e) {
         // Fallback to local pub-sub
     }

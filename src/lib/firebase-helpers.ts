@@ -19,21 +19,12 @@ export async function deleteProjectAndSubcollections(projectId: string) {
     throw new Error("Database is not initialized.");
   }
 
-  // If using Supabase, execute a single atomic SQL delete covering project and all subcollections
+  // If using Supabase, delete the project from the relational projects table.
+  // Foreign key constraints with ON DELETE CASCADE automatically delete all subcollections
+  // (stories, sprints, epics, test cycles, test cases, risks, issues, worklogs, etc.).
   if (isSupa && supabase) {
-    const { error } = await supabase
-      .from('firebase_compat')
-      .delete()
-      .or(`project_id.eq.${projectId},path.eq.projects/${projectId},path.like.projects/${projectId}/%`);
-
+    const { error } = await supabase.from('projects').delete().eq('id', projectId);
     if (error) throw error;
-
-    // Clean up relational projects table if present
-    try {
-      await supabase.from('projects').delete().eq('id', projectId);
-    } catch {
-      // Ignored
-    }
 
     scheduleListenerNotification(`projects/${projectId}`);
     scheduleListenerNotification('projects');

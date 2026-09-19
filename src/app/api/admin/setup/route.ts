@@ -175,42 +175,6 @@ export async function POST(request: Request) {
             } catch (dbErr) {
                 console.warn('Could not write to native employees table:', dbErr);
             }
-
-            // 3. Also sync into firebase_compat table if present
-            try {
-                const { data: existingCompat } = await supabaseAdmin
-                    .from('firebase_compat')
-                    .select('*')
-                    .eq('collection_name', 'employees')
-                    .eq('data->>email', adminEmail)
-                    .single();
-
-                if (existingCompat) {
-                    const updatedData = { ...existingCompat.data, accessLevel: 'Administrator', isEnabled: true, isDeleted: false, uid };
-                    await supabaseAdmin.from('firebase_compat').update({ data: updatedData }).eq('path', existingCompat.path);
-                } else if (empId) {
-                    await supabaseAdmin.from('firebase_compat').insert([{
-                        path: `employees/${empId}`,
-                        collection_name: 'employees',
-                        project_id: null,
-                        data: {
-                            id: empId,
-                            empId,
-                            firstName,
-                            lastName,
-                            email: adminEmail,
-                            phone: 'N/A',
-                            experience: 0,
-                            accessLevel: 'Administrator',
-                            avatar: 'https://placehold.co/40x40.png',
-                            isDeleted: false,
-                            isEnabled: true,
-                            uid
-                        }
-                    }]);
-                }
-            } catch (e) { }
-
         } else {
             // Firebase Initialization
             const { initializeApp, deleteApp } = await import('firebase/app');
