@@ -143,12 +143,29 @@ export default function HolidayPage() {
     }
   };
   
+  const parseHolidayDate = (val: any): Date => {
+    if (!val) return new Date();
+    if (val instanceof Date) return isNaN(val.getTime()) ? new Date() : val;
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      const dmyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+      if (dmyMatch) {
+        const [, d, m, y] = dmyMatch;
+        const dObj = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00.000Z`);
+        if (!isNaN(dObj.getTime())) return dObj;
+      }
+      const dObj = new Date(trimmed);
+      if (!isNaN(dObj.getTime())) return dObj;
+    }
+    return new Date();
+  };
+
   const openHolidayDialog = (holiday: Holiday | null) => {
     setEditingHoliday(holiday);
     if (holiday) {
       holidayForm.reset({
         description: holiday.description,
-        date: format(new Date(holiday.date), 'yyyy-MM-dd'),
+        date: format(parseHolidayDate(holiday.date), 'yyyy-MM-dd'),
         type: holiday.type,
       });
     } else {
@@ -159,15 +176,17 @@ export default function HolidayPage() {
   
   const onHolidaySubmit = async (values: z.infer<typeof holidayFormSchema>) => {
     if (!db) return;
+    const holidayDate = parseHolidayDate(values.date);
     const holidayData: any = {
       description: values.description,
-      date: Timestamp.fromDate(new Date(values.date)),
+      date: Timestamp.fromDate(holidayDate),
     };
     if (values.type) {
        holidayData.type = values.type;
     }
 
     let success = false;
+    let errorMessage = '';
     try {
         if (editingHoliday) {
             await updateDoc(doc(db, 'holidays', editingHoliday.id), holidayData);
@@ -175,15 +194,16 @@ export default function HolidayPage() {
             await addDoc(collection(db, 'holidays'), holidayData);
         }
         success = true;
-    } catch (e) {
+    } catch (e: any) {
         console.error("Error saving holiday:", e);
+        errorMessage = e?.message || 'Could not save holiday.';
     }
 
     if (success) {
       toast({ title: 'Success', description: `Holiday ${editingHoliday ? 'updated' : 'added'}.` });
       setIsHolidayDialogOpen(false);
     } else {
-      toast({ variant: 'destructive', title: 'Error', description: `Could not save holiday.` });
+      toast({ variant: 'destructive', title: 'Error', description: errorMessage || `Could not save holiday.` });
     }
   };
 

@@ -11,6 +11,9 @@ import { MaintenanceInterceptor } from "@/components/MaintenanceInterceptor";
 
 import { getServerRuntimeConfig } from '@/app/api/runtime-config/route';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'ProjectFlow',
   description: 'Manage your projects with ease and clarity.',

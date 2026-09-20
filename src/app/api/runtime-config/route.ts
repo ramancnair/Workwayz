@@ -2,23 +2,35 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // This endpoint is called by the client to get runtime config.
-// It reads .env.local server-side (works after container restart)
+// It reads .env.local or .env server-side (works after container restart)
 // and returns only the SAFE PUBLIC values needed for client-side initialization.
 export function getServerRuntimeConfig() {
     const envMap = new Map<string, string>();
 
-    // 1. Read .env.local
-    const envPath = path.join(process.cwd(), '.env.local');
-    if (fs.existsSync(envPath)) {
-        const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-        lines.forEach(line => {
-            if (!line || !line.includes('=')) return;
-            const idx = line.indexOf('=');
-            const key = line.substring(0, idx).trim();
-            const val = line.substring(idx + 1).trim().replace(/^"/, '').replace(/"$/, '');
-            if (key) envMap.set(key, val);
-        });
+    // 1. Read .env.local or .env
+    const cwd = process.cwd();
+    const envCandidates = [
+        path.join(cwd, '.env.local'),
+        path.join(cwd, '.env'),
+    ];
+
+    for (const p of envCandidates) {
+        if (fs.existsSync(p)) {
+            try {
+                const lines = fs.readFileSync(p, 'utf8').split('\n');
+                lines.forEach(line => {
+                    if (!line || !line.includes('=')) return;
+                    const idx = line.indexOf('=');
+                    const key = line.substring(0, idx).trim();
+                    const val = line.substring(idx + 1).trim().replace(/^"/, '').replace(/"$/, '');
+                    if (key && !envMap.has(key)) envMap.set(key, val);
+                });
+            } catch {}
+        }
     }
 
     // 2. Read connections.json if present
@@ -26,7 +38,7 @@ export function getServerRuntimeConfig() {
     let connsAuth: any = null;
     let connsAi: any = null;
     try {
-        const connsPath = path.join(process.cwd(), 'connections.json');
+        const connsPath = path.join(cwd, 'connections.json');
         if (fs.existsSync(connsPath)) {
             const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
             connsDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
@@ -42,6 +54,7 @@ export function getServerRuntimeConfig() {
         (connsDb?.supabaseUrl ? 'supabase' : null) ||
         (envMap.get('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : null) ||
         process.env.NEXT_PUBLIC_DB_PROVIDER ||
+        process.env.NEXT_PUBLIC_DATABASE_PROVIDER ||
         'supabase';
 
     const authProvider =

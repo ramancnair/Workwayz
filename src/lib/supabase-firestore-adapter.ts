@@ -21,6 +21,9 @@ export class Timestamp {
     }
 
     static fromDate(date: Date) {
+        if (!date || isNaN(date.getTime())) {
+            date = new Date();
+        }
         return new Timestamp(Math.floor(date.getTime() / 1000), 0);
     }
 
@@ -103,13 +106,28 @@ export function scheduleListenerNotification(changedDocPath: string) {
 export function serializeValue(val: any): any {
     if (val === null || val === undefined) return val;
     if (val instanceof Timestamp || (typeof val === 'object' && 'seconds' in val && 'nanoseconds' in val)) {
+        if (isNaN(val.seconds)) return null;
         return new Date(val.seconds * 1000).toISOString();
     }
     if (val instanceof Date) {
+        if (isNaN(val.getTime())) return null;
         return val.toISOString();
     }
     if (typeof val === 'object' && typeof val.toDate === 'function') {
-        return val.toDate().toISOString();
+        try {
+            const d = val.toDate();
+            if (d instanceof Date && !isNaN(d.getTime())) return d.toISOString();
+        } catch {}
+        return null;
+    }
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        // Handle DD-MM-YYYY or DD/MM/YYYY date strings safely
+        const dmyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+        if (dmyMatch) {
+            const [, d, m, y] = dmyMatch;
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00.000Z`;
+        }
     }
     if (Array.isArray(val)) {
         return val.map(serializeValue);

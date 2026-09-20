@@ -478,9 +478,10 @@ export default function ProjectsDashboard() {
       setIsPortfolioDialogOpen(false);
       setEditingPortfolio(null);
       portfolioForm.reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving portfolio:', error);
-      toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingPortfolio ? 'update' : 'create'} portfolio.` });
+      const msg = error?.message ? `: ${error.message}` : '.';
+      toast({ variant: 'destructive', title: 'Error', description: `Could not ${editingPortfolio ? 'update' : 'create'} portfolio${msg}` });
     }
   };
 

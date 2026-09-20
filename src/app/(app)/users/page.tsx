@@ -297,17 +297,22 @@ export default function UsersPage() {
       return;
     }
 
+    const parseUserDate = (val: any): string | null => {
+      if (!val || typeof val !== 'string' || val.trim() === '') return null;
+      const trimmed = val.trim();
+      const dmyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+      if (dmyMatch) {
+        const [, d, m, y] = dmyMatch;
+        const dObj = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00.000Z`);
+        if (!isNaN(dObj.getTime())) return dObj.toISOString();
+      }
+      const dObj = new Date(trimmed);
+      return !isNaN(dObj.getTime()) ? dObj.toISOString() : null;
+    };
+
     const valuesWithDates: any = { ...values };
-    if (values.employmentStartDate && values.employmentStartDate.trim() !== '') {
-      valuesWithDates.employmentStartDate = new Date(values.employmentStartDate).toISOString();
-    } else {
-      valuesWithDates.employmentStartDate = null;
-    }
-    if (values.employmentEndDate && values.employmentEndDate.trim() !== '') {
-      valuesWithDates.employmentEndDate = new Date(values.employmentEndDate).toISOString();
-    } else {
-      valuesWithDates.employmentEndDate = null;
-    }
+    valuesWithDates.employmentStartDate = parseUserDate(values.employmentStartDate);
+    valuesWithDates.employmentEndDate = parseUserDate(values.employmentEndDate);
 
     if (values.costAmount !== undefined && values.costAmount !== null && String(values.costAmount).trim() !== '') {
       const parsedCost = parseFloat(String(values.costAmount));
@@ -369,9 +374,10 @@ export default function UsersPage() {
       }
       setIsDialogOpen(false);
       setEditingUser(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving user", error);
-      toast({ variant: "destructive", title: "Error", description: `Could not save user.` });
+      const msg = error?.message ? `: ${error.message}` : '.';
+      toast({ variant: "destructive", title: "Error", description: `Could not save user${msg}` });
     } finally {
       setIsSubmitting(false);
     }
