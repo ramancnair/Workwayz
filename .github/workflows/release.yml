@@ -44,8 +44,8 @@ jobs:
           npm ci
           npm run build
           mkdir -p ./release-standalone/projectflow
-          # Copy standalone output
-          cp -r .next/standalone/* ./release-standalone/projectflow/
+          # Copy standalone output (including hidden directories like .next)
+          cp -a .next/standalone/. ./release-standalone/projectflow/
           # Copy static files (standalone needs this)
           mkdir -p ./release-standalone/projectflow/.next
           cp -r .next/static ./release-standalone/projectflow/.next/
