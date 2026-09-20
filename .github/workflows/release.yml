@@ -40,6 +40,10 @@ jobs:
           node-version: 20
 
       - name: Build Standalone ZIP
+        env:
+          NEXT_PUBLIC_DB_PROVIDER: supabase
+          NEXT_PUBLIC_DATABASE_PROVIDER: supabase
+          NEXT_PUBLIC_AUTH_PROVIDER: supabase
         run: |
           npm ci
           npm run build

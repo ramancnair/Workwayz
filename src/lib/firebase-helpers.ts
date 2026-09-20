@@ -1,10 +1,8 @@
 
-import { db } from './db-provider';
+import { db, getIsSupa } from './db-provider';
 import { collection, getDocs, writeBatch, doc } from '@/lib/db-provider';
 import { supabase } from './supabase';
 import { scheduleListenerNotification } from './supabase-firestore-adapter';
-
-const isSupa = process.env.NEXT_PUBLIC_DB_PROVIDER === 'supabase';
 
 const SUBCOLLECTIONS = [
   'epics', 'stories', 'sprints', 'employees', 'testCases', 'risks', 
@@ -20,7 +18,7 @@ export async function deleteProjectAndSubcollections(projectId: string) {
   }
 
   // If using Supabase, execute a single atomic SQL delete covering project and all subcollections
-  if (isSupa && supabase) {
+  if (getIsSupa() && supabase) {
     const { error } = await supabase
       .from('firebase_compat')
       .delete()

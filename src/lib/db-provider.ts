@@ -2,7 +2,56 @@ import * as FB from 'firebase/firestore';
 import * as SB from './supabase-firestore-adapter';
 import { db as fbDb, auth as fbAuth } from './firebase';
 
-const isSupa = process.env.NEXT_PUBLIC_DB_PROVIDER === 'supabase';
+import { supabase } from './supabase';
+
+/**
+ * Dynamically resolves whether Supabase or Firebase is the active database provider.
+ * Works across both server-side SSR and client-side (using injected window.__PROJECTFLOW_CONFIG__).
+ */
+export function getIsSupa(): boolean {
+  if (typeof window !== 'undefined') {
+    const winCfg = (window as any).__PROJECTFLOW_CONFIG__;
+    if (winCfg?.dbProvider) {
+      return winCfg.dbProvider === 'supabase';
+    }
+    // If Supabase URL or anon key exists on window or client, default to Supabase
+    if (winCfg?.supabaseUrl) return true;
+  }
+
+  // Server-side / process.env check
+  if (process.env.NEXT_PUBLIC_DB_PROVIDER === 'supabase' || process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'supabase') {
+    return true;
+  }
+  if (process.env.NEXT_PUBLIC_DB_PROVIDER === 'firebase' || process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'firebase') {
+    return false;
+  }
+
+  // Check server-side filesystem if running in Node
+  if (typeof window === 'undefined') {
+    try {
+      const req = eval('require');
+      const fs = req('fs');
+      const path = req('path');
+      const connsPath = path.join(process.cwd(), 'connections.json');
+      if (fs.existsSync(connsPath)) {
+        const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
+        const active = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
+        if (active?.provider === 'supabase') return true;
+        if (active?.provider === 'firebase') return false;
+      }
+    } catch {}
+  }
+
+  // If Firebase has no project ID configured, default to Supabase
+  if (!fbDb) {
+    return true;
+  }
+
+  return true; // Default to Supabase for modern ProjectFlow instances
+}
+
+// Kept for backwards-compatibility where static boolean was expected
+export const isSupa = true;
 
 // Global registry of active snapshot listeners to allow clean, instant detachment on logout
 const activeListeners = new Set<() => void>();
@@ -144,7 +193,7 @@ const safeFbOnSnapshot = (ref: any, ...args: any[]) => {
 };
 
 const safeOnSnapshot = (ref: any, ...args: any[]) => {
-  if (isSupa) {
+  if (getIsSupa()) {
     const unsub = (SB.onSnapshot as any)(ref, ...args);
     const wrapped = () => {
       activeListeners.delete(wrapped);
@@ -158,25 +207,42 @@ const safeOnSnapshot = (ref: any, ...args: any[]) => {
   return safeFbOnSnapshot(ref, ...args);
 };
 
-export const collection = (isSupa ? SB.collection : FB.collection) as any;
-export const doc = (isSupa ? SB.doc : FB.doc) as any;
-export const addDoc = (isSupa ? SB.addDoc : FB.addDoc) as any;
-export const setDoc = (isSupa ? SB.setDoc : FB.setDoc) as any;
-export const updateDoc = (isSupa ? SB.updateDoc : FB.updateDoc) as any;
-export const deleteDoc = (isSupa ? SB.deleteDoc : FB.deleteDoc) as any;
-export const getDoc = (isSupa ? SB.getDoc : FB.getDoc) as any;
-export const query = (isSupa ? SB.query : FB.query) as any;
-export const where = (isSupa ? SB.where : FB.where) as any;
-export const getDocs = (isSupa ? SB.getDocs : FB.getDocs) as any;
-export const writeBatch = (isSupa ? SB.writeBatch : FB.writeBatch) as any;
-export const arrayUnion = (isSupa ? SB.arrayUnion : FB.arrayUnion) as any;
-export const arrayRemove = (isSupa ? SB.arrayRemove : FB.arrayRemove) as any;
+export const collection = ((...args: any[]) => ((getIsSupa() ? SB.collection : FB.collection) as any)(...args)) as any;
+export const doc = ((...args: any[]) => ((getIsSupa() ? SB.doc : FB.doc) as any)(...args)) as any;
+export const addDoc = ((...args: any[]) => ((getIsSupa() ? SB.addDoc : FB.addDoc) as any)(...args)) as any;
+export const setDoc = ((...args: any[]) => ((getIsSupa() ? SB.setDoc : FB.setDoc) as any)(...args)) as any;
+export const updateDoc = ((...args: any[]) => ((getIsSupa() ? SB.updateDoc : FB.updateDoc) as any)(...args)) as any;
+export const deleteDoc = ((...args: any[]) => ((getIsSupa() ? SB.deleteDoc : FB.deleteDoc) as any)(...args)) as any;
+export const getDoc = ((...args: any[]) => ((getIsSupa() ? SB.getDoc : FB.getDoc) as any)(...args)) as any;
+export const query = ((...args: any[]) => ((getIsSupa() ? SB.query : FB.query) as any)(...args)) as any;
+export const where = ((...args: any[]) => ((getIsSupa() ? SB.where : FB.where) as any)(...args)) as any;
+export const getDocs = ((...args: any[]) => ((getIsSupa() ? SB.getDocs : FB.getDocs) as any)(...args)) as any;
+export const writeBatch = ((...args: any[]) => ((getIsSupa() ? SB.writeBatch : FB.writeBatch) as any)(...args)) as any;
+export const arrayUnion = ((...args: any[]) => ((getIsSupa() ? SB.arrayUnion : FB.arrayUnion) as any)(...args)) as any;
+export const arrayRemove = ((...args: any[]) => ((getIsSupa() ? SB.arrayRemove : FB.arrayRemove) as any)(...args)) as any;
 export const onSnapshot = safeOnSnapshot as any;
-export const Timestamp = (isSupa ? SB.Timestamp : FB.Timestamp) as any;
-export const orderBy = (isSupa ? SB.orderBy : FB.orderBy) as any;
-export const collectionGroup = (isSupa ? SB.collectionGroup : FB.collectionGroup) as any;
+export const orderBy = ((...args: any[]) => ((getIsSupa() ? SB.orderBy : FB.orderBy) as any)(...args)) as any;
+export const collectionGroup = ((...args: any[]) => ((getIsSupa() ? SB.collectionGroup : FB.collectionGroup) as any)(...args)) as any;
 
-import { supabase } from './supabase';
-export const db = (isSupa ? supabase : fbDb) as any;
+export const Timestamp = new Proxy(FB.Timestamp as any, {
+  get(_target, prop) {
+    const TargetClass = getIsSupa() ? SB.Timestamp : FB.Timestamp;
+    return (TargetClass as any)[prop];
+  },
+  construct(_target, args) {
+    const TargetClass = getIsSupa() ? SB.Timestamp : FB.Timestamp;
+    return new (TargetClass as any)(...args);
+  }
+}) as any;
+
+export const db = new Proxy({} as any, {
+  get(_target, prop: string) {
+    const targetDb = getIsSupa() ? supabase : fbDb;
+    if (!targetDb) return undefined;
+    const value = (targetDb as any)[prop];
+    return typeof value === 'function' ? value.bind(targetDb) : value;
+  }
+}) as any;
+
 export type Firestore = any;
 

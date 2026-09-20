@@ -50,7 +50,16 @@ async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
 function getClientSync(): SupabaseClient | null {
     if (_client) return _client;
 
-    // Try build-time env first (works in dev, or if passed as Docker build args)
+    // 1. Try window.__PROJECTFLOW_CONFIG__ (injected directly into HTML by RootLayout at request time)
+    if (typeof window !== 'undefined' && (window as any).__PROJECTFLOW_CONFIG__) {
+        const winCfg = (window as any).__PROJECTFLOW_CONFIG__;
+        if (winCfg.supabaseUrl && winCfg.supabaseAnonKey) {
+            _client = createSupabaseClient(winCfg.supabaseUrl, winCfg.supabaseAnonKey);
+            return _client;
+        }
+    }
+
+    // 2. Try build-time env (works in dev, or if passed as Docker build args)
     const buildUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const buildKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -59,7 +68,7 @@ function getClientSync(): SupabaseClient | null {
         return _client;
     }
 
-    // Try cached runtime config (populated after first async fetch)
+    // 3. Try cached runtime config (populated after async fetch)
     if (_runtimeConfig?.supabaseUrl && _runtimeConfig?.supabaseAnonKey) {
         _client = createSupabaseClient(_runtimeConfig.supabaseUrl, _runtimeConfig.supabaseAnonKey);
         return _client;
@@ -69,7 +78,7 @@ function getClientSync(): SupabaseClient | null {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SERVER-SIDE: Initialize directly from process.env (works after restart)
+// SERVER-SIDE: Initialize directly from process.env or connections.json/.env.local
 // CLIENT-SIDE: Use a Proxy that defers initialization until runtime config loads
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -77,6 +86,24 @@ function buildServerClient(): SupabaseClient | null {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (url && key) return createSupabaseClient(url, key);
+
+    // Fallback on server: read connections.json directly if process.env isn't set
+    if (typeof window === 'undefined') {
+        try {
+            const req = eval('require');
+            const fs = req('fs');
+            const path = req('path');
+            const p = path.join(process.cwd(), 'connections.json');
+            if (fs.existsSync(p)) {
+                const conns = JSON.parse(fs.readFileSync(p, 'utf8'));
+                const active = conns.database?.find((d: any) => d.isActive) || conns.database?.[0];
+                if (active?.supabaseUrl && active?.supabaseAnonKey) {
+                    return createSupabaseClient(active.supabaseUrl, active.supabaseAnonKey);
+                }
+            }
+        } catch {}
+    }
+
     return null;
 }
 
