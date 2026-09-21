@@ -55,6 +55,7 @@ import {
   Sparkles,
   UserCog,
   Mail,
+  RefreshCw,
 } from "lucide-react";
 import { db, collection, query, where, onSnapshot, unsubscribeAllListeners } from "@/lib/db-provider";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -314,6 +315,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: '/portfolio-settings/test-data-studio',
       label: 'Test Data Studio',
       icon: Sparkles,
+      group: 'portfolio'
+    },
+    {
+      id: 'system-update',
+      href: '/portfolio-settings/system-update',
+      label: 'System Update',
+      icon: RefreshCw,
       group: 'portfolio'
     },
     {

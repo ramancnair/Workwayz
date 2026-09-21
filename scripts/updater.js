@@ -1,91 +1,216 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
+const http = require('http');
 
 console.log('ProjectFlow Updater started...');
 
-// Paths
-const currentDir = process.cwd();
+// Parse arguments
+const args = process.argv.slice(2);
+const params = {};
+for (let i = 0; i < args.length; i++) {
+  if (args[i].startsWith('--')) {
+    params[args[i].substring(2)] = args[i + 1];
+    i++;
+  }
+}
+
+const currentDir = params.cwd || process.cwd();
+const serverPid = params['server-pid'] ? parseInt(params['server-pid'], 10) : null;
+const port = params.port || process.env.PORT || '3000';
+
 const dataDir = path.join(currentDir, 'data');
 const maintenanceFile = path.join(dataDir, '.maintenance');
 const updateZip = path.join(dataDir, 'update.zip');
-const backupDir = path.join(currentDir, '..', 'projectflow_backup_' + Date.now());
-const tempExtractDir = path.join(currentDir, '..', 'projectflow_temp_extract');
+const updateErrorLog = path.join(dataDir, 'update_error.log');
+
+const timestamp = Date.now();
+const backupDir = path.join(currentDir, '..', `projectflow_backup_${timestamp}`);
+const tempExtractDir = path.join(currentDir, '..', `projectflow_temp_extract_${timestamp}`);
+
+function logError(msg, err) {
+  const errorMsg = `[${new Date().toISOString()}] ERROR: ${msg} ${err ? (err.message || err) : ''}\n`;
+  console.error(errorMsg);
+  fs.appendFileSync(updateErrorLog, errorMsg);
+}
+
+function checkHealth(url, timeoutMs = 30000, intervalMs = 1500) {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+
+    const attempt = () => {
+      if (Date.now() - startTime > timeoutMs) {
+        return reject(new Error('Health check timed out'));
+      }
+
+      const req = http.get(url, (res) => {
+        // We are checking /api/health/maintenance.
+        // It returns 503 if maintenance mode is on (which we haven't deleted yet)
+        // or 200 if OK. Either way, if it responds, the server is UP!
+        if (res.statusCode === 200 || res.statusCode === 503) {
+          resolve(true);
+        } else {
+          setTimeout(attempt, intervalMs);
+        }
+      });
+
+      req.on('error', () => {
+        setTimeout(attempt, intervalMs);
+      });
+      req.end();
+    };
+
+    attempt();
+  });
+}
 
 async function runUpdate() {
-  try {
-    // 1. Wait a few seconds to let the main Node process release file locks if needed
-    // (though in this architecture, the main app is still running, PM2 will handle the restart)
-    console.log('Waiting 5 seconds before starting extraction...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+  let oldServerKilled = false;
+  let newServerProcess = null;
 
-    // Check if zip exists
-    if (!fs.existsSync(updateZip)) {
-      throw new Error(`Update package not found at ${updateZip}`);
+  try {
+    // 1. Snapshot Backup
+    console.log(`Taking pre-update snapshot to ${backupDir}...`);
+    if (fs.existsSync(backupDir)) fs.rmSync(backupDir, { recursive: true, force: true });
+    fs.mkdirSync(backupDir, { recursive: true });
+
+    // Copy critical code folders (skip data/ and node_modules/ if huge, but we need node_modules for rollback)
+    // Standalone has minimal node_modules, so copy all except 'data' and '.git'
+    const items = fs.readdirSync(currentDir);
+    for (const item of items) {
+      if (item === 'data' || item === '.git' || item.startsWith('projectflow_')) continue;
+      fs.cpSync(path.join(currentDir, item), path.join(backupDir, item), { recursive: true, force: true });
     }
 
     // 2. Extract ZIP
     console.log(`Extracting ${updateZip} to ${tempExtractDir}...`);
-    if (fs.existsSync(tempExtractDir)) {
-      fs.rmSync(tempExtractDir, { recursive: true, force: true });
-    }
+    if (!fs.existsSync(updateZip)) throw new Error(`Update package not found at ${updateZip}`);
+    
+    if (fs.existsSync(tempExtractDir)) fs.rmSync(tempExtractDir, { recursive: true, force: true });
     fs.mkdirSync(tempExtractDir, { recursive: true });
 
-    // OS-agnostic extraction (fallback to tar/unzip or powershell)
     if (process.platform === 'win32') {
       execSync(`powershell -command "Expand-Archive -Path '${updateZip}' -DestinationPath '${tempExtractDir}' -Force"`, { stdio: 'inherit' });
     } else {
       execSync(`unzip -o "${updateZip}" -d "${tempExtractDir}"`, { stdio: 'inherit' });
     }
 
-    // 3. Backup current files (excluding 'data' folder if it's large, but here we just backup everything except node_modules maybe)
-    console.log(`Backing up current installation to ${backupDir}...`);
-    // Note: A full robust updater would carefully copy/move. For this demonstration:
-    // We will just copy the new files OVER the current directory, rather than moving the whole directory 
-    // to avoid breaking PM2's working directory reference.
-    
-    // The zip from our github action has a top-level 'projectflow' folder.
-    const extractedProjectFlowDir = path.join(tempExtractDir, 'projectflow');
-    
-    if (fs.existsSync(extractedProjectFlowDir)) {
-      console.log('Copying new files over current installation...');
-      // Copy recursively (Node 16.7+)
-      fs.cpSync(extractedProjectFlowDir, currentDir, { recursive: true, force: true });
-    } else {
-      throw new Error('Invalid update package structure. Expected a "projectflow" root folder inside zip.');
+    let extractedProjectFlowDir = path.join(tempExtractDir, 'projectflow');
+    if (!fs.existsSync(extractedProjectFlowDir)) {
+      if (fs.existsSync(path.join(tempExtractDir, 'server.js'))) {
+        extractedProjectFlowDir = tempExtractDir;
+      } else {
+        throw new Error('Invalid update package structure. Could not find server.js.');
+      }
     }
 
-    // 4. Clean up zip and temp
-    console.log('Cleaning up temporary files...');
+    // 3. Terminate Old Process
+    console.log(`Terminating old server process (PID: ${serverPid})...`);
+    if (serverPid) {
+      try {
+        if (process.platform === 'win32') {
+          execSync(`taskkill /F /PID ${serverPid}`, { stdio: 'ignore' });
+        } else {
+          process.kill(serverPid, 'SIGTERM');
+        }
+        oldServerKilled = true;
+        await new Promise(r => setTimeout(r, 2000)); // wait for locks to release
+      } catch (err) {
+        console.log(`Could not kill server PID ${serverPid}. It might already be stopped.`);
+      }
+    }
+
+    // 4. Clean Directory Swap
+    console.log('Swapping files cleanly...');
+    // Delete old .next, public, server.js
+    ['.next', 'public', 'server.js', 'scripts', 'package.json'].forEach(target => {
+      const p = path.join(currentDir, target);
+      if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+    });
+
+    // Copy new files
+    fs.cpSync(extractedProjectFlowDir, currentDir, { recursive: true, force: true });
+
+    // 5. Cleanup temp extract
     fs.rmSync(tempExtractDir, { recursive: true, force: true });
     fs.unlinkSync(updateZip);
 
-    // 5. Turn off maintenance mode
-    console.log('Disabling maintenance mode...');
-    if (fs.existsSync(maintenanceFile)) {
-      fs.unlinkSync(maintenanceFile);
-    }
+    // 6. Relaunch Server
+    console.log('Relaunching server...');
+    const outLog = fs.openSync(path.join(dataDir, 'server.log'), 'a');
+    const errLog = fs.openSync(path.join(dataDir, 'server-err.log'), 'a');
 
-    // 6. Restart Application
-    console.log('Restarting application...');
-    // Assuming PM2 is managing the process named 'projectflow'
-    try {
-      execSync('pm2 restart projectflow', { stdio: 'inherit' });
-    } catch (pm2Err) {
-      console.log('PM2 restart failed or PM2 not found. Trying npm start...');
-      // Fallback: If no PM2, maybe just exit and hope systemd/docker restarts it.
-      // But this is standalone, so we will attempt to let the service manager handle it.
-    }
+    // We start node server.js detached
+    newServerProcess = spawn(process.execPath, [path.join(currentDir, 'server.js')], {
+      cwd: currentDir,
+      detached: true,
+      stdio: ['ignore', outLog, errLog],
+      env: {
+        ...process.env,
+        PORT: port,
+        HOSTNAME: process.env.HOSTNAME || '0.0.0.0',
+        NODE_ENV: 'production'
+      }
+    });
+    newServerProcess.unref();
+
+    console.log(`New server spawned with PID: ${newServerProcess.pid}`);
+
+    // 7. Health Check
+    console.log('Running health check...');
+    await checkHealth(`http://localhost:${port}/api/health/maintenance`);
+
+    // Success!
+    console.log('Update verified and successful!');
+    if (fs.existsSync(maintenanceFile)) fs.unlinkSync(maintenanceFile);
     
-    console.log('Update completed successfully.');
+    // Optionally remove backup
+    fs.rmSync(backupDir, { recursive: true, force: true });
+
     process.exit(0);
 
   } catch (error) {
-    console.error('Update failed:', error);
-    // Remove maintenance lock if we failed so app becomes usable again
-    if (fs.existsSync(maintenanceFile)) {
-      fs.unlinkSync(maintenanceFile);
+    logError('Update failed:', error);
+
+    // AUTOMATIC ROLLBACK
+    console.log('Initiating automatic rollback...');
+    if (newServerProcess && newServerProcess.pid) {
+      try {
+        if (process.platform === 'win32') execSync(`taskkill /F /PID ${newServerProcess.pid}`, { stdio: 'ignore' });
+        else process.kill(newServerProcess.pid, 'SIGKILL');
+      } catch(e) {}
     }
+
+    try {
+      if (fs.existsSync(backupDir)) {
+        console.log('Restoring from backup snapshot...');
+        ['.next', 'public', 'server.js', 'scripts', 'package.json'].forEach(target => {
+          const p = path.join(currentDir, target);
+          if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+        });
+        
+        fs.cpSync(backupDir, currentDir, { recursive: true, force: true });
+      }
+    } catch(rollbackErr) {
+      logError('Rollback failed:', rollbackErr);
+    }
+
+    if (fs.existsSync(maintenanceFile)) fs.unlinkSync(maintenanceFile);
+
+    // Restart old server
+    if (oldServerKilled) {
+      console.log('Restarting previous server...');
+      const outLog = fs.openSync(path.join(dataDir, 'server.log'), 'a');
+      const errLog = fs.openSync(path.join(dataDir, 'server-err.log'), 'a');
+      const oldProcess = spawn(process.execPath, [path.join(currentDir, 'server.js')], {
+        cwd: currentDir,
+        detached: true,
+        stdio: ['ignore', outLog, errLog],
+        env: { ...process.env, PORT: port, HOSTNAME: process.env.HOSTNAME || '0.0.0.0', NODE_ENV: 'production' }
+      });
+      oldProcess.unref();
+    }
+
     process.exit(1);
   }
 }

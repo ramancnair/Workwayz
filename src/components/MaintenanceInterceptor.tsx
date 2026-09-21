@@ -9,40 +9,78 @@ export function MaintenanceInterceptor() {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   useEffect(() => {
-    // Check maintenance status periodically
-    const checkMaintenance = async () => {
+    // 1. Listen for explicit update start from Admin UI (same tab)
+    const handleUpdateStart = () => setIsMaintenance(true);
+    window.addEventListener('pf_maintenance_start', handleUpdateStart);
+
+    // 2. Listen for storage events (if update started in another tab)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'pf_system_updating' && e.newValue === 'true') {
+        setIsMaintenance(true);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 3. Intercept global fetch to catch 503s
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.status === 503) {
+        setIsMaintenance(true);
+      }
+      return response;
+    };
+
+    // 4. Also check on tab focus (visibility change) - passive check
+    const checkOnFocus = async () => {
+      if (isMaintenance) return; // Already in maintenance
+      try {
+        const res = await originalFetch('/api/health/maintenance', { headers: { 'Cache-Control': 'no-cache' } });
+        if (res.status === 503) setIsMaintenance(true);
+      } catch (e) {
+        // Ignore fetch errors in passive check
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkOnFocus();
+    };
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', checkOnFocus);
+    
+    // Initial passive check on mount
+    checkOnFocus();
+
+    return () => {
+      window.removeEventListener('pf_maintenance_start', handleUpdateStart);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', checkOnFocus);
+      window.fetch = originalFetch;
+    };
+  }, [isMaintenance]);
+
+  // Active polling ONLY starts when we enter maintenance mode
+  useEffect(() => {
+    if (!isMaintenance) return;
+
+    const checkRecovery = async () => {
       try {
         const res = await fetch('/api/health/maintenance', {
           headers: { 'Cache-Control': 'no-cache' }
         });
         
-        if (res.status === 503) {
-          // We are in maintenance mode
-          setIsMaintenance(true);
-        } else if (res.status === 200) {
-          // If we were in maintenance mode, and now we are back to 200, it means the update is done!
-          // We should reload the page to load the new app bundle.
-          if (isMaintenance) {
-            window.location.reload();
-          } else {
-            setIsMaintenance(false);
-            setReconnectAttempts(0);
-          }
+        if (res.status === 200) {
+          // Server is back!
+          localStorage.removeItem('pf_system_updating');
+          window.location.reload();
         }
       } catch (err) {
-        // If the fetch fails completely (network error / server offline), 
-        // we might be in the middle of a restart.
-        if (isMaintenance) {
-          setReconnectAttempts(prev => prev + 1);
-        }
+        setReconnectAttempts(prev => prev + 1);
       }
     };
 
-    // Initial check
-    checkMaintenance();
-
-    // Poll every 3 seconds
-    const interval = setInterval(checkMaintenance, 3000);
+    // Poll aggressively (every 3 seconds) since we are actively waiting for reboot
+    const interval = setInterval(checkRecovery, 3000);
     return () => clearInterval(interval);
   }, [isMaintenance]);
 

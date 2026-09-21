@@ -224,9 +224,11 @@ export const onSnapshot = safeOnSnapshot as any;
 export const orderBy = ((...args: any[]) => ((getIsSupa() ? SB.orderBy : FB.orderBy) as any)(...args)) as any;
 export const collectionGroup = ((...args: any[]) => ((getIsSupa() ? SB.collectionGroup : FB.collectionGroup) as any)(...args)) as any;
 
-export const Timestamp = new Proxy(FB.Timestamp as any, {
+const dummyTimestampTarget = function() {};
+export const Timestamp = new Proxy(dummyTimestampTarget as any, {
   get(_target, prop) {
     const TargetClass = getIsSupa() ? SB.Timestamp : FB.Timestamp;
+    if (!TargetClass) return undefined;
     return (TargetClass as any)[prop];
   },
   construct(_target, args) {
@@ -236,7 +238,8 @@ export const Timestamp = new Proxy(FB.Timestamp as any, {
 }) as any;
 
 export const db = new Proxy({} as any, {
-  get(_target, prop: string) {
+  get(_target, prop: string | symbol) {
+    if (prop === 'then') return undefined;
     const targetDb = getIsSupa() ? supabase : fbDb;
     if (!targetDb) return undefined;
     const value = (targetDb as any)[prop];

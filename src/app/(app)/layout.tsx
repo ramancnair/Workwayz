@@ -120,6 +120,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (hasAccess('AI Config')) return '/portfolio-settings/ai-config';
         if (hasAccess('Archive')) return '/portfolio-settings/archive';
         if (hasAccess('Test Data Studio')) return '/portfolio-settings/test-data-studio';
+        if (hasAccess('System Update')) return '/portfolio-settings/system-update';
         return '/portfolio-settings';
       case 'trash':
         return '/portfolio-trash';
