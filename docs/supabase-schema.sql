@@ -10,9 +10,10 @@
 --  6. Initial Estimation: Initial Impacted Systems & Initial Horizontals
 --  7. Production RAID Logs: Risks, Assumptions, Issues, Dependencies
 --  8. Worklogs & Timesheets
---  9. Releases, Payment Milestones, Documents, Repositories, Environments, Fixed Costs
--- 10. Internal Messaging & Notifications
--- 11. Row-Level Security (RLS) & Realtime Subscriptions
+--  9. Releases, Payment Milestones, Documents, Repositories
+-- 10. Environments & Fixed Costs
+-- 11. Internal Messaging & Notifications
+-- 12. Row-Level Security (RLS) & Realtime Subscriptions
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -536,7 +537,7 @@ CREATE TABLE IF NOT EXISTS public.fixed_costs (
 );
 
 -- ==============================================================================
--- 10. INTERNAL MESSAGING & NOTIFICATIONS
+-- 11. INTERNAL MESSAGING & NOTIFICATIONS
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS public.messages (
@@ -560,9 +561,10 @@ CREATE TABLE IF NOT EXISTS public.messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages("createdAt" DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON public.messages("senderId");
+CREATE INDEX IF NOT EXISTS idx_messages_recipient_user_ids ON public.messages USING GIN("recipientUserIds");
 
 -- ==============================================================================
--- 11. PERMISSIONS, ROW LEVEL SECURITY (RLS) & REALTIME
+-- 12. PERMISSIONS, ROW LEVEL SECURITY (RLS) & REALTIME
 -- ==============================================================================
 
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;

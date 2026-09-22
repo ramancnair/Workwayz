@@ -382,6 +382,16 @@ export function sanitizeForTable(tableName: string, data: any): any {
     return result;
 }
 
+export function isMissingTableError(error: any): boolean {
+    if (!error) return false;
+    return (
+        error.code === 'PGRST205' ||
+        error.code === '42P01' ||
+        String(error.message || '').includes('Could not find the table') ||
+        String(error.message || '').includes('does not exist')
+    );
+}
+
 // ============================================================================
 // Write operations
 // ============================================================================
@@ -404,7 +414,13 @@ export const addDoc = async (colRef: any, data: any) => {
 
     const sanitized = sanitizeForTable(tableName, insertData);
     const { error } = await supabase!.from(tableName).insert([sanitized]);
-    if (error) throw error;
+    if (error) {
+        if (isMissingTableError(error)) {
+            console.warn(`[Supabase Adapter] Table "${tableName}" does not exist yet in Supabase.`);
+            return { id: docId, path: fullPath };
+        }
+        throw error;
+    }
 
     scheduleListenerNotification(fullPath);
     return { id: docId, path: fullPath };
@@ -428,7 +444,11 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
     }
 
     if (options?.merge) {
-        const { data: existing } = await supabase!.from(tableName).select('*').eq('id', docId).single();
+        const { data: existing, error: selectErr } = await supabase!.from(tableName).select('*').eq('id', docId).single();
+        if (selectErr && isMissingTableError(selectErr)) {
+            console.warn(`[Supabase Adapter] Table "${tableName}" does not exist yet in Supabase.`);
+            return;
+        }
         if (existing) {
             let mergedData: any = { ...existing };
             for (const key in upsertData) {
@@ -445,7 +465,10 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
             }
             const sanitized = sanitizeForTable(tableName, mergedData);
             const { error } = await supabase!.from(tableName).update(sanitized).eq('id', docId);
-            if (error) throw error;
+            if (error) {
+                if (isMissingTableError(error)) return;
+                throw error;
+            }
         } else {
             for (const key in upsertData) {
                 if (upsertData[key] && (upsertData[key].type === 'arrayUnion' || upsertData[key].type === 'arrayRemove')) {
@@ -454,7 +477,10 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
             }
             const sanitized = sanitizeForTable(tableName, upsertData);
             const { error } = await supabase!.from(tableName).insert([sanitized]);
-            if (error) throw error;
+            if (error) {
+                if (isMissingTableError(error)) return;
+                throw error;
+            }
         }
     } else {
         for (const key in upsertData) {
@@ -464,7 +490,10 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
         }
         const sanitized = sanitizeForTable(tableName, upsertData);
         const { error } = await supabase!.from(tableName).upsert(sanitized, { onConflict: 'id' });
-        if (error) throw error;
+        if (error) {
+            if (isMissingTableError(error)) return;
+            throw error;
+        }
     }
 
     scheduleListenerNotification(fullPath);
@@ -481,7 +510,10 @@ export const deleteDoc = async (docRef: any) => {
     const docId = pathStr.split('/').pop();
 
     const { error } = await supabase!.from(tableName).delete().eq('id', docId);
-    if (error) throw error;
+    if (error) {
+        if (isMissingTableError(error)) return;
+        throw error;
+    }
     
     scheduleListenerNotification(pathStr);
 };
@@ -496,7 +528,16 @@ export const getDoc = async (docRef: any) => {
     const docId = fullPath.split('/').pop();
 
     const { data, error } = await supabase!.from(tableName).select('*').eq('id', docId).single();
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error) {
+        if (error.code === 'PGRST116' || isMissingTableError(error)) {
+            return {
+                id: docId,
+                exists: () => false,
+                data: () => undefined
+            };
+        }
+        throw error;
+    }
     return {
         id: docId,
         exists: () => !!data,
@@ -555,22 +596,51 @@ export const getDocs = async (queryRef: any) => {
     }
 
     const { data, error } = await request;
-    if (error) throw error;
+    if (error) {
+        if (isMissingTableError(error)) {
+            return {
+                size: 0,
+                empty: true,
+                docs: [],
+                forEach: (cb: any) => []
+            };
+        }
+        throw error;
+    }
 
     let filteredData = data || [];
 
-    // Apply != constraints in memory
+    // Apply != and array constraints in memory
     if (queryRef.constraints) {
         for (const c of queryRef.constraints) {
-            if (c.type === 'where' && c.opStr === '!=') {
-                filteredData = filteredData.filter((row: any) => {
-                    let val = row[c.fieldPath];
-                    if (val === undefined && c.fieldPath === 'createdAt') val = row['created_at'];
-                    if (val === undefined && c.fieldPath === 'created_at') val = row['createdAt'];
-                    if (val === undefined && c.fieldPath === 'updatedAt') val = row['updated_at'];
-                    if (val === undefined && c.fieldPath === 'updated_at') val = row['updatedAt'];
-                    return val !== c.value;
-                });
+            if (c.type === 'where') {
+                if (c.opStr === '!=') {
+                    filteredData = filteredData.filter((row: any) => {
+                        let val = row[c.fieldPath];
+                        if (val === undefined && c.fieldPath === 'createdAt') val = row['created_at'];
+                        if (val === undefined && c.fieldPath === 'created_at') val = row['createdAt'];
+                        if (val === undefined && c.fieldPath === 'updatedAt') val = row['updated_at'];
+                        if (val === undefined && c.fieldPath === 'updated_at') val = row['updatedAt'];
+                        return val !== c.value;
+                    });
+                } else if (c.opStr === 'array-contains-any') {
+                    filteredData = filteredData.filter((row: any) => {
+                        const arr = row[c.fieldPath];
+                        if (!Array.isArray(arr)) return false;
+                        const targets = Array.isArray(c.value) ? c.value : [c.value];
+                        return targets.some((v: any) => arr.includes(v));
+                    });
+                } else if (c.opStr === 'array-contains') {
+                    filteredData = filteredData.filter((row: any) => {
+                        const arr = row[c.fieldPath];
+                        return Array.isArray(arr) && arr.includes(c.value);
+                    });
+                } else if (c.opStr === 'in') {
+                    filteredData = filteredData.filter((row: any) => {
+                        const val = row[c.fieldPath];
+                        return Array.isArray(c.value) && c.value.includes(val);
+                    });
+                }
             }
         }
     }
@@ -718,12 +788,12 @@ export const onSnapshot = (ref: any, onNext: (snapshot: any) => void, onError?: 
     // Initial fetch
     if (ref.type === 'doc') {
         getDoc(ref).then(onNext).catch(err => {
-            console.error('onSnapshot initial fetch error:', err);
+            console.error(`onSnapshot initial fetch error for doc "${ref.path}":`, err?.message || err);
             if (onError) onError(err);
         });
     } else {
         getDocs(ref).then(onNext).catch(err => {
-            console.error('onSnapshot initial fetch error:', err);
+            console.error(`onSnapshot initial fetch error for collection "${collectionPath}":`, err?.message || err);
             if (onError) onError(err);
         });
     }
@@ -760,7 +830,9 @@ export const onSnapshot = (ref: any, onNext: (snapshot: any) => void, onError?: 
                     }
                 }
             })
-            .subscribe();
+            .subscribe((status: string) => {
+                // Ignore channel errors (e.g. unprovisioned table or not in publication) to preserve local state
+            });
     } catch (e) {
         // Fallback to local pub-sub
     }
