@@ -716,7 +716,7 @@ export default function ProjectsDashboard() {
   return (
     <TooltipProvider>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Project Home" description="Manage all your portfolios and projects.">
+        <PageHeader title="PRJ HOME" description="Sample name for project page">
           <div className="flex gap-2">
             <Button onClick={() => setIsPortfolioDialogOpen(true)}>
               <Folder className="mr-2 h-4 w-4" />

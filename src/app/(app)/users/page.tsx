@@ -451,7 +451,7 @@ export default function UsersPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="User List" description="Manage user access">
+        <PageHeader title="ALL USERS" description="Check out these guys......">
           {selectedUsers.length > 0 && (
             <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
