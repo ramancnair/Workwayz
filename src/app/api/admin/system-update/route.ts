@@ -12,7 +12,14 @@ export async function GET(request: Request) {
   try {
     const config = getSystemConfig();
     const diagnostics = getServerDiagnostics();
-    const currentVersion = require('../../../../../package.json').version || '1.0.0';
+    let currentVersion = '1.0.0';
+    try {
+      const pkgPath = path.join(process.cwd(), 'package.json');
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      currentVersion = pkg.version || '1.0.0';
+    } catch (e) {
+      console.warn('Could not parse package.json for version');
+    }
 
     // Mask token for UI
     const maskedConfig = {
@@ -134,7 +141,10 @@ export async function POST(request: Request) {
       const maintenanceFile = path.join(dataDir, '.maintenance');
       fs.writeFileSync(maintenanceFile, 'maintenance');
 
-      const updaterScript = path.join(process.cwd(), 'scripts', 'updater.js');
+      const isDocker = fs.existsSync('/.dockerenv');
+      const scriptName = isDocker ? 'docker-updater.js' : 'updater.js';
+      const updaterScript = path.join(process.cwd(), 'scripts', scriptName);
+      
       const child = spawn('node', [updaterScript, '--server-pid', process.pid.toString(), '--cwd', process.cwd()], {
         detached: true,
         stdio: 'ignore',

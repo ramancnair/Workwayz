@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getConnectionsPath } from '@/lib/config-path';
 
 export async function POST(request: Request) {
     try {
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
 
         // If activating from a saved profile, resolve the unmasked raw keys from connections.json
         if (body.makeActiveId) {
-            const profilesPath = path.join(process.cwd(), 'connections.json');
+            const profilesPath = getConnectionsPath();
             if (fs.existsSync(profilesPath)) {
                 try {
                     const conns = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
 
         // Update isActive flags in connections.json if we mapped via an ID
         if (body.makeActiveId) {
-             const profilesPath = path.join(process.cwd(), 'connections.json');
+             const profilesPath = getConnectionsPath();
              if (fs.existsSync(profilesPath)) {
                  try {
                      const conns = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));

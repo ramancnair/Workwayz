@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getConnectionsPath } from '@/lib/config-path';
 
 export async function POST(request: Request) {
     try {
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
         let effectiveSupaUrl = supaUrl || '';
         let effectiveSupaKey = supaKey || '';
         
-        const profilesPath = path.join(process.cwd(), 'connections.json');
+        const profilesPath = getConnectionsPath();
         if (fs.existsSync(profilesPath)) {
             try {
                 const conns = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));

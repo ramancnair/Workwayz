@@ -31,6 +31,7 @@ ENV NEXT_TELEMETRY_DISABLED 1
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/scripts ./scripts
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Expose the port
@@ -40,7 +41,7 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 # Make entrypoint script executable and normalize line endings
-RUN apk add --no-cache dos2unix && \
+RUN apk add --no-cache unzip dos2unix && \
     dos2unix /app/docker-entrypoint.sh && \
     chmod +x /app/docker-entrypoint.sh
 

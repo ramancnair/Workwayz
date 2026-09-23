@@ -202,6 +202,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'projects'
     },
     {
+      id: 'update-check',
+      href: `/update-check`,
+      label: "Update Check",
+      icon: RefreshCw,
+      group: 'projects'
+    },
+    {
       id: 'billing',
       href: '/billing',
       label: 'Billing',

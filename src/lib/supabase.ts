@@ -120,7 +120,9 @@ function buildServerClient(): SupabaseClient | null {
             const fs = req('fs');
             const path = req('path');
             const cwd = process.cwd();
-            const p = path.join(cwd, 'connections.json');
+            const dataP = path.join(cwd, 'data', 'connections.json');
+            const rootP = path.join(cwd, 'connections.json');
+            const p = fs.existsSync(dataP) ? dataP : rootP;
             if (fs.existsSync(p)) {
                 const conns = JSON.parse(fs.readFileSync(p, 'utf8'));
                 const active = conns.database?.find((d: any) => d.isActive) || conns.database?.[0];

@@ -3,7 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
-const getProfilesPath = () => path.join(process.cwd(), 'connections.json');
+import { getConnectionsPath } from '@/lib/config-path';
+
+const getProfilesPath = () => getConnectionsPath();
 
 const autoSeedFromEnv = (conns: any): boolean => {
     let changed = false;

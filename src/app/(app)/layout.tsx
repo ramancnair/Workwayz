@@ -75,6 +75,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (pathname.startsWith('/project-home')) return 'projects';
     if (pathname.startsWith('/portfolio-dashboard')) return 'projects';
     if (pathname.startsWith('/fp-portfolio-dash') || pathname.startsWith('/fp-dashboard')) return 'projects';
+    if (pathname.startsWith('/update-check')) return 'projects';
     if (pathname.startsWith('/quality')) return 'quality';
     if (pathname.startsWith('/billing')) return 'billing';
     if (pathname.startsWith('/billing-rate')) return 'billing';
@@ -95,6 +96,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (hasAccess('Project Home')) return '/project-home';
         if (hasAccess('Portfolio Dashboard')) return '/portfolio-dashboard';
         if (hasAccess('FP Portfolio Dash') || hasAccess('FP Dashboard')) return '/fp-portfolio-dash';
+        if (hasAccess('Update Check')) return '/update-check';
         return '/project-home';
       case 'quality':
         if (hasAccess('Estimations')) return '/quality/estimations';

@@ -15,7 +15,9 @@ export function getActiveAiConfig() {
 
   if (typeof window === 'undefined') {
     try {
-      const connsPath = path.join(process.cwd(), 'connections.json');
+      const dataP = path.join(process.cwd(), 'data', 'connections.json');
+      const rootP = path.join(process.cwd(), 'connections.json');
+      const connsPath = fs.existsSync(dataP) ? dataP : rootP;
       if (fs.existsSync(connsPath)) {
         const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
         const activeAi = conns.ai?.find((p: any) => p.isActive) || conns.ai?.[0];

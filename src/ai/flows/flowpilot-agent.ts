@@ -4,6 +4,7 @@ import { allFlowPilotTools, toolExecutionStore, flowpilotToolMap, flowpilotAncho
 import { retrieveCandidateTools } from '@/ai/tools/tool-retriever';
 import { recordRequestUsage } from '@/lib/ai/rate-tracker';
 import { calculateStepCost } from '@/lib/ai/cost-calculator';
+import { getConnectionsPath } from '@/lib/config-path';
 
 export const FlowPilotMessageSchema = z.object({
   role: z.enum(['user', 'model', 'system']),
@@ -112,8 +113,7 @@ export async function getActiveAiDetails(): Promise<AiDetails> {
   if (typeof window === 'undefined') {
     try {
       const fs = require('fs');
-      const path = require('path');
-      const connsPath = path.join(process.cwd(), 'connections.json');
+      const connsPath = getConnectionsPath();
       if (fs.existsSync(connsPath)) {
         const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
         const activeAi = conns.ai?.find((item: any) => item.isActive) || conns.ai?.[0];

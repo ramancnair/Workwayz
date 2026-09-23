@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getConnectionsPath } from '@/lib/config-path';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -38,7 +39,7 @@ export function getServerRuntimeConfig() {
     let connsAuth: any = null;
     let connsAi: any = null;
     try {
-        const connsPath = path.join(cwd, 'connections.json');
+        const connsPath = getConnectionsPath();
         if (fs.existsSync(connsPath)) {
             const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
             connsDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
