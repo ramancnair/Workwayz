@@ -41,8 +41,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            aswin/projectflow:latest
-            aswin/projectflow:${{ github.ref_name }}
+            ashdkr99/ash_test_repo1:latest
+            ashdkr99/ash_test_repo1:${{ github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

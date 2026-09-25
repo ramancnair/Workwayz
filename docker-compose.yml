@@ -1,6 +1,6 @@
 services:
   projectflow-web:
-    image: ${PROJECTFLOW_IMAGE:-aswin/projectflow}:${PROJECTFLOW_VERSION:-latest}
+    image: ${PROJECTFLOW_IMAGE:-ashdkr99/ash_test_repo1}:${PROJECTFLOW_VERSION:-latest}
     build:
       context: .
       dockerfile: Dockerfile
