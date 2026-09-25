@@ -21,8 +21,8 @@ jobs:
       - name: Inject Release Version
         run: |
           VERSION_TAG=${{ github.ref_name }}
-          CLEAN_VERSION=${VERSION_TAG#v}
-          CLEAN_VERSION=${CLEAN_VERSION#release-}
+          # Normalize to valid 3-part SemVer (e.g. v0.10 -> 0.10.0) required by NPM
+          CLEAN_VERSION=$(node -e "const s = require('semver'); console.log(s.coerce(process.argv[1])?.version || process.argv[1].replace(/^[^\d]*/, ''))" "$VERSION_TAG")
           jq --arg v "$CLEAN_VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
 
       - name: Set up Docker Buildx
@@ -74,6 +74,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd ./release-standalone/projectflow
+          # Rename node_modules to bundled_node_modules so npm doesn't strip it during publish
+          if [ -d "node_modules" ]; then
+            mv node_modules bundled_node_modules
+          fi
           npm publish --access public
 
       - name: Zip Standalone App (Fallback)
