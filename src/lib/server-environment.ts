@@ -5,6 +5,7 @@ import path from 'path';
 export interface SystemConfig {
   githubRepo: string;
   githubToken?: string;
+  npmPackage?: string;
   restartCommand?: string;
 }
 
@@ -18,6 +19,7 @@ export function getSystemConfig(): SystemConfig {
       return {
         githubRepo: config.githubRepo || 'ramancnair/ProjectFlow',
         githubToken: config.githubToken || '',
+        npmPackage: config.npmPackage || '@ramancnair/projectflow',
         restartCommand: config.restartCommand || ''
       };
     } catch (e) {
@@ -28,6 +30,7 @@ export function getSystemConfig(): SystemConfig {
   return {
     githubRepo: 'ramancnair/ProjectFlow',
     githubToken: '',
+    npmPackage: '@ramancnair/projectflow',
     restartCommand: ''
   };
 }
@@ -54,7 +57,7 @@ export function detectRestartStrategy(): string {
   }
   
   // Check for Docker
-  if (fs.existsSync('/.dockerenv')) {
+  if (fs.existsSync('/.dockerenv') || process.env.FORCE_DOCKER_MODE === 'true') {
     return 'Docker Container Managed';
   }
   

@@ -12,11 +12,11 @@ export async function GET(request: Request) {
   try {
     const config = getSystemConfig();
     const diagnostics = getServerDiagnostics();
-    let currentVersion = '1.0.0';
+    let currentVersion = '0.1.0';
     try {
       const pkgPath = path.join(process.cwd(), 'package.json');
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-      currentVersion = pkg.version || '1.0.0';
+      currentVersion = pkg.version || '0.1.0';
     } catch (e) {
       console.warn('Could not parse package.json for version');
     }
@@ -51,101 +51,126 @@ export async function POST(request: Request) {
     const action = body.action || 'apply';
 
     if (action === 'save-config') {
-      // Don't save if it's masked
       const updates = { ...body.config };
       if (updates.githubToken && updates.githubToken.startsWith('***')) {
         delete updates.githubToken;
       }
       const newConfig = saveSystemConfig(updates);
-      return NextResponse.json({ success: true, message: 'Configuration saved' });
+      return NextResponse.json({ success: true, message: 'Configuration saved', config: newConfig });
     }
 
+    const config = getSystemConfig();
+    const isDocker = fs.existsSync('/.dockerenv') || process.env.FORCE_DOCKER_MODE === 'true';
+
     if (action === 'check') {
-      const config = getSystemConfig();
-      if (!config.githubRepo) return NextResponse.json({ error: 'GitHub Repo not configured' }, { status: 400 });
+      if (isDocker) {
+        // Fetch from Docker Hub API
+        let repo = (config.githubRepo || 'ramancnair/projectflow').trim();
+        if (!repo.includes('/')) {
+          repo = `library/${repo}`;
+        }
+        const res = await fetch(`https://hub.docker.com/v2/repositories/${repo}/tags?page_size=15`);
+        if (!res.ok) {
+          if (res.status === 404) return NextResponse.json({ error: `Docker Hub repository "${repo}" not found` }, { status: 404 });
+          return NextResponse.json({ error: `Docker Hub API Error: ${res.statusText}` }, { status: res.status });
+        }
 
-      const headers: any = {
-        'User-Agent': 'ProjectFlow-Updater',
-        'Accept': 'application/vnd.github.v3+json'
-      };
-      if (config.githubToken) {
-        headers['Authorization'] = `token ${config.githubToken}`;
-      }
-
-      const res = await fetch(`https://api.github.com/repos/${config.githubRepo}/releases`, { headers });
-      if (!res.ok) {
-        if (res.status === 404) return NextResponse.json({ error: 'Releases not found or private repo missing token' }, { status: 404 });
-        return NextResponse.json({ error: `GitHub API Error: ${res.statusText}` }, { status: res.status });
-      }
-
-      const releasesData = await res.json();
-      
-      const availableReleases = releasesData
-        .map((data: any) => {
-          const standaloneAsset = data.assets?.find((a: any) => a.name.includes('standalone') && a.name.endsWith('.zip'));
-          if (!standaloneAsset) return null;
-          return {
-            tagName: data.tag_name,
-            name: data.name,
-            publishedAt: data.published_at,
-            body: data.body,
+        const data = await res.json();
+        const availableReleases = (data.results || [])
+          .filter((t: any) => t.name !== 'latest')
+          .map((t: any) => ({
+            tagName: t.name.startsWith('v') ? t.name : `v${t.name}`,
+            name: `Docker Image ${t.name}`,
+            publishedAt: t.last_updated,
+            body: `Docker Hub Release\nRepository: ${repo}\nTag: ${t.name}\nSize: ${(t.full_size / 1024 / 1024).toFixed(2)} MB`,
             asset: {
-              name: standaloneAsset.name,
-              size: standaloneAsset.size,
-              downloadUrl: standaloneAsset.url
+              name: `docker-image-${t.name}`,
+              size: t.full_size || 0,
+              downloadUrl: `docker compose pull`
             }
-          };
-        })
-        .filter(Boolean);
+          }));
 
-      return NextResponse.json({
-        releases: availableReleases
-      });
+        return NextResponse.json({ releases: availableReleases });
+      } else {
+        // Fetch from NPM Registry (Standalone)
+        const npmPackageName = (config.npmPackage || '@ramancnair/projectflow').trim();
+        const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(npmPackageName)}`);
+        
+        if (!res.ok) {
+          if (res.status === 404) {
+            return NextResponse.json({ 
+              error: `NPM package "${npmPackageName}" not found on public registry yet. It will appear once your first release is published.` 
+            }, { status: 404 });
+          }
+          return NextResponse.json({ error: `NPM API Error: ${res.statusText}` }, { status: res.status });
+        }
+
+        const data = await res.json();
+        const versions = Object.keys(data.versions || {});
+        
+        const availableReleases = versions
+          .sort()
+          .reverse()
+          .slice(0, 15)
+          .map((version: string) => {
+            const versionData = data.versions[version];
+            const cleanVersion = version.replace(/^v/, '');
+            return {
+              tagName: `v${cleanVersion}`,
+              name: `Standalone Update v${cleanVersion}`,
+              publishedAt: data.time?.[version] || new Date().toISOString(),
+              body: `NPM Release: ${versionData.name}@${cleanVersion}\nUnpack and hot-swap standalone binaries.`,
+              asset: {
+                name: `${versionData.name?.replace('/', '-')}-${cleanVersion}.tgz`,
+                size: 0,
+                downloadUrl: versionData.dist?.tarball
+              }
+            };
+          });
+
+        return NextResponse.json({ releases: availableReleases });
+      }
     }
 
     if (action === 'apply') {
+      // Backend Safety Guard: Never run in-app apply for Docker deployments
+      if (isDocker) {
+        return NextResponse.json({ 
+          error: 'In-app automated apply is disabled for Docker deployments. Please run the Docker recreate commands shown in the UI on your host terminal.' 
+        }, { status: 400 });
+      }
+
       const { downloadUrl } = body;
       if (!downloadUrl) return NextResponse.json({ error: 'Missing downloadUrl' }, { status: 400 });
-
-      const config = getSystemConfig();
-      const headers: any = {
-        'User-Agent': 'ProjectFlow-Updater',
-        'Accept': 'application/octet-stream'
-      };
-      if (config.githubToken) {
-        headers['Authorization'] = `token ${config.githubToken}`;
-      }
 
       const dataDir = path.join(process.cwd(), 'data');
       if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-      const updateZipPath = path.join(dataDir, 'update.zip');
+      const updateTarballPath = path.join(dataDir, 'update.tgz');
       
-      // Download file stream
-      console.log(`Downloading update from ${downloadUrl}`);
-      const response = await fetch(downloadUrl, { headers, redirect: 'follow' });
+      console.log(`Downloading standalone update from ${downloadUrl}...`);
+      const response = await fetch(downloadUrl, { redirect: 'follow' });
       
       if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
-      if (!response.body) throw new Error(`Download failed: no body`);
+      if (!response.body) throw new Error(`Download failed: empty response body`);
 
-      // Write stream to file
-      const fileStream = fs.createWriteStream(updateZipPath);
+      // Write stream to update.tgz
+      const fileStream = fs.createWriteStream(updateTarballPath);
       // @ts-ignore
       await pipeline(response.body, fileStream);
       
-      // File downloaded, clear error logs
+      // Clear previous error logs
       const errorLogPath = path.join(dataDir, 'update_error.log');
       if (fs.existsSync(errorLogPath)) fs.unlinkSync(errorLogPath);
 
-      // Trigger Maintenance and Spawn Updater
+      // Trigger Maintenance Mode
       const maintenanceFile = path.join(dataDir, '.maintenance');
       fs.writeFileSync(maintenanceFile, 'maintenance');
 
-      const isDocker = fs.existsSync('/.dockerenv');
-      const scriptName = isDocker ? 'docker-updater.js' : 'updater.js';
-      const updaterScript = path.join(process.cwd(), 'scripts', scriptName);
+      // Spawn detached updater.js
+      const updaterScript = path.join(process.cwd(), 'scripts', 'updater.js');
       
-      const child = spawn('node', [updaterScript, '--server-pid', process.pid.toString(), '--cwd', process.cwd()], {
+      const child = spawn(process.execPath, [updaterScript, '--server-pid', process.pid.toString(), '--cwd', process.cwd()], {
         detached: true,
         stdio: 'ignore',
         cwd: process.cwd()

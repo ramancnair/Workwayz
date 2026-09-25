@@ -18,28 +18,39 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Inject Release Version
+        run: |
+          VERSION_TAG=${{ github.ref_name }}
+          CLEAN_VERSION=${VERSION_TAG#v}
+          CLEAN_VERSION=${CLEAN_VERSION#release-}
+          jq --arg v "$CLEAN_VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          tags: projectflow-web:latest
-          outputs: type=docker,dest=/tmp/projectflow-web-image.tar
-
-      - name: Compress Docker Image Tarball
-        run: |
-          gzip -9 /tmp/projectflow-web-image.tar
-          mv /tmp/projectflow-web-image.tar.gz ./projectflow-web-image-v${{ github.ref_name }}.tar.gz
+          push: true
+          tags: |
+            aswin/projectflow:latest
+            aswin/projectflow:${{ github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Build Standalone ZIP
+      - name: Build Standalone App
         env:
           NEXT_PUBLIC_DB_PROVIDER: supabase
           NEXT_PUBLIC_DATABASE_PROVIDER: supabase
@@ -57,16 +68,27 @@ jobs:
           # Copy scripts
           cp -r scripts ./release-standalone/projectflow/
           cp package.json ./release-standalone/projectflow/
-          # Zip it up
+
+      - name: Publish to NPM
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd ./release-standalone/projectflow
+          npm publish --access public
+
+      - name: Zip Standalone App (Fallback)
+        run: |
           cd ./release-standalone
           zip -r ../projectflow-standalone-v${{ github.ref_name }}.zip projectflow/
+          cd ..
+          zip projectflow-docker-setup-v${{ github.ref_name }}.zip docker-compose.yml .env.local.example || zip projectflow-docker-setup-v${{ github.ref_name }}.zip docker-compose.yml
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            projectflow-web-image-v${{ github.ref_name }}.tar.gz
             projectflow-standalone-v${{ github.ref_name }}.zip
-            docker-compose.yml
+            projectflow-docker-setup-v${{ github.ref_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
