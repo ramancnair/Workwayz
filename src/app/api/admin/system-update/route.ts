@@ -62,6 +62,28 @@ export async function POST(request: Request) {
     const config = getSystemConfig();
     const isDocker = fs.existsSync('/.dockerenv') || process.env.FORCE_DOCKER_MODE === 'true';
 
+    const parseSemVer = (ver: string): [number, number, number] | null => {
+      const match = ver.trim().replace(/^v/i, '').match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+      if (!match) return null;
+      return [
+        parseInt(match[1] || '0', 10),
+        parseInt(match[2] || '0', 10),
+        parseInt(match[3] || '0', 10)
+      ];
+    };
+
+    const compareSemVer = (a: string, b: string): number => {
+      const vA = parseSemVer(a);
+      const vB = parseSemVer(b);
+      if (!vA && !vB) return 0;
+      if (!vA) return -1;
+      if (!vB) return 1;
+      if (vA[0] !== vB[0]) return vA[0] - vB[0];
+      if (vA[1] !== vB[1]) return vA[1] - vB[1];
+      return vA[2] - vB[2];
+    };
+
+
     if (action === 'check') {
       if (isDocker) {
         // Fetch from Docker Hub API
@@ -76,19 +98,23 @@ export async function POST(request: Request) {
         }
 
         const data = await res.json();
-        const availableReleases = (data.results || [])
-          .filter((t: any) => t.name !== 'latest')
-          .map((t: any) => ({
-            tagName: t.name.startsWith('v') ? t.name : `v${t.name}`,
-            name: `Docker Image ${t.name}`,
-            publishedAt: t.last_updated,
-            body: `Docker Hub Release\nRepository: ${repo}\nTag: ${t.name}\nSize: ${(t.full_size / 1024 / 1024).toFixed(2)} MB`,
-            asset: {
-              name: `docker-image-${t.name}`,
-              size: t.full_size || 0,
-              downloadUrl: `docker compose pull`
-            }
-          }));
+        const validTags = (data.results || [])
+          .filter((t: any) => t.name !== 'latest' && /^v?\d+(\.\d+)*$/i.test(t.name))
+          .sort((a: any, b: any) => compareSemVer(b.name, a.name)); // Descending order
+
+        const latestTag = validTags.length > 0 ? validTags[0] : null;
+
+        const availableReleases = latestTag ? [{
+          tagName: latestTag.name,
+          name: `Docker Image ${latestTag.name}`,
+          publishedAt: latestTag.last_updated,
+          body: `Docker Hub Release\nRepository: ${repo}\nTag: ${latestTag.name}\nSize: ${(latestTag.full_size / 1024 / 1024).toFixed(2)} MB`,
+          asset: {
+            name: `docker-image-${latestTag.name}`,
+            size: latestTag.full_size || 0,
+            downloadUrl: `docker compose pull`
+          }
+        }] : [];
 
         return NextResponse.json({ releases: availableReleases });
       } else {
@@ -106,27 +132,28 @@ export async function POST(request: Request) {
         }
 
         const data = await res.json();
-        const versions = Object.keys(data.versions || {});
+        const versions = Object.keys(data.versions || {})
+          .filter(v => /^v?\d+(\.\d+)*$/i.test(v))
+          .sort((a, b) => compareSemVer(b, a));
         
-        const availableReleases = versions
-          .sort()
-          .reverse()
-          .slice(0, 15)
-          .map((version: string) => {
-            const versionData = data.versions[version];
-            const cleanVersion = version.replace(/^v/, '');
-            return {
-              tagName: `v${cleanVersion}`,
-              name: `Standalone Update v${cleanVersion}`,
-              publishedAt: data.time?.[version] || new Date().toISOString(),
-              body: `NPM Release: ${versionData.name}@${cleanVersion}\nUnpack and hot-swap standalone binaries.`,
-              asset: {
-                name: `${versionData.name?.replace('/', '-')}-${cleanVersion}.tgz`,
-                size: 0,
-                downloadUrl: versionData.dist?.tarball
-              }
-            };
+        const latestVersion = versions.length > 0 ? versions[0] : null;
+        
+        let availableReleases = [];
+        if (latestVersion) {
+          const versionData = data.versions[latestVersion];
+          const cleanVersion = latestVersion.replace(/^v/, '');
+          availableReleases.push({
+            tagName: `v${cleanVersion}`,
+            name: `Standalone Update v${cleanVersion}`,
+            publishedAt: data.time?.[latestVersion] || new Date().toISOString(),
+            body: `NPM Release: ${versionData.name}@${cleanVersion}\nUnpack and hot-swap standalone binaries.`,
+            asset: {
+              name: `${versionData.name?.replace('/', '-')}-${cleanVersion}.tgz`,
+              size: 0,
+              downloadUrl: versionData.dist?.tarball
+            }
           });
+        }
 
         return NextResponse.json({ releases: availableReleases });
       }

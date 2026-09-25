@@ -27,14 +27,28 @@ export default function SystemUpdatePage() {
   const [applying, setApplying] = useState(false);
 
   // Docker Host OS tab & copy feedback
-  const [hostOsTab, setHostOsTab] = useState<string>('linux');
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
 
-  // Helper for simple semver comparison
+  // Helper for numeric SemVer comparison
+  const parseSemVer = (ver: string): [number, number, number] | null => {
+    if (!ver) return null;
+    const match = ver.trim().replace(/^v/i, '').match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+    if (!match) return null;
+    return [
+      parseInt(match[1] || '0', 10),
+      parseInt(match[2] || '0', 10),
+      parseInt(match[3] || '0', 10)
+    ];
+  };
+
   const isNewerVersion = (tag: string, current: string) => {
-    const cleanTag = tag.replace(/^v/, '');
-    const cleanCurrent = current.replace(/^v/, '');
-    return cleanTag.localeCompare(cleanCurrent, undefined, { numeric: true, sensitivity: 'base' }) > 0;
+    const vTag = parseSemVer(tag);
+    const vCurr = parseSemVer(current);
+    if (!vTag || !vCurr) return false;
+    
+    if (vTag[0] !== vCurr[0]) return vTag[0] > vCurr[0];
+    if (vTag[1] !== vCurr[1]) return vTag[1] > vCurr[1];
+    return vTag[2] > vCurr[2];
   };
 
   // Config Form
@@ -45,12 +59,6 @@ export default function SystemUpdatePage() {
 
   useEffect(() => {
     fetchData();
-    if (typeof window !== 'undefined') {
-      const isWin = /win/i.test(navigator.userAgent || navigator.platform);
-      if (isWin) {
-        setHostOsTab('powershell');
-      }
-    }
   }, []);
 
   const fetchData = async () => {
@@ -231,14 +239,14 @@ export default function SystemUpdatePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {!releases ? (
+                {(!releases) ? (
                   <div className="flex flex-col items-center justify-center py-6">
                     <Button onClick={handleCheckUpdate} disabled={checkingUpdate} className="w-full max-w-xs shadow-md">
                       {checkingUpdate ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Github className="w-4 h-4 mr-2" />}
                       {checkingUpdate ? 'Checking...' : 'Check for Updates'}
                     </Button>
                   </div>
-                ) : releases.length === 0 ? (
+                ) : (releases.length === 0) ? (
                   <div className="flex flex-col items-center justify-center py-6 text-center">
                     <ShieldCheck className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
                     <h3 className="font-semibold text-lg">System is up to date!</h3>
@@ -248,20 +256,21 @@ export default function SystemUpdatePage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {releases.map((release, idx) => (
-                      <div 
-                        key={release.tagName}
-                        onClick={() => setSelectedRelease(release)}
-                        className={`flex flex-col cursor-pointer p-4 rounded-xl border transition-all ${selectedRelease?.tagName === release.tagName ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'hover:border-border hover:bg-muted/30'}`}
-                      >
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-semibold text-base">{release.tagName}</span>
-                          {idx === 0 && <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 text-[10px] px-2 py-0.5">Latest</Badge>}
-                        </div>
-                        <span className="text-xs text-muted-foreground">{new Date(release.publishedAt).toLocaleDateString()}</span>
+                  <div className="flex flex-col p-4 rounded-xl border border-primary bg-primary/5 ring-1 ring-primary/20">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-lg">Update Available</span>
+                        <span className="text-sm font-medium">{releases[0]?.tagName}</span>
                       </div>
-                    ))}
+                      <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">Latest</Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground mb-4">
+                      Published: {releases[0]?.publishedAt ? new Date(releases[0].publishedAt).toLocaleDateString() : 'Unknown'}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={handleCheckUpdate} disabled={checkingUpdate} className="w-full">
+                      {checkingUpdate ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                      Check Again
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -311,130 +320,40 @@ export default function SystemUpdatePage() {
 
                       <AlertDialogDescription asChild>
                         {diagnostics?.restartStrategy === 'Docker Container Managed' ? (
-                          <div className="space-y-4 pt-3 text-left">
-                            <p className="text-xs text-muted-foreground">
-                              Run the following commands in the directory where your <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[11px] font-semibold text-foreground">docker-compose.yml</code> file is located on the host:
-                            </p>
-
-                            <Tabs value={hostOsTab} onValueChange={setHostOsTab} className="w-full">
-                              <TabsList className="grid grid-cols-4 w-full h-9">
-                                <TabsTrigger value="powershell" className="text-xs">PowerShell</TabsTrigger>
-                                <TabsTrigger value="linux" className="text-xs">Linux / macOS</TabsTrigger>
-                                <TabsTrigger value="cmd" className="text-xs">CMD</TabsTrigger>
-                                <TabsTrigger value="envfile" className="text-xs">.env File</TabsTrigger>
-                              </TabsList>
-
-                              {Object.entries({
-                                powershell: {
-                                  label: 'Windows (PowerShell)',
-                                  lines: [
-                                    '# 1. Set the target version',
-                                    `$env:PROJECTFLOW_VERSION="${selectedRelease.tagName}"`,
-                                    '',
-                                    '# 2. Download the updated Docker image',
-                                    'docker compose pull',
-                                    '',
-                                    '# 3. Recreate the container with the new version',
-                                    'docker compose up -d'
-                                  ],
-                                  oneLiner: `$env:PROJECTFLOW_VERSION="${selectedRelease.tagName}"; docker compose pull; if ($LASTEXITCODE -eq 0) { docker compose up -d }`,
-                                  note: 'Safe sequential execution: container recreates only if image download succeeds.'
-                                },
-                                linux: {
-                                  label: 'Linux / macOS (Bash / Zsh)',
-                                  lines: [
-                                    '# 1. Set the target version',
-                                    `export PROJECTFLOW_VERSION=${selectedRelease.tagName}`,
-                                    '',
-                                    '# 2. Download the updated Docker image',
-                                    'docker compose pull',
-                                    '',
-                                    '# 3. Recreate the container with the new version',
-                                    'docker compose up -d'
-                                  ],
-                                  oneLiner: `export PROJECTFLOW_VERSION=${selectedRelease.tagName} && docker compose pull && docker compose up -d`,
-                                  note: 'Compatible with all POSIX shells (Ubuntu, Debian, Alpine, CentOS, macOS).'
-                                },
-                                cmd: {
-                                  label: 'Windows (Command Prompt)',
-                                  lines: [
-                                    ':: 1. Set the target version',
-                                    `set PROJECTFLOW_VERSION=${selectedRelease.tagName}`,
-                                    '',
-                                    ':: 2. Download the updated Docker image',
-                                    'docker compose pull',
-                                    '',
-                                    ':: 3. Recreate the container with the new version',
-                                    'docker compose up -d'
-                                  ],
-                                  oneLiner: `set PROJECTFLOW_VERSION=${selectedRelease.tagName}&& docker compose pull && docker compose up -d`,
-                                  note: 'Notice: No space between variable value and && in CMD.'
-                                },
-                                envfile: {
-                                  label: '.env File (Permanent Pin)',
-                                  lines: [
-                                    '# 1. Set version in .env file next to docker-compose.yml:',
-                                    `PROJECTFLOW_VERSION=${selectedRelease.tagName}`,
-                                    '',
-                                    '# 2. Recreate container with this version:',
-                                    'docker compose pull',
-                                    'docker compose up -d'
-                                  ],
-                                  oneLiner: `echo PROJECTFLOW_VERSION=${selectedRelease.tagName} >> .env && docker compose pull && docker compose up -d`,
-                                  note: 'Permanently pins this version across host machine reboots.'
-                                }
-                              }).map(([key, cmd]) => (
-                                <TabsContent key={key} value={key} className="space-y-3 mt-3">
-                                  <div className="relative rounded-lg bg-zinc-950 p-4 text-zinc-100 font-mono text-xs shadow-inner border border-zinc-800">
-                                    <div className="flex items-center justify-between border-b border-zinc-800 pb-2 mb-3 text-[11px] text-zinc-400">
-                                      <span className="flex items-center gap-1.5 font-sans">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        {cmd.label}
-                                      </span>
-                                      <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        className="h-7 text-xs gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
-                                        onClick={() => copyToClipboard(cmd.oneLiner, key)}
-                                      >
-                                        {copiedCommand === key ? (
-                                          <>
-                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                            Copied!
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Copy className="w-3.5 h-3.5" />
-                                            Copy Commands
-                                          </>
-                                        )}
-                                      </Button>
-                                    </div>
-
-                                    <div className="space-y-1 select-all overflow-x-auto leading-relaxed">
-                                      {cmd.lines.map((line, i) => (
-                                        <div 
-                                          key={i} 
-                                          className={
-                                            line.startsWith('#') || line.startsWith('::')
-                                              ? 'text-zinc-500 select-none italic font-sans'
-                                              : line === ''
-                                              ? 'h-2'
-                                              : 'text-emerald-400 font-bold'
-                                          }
-                                        >
-                                          {line}
-                                        </div>
-                                      ))}
-                                    </div>
+                              <div className="space-y-4 pt-3 text-left">
+                                <p className="text-xs text-muted-foreground">
+                                  Run the following command in the directory where your <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[11px] font-semibold text-foreground">docker-compose.yml</code> file is located on the host:
+                                </p>
+                                
+                                <div className="relative rounded-lg bg-zinc-950 p-4 text-zinc-100 font-mono text-xs shadow-inner border border-zinc-800">
+                                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2 mb-3 text-[11px] text-zinc-400">
+                                    <span className="flex items-center gap-1.5 font-sans">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                      Update Command
+                                    </span>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      className="h-7 text-xs gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                                      onClick={() => copyToClipboard('docker compose pull && docker compose up -d', 'simplified')}
+                                    >
+                                      {copiedCommand === 'simplified' ? (
+                                        <>
+                                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                          Copied!
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-3.5 h-3.5" />
+                                          Copy Command
+                                        </>
+                                      )}
+                                    </Button>
                                   </div>
-
-                                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                    <span className="font-semibold text-foreground">Rule:</span> {cmd.note}
+                                  <div className="text-emerald-400 font-bold select-all overflow-x-auto">
+                                    docker compose pull && docker compose up -d
                                   </div>
-                                </TabsContent>
-                              ))}
-                            </Tabs>
+                                </div>
 
                             <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-900 dark:text-blue-200">
                               <p className="font-medium flex items-center gap-1.5 mb-1 text-xs">

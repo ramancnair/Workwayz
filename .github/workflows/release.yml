@@ -83,16 +83,16 @@ jobs:
       - name: Zip Standalone App (Fallback)
         run: |
           cd ./release-standalone
-          zip -r ../projectflow-standalone-v${{ github.ref_name }}.zip projectflow/
+          zip -r ../projectflow-standalone-${{ github.ref_name }}.zip projectflow/
           cd ..
-          zip projectflow-docker-setup-v${{ github.ref_name }}.zip docker-compose.yml .env.local.example || zip projectflow-docker-setup-v${{ github.ref_name }}.zip docker-compose.yml
+          zip projectflow-docker-setup-${{ github.ref_name }}.zip docker-compose.yml .env.local.example || zip projectflow-docker-setup-v${{ github.ref_name }}.zip docker-compose.yml
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            projectflow-standalone-v${{ github.ref_name }}.zip
-            projectflow-docker-setup-v${{ github.ref_name }}.zip
+            projectflow-standalone-${{ github.ref_name }}.zip
+            projectflow-docker-setup-${{ github.ref_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -209,6 +209,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'projects'
     },
     {
+      id: 'model-list',
+      href: `/model-list`,
+      label: "Model List",
+      icon: Bot,
+      group: 'projects'
+    },
+    {
       id: 'billing',
       href: '/billing',
       label: 'Billing',
