@@ -21,8 +21,8 @@ jobs:
       - name: Inject Release Version
         run: |
           VERSION_TAG=${{ github.ref_name }}
-          # Normalize to valid 3-part SemVer (e.g. v0.10 -> 0.10.0) required by NPM
-          CLEAN_VERSION=$(node -e "const s = require('semver'); console.log(s.coerce(process.argv[1])?.version || process.argv[1].replace(/^[^\d]*/, ''))" "$VERSION_TAG")
+          # Normalize to valid 3-part SemVer (e.g. v0.12 -> 0.12.0) required by NPM (pure node, zero dependencies)
+          CLEAN_VERSION=$(node -e "const parts = process.argv[1].replace(/^(v|release-)/i, '').split('.').filter(Boolean); while (parts.length < 3) parts.push('0'); console.log(parts.slice(0, 3).join('.'));" "$VERSION_TAG")
           jq --arg v "$CLEAN_VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
 
       - name: Set up Docker Buildx
