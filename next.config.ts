@@ -18,20 +18,6 @@ function getLocalIpOrigins(): string[] {
   return ips.flatMap(ip => [ip, `${ip}:3000`]);
 }
 
-const ContentSecurityPolicy = `
-  default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline';
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  img-src 'self' data: blob: https://placehold.co https://*.googleusercontent.com https://*.supabase.co https://avatars.githubusercontent.com;
-  font-src 'self' data: https://fonts.gstatic.com;
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://identitytoolkit.googleapis.com https://*.firebaseio.com https://api.github.com http://localhost:* http://127.0.0.1:* ws: wss:;
-  frame-ancestors 'none';
-  form-action 'self';
-  object-src 'none';
-  base-uri 'self';
-  upgrade-insecure-requests;
-`.replace(/\s{2,}/g, ' ').trim();
-
 const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
@@ -41,10 +27,13 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     if (!isServer) {
       config.output = config.output || {};
       config.output.chunkLoadTimeout = 300000; // 5 minutes
+      if (dev) {
+        config.devtool = 'cheap-module-source-map';
+      }
     }
     return config;
   },
@@ -65,7 +54,6 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: ContentSecurityPolicy },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

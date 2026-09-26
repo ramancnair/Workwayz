@@ -1,6 +1,7 @@
 
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { headers } from 'next/headers';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -20,11 +21,13 @@ export const metadata: Metadata = {
   description: 'Manage your projects with ease and clarity.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get('x-nonce') || undefined;
+
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="font-body antialiased" suppressHydrationWarning>
@@ -34,6 +37,7 @@ export default function RootLayout({
           themes={["light", "dark", "green", "blue", "system"]}
           enableSystem
           disableTransitionOnChange
+          nonce={nonce}
         >
           <GlobalErrorReporter />
           <SupabaseBootstrap />
