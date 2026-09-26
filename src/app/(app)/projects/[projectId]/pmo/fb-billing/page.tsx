@@ -25,6 +25,7 @@ import { PlusCircle, Trash2, Printer, Edit, Check, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { cn, formatRateInput } from '@/lib/utils';
+import { printInvoice } from '@/lib/printInvoice';
 import {
   Dialog,
   DialogContent,
@@ -849,6 +850,22 @@ export default function ResourceBillingPage() {
         </CardContent>
       </Card>
 
+      {/* Print to PDF Action below the invoice section */}
+      <div className="flex justify-end pt-2 pb-6 no-print">
+        <Button
+          onClick={() =>
+            printInvoice('invoice-print-area', {
+              title: `Invoice - ${project?.name || 'Project'} - Fixed Bid`,
+              projectName: project?.name,
+            })
+          }
+          className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm transition-all"
+        >
+          <Printer className="h-4 w-4" />
+          Print to PDF
+        </Button>
+      </div>
+
       <style>{`
         @media print {
           @page {
@@ -856,8 +873,14 @@ export default function ResourceBillingPage() {
             margin: 10mm;
           }
 
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
           /* Hide UI elements that aren't the invoice */
-          aside, nav, header, button, .no-print {
+          aside, nav, header, button, .no-print, [data-sidebar], [data-sidebar-provider] > *:not(.sidebar-inset) {
             display: none !important;
           }
 
@@ -872,28 +895,15 @@ export default function ResourceBillingPage() {
             min-height: 0 !important;
             max-height: none !important;
             overflow: visible !important;
-            background: white !important;
-          }
-
-          /* Force all text in the print area to be black */
-          body {
-            color: black !important;
-          }
-          
-          #invoice-print-area, #invoice-print-area * {
-            color: black !important;
-            border-color: #e5e7eb !important;
           }
 
           #invoice-print-area {
             box-shadow: none !important;
-            border: none !important;
             margin: 0 !important;
-            padding: 0 !important;
             width: 100% !important;
           }
 
-          /* DISABLE OVERFLOW AND FORCE EXPANSION OF TABLES */
+          /* Disable overflow and force expansion of tables */
           .overflow-x-auto {
             overflow: visible !important;
             overflow-x: visible !important;
@@ -905,30 +915,8 @@ export default function ResourceBillingPage() {
             border-collapse: collapse !important;
           }
 
-          th, td {
-            padding: 6px 8px !important;
-            font-size: 12px !important;
-            border-bottom: 1px solid #e5e7eb !important;
-          }
-
-          th {
-            background-color: #f3f4f6 !important;
-            font-weight: bold !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          
-          /* Remove background colors that might mask text */
-          .bg-card, .bg-muted\\/20 {
-            background-color: transparent !important;
-          }
-          
-          /* Retain background for the total section */
-          .bg-emerald-500\\/10 {
-            background-color: #f0fdf4 !important;
-            border: 1px solid #bbf7d0 !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+          tr {
+            page-break-inside: avoid;
           }
         }
       `}</style>
