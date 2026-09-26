@@ -46,12 +46,12 @@ describe('Security Configuration and Headers (OWASP Hardening)', () => {
     expect(headersMap.get('cross-origin-opener-policy')).toBe('same-origin');
   });
 
-  it('should generate dynamic nonce-based Content-Security-Policy in middleware without wildcards', async () => {
-    const { middleware } = await import('../../middleware');
+  it('should generate dynamic nonce-based Content-Security-Policy in proxy/middleware without wildcards', async () => {
+    const { proxy } = await import('../../proxy');
     const { NextRequest } = await import('next/server');
 
     const req = new NextRequest('http://localhost:3000/login');
-    const res = middleware(req);
+    const res = proxy(req);
 
     const csp = res.headers.get('content-security-policy');
     expect(csp).toBeDefined();

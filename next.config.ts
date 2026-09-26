@@ -27,13 +27,10 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  webpack: (config, { isServer, dev }) => {
+  webpack: (config, { isServer }) => {
     if (!isServer) {
       config.output = config.output || {};
       config.output.chunkLoadTimeout = 300000; // 5 minutes
-      if (dev) {
-        config.devtool = 'cheap-module-source-map';
-      }
     }
     return config;
   },
