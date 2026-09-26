@@ -20,13 +20,13 @@ import { BookOpen, CheckCircle, GitFork, Boxes, CheckSquare, Bug, GitCommit, Clo
 import { StatsCard } from '@/components/dashboard/StatsCard';
 
 const burndownChartConfig = {
-  remaining: { label: "Remaining Effort", color: "hsl(var(--chart-2))" },
-  ideal: { label: "Ideal Burndown", color: "hsl(var(--chart-1))" },
+  remaining: { label: "Remaining Effort", color: "hsl(var(--primary))" },
+  ideal: { label: "Ideal Burndown", color: "hsl(var(--muted-foreground))" },
 } satisfies ChartConfig;
 
 const burnupChartConfig = {
-  completed: { label: "Completed Work", color: "hsl(var(--chart-2))" },
-  ideal: { label: "Ideal Burnup", color: "hsl(var(--chart-1))" },
+  completed: { label: "Completed Work", color: "hsl(142 70% 45%)" },
+  ideal: { label: "Ideal Burnup", color: "hsl(var(--primary))" },
 } satisfies ChartConfig;
 
 const getStatusOnDate = (item: Story, targetDate: Date): string | null => {
@@ -198,7 +198,7 @@ export default function DevelopmentDashboard() {
           }
           
           return {
-              date: date,
+              date: format(date, 'dd/MM'),
               remaining: today && date <= today ? (remaining < 0 ? 0 : remaining) : null,
               ideal: idealEffort < 0 ? 0 : idealEffort,
           }
@@ -333,11 +333,11 @@ export default function DevelopmentDashboard() {
                 <ChartContainer config={burndownChartConfig} className="h-full w-full">
                     <LineChart data={burndownData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                         <CartesianGrid vertical={false} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => format(new Date(value), 'dd/MM')} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
                         <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                         <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
-                        <Line dataKey="remaining" type="monotone" stroke="var(--color-remaining)" strokeWidth={2} dot={false} name="Remaining Effort" connectNulls={false} />
-                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} strokeDasharray="3 3" name="Ideal Burndown" />
+                        <Line dataKey="remaining" type="monotone" stroke="var(--color-remaining, hsl(var(--primary)))" strokeWidth={2.5} dot={false} name="Remaining Effort" connectNulls={false} />
+                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal, hsl(var(--muted-foreground)))" strokeWidth={2} dot={false} strokeDasharray="3 3" name="Ideal Burndown" />
                     </LineChart>
                 </ChartContainer>
             ) : <p className="text-center text-muted-foreground">Select a sprint with dates to view burndown.</p>}
@@ -369,8 +369,8 @@ export default function DevelopmentDashboard() {
                         <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, burnupData[0]?.scope || 'auto']} />
                         <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
                         <ReferenceLine y={burnupData[0]?.scope} label={{ value: "Scope", position: 'insideRight', dy: -5 }} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-                        <Line dataKey="completed" type="monotone" stroke="var(--color-completed)" strokeWidth={2} dot={false} connectNulls={false} />
-                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal)" strokeWidth={2} dot={false} />
+                        <Line dataKey="completed" type="monotone" stroke="var(--color-completed, hsl(142 70% 45%))" strokeWidth={2.5} dot={false} name="Completed Work" connectNulls={false} />
+                        <Line dataKey="ideal" type="monotone" stroke="var(--color-ideal, hsl(var(--primary)))" strokeWidth={2} dot={false} strokeDasharray="3 3" name="Ideal Burnup" />
                     </LineChart>
                 </ChartContainer>
             ) : <p className="text-center text-muted-foreground">Select a release with dates to view burnup.</p>}

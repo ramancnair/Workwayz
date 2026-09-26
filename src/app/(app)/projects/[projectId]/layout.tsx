@@ -12,6 +12,7 @@ import { useSidebarPersistedState } from '@/hooks/use-sidebar-state';
 import { cn } from '@/lib/utils';
 import { Settings, Trash2 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function ProjectLayoutContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -190,8 +191,9 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
       <>
         <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4 overflow-hidden shrink-0">
           <div className="overflow-x-auto max-w-full py-1 -my-1 shrink-0">
-            <Tabs value={getTabValue()} onValueChange={onTabChange} className="w-auto">
-              <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 flex whitespace-nowrap w-max">
+            <TooltipProvider delayDuration={150}>
+              <Tabs value={getTabValue()} onValueChange={onTabChange} className="w-auto">
+                <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 flex whitespace-nowrap w-max">
                 {(hasAccess('Specifications (Initial Estimation)') || hasAccess('Project Status (Initial Estimation)')) && (
                   <TabsTrigger 
                     value="initial-estimation" 
@@ -247,20 +249,34 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                       </TabsTrigger>
                     )}
                     {(hasAccess('Board Settings') || hasAccess('Sprint Settings') || hasAccess('Effort Settings')) && (
-                      <TabsTrigger value="settings" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={getDefaultRouteForTab('settings')} className="flex items-center gap-1.5">
-                          <Settings className="h-4 w-4" />
-                          <span>Project Settings</span>
-                        </Link>
-                      </TabsTrigger>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <TabsTrigger value="settings" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5">
+                            <Link href={getDefaultRouteForTab('settings')} className="flex items-center justify-center" aria-label="Project Settings">
+                              <Settings className="h-4 w-4" />
+                              <span className="sr-only">Project Settings</span>
+                            </Link>
+                          </TabsTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Project Settings</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                     {hasAccess('Project Trash') && (
-                      <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={getDefaultRouteForTab('trash')} className="flex items-center gap-1.5">
-                          <Trash2 className="h-4 w-4" />
-                          <span>Project Trash</span>
-                        </Link>
-                      </TabsTrigger>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5">
+                            <Link href={getDefaultRouteForTab('trash')} className="flex items-center justify-center" aria-label="Project Trash">
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Project Trash</span>
+                            </Link>
+                          </TabsTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Project Trash</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </>
                 )}
@@ -273,6 +289,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                 )}
               </TabsList>
             </Tabs>
+            </TooltipProvider>
           </div>
           <div className="flex-shrink-0 text-right hidden sm:block">
             <h1 className="text-base font-bold leading-tight truncate max-w-[250px] md:max-w-[350px]">{project?.name || 'Loading Project...'}</h1>

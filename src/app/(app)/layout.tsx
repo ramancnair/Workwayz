@@ -14,6 +14,7 @@ import { Settings, Trash2 } from 'lucide-react';
 import { collection, query, where, getDocs } from '@/lib/db-provider';
 import { db } from '@/lib/db-provider';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
@@ -163,6 +164,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         <SidebarInset className="min-w-0">
           <div className="h-screen flex flex-col overflow-hidden">
             <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4 shrink-0">
+              <TooltipProvider delayDuration={150}>
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
                         <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
@@ -196,20 +198,34 @@ export default function AppLayout({ children }: PropsWithChildren) {
                               </TabsTrigger>
                             )}
                             {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive') || hasAccess('Test Data Studio') || hasAccess('Cron Jobs')) && (
-                              <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center gap-1.5">
-                                  <Settings className="h-4 w-4" />
-                                  <span>Portfolio Settings</span>
-                                </Link>
-                              </TabsTrigger>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5">
+                                    <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center justify-center" aria-label="Portfolio Settings">
+                                      <Settings className="h-4 w-4" />
+                                      <span className="sr-only">Portfolio Settings</span>
+                                    </Link>
+                                  </TabsTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">
+                                  <p>Portfolio Settings</p>
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                             {(hasAccess('Portfolio Trash') || hasAccess('Trash')) && (
-                              <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                                <Link href={getDefaultRouteForTab('trash')} className="flex items-center gap-1.5">
-                                  <Trash2 className="h-4 w-4" />
-                                  <span>Portfolio Trash</span>
-                                </Link>
-                              </TabsTrigger>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5">
+                                    <Link href={getDefaultRouteForTab('trash')} className="flex items-center justify-center" aria-label="Portfolio Trash">
+                                      <Trash2 className="h-4 w-4" />
+                                      <span className="sr-only">Portfolio Trash</span>
+                                    </Link>
+                                  </TabsTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">
+                                  <p>Portfolio Trash</p>
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                           </>
                         )}
@@ -222,6 +238,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         )}
                     </TabsList>
                 </Tabs>
+              </TooltipProvider>
             </div>
             <div className="flex-1 overflow-y-auto">
               {children}

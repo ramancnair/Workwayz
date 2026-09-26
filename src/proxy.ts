@@ -27,9 +27,9 @@ export function proxy(request: NextRequest) {
   const cspHeader = `
     default-src 'self';
     script-src ${scriptDirectives};
-    style-src 'self' 'nonce-${nonce}';
+    style-src 'self' 'nonce-${nonce}' 'unsafe-inline';
     style-src-attr 'unsafe-inline';
-    style-src-elem 'self' 'nonce-${nonce}';
+    style-src-elem 'self' 'nonce-${nonce}' 'unsafe-inline';
     img-src 'self' data: blob: https://placehold.co https://lh3.googleusercontent.com https://avatars.githubusercontent.com ${supaImg};
     font-src 'self' data:;
     connect-src 'self' https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://securetoken.googleapis.com https://api.github.com ${supaConnect} http://localhost:3000 http://127.0.0.1:3000;

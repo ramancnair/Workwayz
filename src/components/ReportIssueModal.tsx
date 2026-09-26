@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Bug, CheckCircle2, ChevronDown, ChevronUp, ExternalLink, Loader2 } from 'lucide-react';
+import { AlertCircle, Bug, Check, CheckCircle2, ChevronDown, ChevronUp, Copy, ExternalLink, Loader2 } from 'lucide-react';
 
 interface ReportIssueModalProps {
   open: boolean;
@@ -36,6 +36,7 @@ export function ReportIssueModal({
   const [userDescription, setUserDescription] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  const [copiedDetails, setCopiedDetails] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedResult, setSubmittedResult] = useState<{
     success: boolean;
@@ -43,6 +44,38 @@ export function ReportIssueModal({
     issueUrl?: string;
     message?: string;
   } | null>(null);
+
+  const handleCopyTechnicalDetails = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!initialError) return;
+
+    const parts: string[] = [];
+    const errorTitle =
+      initialError.name && !initialError.message.startsWith(initialError.name)
+        ? `${initialError.name}: ${initialError.message}`
+        : initialError.message;
+    if (errorTitle) parts.push(errorTitle);
+
+    if (initialError.code || initialError.digest) {
+      parts.push(`Code: ${initialError.code || initialError.digest}`);
+    }
+
+    if (initialError.stack) {
+      parts.push(`\nStack trace:\n${initialError.stack}`);
+    }
+
+    if (initialError.componentStack) {
+      parts.push(`\nComponent stack:\n${initialError.componentStack}`);
+    }
+
+    try {
+      await navigator.clipboard.writeText(parts.join('\n'));
+      setCopiedDetails(true);
+      setTimeout(() => setCopiedDetails(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy technical details to clipboard:', err);
+    }
+  };
 
   // Autofill user email if stored in localStorage
   useEffect(() => {
@@ -213,21 +246,44 @@ export function ReportIssueModal({
 
             {initialError && (
               <div className="border rounded-lg p-3 bg-muted/40 space-y-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-                  className="flex items-center justify-between w-full font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-                    Captured Technical Details
-                  </span>
-                  {showTechnicalDetails ? (
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  )}
-                </button>
+                <div className="flex items-center justify-between w-full font-medium text-muted-foreground">
+                  <button
+                    type="button"
+                    onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                    className="flex items-center gap-1.5 hover:text-foreground transition-colors flex-1 text-left py-0.5"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span>Captured Technical Details</span>
+                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleCopyTechnicalDetails}
+                      className="p-1 rounded hover:bg-background/80 text-muted-foreground hover:text-foreground transition-colors"
+                      title={copiedDetails ? 'Copied to clipboard!' : 'Copy technical details'}
+                      aria-label="Copy technical details"
+                    >
+                      {copiedDetails ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                      className="p-1 rounded hover:bg-background/80 text-muted-foreground hover:text-foreground transition-colors"
+                      title={showTechnicalDetails ? 'Collapse technical details' : 'Expand technical details'}
+                      aria-label={showTechnicalDetails ? 'Collapse technical details' : 'Expand technical details'}
+                    >
+                      {showTechnicalDetails ? (
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
 
                 {showTechnicalDetails && (
                   <div className="space-y-2 pt-2 border-t mt-1 font-mono text-[11px] text-muted-foreground overflow-hidden">

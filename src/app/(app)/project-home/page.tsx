@@ -329,7 +329,6 @@ export default function ProjectsDashboard() {
 
   const [activeExpanded, setActiveExpanded] = useState<string[]>([]);
   const [archiveExpanded, setArchiveExpanded] = useState<string[]>([]);
-  const [isExpandedInitialized, setIsExpandedInitialized] = useState(false);
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
@@ -340,32 +339,6 @@ export default function ProjectsDashboard() {
     resolver: zodResolver(portfolioSchema),
     defaultValues: { name: '', description: '' },
   });
-
-  useEffect(() => {
-    if (portfolios.length > 0) {
-      const ids = portfolios.map(p => p.id);
-      if (!isExpandedInitialized) {
-        setActiveExpanded(ids);
-        setArchiveExpanded(ids);
-        setIsExpandedInitialized(true);
-      } else {
-        setActiveExpanded(prev => {
-          const newIds = ids.filter(id => !prev.includes(id));
-          if (newIds.length > 0) {
-            return [...prev, ...newIds];
-          }
-          return prev;
-        });
-        setArchiveExpanded(prev => {
-          const newIds = ids.filter(id => !prev.includes(id));
-          if (newIds.length > 0) {
-            return [...prev, ...newIds];
-          }
-          return prev;
-        });
-      }
-    }
-  }, [portfolios, isExpandedInitialized]);
 
   useEffect(() => {
     if (!db) return;
@@ -702,6 +675,20 @@ export default function ProjectsDashboard() {
 
   const activeProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(false), [getProjectsByPortfolio]);
   const archivedProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(true), [getProjectsByPortfolio]);
+
+  // Automatically expand portfolios when actively searching/filtering so matching results are visible
+  useEffect(() => {
+    if (filterText.trim()) {
+      const matchingActive = activeProjectsByPortfolio
+        .filter(p => p.projects.length > 0)
+        .map(p => p.id);
+      const matchingArchive = archivedProjectsByPortfolio
+        .filter(p => p.projects.length > 0)
+        .map(p => p.id);
+      setActiveExpanded(matchingActive);
+      setArchiveExpanded(matchingArchive);
+    }
+  }, [filterText, activeProjectsByPortfolio, archivedProjectsByPortfolio]);
 
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>
