@@ -1,5 +1,6 @@
 
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -7,6 +8,12 @@ import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 import { GlobalErrorReporter } from "@/components/GlobalErrorReporter";
 import { FlowPilotWidgetClient } from "@/components/flowpilot/FlowPilotWidgetClient";
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export const metadata: Metadata = {
   title: 'ProjectFlow',
@@ -19,13 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;600;700&family=Oswald:wght@400;500;600;700&family=PT+Sans:wght@400;700&family=Raleway:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Source+Sans+Pro:wght@400;600;700&family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="font-body antialiased" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"

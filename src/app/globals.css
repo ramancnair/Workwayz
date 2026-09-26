@@ -53,7 +53,7 @@ body {
     --chart-5: 180 75% 55%;
 
     --radius: 0.25rem;
-    --font-body-family: 'Inter', sans-serif;
+    --font-body-family: var(--font-inter), 'Inter', sans-serif;
 
     --shadow-color: 220 3% 15%;
     --shadow-strength: 1%;
