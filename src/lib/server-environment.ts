@@ -12,14 +12,25 @@ export interface SystemConfig {
 export function getSystemConfig(): SystemConfig {
   const dataDir = path.join(process.cwd(), 'data');
   const configFile = path.join(dataDir, 'system_config.json');
+
+  let defaultNpmPackage = '@pf_test1999/projectflow';
+  try {
+    const pkgPath = path.join(process.cwd(), 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      if (pkg.name) defaultNpmPackage = pkg.name;
+    }
+  } catch (e) {
+    // fallback
+  }
   
   if (fs.existsSync(configFile)) {
     try {
       const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
       return {
-        githubRepo: config.githubRepo || 'ramancnair/ProjectFlow',
+        githubRepo: config.githubRepo || 'ashdkr99/ash_test_repo1',
         githubToken: config.githubToken || '',
-        npmPackage: config.npmPackage || '@ramancnair/projectflow',
+        npmPackage: config.npmPackage || defaultNpmPackage,
         restartCommand: config.restartCommand || ''
       };
     } catch (e) {
@@ -28,9 +39,9 @@ export function getSystemConfig(): SystemConfig {
   }
   
   return {
-    githubRepo: 'ramancnair/ProjectFlow',
+    githubRepo: 'ashdkr99/ash_test_repo1',
     githubToken: '',
-    npmPackage: '@ramancnair/projectflow',
+    npmPackage: defaultNpmPackage,
     restartCommand: ''
   };
 }

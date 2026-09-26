@@ -201,20 +201,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       icon: Sparkles,
       group: 'projects'
     },
-    {
-      id: 'update-check',
-      href: `/update-check`,
-      label: "Update Check",
-      icon: RefreshCw,
-      group: 'projects'
-    },
-    {
-      id: 'model-list',
-      href: `/model-list`,
-      label: "Model List",
-      icon: Bot,
-      group: 'projects'
-    },
+
     {
       id: 'billing',
       href: '/billing',

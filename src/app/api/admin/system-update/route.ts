@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     if (action === 'check') {
       if (isDocker) {
         // Fetch from Docker Hub API
-        let repo = (config.githubRepo || 'ramancnair/projectflow').trim();
+        let repo = (config.githubRepo || 'ashdkr99/ash_test_repo1').trim();
         if (!repo.includes('/')) {
           repo = `library/${repo}`;
         }
@@ -119,7 +119,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ releases: availableReleases });
       } else {
         // Fetch from NPM Registry (Standalone)
-        const npmPackageName = (config.npmPackage || '@ramancnair/projectflow').trim();
+        let defaultNpm = '@pf_test1999/projectflow';
+        try {
+          const pkgPath = path.join(process.cwd(), 'package.json');
+          if (fs.existsSync(pkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+            if (pkg.name) defaultNpm = pkg.name;
+          }
+        } catch (e) {}
+
+        const npmPackageName = (config.npmPackage || defaultNpm).trim();
         const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(npmPackageName)}`);
         
         if (!res.ok) {

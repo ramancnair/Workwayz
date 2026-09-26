@@ -235,14 +235,14 @@ export default function SystemUpdatePage() {
                 <CardDescription>
                   {diagnostics?.restartStrategy === 'Docker Container Managed' 
                     ? 'Check Docker Hub for the latest application images.' 
-                    : 'Check GitHub for the latest releases.'}
+                    : 'Check NPM registry for the latest standalone releases.'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {(!releases) ? (
                   <div className="flex flex-col items-center justify-center py-6">
                     <Button onClick={handleCheckUpdate} disabled={checkingUpdate} className="w-full max-w-xs shadow-md">
-                      {checkingUpdate ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Github className="w-4 h-4 mr-2" />}
+                      {checkingUpdate ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                       {checkingUpdate ? 'Checking...' : 'Check for Updates'}
                     </Button>
                   </div>
@@ -430,7 +430,7 @@ export default function SystemUpdatePage() {
                     <Input 
                       value={npmPackage} 
                       onChange={e => setNpmPackage(e.target.value)} 
-                      placeholder="e.g. @ramancnair/projectflow or projectflow-standalone"
+                      placeholder="e.g. @pf_test1999/projectflow or projectflow-standalone"
                     />
                     <p className="text-xs text-muted-foreground">
                       The package registry name on npmjs.org used to poll and download standalone updates.
@@ -442,7 +442,7 @@ export default function SystemUpdatePage() {
                     <Input 
                       value={githubRepo} 
                       onChange={e => setGithubRepo(e.target.value)} 
-                      placeholder="e.g. ramancnair/ProjectFlow"
+                      placeholder="e.g. ashdkr99/ash_test_repo1"
                     />
                     <p className="text-xs text-muted-foreground">
                       Repository used for manual releases and backup assets.
