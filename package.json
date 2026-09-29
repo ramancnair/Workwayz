@@ -1,7 +1,29 @@
 {
-  "name": "nextn",
+  "name": "projectflow",
   "version": "0.1.0",
   "private": false,
+  "description": "Enterprise-Grade AI-Powered Project & Portfolio Management Platform",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ramancnair/ProjectFlow.git"
+  },
+  "bin": {
+    "projectflow": "./bin/projectflow.js"
+  },
+  "files": [
+    ".next",
+    "!.next/cache",
+    "!.next/dev",
+    "!.next/diagnostics",
+    "!.next/trace*",
+    "!.next/**/node_modules",
+    "!.next/standalone",
+    "public",
+    "bin",
+    "next.config.ts",
+    "package.json",
+    "README.md"
+  ],
   "scripts": {
     "dev": "next dev --webpack",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",

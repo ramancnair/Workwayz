@@ -1,0 +1,10 @@
+# Exclude Next.js build cache from npm package
+.next/cache/
+.next/cache/**
+
+# Exclude environment and local secrets
+.env*
+*.log
+*.tsbuildinfo
+connections*.json
+service-account*.json
