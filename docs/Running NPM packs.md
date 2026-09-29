@@ -1,117 +1,177 @@
-# Running ProjectFlow NPM Packages & Standalone Builds
+# Running ProjectFlow Release Packages: NPM, Standalone & Docker
 
-This guide explains the difference between the **NPM Package (`.tgz` / `npx`)** and the **Next.js Standalone Bundle (`.tar.gz`)**, and provides step-by-step instructions on how to test and run them directly from GitHub releases before publishing to the public npm registry.
+This guide explains the three distribution formats available in ProjectFlow releases—**NPM Package (`.tgz`)**, **Next.js Standalone Bundle (`.tar.gz`)**, and **Docker Web Image (`projectflow-web-image-...tar.gz`)**—and provides step-by-step instructions on how to test and run each one.
 
 ---
 
-## 1. Comparing NPM Packages vs. Standalone Builds
+## 1. Comparing the 3 Release Formats
 
-Both distribution formats run the exact same **pre-compiled production Next.js code** with zero build or compilation steps required on the user's system. However, they serve different delivery workflows and deployment scenarios.
+All formats run the exact same **pre-compiled production Next.js code** with zero build or compilation steps required on the destination machine.
 
 ### Comparison Matrix
 
-| Feature | **NPM Package (`npx` / `.tgz`)** | **Standalone Bundle (`.tar.gz`)** |
-| :--- | :--- | :--- |
-| **How it is executed** | Single command: `npx projectflow` (or `projectflow` if installed globally) | Unpacked directory: `node server.js` (or `npm start`) |
-| **Installation effort** | ⚡ **Zero install** via `npx`, or standard global install via `npm install -g` | 📂 Download, extract archive, and execute |
-| **Primary distribution channel** | npm Registry (`npmjs.com`) or GitHub Release `.tgz` asset | GitHub Release `.tar.gz` asset |
-| **Target audience** | Developers, evaluators, quick local trials | System administrators, Linux VMs, bare-metal servers, Dockerless production hosts |
-| **Offline / Air-Gapped support** | Requires npm/internet unless local `.tgz` is supplied | 🔌 **Full offline support** — can be transferred via USB or local network |
-| **Update mechanism** | Automatic with `npx projectflow@latest` or `npm update -g` | Download the new release `.tar.gz` archive |
-| **Runtime requirements** | Node.js (18+) + npm | Node.js (18+) runtime only (npm is not required) |
-
-### Why Having Both is Advantageous
-1. **The NPM Package** provides the fastest possible trial experience: anyone with Node.js installed can launch ProjectFlow in seconds with a single terminal command.
-2. **The Standalone Bundle** provides a clean, self-contained server package ideal for long-running server hosting with system managers (such as `systemd` or `pm2`).
+| Feature | **1. NPM Package (`.tgz` / `npx`)** | **2. Standalone Bundle (`.tar.gz`)** | **3. Docker Web Image (`.tar.gz`)** |
+| :--- | :--- | :--- | :--- |
+| **How it is executed** | `npx projectflow` or `projectflow` (if installed globally) | `node server.js` or `npm start` inside the folder | `docker compose up -d` or `docker run` |
+| **Installation effort** | ⚡ **Zero install** via `npx`, or quick global install | 📂 Unpack `.tar.gz` and run `node server.js` | 🐳 Load tarball into Docker (`docker load -i ...`) |
+| **Target audience** | Developers, evaluators, quick local trials | Sysadmins, bare-metal servers, Linux VMs without Docker | Production servers, container clusters, self-hosters |
+| **Containerized?** | ❌ No (runs directly on host) | ❌ No (runs directly on host) | ✅ **Yes** (isolated Docker container) |
+| **Dependencies needed** | Node.js (18+) + npm | Node.js (18+) runtime only | Docker Engine / Docker Desktop (Node.js not needed) |
+| **Offline / Air-Gapped** | Requires npm unless local `.tgz` is supplied | 🔌 **Full offline support** (portable archive) | 🔌 **Full offline support** (portable container) |
+| **Release Asset Name** | `projectflow-npm-v<tag>.tgz` | `projectflow-standalone-v<tag>.tar.gz` | `projectflow-web-image-v<tag>.tar.gz` |
 
 ---
 
-## 2. Running the NPM Package Before Publishing to `npmjs.com`
-
-Before the package name or domain is finalized on `npmjs.com`, GitHub Actions creates pre-built release assets attached to each GitHub Release. You can test and run these packages on any computer using any of the methods below.
-
-### Method A: Run with `npx` from the Downloaded `.tgz` (Zero Install)
-
-When you download the package archive (e.g., `projectflow-npm-v0.1.0.tgz`) from the GitHub Release page:
-
-1. Open your terminal in the directory where the file was downloaded.
-2. Run the package directly using `npx`:
-   ```bash
-   npx ./projectflow-npm-v0.1.0.tgz
-   ```
-3. `npx` will unpack the temporary bundle and launch the Next.js production server immediately at:
-   ```text
-   http://localhost:3000
-   ```
+## 2. How to Run Each Package Format
 
 ---
 
-### Method B: Install Globally from the Local `.tgz`
+### Option 1: Running the NPM Package (`.tgz`)
 
-To install the application as a permanent system command on your machine:
+When you download `projectflow-npm-v<tag>.tgz` from the GitHub Release page:
 
-1. In your terminal, run:
-   ```bash
-   npm install -g ./projectflow-npm-v0.1.0.tgz
-   ```
-2. Once installed, start ProjectFlow from any terminal window simply by typing:
-   ```bash
-   projectflow
-   ```
-3. *(Optional)* To remove or uninstall it later:
-   ```bash
-   npm uninstall -g projectflow
-   ```
-
----
-
-### Method C: Run Directly from GitHub's Download URL (No Manual Download)
-
-Because both `npm` and `npx` can fetch tarballs directly from HTTPS URLs, you can install or run a release directly using its GitHub Release asset URL:
-
+#### Method A: Run with `npx` directly (Zero Install)
+Open your terminal in the folder containing the downloaded `.tgz`:
 ```bash
-# Global install straight from GitHub Release URL:
-npm install -g https://github.com/ramancnair/ProjectFlow/releases/download/v0.1.0/projectflow-npm-v0.1.0.tgz
+npx ./projectflow-npm-v7.0.1.tgz
+```
+`npx` will unpack the temporary bundle and launch the Next.js production server immediately at `http://localhost:3000`.
 
-# Launch the server:
+#### Method B: Install Globally as a System Command
+```bash
+# 1. Install globally
+npm install -g ./projectflow-npm-v7.0.1.tgz
+
+# 2. Run anywhere anytime
+projectflow
+
+# 3. (Optional) Uninstall later
+npm uninstall -g projectflow
+```
+
+#### Method C: Run Directly from GitHub's Download URL (No Manual Download)
+```bash
+npm install -g https://github.com/ramancnair/ProjectFlow/releases/download/v7.0.1/projectflow-npm-v7.0.1.tgz
 projectflow
 ```
 
 ---
 
-### Method D: Running the Standalone Bundle (`.tar.gz`)
+### Option 2: Running the Standalone Bundle (`.tar.gz`)
 
-If you downloaded the Standalone archive (`projectflow-standalone-v0.1.0.tar.gz`):
+The Standalone bundle is a lightweight (~19 MB), self-contained Node.js server with all runtime dependencies pre-packaged.
 
-1. Extract the tarball:
+1. **Extract the archive:**
    ```bash
-   tar -xzf projectflow-standalone-v0.1.0.tar.gz
+   tar -xzf projectflow-standalone-v7.0.1.tar.gz
    ```
-2. Navigate into the extracted folder (or run in place):
+   *(On Windows, you can also right-click and choose "Extract All")*
+
+2. **Navigate into the extracted folder:**
+   ```bash
+   cd projectflow-standalone-v7.0.1
+   ```
+
+3. **Start the server:**
    ```bash
    node server.js
    ```
+   *(Or run `npm start`—both work identically)*
+
+4. Open your browser to **[http://localhost:3000](http://localhost:3000)**.
+
+---
+
+### Option 3: Running the Docker Web Image (`projectflow-web-image-...`)
+
+The `projectflow-web-image-v<tag>.tar.gz` asset contains the complete, pre-built Docker image. It allows you to run ProjectFlow inside Docker without building from source or pulling from a remote registry.
+
+#### Prerequisites
+* **Docker Desktop** (Windows / macOS) or **Docker Engine** (Linux) must be installed and running.
+
+#### Step 1: Download Files
+From the GitHub Release page, download these two files into the same directory:
+1. `projectflow-web-image-v7.0.1.tar.gz`
+2. `docker-compose.yml`
+
+#### Step 2: Load the Image into Docker
+Open your terminal / command prompt in that directory and load the image using the `-i` (input) flag:
+
+**Windows (PowerShell / Command Prompt):**
+```powershell
+docker load -i projectflow-web-image-v7.0.1.tar.gz
+```
+
+**Linux / macOS:**
+```bash
+docker load -i projectflow-web-image-v7.0.1.tar.gz
+```
+
+Docker will import the layers and confirm:
+```text
+Loaded image: projectflow-web:latest
+```
+
+#### Step 3: Run with Docker Compose (Recommended)
+In the same folder where `docker-compose.yml` is located:
+```bash
+docker compose up -d
+```
+ProjectFlow is now running in the background at **[http://localhost:3000](http://localhost:3000)**!
+
+#### Step 4: Or Run Directly with `docker run` (Without Compose)
+```bash
+docker run -d -p 3000:3000 --name projectflow projectflow-web:latest
+```
+
+#### Useful Docker Management Commands:
+* **View application logs:**
+  ```bash
+  docker compose logs -f
+  ```
+* **Stop the container:**
+  ```bash
+  docker compose down
+  ```
+  *(Or `docker stop projectflow && docker rm projectflow` if using `docker run`)*
+
+#### Alternative: Online Registry Pull (Zero File Download)
+If your machine has internet access, you do not even need to download the `.tar.gz` file. You can pull the image straight from GitHub Container Registry:
+```bash
+docker run -d -p 3000:3000 --name projectflow ghcr.io/ramancnair/projectflow:latest
+```
 
 ---
 
 ## 3. Configuration & Custom Ports
 
-You can pass standard environment variables when launching the server with any method:
-
 ### Running on a Custom Port
+
+#### NPM / NPX:
 ```bash
-# Using npx
-PORT=8080 npx ./projectflow-npm-v0.1.0.tgz
-
-# Using global command
-PORT=8080 projectflow
-
-# Using standalone server
-PORT=8080 node server.js
+PORT=8080 npx ./projectflow-npm-v7.0.1.tgz
+# Or on Windows PowerShell:
+$env:PORT="8080"; npx ./projectflow-npm-v7.0.1.tgz
 ```
 
-### Passing Environment Files
-ProjectFlow automatically looks for `.env.local` or environment variables in your current working directory. You can provide your Firebase, Supabase, or Gemini keys in a local `.env.local` file in the folder where you launch the command:
+#### Standalone Node Server:
+```bash
+PORT=8080 node server.js
+# Or on Windows PowerShell:
+$env:PORT="8080"; node server.js
+```
+
+#### Docker:
+Change the port mapping in `docker run` or `docker-compose.yml`:
+```bash
+docker run -d -p 8080:3000 --name projectflow projectflow-web:latest
+```
+*(Now accessible at `http://localhost:8080`)*
+
+---
+
+### Supplying Environment Variables
+ProjectFlow automatically reads `.env.local` from your current directory when started with Node or npm. For Docker, specify an `.env` file or environment variables in `docker-compose.yml`:
 
 ```env
 NEXT_PUBLIC_DB_PROVIDER=supabase

@@ -30,6 +30,7 @@ jobs:
         run: |
           CLEAN_VERSION="${GITHUB_REF_NAME#v}"
           npm version "$CLEAN_VERSION" --no-git-tag-version --allow-same-version
+          echo "RELEASE_TAG=v${CLEAN_VERSION}" >> $GITHUB_ENV
 
       - name: Build Next.js Application
         run: npm run build
@@ -57,12 +58,12 @@ jobs:
             };
             require("fs").writeFileSync("dist/package.json", JSON.stringify(standalonePkg, null, 2));
           '
-          tar -czf projectflow-standalone-v${{ github.ref_name }}.tar.gz -C dist .
+          tar -czf projectflow-standalone-${{ env.RELEASE_TAG }}.tar.gz -C dist .
 
       - name: Create npm package tarball
         run: |
           npm pack
-          mv projectflow-*.tgz projectflow-npm-v${{ github.ref_name }}.tgz
+          mv projectflow-*.tgz projectflow-npm-${{ env.RELEASE_TAG }}.tgz
 
       # --- 3. Docker Build & Push to GitHub Container Registry (ghcr.io) ---
       - name: Set lowercased image name
@@ -101,16 +102,16 @@ jobs:
       - name: Compress offline Docker image
         run: |
           gzip -9 /tmp/projectflow-web-image.tar
-          mv /tmp/projectflow-web-image.tar.gz ./projectflow-web-image-v${{ github.ref_name }}.tar.gz
+          mv /tmp/projectflow-web-image.tar.gz ./projectflow-web-image-${{ env.RELEASE_TAG }}.tar.gz
 
       # --- 4. Upload All Artifacts to GitHub Release ---
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            projectflow-standalone-v${{ github.ref_name }}.tar.gz
-            projectflow-npm-v${{ github.ref_name }}.tgz
-            projectflow-web-image-v${{ github.ref_name }}.tar.gz
+            projectflow-standalone-${{ env.RELEASE_TAG }}.tar.gz
+            projectflow-npm-${{ env.RELEASE_TAG }}.tgz
+            projectflow-web-image-${{ env.RELEASE_TAG }}.tar.gz
             docker-compose.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
