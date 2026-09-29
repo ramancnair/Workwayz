@@ -257,12 +257,28 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         }
       }
 
+      // Persist active dbProvider in localStorage for instant client initialization
+      localStorage.setItem('projectflow_db_provider', dbProvider);
+      if (dbProvider === 'firebase' && fbProjectId) {
+        localStorage.setItem('projectflow_firebase_config', JSON.stringify({
+          projectId: fbProjectId,
+          apiKey: fbApiKey,
+          authDomain: `${fbProjectId}.firebaseapp.com`,
+        }));
+      }
+
       toast({
         title: "Setup Complete!",
         description: "Your configuration profiles have been saved.",
       });
 
-      router.push('/project-home');
+      // Full page redirect to cleanly re-bootstrap all runtime connections
+      if (onClose) {
+        onClose();
+        window.location.reload();
+      } else {
+        window.location.href = '/project-home';
+      }
     } catch (err: any) {
       toast({
         title: "Error saving setup",

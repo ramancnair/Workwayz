@@ -1,10 +1,8 @@
 
-import { db } from './db-provider';
+import { db, isSupabaseActive } from './db-provider';
 import { collection, getDocs, writeBatch, doc } from '@/lib/db-provider';
 import { supabase } from './supabase';
 import { scheduleListenerNotification } from './supabase-firestore-adapter';
-
-const isSupa = process.env.NEXT_PUBLIC_DB_PROVIDER === 'supabase';
 
 const SUBCOLLECTIONS = [
   'epics', 'stories', 'sprints', 'employees', 'testCases', 'risks', 
@@ -22,7 +20,7 @@ export async function deleteProjectAndSubcollections(projectId: string) {
   // If using Supabase, delete the project from the relational projects table.
   // Foreign key constraints with ON DELETE CASCADE automatically delete all subcollections
   // (stories, sprints, epics, test cycles, test cases, risks, issues, worklogs, etc.).
-  if (isSupa && supabase) {
+  if (isSupabaseActive() && supabase) {
     const { error } = await supabase.from('projects').delete().eq('id', projectId);
     if (error) throw error;
 

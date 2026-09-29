@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type PropsWithChildren, useCallback, useMemo, useRef } from 'react';
 import { db } from '@/lib/db-provider';
-import { firebaseConfig } from '@/lib/firebase';
+import { firebaseConfig, initFirebaseClient } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -20,7 +20,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from '@/lib/db-provider';
-import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, DependencyType, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan, TestPlanTestCase } from '@/types';
+import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, DependencyType, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan, TestPlanTestCase, TestCycle, TestCycleTestCase } from '@/types';
 import { arrayMove } from '@dnd-kit/sortable';
 import { v4 as uuidv4 } from 'uuid';
 import { generateNextSprintId } from '@/lib/utils';
@@ -241,6 +241,20 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
 
   const isInitialLoad = useRef(true);
   const prevProjectId = useRef(projectId);
+  const [firebaseReady, setFirebaseReady] = useState(!!firebaseConfig.projectId);
+
+  useEffect(() => {
+    if (!firebaseReady) {
+      initFirebaseClient().then((success) => {
+        if (success && firebaseConfig.projectId) {
+          setFirebaseReady(true);
+        } else {
+          setError(`Firebase is not configured correctly. The application is trying to use the Project ID: "${firebaseConfig.projectId || 'your-project-id'}". This is likely a placeholder. Please check your project setup in the Firebase Studio settings to ensure it's correctly linked to a Firebase project.`);
+          setIsLoading(false);
+        }
+      });
+    }
+  }, [firebaseReady]);
 
   useEffect(() => {
     if (prevProjectId.current !== projectId) {
@@ -248,11 +262,12 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       isInitialLoad.current = true;
     }
 
-    if (!db || !projectId) {
-      if (!db) {
-        setError(`Firebase is not configured correctly. The application is trying to use the Project ID: "${firebaseConfig.projectId || 'your-project-id'}". This is likely a placeholder. Please check your project setup in the Firebase Studio settings to ensure it's correctly linked to a Firebase project.`);
-      }
+    if (!projectId) {
       setIsLoading(false);
+      return;
+    }
+
+    if (!firebaseReady || !db) {
       return;
     }
 
@@ -499,7 +514,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       unsubGlobalHolidays();
       unsubAllUsers();
     }
-  }, [projectId, neededCollectionsKey, neededCollectionNames]);
+  }, [projectId, neededCollectionsKey, neededCollectionNames, firebaseReady]);
 
   // Auto-repair: If employee capabilities are unpopulated (e.g. for older seeded projects),
   // automatically map capabilities to the project's impacted systems so capacity bars show correctly.

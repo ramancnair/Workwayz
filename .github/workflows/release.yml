@@ -41,12 +41,17 @@ jobs:
       - name: Package Standalone npm Bundle
         run: |
           mkdir -p dist
-          # Copy Next.js standalone server output, static files, and public assets
+          # Copy Next.js standalone server output (node_modules, server.js, package.json)
           cp -r .next/standalone/* dist/
+          # Explicitly copy .next from standalone (contains server chunks, BUILD_ID, and required server manifests)
+          cp -r .next/standalone/.next dist/
+          # Standalone mode requires static assets and public directory to be copied manually
           mkdir -p dist/.next/static
-          cp -r .next/static dist/.next/
+          cp -r .next/static/. dist/.next/static/
           cp -r public dist/
           cp docker-entrypoint.sh dist/ 2>/dev/null || true
+          # Remove any transient credentials or environment files
+          rm -f dist/.env* dist/connections.json
           # Include minimal package.json so "npm start" works inside the standalone folder
           node -e '
             const pkg = require("./package.json");

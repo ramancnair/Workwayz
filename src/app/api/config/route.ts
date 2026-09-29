@@ -149,6 +149,9 @@ export async function POST(request: Request) {
         let newContent = '';
         envMap.forEach((val, key) => {
             newContent += `${key}=${val}\n`;
+            // Keep in-memory process.env in sync for running Node server
+            const cleanVal = val.replace(/^"/, '').replace(/"$/, '');
+            process.env[key] = cleanVal;
         });
 
         fs.writeFileSync(envPath, newContent, 'utf8');

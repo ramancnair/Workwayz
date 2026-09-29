@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, type PropsWithChildren } from 'react';
+import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
 import type { Epic, Story, Sprint, StoryStatus, Employee, TestCase, Risk, Assumption, Issue, Dependency, KanbanColumn, Holiday, ProjectSettings, ImpactedSystem, Release, Worklog, WorklogItem, WorklogSubmission, LeavePeriod, Project, Horizontal, User, Environment, WorkItemType, BugSeverity, RiskSeverity, RiskProbability, AssumptionCategory, AssumptionStatus, IssuePriority, IssueStatus, DependencyStatus, DependencyType, ProjectDocument, PaymentMilestone, CodeRepository, StatusHistoryItem, SprintStatus, FixedCost, TestPlan, TestPlanTestCase, TestCycle, TestCycleTestCase } from '@/types';
 import { FirebaseProjectProvider } from './FirebaseProjectProvider';
 import { PostgresProjectProvider } from './PostgresProjectProvider';
@@ -208,8 +208,30 @@ export function useProject() {
 }
 
 export function ProjectProvider({ children, projectId }: PropsWithChildren<{ projectId: string }>) {
-  const isPostgres = process.env.NEXT_PUBLIC_DB_PROVIDER === 'postgres';
-  if (isPostgres) {
+  const [dbProvider, setDbProvider] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('projectflow_db_provider');
+      if (cached) return cached;
+    }
+    return process.env.NEXT_PUBLIC_DB_PROVIDER || 'supabase';
+  });
+
+  useEffect(() => {
+    fetch('/api/runtime-config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.dbProvider) {
+          setDbProvider(data.dbProvider);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('projectflow_db_provider', data.dbProvider);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const isSupabase = dbProvider === 'supabase' || dbProvider === 'postgres';
+  if (isSupabase) {
     return <PostgresProjectProvider projectId={projectId}>{children}</PostgresProjectProvider>;
   }
   return <FirebaseProjectProvider projectId={projectId}>{children}</FirebaseProjectProvider>;

@@ -1,8 +1,16 @@
 import * as FB from 'firebase/firestore';
 import * as SB from './supabase-firestore-adapter';
 import { db as fbDb, auth as fbAuth } from './firebase';
+import { supabase } from './supabase';
 
-const isSupa = process.env.NEXT_PUBLIC_DB_PROVIDER === 'supabase';
+export function isSupabaseActive(): boolean {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem('projectflow_db_provider');
+    if (cached) return cached === 'supabase' || cached === 'postgres';
+  }
+  const envVal = process.env.NEXT_PUBLIC_DB_PROVIDER || process.env.NEXT_PUBLIC_DATABASE_PROVIDER;
+  return envVal === 'supabase' || envVal === 'postgres';
+}
 
 // Global registry of active snapshot listeners to allow clean, instant detachment on logout
 const activeListeners = new Set<() => void>();
@@ -118,7 +126,6 @@ const safeFbOnSnapshot = (ref: any, ...args: any[]) => {
       ((window as any).__isLoggingOut || !fbAuth?.currentUser);
 
     if (isPermissionDenied && isLoggingOut) {
-      // Expected teardown event during or after logout — suppress cleanly
       return;
     }
     if (typeof onError === 'function') {
@@ -144,7 +151,7 @@ const safeFbOnSnapshot = (ref: any, ...args: any[]) => {
 };
 
 const safeOnSnapshot = (ref: any, ...args: any[]) => {
-  if (isSupa) {
+  if (isSupabaseActive()) {
     const unsub = (SB.onSnapshot as any)(ref, ...args);
     const wrapped = () => {
       activeListeners.delete(wrapped);
@@ -158,25 +165,32 @@ const safeOnSnapshot = (ref: any, ...args: any[]) => {
   return safeFbOnSnapshot(ref, ...args);
 };
 
-export const collection = (isSupa ? SB.collection : FB.collection) as any;
-export const doc = (isSupa ? SB.doc : FB.doc) as any;
-export const addDoc = (isSupa ? SB.addDoc : FB.addDoc) as any;
-export const setDoc = (isSupa ? SB.setDoc : FB.setDoc) as any;
-export const updateDoc = (isSupa ? SB.updateDoc : FB.updateDoc) as any;
-export const deleteDoc = (isSupa ? SB.deleteDoc : FB.deleteDoc) as any;
-export const getDoc = (isSupa ? SB.getDoc : FB.getDoc) as any;
-export const query = (isSupa ? SB.query : FB.query) as any;
-export const where = (isSupa ? SB.where : FB.where) as any;
-export const getDocs = (isSupa ? SB.getDocs : FB.getDocs) as any;
-export const writeBatch = (isSupa ? SB.writeBatch : FB.writeBatch) as any;
-export const arrayUnion = (isSupa ? SB.arrayUnion : FB.arrayUnion) as any;
-export const arrayRemove = (isSupa ? SB.arrayRemove : FB.arrayRemove) as any;
+export const collection = ((...args: any[]) => isSupabaseActive() ? (SB.collection as any)(...args) : (FB.collection as any)(...args)) as typeof FB.collection;
+export const doc = ((...args: any[]) => isSupabaseActive() ? (SB.doc as any)(...args) : (FB.doc as any)(...args)) as typeof FB.doc;
+export const addDoc = ((...args: any[]) => isSupabaseActive() ? (SB.addDoc as any)(...args) : (FB.addDoc as any)(...args)) as typeof FB.addDoc;
+export const setDoc = ((...args: any[]) => isSupabaseActive() ? (SB.setDoc as any)(...args) : (FB.setDoc as any)(...args)) as typeof FB.setDoc;
+export const updateDoc = ((...args: any[]) => isSupabaseActive() ? (SB.updateDoc as any)(...args) : (FB.updateDoc as any)(...args)) as typeof FB.updateDoc;
+export const deleteDoc = ((...args: any[]) => isSupabaseActive() ? (SB.deleteDoc as any)(...args) : (FB.deleteDoc as any)(...args)) as typeof FB.deleteDoc;
+export const getDoc = ((...args: any[]) => isSupabaseActive() ? (SB.getDoc as any)(...args) : (FB.getDoc as any)(...args)) as typeof FB.getDoc;
+export const query = ((...args: any[]) => isSupabaseActive() ? (SB.query as any)(...args) : (FB.query as any)(...args)) as typeof FB.query;
+export const where = ((...args: any[]) => isSupabaseActive() ? (SB.where as any)(...args) : (FB.where as any)(...args)) as typeof FB.where;
+export const getDocs = ((...args: any[]) => isSupabaseActive() ? (SB.getDocs as any)(...args) : (FB.getDocs as any)(...args)) as typeof FB.getDocs;
+export const writeBatch = ((...args: any[]) => isSupabaseActive() ? (SB.writeBatch as any)(...args) : (FB.writeBatch as any)(...args)) as typeof FB.writeBatch;
+export const arrayUnion = ((...args: any[]) => isSupabaseActive() ? (SB.arrayUnion as any)(...args) : (FB.arrayUnion as any)(...args)) as typeof FB.arrayUnion;
+export const arrayRemove = ((...args: any[]) => isSupabaseActive() ? (SB.arrayRemove as any)(...args) : (FB.arrayRemove as any)(...args)) as typeof FB.arrayRemove;
 export const onSnapshot = safeOnSnapshot as any;
-export const Timestamp = (isSupa ? SB.Timestamp : FB.Timestamp) as any;
-export const orderBy = (isSupa ? SB.orderBy : FB.orderBy) as any;
-export const collectionGroup = (isSupa ? SB.collectionGroup : FB.collectionGroup) as any;
+export const orderBy = ((...args: any[]) => isSupabaseActive() ? (SB.orderBy as any)(...args) : (FB.orderBy as any)(...args)) as typeof FB.orderBy;
+export const collectionGroup = ((...args: any[]) => isSupabaseActive() ? (SB.collectionGroup as any)(...args) : (FB.collectionGroup as any)(...args)) as typeof FB.collectionGroup;
 
-import { supabase } from './supabase';
-export const db = (isSupa ? supabase : fbDb) as any;
+export const Timestamp = FB.Timestamp;
+
+export const db = new Proxy({} as any, {
+  get(_target, prop: string) {
+    const activeDb = isSupabaseActive() ? supabase : fbDb;
+    if (!activeDb) return undefined;
+    const value = (activeDb as any)[prop];
+    return typeof value === 'function' ? value.bind(activeDb) : value;
+  }
+}) as any;
+
 export type Firestore = any;
-
