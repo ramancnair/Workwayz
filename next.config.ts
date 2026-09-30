@@ -23,6 +23,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   turbopack: {},
+  serverExternalPackages: [
+    'express',
+    'import-in-the-middle',
+    'require-in-the-middle',
+    '@genkit-ai/google-genai',
+    '@genkit-ai/compat-oai',
+    'genkit',
+  ],
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
