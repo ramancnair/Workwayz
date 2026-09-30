@@ -264,7 +264,10 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           projectId: fbProjectId,
           apiKey: fbApiKey,
           authDomain: `${fbProjectId}.firebaseapp.com`,
+          storageBucket: `${fbProjectId}.firebasestorage.app`,
         }));
+      } else if (dbProvider === 'supabase') {
+        localStorage.removeItem('projectflow_firebase_config');
       }
 
       toast({

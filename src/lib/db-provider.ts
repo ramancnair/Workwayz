@@ -9,7 +9,23 @@ export function isSupabaseActive(): boolean {
     if (cached) return cached === 'supabase' || cached === 'postgres';
   }
   const envVal = process.env.NEXT_PUBLIC_DB_PROVIDER || process.env.NEXT_PUBLIC_DATABASE_PROVIDER;
-  return envVal === 'supabase' || envVal === 'postgres';
+  if (envVal) return envVal === 'supabase' || envVal === 'postgres';
+
+  if (typeof window === 'undefined') {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const connsPath = path.join(process.cwd(), 'connections.json');
+      if (fs.existsSync(connsPath)) {
+        const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
+        const activeDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
+        if (activeDb?.provider) {
+          return activeDb.provider === 'supabase' || activeDb.provider === 'postgres';
+        }
+      }
+    } catch {}
+  }
+  return false;
 }
 
 // Global registry of active snapshot listeners to allow clean, instant detachment on logout
@@ -165,28 +181,142 @@ const safeOnSnapshot = (ref: any, ...args: any[]) => {
   return safeFbOnSnapshot(ref, ...args);
 };
 
-export const collection = ((...args: any[]) => isSupabaseActive() ? (SB.collection as any)(...args) : (FB.collection as any)(...args)) as typeof FB.collection;
-export const doc = ((...args: any[]) => isSupabaseActive() ? (SB.doc as any)(...args) : (FB.doc as any)(...args)) as typeof FB.doc;
-export const addDoc = ((...args: any[]) => isSupabaseActive() ? (SB.addDoc as any)(...args) : (FB.addDoc as any)(...args)) as typeof FB.addDoc;
-export const setDoc = ((...args: any[]) => isSupabaseActive() ? (SB.setDoc as any)(...args) : (FB.setDoc as any)(...args)) as typeof FB.setDoc;
-export const updateDoc = ((...args: any[]) => isSupabaseActive() ? (SB.updateDoc as any)(...args) : (FB.updateDoc as any)(...args)) as typeof FB.updateDoc;
-export const deleteDoc = ((...args: any[]) => isSupabaseActive() ? (SB.deleteDoc as any)(...args) : (FB.deleteDoc as any)(...args)) as typeof FB.deleteDoc;
-export const getDoc = ((...args: any[]) => isSupabaseActive() ? (SB.getDoc as any)(...args) : (FB.getDoc as any)(...args)) as typeof FB.getDoc;
-export const query = ((...args: any[]) => isSupabaseActive() ? (SB.query as any)(...args) : (FB.query as any)(...args)) as typeof FB.query;
+export function getActiveDb(): any {
+  if (isSupabaseActive()) return supabase;
+  return fbDb;
+}
+
+export function unwrapDb(val: any): any {
+  if (!val || typeof val !== 'object') return val;
+  if ('_delegate' in val) {
+    return val._delegate || null;
+  }
+  return val;
+}
+
+export const collection = ((...args: any[]) => {
+  if (isSupabaseActive()) return (SB.collection as any)(...args);
+  const unwrapped = args.map((a, i) => (i === 0 ? unwrapDb(a) : a));
+  if (!unwrapped[0]) {
+    console.warn('[db-provider] collection() called before database initialization.');
+    return null;
+  }
+  return (FB.collection as any)(...unwrapped);
+}) as typeof FB.collection;
+
+export const doc = ((...args: any[]) => {
+  if (isSupabaseActive()) return (SB.doc as any)(...args);
+  const unwrapped = args.map((a, i) => (i === 0 ? unwrapDb(a) : a));
+  if (!unwrapped[0]) {
+    console.warn('[db-provider] doc() called before database initialization.');
+    return null;
+  }
+  return (FB.doc as any)(...unwrapped);
+}) as typeof FB.doc;
+
+export const addDoc = ((ref: any, ...rest: any[]) => {
+  if (isSupabaseActive()) return (SB.addDoc as any)(ref, ...rest);
+  if (!ref) return Promise.reject(new Error("Cannot addDoc to an uninitialized collection"));
+  return (FB.addDoc as any)(ref, ...rest);
+}) as typeof FB.addDoc;
+
+export const setDoc = ((ref: any, ...rest: any[]) => {
+  if (isSupabaseActive()) return (SB.setDoc as any)(ref, ...rest);
+  if (!ref) return Promise.reject(new Error("Cannot setDoc on an uninitialized document"));
+  return (FB.setDoc as any)(ref, ...rest);
+}) as typeof FB.setDoc;
+
+export const updateDoc = ((ref: any, ...rest: any[]) => {
+  if (isSupabaseActive()) return (SB.updateDoc as any)(ref, ...rest);
+  if (!ref) return Promise.reject(new Error("Cannot updateDoc on an uninitialized document"));
+  return (FB.updateDoc as any)(ref, ...rest);
+}) as typeof FB.updateDoc;
+
+export const deleteDoc = ((ref: any, ...rest: any[]) => {
+  if (isSupabaseActive()) return (SB.deleteDoc as any)(ref, ...rest);
+  if (!ref) return Promise.reject(new Error("Cannot deleteDoc on an uninitialized document"));
+  return (FB.deleteDoc as any)(ref, ...rest);
+}) as typeof FB.deleteDoc;
+
+export const getDoc = ((ref: any, ...rest: any[]) => {
+  if (isSupabaseActive()) return (SB.getDoc as any)(ref, ...rest);
+  if (!ref) {
+    return Promise.resolve({
+      exists: () => false,
+      data: () => undefined,
+      id: '',
+    } as any);
+  }
+  return (FB.getDoc as any)(ref, ...rest);
+}) as typeof FB.getDoc;
+
+export const query = ((ref: any, ...rest: any[]) => {
+  if (isSupabaseActive()) return (SB.query as any)(ref, ...rest);
+  if (!ref) return null;
+  return (FB.query as any)(ref, ...rest);
+}) as typeof FB.query;
+
 export const where = ((...args: any[]) => isSupabaseActive() ? (SB.where as any)(...args) : (FB.where as any)(...args)) as typeof FB.where;
-export const getDocs = ((...args: any[]) => isSupabaseActive() ? (SB.getDocs as any)(...args) : (FB.getDocs as any)(...args)) as typeof FB.getDocs;
-export const writeBatch = ((...args: any[]) => isSupabaseActive() ? (SB.writeBatch as any)(...args) : (FB.writeBatch as any)(...args)) as typeof FB.writeBatch;
+
+export const getDocs = ((ref: any, ...rest: any[]) => {
+  if (isSupabaseActive()) return (SB.getDocs as any)(ref, ...rest);
+  if (!ref) {
+    return Promise.resolve({
+      empty: true,
+      docs: [],
+      size: 0,
+      forEach: () => {},
+    } as any);
+  }
+  return (FB.getDocs as any)(ref, ...rest);
+}) as typeof FB.getDocs;
+
+export const writeBatch = ((...args: any[]) => {
+  if (isSupabaseActive()) return (SB.writeBatch as any)(...args);
+  const unwrapped = args.map((a, i) => (i === 0 ? unwrapDb(a) : a));
+  if (!unwrapped[0]) {
+    return {
+      set: () => {},
+      update: () => {},
+      delete: () => {},
+      commit: async () => {},
+    } as any;
+  }
+  return (FB.writeBatch as any)(...unwrapped);
+}) as typeof FB.writeBatch;
+
 export const arrayUnion = ((...args: any[]) => isSupabaseActive() ? (SB.arrayUnion as any)(...args) : (FB.arrayUnion as any)(...args)) as typeof FB.arrayUnion;
 export const arrayRemove = ((...args: any[]) => isSupabaseActive() ? (SB.arrayRemove as any)(...args) : (FB.arrayRemove as any)(...args)) as typeof FB.arrayRemove;
 export const onSnapshot = safeOnSnapshot as any;
 export const orderBy = ((...args: any[]) => isSupabaseActive() ? (SB.orderBy as any)(...args) : (FB.orderBy as any)(...args)) as typeof FB.orderBy;
-export const collectionGroup = ((...args: any[]) => isSupabaseActive() ? (SB.collectionGroup as any)(...args) : (FB.collectionGroup as any)(...args)) as typeof FB.collectionGroup;
+
+export const collectionGroup = ((...args: any[]) => {
+  if (isSupabaseActive()) return (SB.collectionGroup as any)(...args);
+  const unwrapped = args.map((a, i) => (i === 0 ? unwrapDb(a) : a));
+  if (!unwrapped[0]) return null;
+  return (FB.collectionGroup as any)(...unwrapped);
+}) as typeof FB.collectionGroup;
+
+export const runTransaction = ((firestore: any, ...rest: any[]) => {
+  if (isSupabaseActive()) return (SB as any).runTransaction ? (SB as any).runTransaction(firestore, ...rest) : Promise.resolve();
+  const unwrapped = unwrapDb(firestore);
+  if (!unwrapped) return Promise.reject(new Error("Cannot runTransaction on uninitialized firestore"));
+  return (FB.runTransaction as any)(unwrapped, ...rest);
+}) as typeof FB.runTransaction;
 
 export const Timestamp = FB.Timestamp;
 
 export const db = new Proxy({} as any, {
-  get(_target, prop: string) {
-    const activeDb = isSupabaseActive() ? supabase : fbDb;
+  has(_target, prop: string | symbol) {
+    if (prop === '_delegate') return true;
+    const activeDb = getActiveDb();
+    return activeDb ? (prop in activeDb) : false;
+  },
+  get(_target, prop: string | symbol) {
+    const activeDb = getActiveDb();
+    if (prop === '_delegate') {
+      return unwrapDb(activeDb);
+    }
     if (!activeDb) return undefined;
     const value = (activeDb as any)[prop];
     return typeof value === 'function' ? value.bind(activeDb) : value;

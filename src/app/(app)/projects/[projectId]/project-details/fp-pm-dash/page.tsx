@@ -4,8 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useTransition } from 'react'
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useProject } from '@/context/ProjectContext';
-import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { db, collection, getDocs } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

@@ -2,13 +2,15 @@ import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getAuth, type Auth } from 'firebase/auth';
 
+const sanitizeEnv = (val?: string) => (val && val !== 'undefined' && val !== 'null' && val.trim() !== '' ? val.trim() : undefined);
+
 export const firebaseConfig: any = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: sanitizeEnv(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
+  authDomain: sanitizeEnv(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
+  projectId: sanitizeEnv(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
+  storageBucket: sanitizeEnv(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: sanitizeEnv(process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
+  appId: sanitizeEnv(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
 };
 
 // Client-side cache check from localStorage
@@ -50,7 +52,7 @@ let _app: FirebaseApp | null = null;
 let _db: Firestore | null = null;
 let _auth: Auth | null = null;
 
-function initApp(): FirebaseApp | null {
+export function getFirebaseApp(): FirebaseApp | null {
   if (_app) return _app;
   if (getApps().length > 0) {
     _app = getApp();
@@ -66,6 +68,36 @@ function initApp(): FirebaseApp | null {
   }
   return null;
 }
+
+export function getFirestoreInstance(): Firestore | null {
+  if (_db) return _db;
+  const app = getFirebaseApp();
+  if (app) {
+    try {
+      _db = getFirestore(app);
+    } catch (e) {
+      console.error("Firestore initialization error", e);
+    }
+  }
+  return _db;
+}
+
+export function getAuthInstance(): Auth | null {
+  if (_auth) return _auth;
+  const app = getFirebaseApp();
+  if (app && firebaseConfig.apiKey) {
+    try {
+      _auth = getAuth(app);
+    } catch (e) {
+      console.error("Auth initialization error", e);
+    }
+  }
+  return _auth;
+}
+
+// Initial eager initialization attempt
+getFirestoreInstance();
+getAuthInstance();
 
 // Asynchronously bootstrap Firebase from runtime-config if needed
 let _fetchPromise: Promise<boolean> | null = null;
@@ -94,7 +126,7 @@ export async function initFirebaseClient(): Promise<boolean> {
           }));
         } catch (e) {}
 
-        const appInstance = initApp();
+        const appInstance = getFirebaseApp();
         if (appInstance) {
           _db = getFirestore(appInstance);
           if (firebaseConfig.apiKey) {
@@ -110,30 +142,38 @@ export async function initFirebaseClient(): Promise<boolean> {
   return _fetchPromise;
 }
 
-// Initial initialization attempt
-initApp();
+// Auto-trigger client runtime fetch if config is missing
+if (typeof window !== 'undefined' && !firebaseConfig.projectId) {
+  initFirebaseClient();
+}
 
 const dbProxy = new Proxy({} as any, {
-  get(_target, prop: string) {
-    if (!_db) {
-      const a = initApp();
-      if (a) _db = getFirestore(a);
-    }
-    if (!_db) return undefined;
-    const value = (_db as any)[prop];
-    return typeof value === 'function' ? value.bind(_db) : value;
+  has(_target, prop: string | symbol) {
+    if (prop === '_delegate') return true;
+    const realDb = getFirestoreInstance();
+    return realDb ? (prop in realDb) : false;
+  },
+  get(_target, prop: string | symbol) {
+    const realDb = getFirestoreInstance();
+    if (prop === '_delegate') return realDb;
+    if (!realDb) return undefined;
+    const value = (realDb as any)[prop];
+    return typeof value === 'function' ? value.bind(realDb) : value;
   }
 }) as Firestore;
 
 const authProxy = new Proxy({} as any, {
-  get(_target, prop: string) {
-    if (!_auth) {
-      const a = initApp();
-      if (a && firebaseConfig.apiKey) _auth = getAuth(a);
-    }
-    if (!_auth) return undefined;
-    const value = (_auth as any)[prop];
-    return typeof value === 'function' ? value.bind(_auth) : value;
+  has(_target, prop: string | symbol) {
+    if (prop === '_delegate') return true;
+    const realAuth = getAuthInstance();
+    return realAuth ? (prop in realAuth) : false;
+  },
+  get(_target, prop: string | symbol) {
+    const realAuth = getAuthInstance();
+    if (prop === '_delegate') return realAuth;
+    if (!realAuth) return undefined;
+    const value = (realAuth as any)[prop];
+    return typeof value === 'function' ? value.bind(realAuth) : value;
   }
 }) as Auth;
 
