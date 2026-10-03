@@ -11,6 +11,14 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/__tests__/**/*.{test,spec}.{ts,tsx}'],
     reporters: ['default', new VitestMatrixReporter()],
+    maxConcurrency: 4,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        maxThreads: 4,
+        minThreads: 1,
+      },
+    },
   },
   resolve: {
     alias: {

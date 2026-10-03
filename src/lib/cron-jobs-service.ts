@@ -1,4 +1,4 @@
-import { db, doc, getDoc, setDoc, collection, getDocs } from '@/lib/db-provider';
+import { db, doc, getDoc, setDoc, collection, getDocs, getActiveDb } from '@/lib/db-provider';
 import type { FpCronJob, CreateCronJobInput, CronInterval } from '@/types/cron-jobs';
 import { executeFpQuery } from '@/lib/fp-query-engine';
 import { executeFpPmQuery, type FpPmProjectData } from '@/lib/fp-pm-query-engine';
@@ -128,9 +128,10 @@ export async function loadCronJobs(options?: {
 }): Promise<FpCronJob[]> {
   let jobs: FpCronJob[] = getLocalCachedJobs();
 
-  if (db) {
+  const targetDoc = doc(db, 'settings', 'cron_jobs');
+  if (targetDoc) {
     try {
-      const snap = await getDoc(doc(db, 'settings', 'cron_jobs'));
+      const snap = await getDoc(targetDoc);
       if (snap && (typeof snap.exists === 'function' ? snap.exists() : snap.data)) {
         const raw = typeof snap.data === 'function' ? snap.data() : snap.data;
         if (raw && Array.isArray(raw.jobs)) {
@@ -168,9 +169,10 @@ export async function loadCronJobs(options?: {
 
       // Check project closure for project jobs
       if (job.scope === 'project' && job.projectId && job.status === 'active') {
-        if (db) {
+        const projRef = doc(db, 'projects', job.projectId);
+        if (projRef) {
           try {
-            const projDoc = await getDoc(doc(db, 'projects', job.projectId));
+            const projDoc = await getDoc(projRef);
             if (projDoc && (typeof projDoc.exists === 'function' ? projDoc.exists() : projDoc.data)) {
               const pData = typeof projDoc.data === 'function' ? projDoc.data() : projDoc.data;
               if (pData?.status === 'Closed' || pData?.isArchived || pData?.isDeleted) {
@@ -211,7 +213,8 @@ export async function loadCronJobs(options?: {
 export async function saveCronJobsList(jobs: FpCronJob[]): Promise<void> {
   const sanitizedJobs = sanitizeForFirestore(jobs);
   setLocalCachedJobs(sanitizedJobs);
-  if (db) {
+  const targetDoc = doc(db, 'settings', 'cron_jobs');
+  if (targetDoc) {
     try {
       const rawPayload = {
         id: 'cron_jobs',
@@ -221,7 +224,7 @@ export async function saveCronJobsList(jobs: FpCronJob[]): Promise<void> {
       };
       // Convert to clean JSON to strictly eliminate all undefined properties
       const cleanPayload = JSON.parse(JSON.stringify(sanitizeForFirestore(rawPayload)));
-      await setDoc(doc(db, 'settings', 'cron_jobs'), cleanPayload);
+      await setDoc(targetDoc, cleanPayload);
     } catch (err) {
       console.error('[cron-jobs-service] Failed to persist cron jobs to database:', err);
       throw err;
@@ -368,7 +371,7 @@ export async function renewCronJob(
  * for deterministic PM query execution.
  */
 export async function loadProjectDataForCron(projectId: string): Promise<FpPmProjectData | null> {
-  if (!db || !projectId) return null;
+  if (!getActiveDb() || !projectId) return null;
   try {
     const projDoc = await getDoc(doc(db, 'projects', projectId));
     if (!projDoc) return null;
@@ -612,7 +615,7 @@ export async function executeCronJob(
 
     // 3. Dispatch internal message if recipients configured
     let sentMessageId: string | undefined;
-    if (job.recipients && job.recipients.length > 0 && db) {
+    if (job.recipients && job.recipients.length > 0 && getActiveDb()) {
       const msgRes = await sendInternalMessage(db, {
         sender: {
           id: job.createdBy.userId || 'system',
