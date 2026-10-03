@@ -14,6 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { db, collection, getDocs } from '@/lib/db-provider';
+import { cn } from '@/lib/utils';
+import * as SliderPrimitive from '@radix-ui/react-slider';
 import {
   Sparkles,
   Trash2,
@@ -34,10 +36,14 @@ import {
   ExternalLink,
   RefreshCw,
   BarChart2,
+  ChevronDown,
+  ChevronUp,
+  Sliders,
 } from 'lucide-react';
 import {
   GeneratorConfig,
   PRESET_CONFIGS,
+  PROJECT_NAME_TEMPLATES,
   generateEmployees,
   createStudioPortfolios,
   generateProjects,
@@ -51,12 +57,95 @@ import {
   simulateProjectProgression,
 } from '@/dev-tools';
 
+interface ProjectSliderProps {
+  value: number;
+  onChange: (val: number) => void;
+  disabled?: boolean;
+}
+
+function ProjectSlider({ value, onChange, disabled = false }: ProjectSliderProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      className="relative group/slider w-full py-1"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <SliderPrimitive.Root
+        min={0}
+        max={100}
+        step={25}
+        value={[value]}
+        disabled={disabled}
+        onValueChange={([val]) => onChange(val)}
+        onPointerDown={() => {
+          setIsDragging(true);
+          const handlePointerUp = () => {
+            setIsDragging(false);
+            window.removeEventListener('pointerup', handlePointerUp);
+          };
+          window.addEventListener('pointerup', handlePointerUp);
+        }}
+        className={cn(
+          'relative flex w-full touch-none select-none items-center cursor-pointer',
+          disabled && 'cursor-not-allowed opacity-50'
+        )}
+      >
+        <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary/80">
+          <SliderPrimitive.Range className="absolute h-full bg-primary" />
+        </SliderPrimitive.Track>
+
+        {/* Step ticks at 0%, 25%, 50%, 75%, 100% */}
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-0.5 pointer-events-none">
+          {[0, 25, 50, 75, 100].map((step) => (
+            <span
+              key={step}
+              className={cn(
+                'w-1 h-1 rounded-full transition-colors',
+                value >= step ? 'bg-primary-foreground/90 dark:bg-background/90' : 'bg-muted-foreground/30'
+              )}
+            />
+          ))}
+        </div>
+
+        <SliderPrimitive.Thumb className="relative block h-3.5 w-3.5 rounded-full border-2 border-primary bg-background shadow-xs hover:scale-125 active:scale-110 transition-transform focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-grab active:cursor-grabbing">
+          {/* Mouse overlay / tooltip showing % */}
+          <div
+            className={cn(
+              'absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-slate-900 text-white dark:bg-primary dark:text-primary-foreground font-mono text-[10px] font-bold shadow-md pointer-events-none transition-all duration-150 whitespace-nowrap z-30',
+              isHovered || isDragging
+                ? 'opacity-100 scale-100 translate-y-0'
+                : 'opacity-0 scale-95 translate-y-1 group-hover/slider:opacity-100 group-hover/slider:scale-100 group-hover/slider:translate-y-0'
+            )}
+          >
+            {value}%
+            <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-0.5 border-4 border-transparent border-t-slate-900 dark:border-t-primary" />
+          </div>
+        </SliderPrimitive.Thumb>
+      </SliderPrimitive.Root>
+    </div>
+  );
+}
+
 export default function TestDataStudioPage() {
   const { toast } = useToast();
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<'presets' | 'custom' | 'autorun'>('presets');
   const [selectedPreset, setSelectedPreset] = useState<'minimal' | 'standard' | 'stress'>('standard');
+  const [expandedPreset, setExpandedPreset] = useState<'minimal' | 'standard' | 'stress' | null>(null);
+  const [projectSimProgress, setProjectSimProgress] = useState<Record<'minimal' | 'standard' | 'stress', number[]>>({
+    minimal: [75, 75],
+    standard: [75, 75, 75, 75, 75],
+    stress: [75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75],
+  });
+  const [presetAutoRun, setPresetAutoRun] = useState<Record<'minimal' | 'standard' | 'stress', boolean>>({
+    minimal: true,
+    standard: true,
+    stress: true,
+  });
 
   // Configuration state
   const [config, setConfig] = useState<GeneratorConfig>(PRESET_CONFIGS.standard);
@@ -138,9 +227,76 @@ export default function TestDataStudioPage() {
     fetchAvailableProjects();
   }, []);
 
+  const getPresetProgressLabel = (presetKey: 'minimal' | 'standard' | 'stress') => {
+    if (!presetAutoRun[presetKey]) return 'Off';
+    const projs = projectSimProgress[presetKey] || [];
+    if (projs.length === 0) return '75%';
+    const allSame = projs.every(p => p === projs[0]);
+    if (allSame) return `${projs[0]}%`;
+    const avg = Math.round(projs.reduce((a, b) => a + b, 0) / projs.length);
+    return `Avg ${avg}%`;
+  };
+
   const applyPreset = (presetKey: 'minimal' | 'standard' | 'stress') => {
     setSelectedPreset(presetKey);
-    setConfig(PRESET_CONFIGS[presetKey]);
+    const projs = projectSimProgress[presetKey] || [];
+    const avg = projs.length > 0 ? Math.round(projs.reduce((a, b) => a + b, 0) / projs.length) : 75;
+    setConfig({
+      ...PRESET_CONFIGS[presetKey],
+      simulationProgress: avg,
+      projectSimulationProgress: projs,
+      autoRunSimulation: presetAutoRun[presetKey],
+    });
+  };
+
+  const handleProjectSimChange = (presetKey: 'minimal' | 'standard' | 'stress', index: number, val: number) => {
+    setProjectSimProgress(prev => {
+      const updated = [...(prev[presetKey] || [])];
+      updated[index] = val;
+      const nextState = { ...prev, [presetKey]: updated };
+      if (selectedPreset === presetKey) {
+        const avg = Math.round(updated.reduce((a, b) => a + b, 0) / updated.length);
+        setConfig(c => ({
+          ...c,
+          simulationProgress: avg,
+          projectSimulationProgress: updated,
+        }));
+      }
+      return nextState;
+    });
+  };
+
+  const handlePresetAutoRunToggle = (presetKey: 'minimal' | 'standard' | 'stress', enabled: boolean) => {
+    setPresetAutoRun(prev => ({ ...prev, [presetKey]: enabled }));
+    if (selectedPreset === presetKey) {
+      setConfig(prev => ({
+        ...prev,
+        autoRunSimulation: enabled,
+      }));
+    }
+  };
+
+  const togglePresetExpand = (presetKey: 'minimal' | 'standard' | 'stress') => {
+    applyPreset(presetKey);
+    setExpandedPreset(prev => (prev === presetKey ? null : presetKey));
+  };
+
+  const getPresetProjectList = (presetKey: 'minimal' | 'standard' | 'stress') => {
+    const count = PRESET_CONFIGS[presetKey].projectCount;
+    const pricingModel = PRESET_CONFIGS[presetKey].pricingModel;
+    return Array.from({ length: count }).map((_, i) => {
+      const name = PROJECT_NAME_TEMPLATES[i % PROJECT_NAME_TEMPLATES.length];
+      const pricing = pricingModel === 'Mixed' ? (i % 2 === 0 ? 'Fixed Bid' : 'T&M') : pricingModel;
+      return { name, pricing };
+    });
+  };
+
+  const getProjectSimBadge = (pct: number, enabled: boolean) => {
+    if (!enabled || pct === 0) return 'To Do';
+    if (pct <= 25) return 'Sprint 1 Active';
+    if (pct <= 50) return 'Sprint 1 Done';
+    if (pct <= 75) return 'Sprint 2 Mid-Flight';
+    return 'Release Done';
   };
 
   const handleRunSimulation = async () => {
@@ -218,6 +374,7 @@ export default function TestDataStudioPage() {
         globalUsers: createdUsers,
         autoRunSimulation: config.autoRunSimulation ?? true,
         simulationProgress: config.simulationProgress ?? 75,
+        projectSimulationProgress: config.projectSimulationProgress ?? projectSimProgress[selectedPreset],
         onProgress: msg => setProgressMsg(msg),
       });
 
@@ -386,12 +543,6 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
       setProgressMsg(null);
     }
   };
-
-  // Estimated stats for live summary
-  const estPortfolios = config.portfolioCount;
-  const estProjects = config.projectCount;
-  const estWorkItems = estProjects * 8;
-  const estTestCycles = estProjects * 3;
 
   if (!isAdmin) {
     return (
@@ -589,7 +740,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
 
           {/* TAB 1: PRESETS */}
           {activeTab === 'presets' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
               {/* Minimal Starter */}
               <div
                 onClick={() => applyPreset('minimal')}
@@ -624,8 +775,116 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-border text-[11px] text-muted-foreground font-medium">
-                  ~16 Work Items • 6 Sprints • 6 Test Cycles
+
+                <div className="mt-4 pt-3 border-t border-border space-y-2">
+                  <div className="text-[11px] text-muted-foreground font-medium">
+                    ~16 Work Items • 6 Sprints • 6 Test Cycles
+                  </div>
+
+                  {/* Expand / Collapse Button for Auto-Run Simulation */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePresetExpand('minimal');
+                    }}
+                    className={`w-full h-8 text-xs justify-between font-medium transition-colors ${
+                      expandedPreset === 'minimal'
+                        ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/15'
+                        : 'border-border/80 hover:bg-muted/70 text-foreground'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-primary" />
+                      <span>Auto-Run Simulation</span>
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 font-mono font-semibold"
+                      >
+                        {getPresetProgressLabel('minimal')}
+                      </Badge>
+                    </span>
+                    {expandedPreset === 'minimal' ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                  </Button>
+
+                  {/* Expanded Section: Projects & Simulation Slider */}
+                  {expandedPreset === 'minimal' && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 pt-3 border-t border-border/80 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="sim-toggle-minimal" className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5">
+                          <Activity className="w-3.5 h-3.5 text-primary" />
+                          Simulation Active
+                        </Label>
+                        <Switch
+                          id="sim-toggle-minimal"
+                          checked={presetAutoRun['minimal']}
+                          onCheckedChange={(checked) => handlePresetAutoRunToggle('minimal', checked)}
+                        />
+                      </div>
+
+                      {!presetAutoRun['minimal'] && (
+                        <div className="p-2 rounded bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
+                          Simulation disabled. Projects will be generated in fresh planning state with all work items in "To Do".
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5 pt-1 border-t border-border/60">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
+                          <span className="flex items-center gap-1">
+                            <FolderKanban className="w-3.5 h-3.5 text-primary" />
+                            Projects Included ({getPresetProjectList('minimal').length})
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                            {presetAutoRun['minimal'] ? `${getPresetProgressLabel('minimal')} sim` : 'fresh'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1 pt-1">
+                          {getPresetProjectList('minimal').map((proj, idx) => {
+                            const projVal = projectSimProgress['minimal'][idx] ?? 75;
+                            const isSimActive = presetAutoRun['minimal'];
+                            return (
+                              <div
+                                key={idx}
+                                className="p-2.5 rounded bg-card/90 border border-border/70 text-[11px] space-y-1.5 hover:border-primary/40 transition-colors"
+                              >
+                                <div className="flex items-start justify-between gap-1.5">
+                                  <span className="font-medium text-foreground leading-snug">
+                                    {idx + 1}. {proj.name}
+                                  </span>
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 font-mono">
+                                    {proj.pricing}
+                                  </Badge>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground flex items-center justify-between">
+                                  <span>3 Sprints • ~8 Stories</span>
+                                  <span className="text-primary font-medium font-mono text-[9px]">
+                                    {getProjectSimBadge(projVal, isSimActive)}
+                                  </span>
+                                </div>
+                                <div className="pt-2 pb-0.5">
+                                  <ProjectSlider
+                                    value={isSimActive ? projVal : 0}
+                                    disabled={!isSimActive}
+                                    onChange={(val) => handleProjectSimChange('minimal', idx, val)}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -666,8 +925,116 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-border text-[11px] text-muted-foreground font-medium">
-                  ~40 Work Items • 15 Sprints • 15 Test Cycles
+
+                <div className="mt-4 pt-3 border-t border-border space-y-2">
+                  <div className="text-[11px] text-muted-foreground font-medium">
+                    ~40 Work Items • 15 Sprints • 15 Test Cycles
+                  </div>
+
+                  {/* Expand / Collapse Button for Auto-Run Simulation */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePresetExpand('standard');
+                    }}
+                    className={`w-full h-8 text-xs justify-between font-medium transition-colors ${
+                      expandedPreset === 'standard'
+                        ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/15'
+                        : 'border-border/80 hover:bg-muted/70 text-foreground'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-primary" />
+                      <span>Auto-Run Simulation</span>
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 font-mono font-semibold"
+                      >
+                        {getPresetProgressLabel('standard')}
+                      </Badge>
+                    </span>
+                    {expandedPreset === 'standard' ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                  </Button>
+
+                  {/* Expanded Section: Projects & Simulation Slider */}
+                  {expandedPreset === 'standard' && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 pt-3 border-t border-border/80 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="sim-toggle-standard" className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5">
+                          <Activity className="w-3.5 h-3.5 text-primary" />
+                          Simulation Active
+                        </Label>
+                        <Switch
+                          id="sim-toggle-standard"
+                          checked={presetAutoRun['standard']}
+                          onCheckedChange={(checked) => handlePresetAutoRunToggle('standard', checked)}
+                        />
+                      </div>
+
+                      {!presetAutoRun['standard'] && (
+                        <div className="p-2 rounded bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
+                          Simulation disabled. Projects will be generated in fresh planning state with all work items in "To Do".
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5 pt-1 border-t border-border/60">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
+                          <span className="flex items-center gap-1">
+                            <FolderKanban className="w-3.5 h-3.5 text-primary" />
+                            Projects Included ({getPresetProjectList('standard').length})
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                            {presetAutoRun['standard'] ? `${getPresetProgressLabel('standard')} sim` : 'fresh'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1 pt-1">
+                          {getPresetProjectList('standard').map((proj, idx) => {
+                            const projVal = projectSimProgress['standard'][idx] ?? 75;
+                            const isSimActive = presetAutoRun['standard'];
+                            return (
+                              <div
+                                key={idx}
+                                className="p-2.5 rounded bg-card/90 border border-border/70 text-[11px] space-y-1.5 hover:border-primary/40 transition-colors"
+                              >
+                                <div className="flex items-start justify-between gap-1.5">
+                                  <span className="font-medium text-foreground leading-snug">
+                                    {idx + 1}. {proj.name}
+                                  </span>
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 font-mono">
+                                    {proj.pricing}
+                                  </Badge>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground flex items-center justify-between">
+                                  <span>3 Sprints • ~8 Stories</span>
+                                  <span className="text-primary font-medium font-mono text-[9px]">
+                                    {getProjectSimBadge(projVal, isSimActive)}
+                                  </span>
+                                </div>
+                                <div className="pt-2 pb-0.5">
+                                  <ProjectSlider
+                                    value={isSimActive ? projVal : 0}
+                                    disabled={!isSimActive}
+                                    onChange={(val) => handleProjectSimChange('standard', idx, val)}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -705,28 +1072,116 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-border text-[11px] text-muted-foreground font-medium">
-                  ~96 Work Items • 36 Sprints • 36 Test Cycles
-                </div>
-              </div>
 
-              {/* Presets Agile Simulation Badge Callout */}
-              <div className="md:col-span-3 rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                    <Activity className="w-4 h-4" />
+                <div className="mt-4 pt-3 border-t border-border space-y-2">
+                  <div className="text-[11px] text-muted-foreground font-medium">
+                    ~96 Work Items • 36 Sprints • 36 Test Cycles
                   </div>
-                  <div>
-                    <div className="text-xs font-semibold text-foreground flex items-center gap-2">
-                      Auto-Run Agile Simulation Included
-                      <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
-                        75% Active Mid-Flight
+
+                  {/* Expand / Collapse Button for Auto-Run Simulation */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePresetExpand('stress');
+                    }}
+                    className={`w-full h-8 text-xs justify-between font-medium transition-colors ${
+                      expandedPreset === 'stress'
+                        ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/15'
+                        : 'border-border/80 hover:bg-muted/70 text-foreground'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-primary" />
+                      <span>Auto-Run Simulation</span>
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 font-mono font-semibold"
+                      >
+                        {getPresetProgressLabel('stress')}
                       </Badge>
+                    </span>
+                    {expandedPreset === 'stress' ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                  </Button>
+
+                  {/* Expanded Section: Projects & Simulation Slider */}
+                  {expandedPreset === 'stress' && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 pt-3 border-t border-border/80 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="sim-toggle-stress" className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5">
+                          <Activity className="w-3.5 h-3.5 text-primary" />
+                          Simulation Active
+                        </Label>
+                        <Switch
+                          id="sim-toggle-stress"
+                          checked={presetAutoRun['stress']}
+                          onCheckedChange={(checked) => handlePresetAutoRunToggle('stress', checked)}
+                        />
+                      </div>
+
+                      {!presetAutoRun['stress'] && (
+                        <div className="p-2 rounded bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
+                          Simulation disabled. Projects will be generated in fresh planning state with all work items in "To Do".
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5 pt-1 border-t border-border/60">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
+                          <span className="flex items-center gap-1">
+                            <FolderKanban className="w-3.5 h-3.5 text-primary" />
+                            Projects Included ({getPresetProjectList('stress').length})
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                            {presetAutoRun['stress'] ? `${getPresetProgressLabel('stress')} sim` : 'fresh'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1 pt-1">
+                          {getPresetProjectList('stress').map((proj, idx) => {
+                            const projVal = projectSimProgress['stress'][idx] ?? 75;
+                            const isSimActive = presetAutoRun['stress'];
+                            return (
+                              <div
+                                key={idx}
+                                className="p-2.5 rounded bg-card/90 border border-border/70 text-[11px] space-y-1.5 hover:border-primary/40 transition-colors"
+                              >
+                                <div className="flex items-start justify-between gap-1.5">
+                                  <span className="font-medium text-foreground leading-snug">
+                                    {idx + 1}. {proj.name}
+                                  </span>
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 font-mono">
+                                    {proj.pricing}
+                                  </Badge>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground flex items-center justify-between">
+                                  <span>3 Sprints • ~8 Stories</span>
+                                  <span className="text-primary font-medium font-mono text-[9px]">
+                                    {getProjectSimBadge(projVal, isSimActive)}
+                                  </span>
+                                </div>
+                                <div className="pt-2 pb-0.5">
+                                  <ProjectSlider
+                                    value={isSimActive ? projVal : 0}
+                                    disabled={!isSimActive}
+                                    onChange={(val) => handleProjectSimChange('stress', idx, val)}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      All presets automatically calibrate Sprint 1 (Completed to 0h), Sprint 2 (In-Flight with live burndown to today), Release Burnup with cumulative scope, and SIT/UAT testing metrics for immediate dashboard visualization.
-                    </p>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1067,36 +1522,6 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
             </div>
           )}
 
-          {/* Live Payload Summary Banner */}
-          {activeTab !== 'autorun' && (
-            <div className="rounded-lg border border-border bg-muted/30 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                Estimated Payload Summary
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <div className="bg-card border border-border rounded-md p-3 text-center">
-                  <div className="text-xl font-bold text-foreground">{estPortfolios}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">New Portfolios</div>
-                </div>
-                <div className="bg-card border border-border rounded-md p-3 text-center">
-                  <div className="text-xl font-bold text-foreground">{estProjects}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">New Projects</div>
-                </div>
-                <div className="bg-card border border-border rounded-md p-3 text-center">
-                  <div className="text-xl font-bold text-foreground">~{estWorkItems}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">Stories &amp; Tasks</div>
-                </div>
-                <div className="bg-card border border-border rounded-md p-3 text-center">
-                  <div className="text-xl font-bold text-foreground">~{estTestCycles}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">Test Cycles</div>
-                </div>
-                <div className="bg-card border border-border rounded-md p-3 text-center">
-                  <div className="text-xl font-bold text-foreground">{config.userCount}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">New Users (Auth Sync)</div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Actions */}
           <div className="flex justify-between items-center gap-3 pt-2 border-t flex-wrap">

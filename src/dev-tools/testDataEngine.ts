@@ -427,7 +427,7 @@ const PORTFOLIO_TEMPLATES = [
   },
 ];
 
-const PROJECT_NAME_TEMPLATES = [
+export const PROJECT_NAME_TEMPLATES = [
   'Microservices Architecture Migration',
   'AI-Powered Customer Assistance Hub',
   'Real-Time Fraud Detection Engine',
@@ -462,6 +462,7 @@ export interface GeneratorConfig {
   roleDistribution?: Partial<Record<AccessLevel, number>>;
   autoRunSimulation?: boolean;
   simulationProgress?: number; // 25 | 50 | 75 | 100
+  projectSimulationProgress?: number[];
 }
 
 export const PRESET_CONFIGS: Record<'minimal' | 'standard' | 'stress', GeneratorConfig> = {
@@ -714,10 +715,11 @@ export async function generateProjects(
     globalUsers: User[];
     autoRunSimulation?: boolean;
     simulationProgress?: number;
+    projectSimulationProgress?: number[];
     onProgress?: (message: string) => void;
   }
 ): Promise<Project[]> {
-  const { count, portfolioIds, pricingModel, globalUsers, autoRunSimulation, simulationProgress, onProgress } = opts;
+  const { count, portfolioIds, pricingModel, globalUsers, autoRunSimulation, simulationProgress, projectSimulationProgress, onProgress } = opts;
   if (!db) throw new Error('Database is not initialized.');
 
   onProgress?.('Scanning existing projects for next ID sequence...');
@@ -736,10 +738,7 @@ export async function generateProjects(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // If simulation is enabled, anchor startDate in the past so historical burndown & burnup data exists
-  const isSimulated = autoRunSimulation !== false;
-  const progressPct = simulationProgress ?? 75;
-  const pastDaysOffset = progressPct <= 25 ? 6 : (progressPct <= 50 ? 18 : (progressPct <= 75 ? 26 : 45));
+  const defaultProgressPct = simulationProgress ?? 75;
 
   for (let i = 0; i < count; i++) {
     currentMaxId++;
@@ -749,7 +748,14 @@ export async function generateProjects(
     const portfolioId = portfolioIds[i % portfolioIds.length];
     const projectName = `${PROJECT_NAME_TEMPLATES[i % PROJECT_NAME_TEMPLATES.length]} (Batch ${currentYear}-${currentMaxId})`;
 
-    const startDate = isSimulated ? startOfWeek(subDays(today, pastDaysOffset), { weekStartsOn: 1 }) : new Date();
+    // Per-project simulation calculation
+    const projProgressPct = projectSimulationProgress && projectSimulationProgress[i] !== undefined
+      ? projectSimulationProgress[i]
+      : defaultProgressPct;
+    const isProjSimulated = autoRunSimulation !== false && projProgressPct > 0;
+    const pastDaysOffset = projProgressPct <= 25 ? 6 : (projProgressPct <= 50 ? 18 : (projProgressPct <= 75 ? 26 : 45));
+
+    const startDate = isProjSimulated ? startOfWeek(subDays(today, pastDaysOffset), { weekStartsOn: 1 }) : new Date();
     const endDate = addDays(startDate, 90);
 
     const model: PricingModel = pricingModel === 'Mixed'
@@ -794,8 +800,8 @@ export async function generateProjects(
       endDate,
       globalUsers,
       pricingModel: model,
-      autoRunSimulation: isSimulated,
-      simulationProgress: progressPct,
+      autoRunSimulation: isProjSimulated,
+      simulationProgress: projProgressPct,
     });
 
     generatedProjects.push(projectData);
@@ -972,9 +978,9 @@ export async function simulateProjectProgression(
   let updatedTestCases = 0;
   for (const tc of testCyclesSnap.docs) {
     const casesSnap = await getDocs(collection(db, 'projects', projectId, 'testCycles', tc.id, 'testCases'));
-    const cycleData = typeof tc.data === 'function' ? tc.data() : tc;
-    const isSit = cycleData.name?.includes('SIT');
-    const isUat = cycleData.name?.includes('UAT');
+    const cycleData: any = typeof tc.data === 'function' ? tc.data() : tc;
+    const isSit = cycleData?.name?.includes('SIT');
+    const isUat = cycleData?.name?.includes('UAT');
 
     casesSnap.docs.forEach((cDoc: any, cIdx: number) => {
       let tcStatus = 'Not Run';
