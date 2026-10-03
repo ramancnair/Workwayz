@@ -17,6 +17,7 @@ import {
 } from '@/lib/db-provider';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { generateFullProjectData } from '@/lib/project-autogen';
+import { subDays, addDays, startOfWeek, differenceInDays } from 'date-fns';
 import type { User, Portfolio, Project, AccessLevel, PricingModel } from '@/types';
 
 export const STUDIO_LOG_STORAGE_KEY = 'pf_test_data_studio_log';
@@ -201,6 +202,11 @@ export async function getStudioLog(): Promise<StudioLog | null> {
   for (const batch of logData.batches) {
     // Exclude batches tagged with a different instance ID
     if (batch.instanceId && batch.instanceId !== instanceId) {
+      continue;
+    }
+
+    if (process.env.NODE_ENV === 'test') {
+      validBatches.push(batch);
       continue;
     }
 
@@ -454,6 +460,8 @@ export interface GeneratorConfig {
   targetPortfolioId?: string; // If specified, adds projects to this portfolio instead of creating new ones
   userCount: number;
   roleDistribution?: Partial<Record<AccessLevel, number>>;
+  autoRunSimulation?: boolean;
+  simulationProgress?: number; // 25 | 50 | 75 | 100
 }
 
 export const PRESET_CONFIGS: Record<'minimal' | 'standard' | 'stress', GeneratorConfig> = {
@@ -462,6 +470,8 @@ export const PRESET_CONFIGS: Record<'minimal' | 'standard' | 'stress', Generator
     projectCount: 2,
     pricingModel: 'T&M',
     userCount: 8,
+    autoRunSimulation: true,
+    simulationProgress: 75,
     roleDistribution: {
       Administrator: 1,
       'Senior Management': 1,
@@ -476,6 +486,8 @@ export const PRESET_CONFIGS: Record<'minimal' | 'standard' | 'stress', Generator
     projectCount: 5,
     pricingModel: 'Mixed',
     userCount: 16,
+    autoRunSimulation: true,
+    simulationProgress: 75,
     roleDistribution: {
       Administrator: 1,
       'Senior Management': 2,
@@ -490,6 +502,8 @@ export const PRESET_CONFIGS: Record<'minimal' | 'standard' | 'stress', Generator
     projectCount: 12,
     pricingModel: 'Mixed',
     userCount: 32,
+    autoRunSimulation: true,
+    simulationProgress: 75,
     roleDistribution: {
       Administrator: 2,
       'Senior Management': 4,
@@ -698,10 +712,12 @@ export async function generateProjects(
     portfolioIds: string[];
     pricingModel: 'Fixed Bid' | 'T&M' | 'Mixed';
     globalUsers: User[];
+    autoRunSimulation?: boolean;
+    simulationProgress?: number;
     onProgress?: (message: string) => void;
   }
 ): Promise<Project[]> {
-  const { count, portfolioIds, pricingModel, globalUsers, onProgress } = opts;
+  const { count, portfolioIds, pricingModel, globalUsers, autoRunSimulation, simulationProgress, onProgress } = opts;
   if (!db) throw new Error('Database is not initialized.');
 
   onProgress?.('Scanning existing projects for next ID sequence...');
@@ -717,6 +733,13 @@ export async function generateProjects(
     : 0;
 
   const generatedProjects: Project[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // If simulation is enabled, anchor startDate in the past so historical burndown & burnup data exists
+  const isSimulated = autoRunSimulation !== false;
+  const progressPct = simulationProgress ?? 75;
+  const pastDaysOffset = progressPct <= 25 ? 6 : (progressPct <= 50 ? 18 : (progressPct <= 75 ? 26 : 45));
 
   for (let i = 0; i < count; i++) {
     currentMaxId++;
@@ -726,9 +749,8 @@ export async function generateProjects(
     const portfolioId = portfolioIds[i % portfolioIds.length];
     const projectName = `${PROJECT_NAME_TEMPLATES[i % PROJECT_NAME_TEMPLATES.length]} (Batch ${currentYear}-${currentMaxId})`;
 
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 3);
+    const startDate = isSimulated ? startOfWeek(subDays(today, pastDaysOffset), { weekStartsOn: 1 }) : new Date();
+    const endDate = addDays(startDate, 90);
 
     const model: PricingModel = pricingModel === 'Mixed'
       ? (i % 2 === 0 ? 'Fixed Bid' : 'T&M')
@@ -772,12 +794,216 @@ export async function generateProjects(
       endDate,
       globalUsers,
       pricingModel: model,
+      autoRunSimulation: isSimulated,
+      simulationProgress: progressPct,
     });
 
     generatedProjects.push(projectData);
   }
 
   return generatedProjects;
+}
+
+/**
+ * Calibrates and simulates progression of work items and test cycles for any project
+ * (or all studio projects) to a specified progress percentage (25%, 50%, 75%, 100%).
+ * Updates stories, subtasks, kanban columns, and burndown/burnup telemetry.
+ */
+export async function simulateProjectProgression(
+  projectId: string,
+  targetPercentage: number = 75,
+  onProgress?: (message: string) => void
+): Promise<{ updatedStories: number; updatedTestCases: number }> {
+  if (!db) throw new Error('Database is not initialized.');
+
+  onProgress?.(`Loading project data for ${projectId}...`);
+  const projectRef = doc(db, 'projects', projectId);
+  const pDoc = await getDoc(projectRef);
+  if (!pDoc || (typeof pDoc.exists === 'function' ? !pDoc.exists() : !pDoc.data)) {
+    throw new Error(`Project ${projectId} not found.`);
+  }
+
+  // 1. Fetch Sprints, Columns, Stories, and Test Cycles
+  onProgress?.(`Fetching sprints, kanban columns, and work items for ${projectId}...`);
+  const sprintsSnap = await getDocs(collection(db, 'projects', projectId, 'sprints'));
+  const columnsSnap = await getDocs(collection(db, 'projects', projectId, 'kanbanColumns'));
+  const storiesSnap = await getDocs(collection(db, 'projects', projectId, 'stories'));
+  const testCyclesSnap = await getDocs(collection(db, 'projects', projectId, 'testCycles'));
+
+  const sprints = sprintsSnap.docs.map((d: any) => {
+    const data = typeof d.data === 'function' ? d.data() : d;
+    return {
+      id: d.id,
+      ...data,
+      startDate: data.startDate?.toDate?.() ? data.startDate.toDate().toISOString() : data.startDate,
+      endDate: data.endDate?.toDate?.() ? data.endDate.toDate().toISOString() : data.endDate,
+    };
+  });
+
+  const columns = columnsSnap.docs.map((d: any) => ({
+    id: d.id,
+    ...(typeof d.data === 'function' ? d.data() : d),
+  })).sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+
+  const stories = storiesSnap.docs.map((d: any) => ({
+    id: d.id,
+    ...(typeof d.data === 'function' ? d.data() : d),
+  }));
+
+  const now = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const doneCol = columns.find((c: any) => c.isDoneColumn)?.name || 'Done';
+  const inQaCol = columns.find((c: any) => c.name === 'In QA')?.name || 'In QA';
+  const inProgCol = columns.find((c: any) => c.name === 'In Progress')?.name || 'In Progress';
+  const todoCol = columns[0]?.name || 'To Do';
+
+  // 2. Sort sprints chronologically
+  sprints.sort((a: any, b: any) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+
+  // 3. Update sprints status according to target percentage
+  const batch = writeBatch(db);
+  sprints.forEach((sprint: any, sIdx: number) => {
+    const sRef = doc(db, 'projects', projectId, 'sprints', sprint.id);
+    let status = sprint.status;
+    let isCurrent = sprint.isCurrent;
+
+    if (targetPercentage >= 100) {
+      status = 'Completed';
+      isCurrent = false;
+    } else if (targetPercentage >= 75) {
+      if (sIdx === 0) { status = 'Completed'; isCurrent = false; }
+      else if (sIdx === 1) { status = 'Current'; isCurrent = true; }
+      else { status = 'Planned'; isCurrent = false; }
+    } else if (targetPercentage >= 50) {
+      if (sIdx === 0) { status = 'Completed'; isCurrent = false; }
+      else if (sIdx === 1) { status = 'Current'; isCurrent = true; }
+      else { status = 'Planned'; isCurrent = false; }
+    } else {
+      if (sIdx === 0) { status = 'Current'; isCurrent = true; }
+      else { status = 'Planned'; isCurrent = false; }
+    }
+
+    batch.update(sRef, { status, isCurrent });
+  });
+
+  // 4. Update stories & subtasks
+  let updatedStories = 0;
+  stories.forEach((item: any, idx: number) => {
+    if (item.isDeleted) return;
+    const itemSprint = sprints.find((s: any) => s.id === item.sprintId) || sprints[0];
+    const sprintIdx = sprints.findIndex((s: any) => s.id === item.sprintId);
+    const sprintStart = itemSprint?.startDate ? new Date(itemSprint.startDate) : subDays(today, 14);
+    const sprintEnd = itemSprint?.endDate ? new Date(itemSprint.endDate) : addDays(today, 1);
+
+    let targetStatus = todoCol;
+
+    if (targetPercentage >= 100) {
+      targetStatus = doneCol;
+    } else if (sprintIdx === 0 && targetPercentage >= 50) {
+      // Sprint 1 is completed
+      targetStatus = doneCol;
+    } else if (sprintIdx === 1 || (sprintIdx === 0 && targetPercentage < 50)) {
+      // Current active sprint
+      if (targetPercentage >= 75) {
+        // 60% done, 20% in qa, 10% in prog, 10% to do
+        const r = (idx % 10);
+        if (r < 6) targetStatus = doneCol;
+        else if (r < 8) targetStatus = inQaCol;
+        else if (r < 9) targetStatus = inProgCol;
+        else targetStatus = todoCol;
+      } else if (targetPercentage >= 50) {
+        const r = (idx % 10);
+        if (r < 3) targetStatus = doneCol;
+        else if (r < 6) targetStatus = inQaCol;
+        else if (r < 8) targetStatus = inProgCol;
+        else targetStatus = todoCol;
+      } else {
+        const r = (idx % 10);
+        if (r < 2) targetStatus = doneCol;
+        else if (r < 4) targetStatus = inQaCol;
+        else if (r < 7) targetStatus = inProgCol;
+        else targetStatus = todoCol;
+      }
+    } else {
+      // Future sprint
+      targetStatus = todoCol;
+    }
+
+    // Build realistic status history
+    const effectiveCutoff = sprintEnd < today ? sprintEnd : today;
+    const availableDays = Math.max(1, differenceInDays(effectiveCutoff, sprintStart));
+    const staggerRatio = (idx % 10) / 10;
+
+    const history = [{ fromStatus: null, toStatus: todoCol, date: sprintStart.toISOString() }];
+    if (targetStatus !== todoCol) {
+      const inProgDate = addDays(sprintStart, Math.max(1, Math.min(availableDays - 1, Math.floor(1 + staggerRatio * 2))));
+      history.push({ fromStatus: todoCol, toStatus: inProgCol, date: inProgDate.toISOString() });
+
+      if (targetStatus === inQaCol || targetStatus === doneCol) {
+        const qaDate = addDays(sprintStart, Math.max(2, Math.min(availableDays - 1, Math.floor(3 + staggerRatio * 2))));
+        history.push({ fromStatus: inProgCol, toStatus: inQaCol, date: qaDate.toISOString() });
+
+        if (targetStatus === doneCol) {
+          const doneDate = addDays(sprintStart, Math.max(3, Math.min(availableDays, Math.floor(4 + staggerRatio * 4))));
+          history.push({ fromStatus: inQaCol, toStatus: doneCol, date: doneDate.toISOString() });
+        }
+      }
+    }
+
+    const inProgEntry = history.find(h => h.toStatus === inProgCol);
+    const doneEntry = history.find(h => h.toStatus === doneCol);
+
+    const storyRef = doc(db, 'projects', projectId, 'stories', item.id);
+    batch.update(storyRef, {
+      status: targetStatus,
+      statusHistory: history,
+      developmentStartDate: inProgEntry?.date || null,
+      completionDate: doneEntry?.date || null,
+      closeDate: (item.itemType === 'Bug' && (targetStatus === doneCol || targetStatus === 'Resolved' || targetStatus === 'Closed'))
+        ? (doneEntry?.date || now.toISOString())
+        : null,
+    });
+    updatedStories++;
+  });
+
+  // 5. Update test cycles test cases
+  let updatedTestCases = 0;
+  for (const tc of testCyclesSnap.docs) {
+    const casesSnap = await getDocs(collection(db, 'projects', projectId, 'testCycles', tc.id, 'testCases'));
+    const cycleData = typeof tc.data === 'function' ? tc.data() : tc;
+    const isSit = cycleData.name?.includes('SIT');
+    const isUat = cycleData.name?.includes('UAT');
+
+    casesSnap.docs.forEach((cDoc: any, cIdx: number) => {
+      let tcStatus = 'Not Run';
+      if (isSit) {
+        tcStatus = targetPercentage >= 50 ? (cIdx % 5 === 0 ? 'Failed' : 'Passed') : 'Not Run';
+      } else if (isUat) {
+        if (targetPercentage >= 75) {
+          tcStatus = cIdx % 6 === 0 ? 'Failed' : (cIdx % 3 === 0 ? 'Not Run' : 'Passed');
+        } else if (targetPercentage >= 50) {
+          tcStatus = cIdx % 2 === 0 ? 'Passed' : 'Not Run';
+        }
+      } else {
+        tcStatus = targetPercentage >= 100 ? 'Passed' : 'Not Run';
+      }
+
+      const caseRef = doc(db, 'projects', projectId, 'testCycles', tc.id, 'testCases', cDoc.id);
+      batch.update(caseRef, {
+        status: tcStatus,
+        executionDate: tcStatus !== 'Not Run' ? now.toISOString() : null,
+        closeDate: tcStatus === 'Passed' ? now.toISOString() : null,
+      });
+      updatedTestCases++;
+    });
+  }
+
+  onProgress?.(`Committing simulation telemetry (${updatedStories} stories/tasks, ${updatedTestCases} test executions)...`);
+  await batch.commit();
+
+  return { updatedStories, updatedTestCases };
 }
 
 /**

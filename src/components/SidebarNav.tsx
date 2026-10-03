@@ -68,9 +68,7 @@ import {
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useProject } from "@/context/ProjectContext";
-import { DateTimePicker } from "./ui/datetime-picker";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ProjectSimulator } from "./ProjectSimulator";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { unsubscribeAllListeners } from "@/lib/db-provider";
@@ -79,7 +77,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
-  const { project, testDate, setTestDate } = useProject();
+  const { project } = useProject();
   const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string }>({ name: '', email: '', avatar: '' });
 
   useEffect(() => {
@@ -456,14 +454,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-2 transition-all duration-300">
-        <div className="grid grid-rows-[1fr] transition-all duration-300 group-data-[collapsible=icon]:grid-rows-[0fr] opacity-100 group-data-[collapsible=icon]:opacity-0 overflow-hidden">
-          <div className="min-h-0 space-y-2 mb-2 group-data-[collapsible=icon]:mb-0 whitespace-nowrap overflow-hidden">
-            <ProjectSimulator />
-            <label className="text-xs font-semibold text-sidebar-foreground/70">Test Date</label>
-            <DateTimePicker date={testDate} setDate={setTestDate} />
-          </div>
-        </div>
-        <Separator className="my-2 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:my-0 bg-sidebar-border" />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center mt-2 h-12 overflow-hidden cursor-pointer hover:bg-sidebar-accent rounded-md p-1.5 -mx-1 transition-colors">

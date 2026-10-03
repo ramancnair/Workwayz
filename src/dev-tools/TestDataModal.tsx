@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Eye,
+  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/db-provider';
@@ -136,12 +138,14 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
       const portfolioIdsToUse = resolvedPortfolios.map(p => p.id);
 
       // 3. Generate Projects with all subcollections (strictly using new users)
-      setProgressMsg('Building projects with relational subcollections...');
+      setProgressMsg('Building projects with relational subcollections and agile telemetry...');
       const createdProjects = await generateProjects({
         count: config.projectCount,
         portfolioIds: portfolioIdsToUse,
         pricingModel: config.pricingModel,
         globalUsers: createdUsers,
+        autoRunSimulation: config.autoRunSimulation ?? true,
+        simulationProgress: config.simulationProgress ?? 75,
         onProgress: msg => setProgressMsg(msg)
       });
 
@@ -733,6 +737,66 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                   Generates enterprise profiles across Administrator, Senior Management, Project Manager, Lead, Team Member, and PMO. Each user is assigned cost rates ($60k - $120k) and auto-provisioned into the Auth Identity pool.
                 </div>
               </div>
+            </div>
+
+            {/* Agile Simulation & Telemetry */}
+            <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-4 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-foreground font-semibold text-sm">
+                  <Activity className="w-4 h-4 text-primary" />
+                  Agile Simulation &amp; Dashboard Telemetry
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="modal-sim-toggle" className="text-xs text-muted-foreground cursor-pointer">
+                    Auto-Run Simulation
+                  </Label>
+                  <Switch
+                    id="modal-sim-toggle"
+                    checked={config.autoRunSimulation !== false}
+                    onCheckedChange={checked => setConfig({ ...config, autoRunSimulation: checked })}
+                  />
+                </div>
+              </div>
+
+              {config.autoRunSimulation !== false ? (
+                <div className="space-y-3 pt-1">
+                  <div className="flex justify-between items-center text-xs text-muted-foreground">
+                    <span>Target Simulation Progress:</span>
+                    <Badge variant="secondary" className="font-semibold text-xs">
+                      {config.simulationProgress ?? 75}% {config.simulationProgress === 75 ? '(Recommended)' : ''}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { pct: 25, label: '25% - Kickoff', desc: 'Sprint 1 active, burndown started' },
+                      { pct: 50, label: '50% - Mid-Point', desc: 'Sprint 1 done (0h), Sprint 2 start' },
+                      { pct: 75, label: '75% - Active Mid-Flight', desc: 'Sprint 1 done, Sprint 2 active, UAT active' },
+                      { pct: 100, label: '100% - Finished', desc: 'All sprints complete, all tests passed' },
+                    ].map(stage => (
+                      <Button
+                        key={stage.pct}
+                        type="button"
+                        variant={(config.simulationProgress ?? 75) === stage.pct ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setConfig({ ...config, simulationProgress: stage.pct })}
+                        className="flex flex-col items-start h-auto py-2 text-left"
+                      >
+                        <span className="text-xs font-semibold">{stage.label}</span>
+                        <span className="text-[10px] opacity-80 mt-0.5 leading-tight">{stage.desc}</span>
+                      </Button>
+                    ))}
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
+                    Staggers leaf work item status changes across working days, logs authentic weekday hours, and seeds SIT/UAT/Prod testing executions so Sprint Burndowns, Release Burnups, and PM Dashboards display realistic curves out of the box.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Simulation disabled. Projects will be generated in fresh planning state with all work items in "To Do".
+                </p>
+              )}
             </div>
           </div>
         )}
