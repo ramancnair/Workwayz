@@ -1,0 +1,131 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e6]:
+      - generic [ref=e8]:
+        - heading "ProjectFlow" [level=1] [ref=e14]
+        - generic [ref=e15]:
+          - button "Toggle Sidebar" [ref=e16] [cursor=pointer]
+          - button "Toggle theme" [ref=e19] [cursor=pointer]
+      - list [ref=e22]:
+        - listitem [ref=e23]:
+          - link "Access Settings" [ref=e24] [cursor=pointer]:
+            - /url: /portfolio-settings/access-settings
+        - listitem [ref=e29]:
+          - link "Database" [ref=e30] [cursor=pointer]:
+            - /url: /portfolio-settings/database
+        - listitem [ref=e37]:
+          - link "Authentication" [ref=e38] [cursor=pointer]:
+            - /url: /portfolio-settings/authentication
+        - listitem [ref=e45]:
+          - link "AI Config" [ref=e46] [cursor=pointer]:
+            - /url: /portfolio-settings/ai-config
+        - listitem [ref=e52]:
+          - button "Setup Wizard" [ref=e53] [cursor=pointer]
+        - listitem [ref=e58]:
+          - link "Archive" [ref=e59] [cursor=pointer]:
+            - /url: /portfolio-settings/archive
+        - listitem [ref=e65]:
+          - link "Test Data Studio" [ref=e66] [cursor=pointer]:
+            - /url: /portfolio-settings/test-data-studio
+        - listitem [ref=e71]:
+          - link "Cron Jobs" [ref=e72] [cursor=pointer]:
+            - /url: /portfolio-settings/cron-jobs
+      - generic [ref=e79] [cursor=pointer]:
+        - generic [ref=e80]: RN
+        - generic [ref=e82]:
+          - generic [ref=e83]: Raman Nair
+          - generic [ref=e84]: Administrator
+          - generic [ref=e85]: ramanreadsmail@gmail.com
+    - main [ref=e86]:
+      - generic [ref=e87]:
+        - tablist [ref=e90]:
+          - tab "My Projects" [ref=e91] [cursor=pointer]
+          - tab "Projects" [ref=e92] [cursor=pointer]
+          - tab "Quality" [ref=e93] [cursor=pointer]
+          - tab "Billing" [ref=e94] [cursor=pointer]
+          - tab "Users" [ref=e95] [cursor=pointer]
+          - tab "Holidays" [ref=e96] [cursor=pointer]
+          - tab "Portfolio Settings" [selected] [ref=e97] [cursor=pointer]
+          - tab "Portfolio Trash" [ref=e102] [cursor=pointer]
+        - generic [ref=e109]:
+          - generic [ref=e111]:
+            - heading "Test Data Studio" [level=2] [ref=e112]
+            - paragraph [ref=e113]: Configure, rapidly generate, or wipe relationally-linked mock datasets across portfolios, projects, and users.
+          - generic [ref=e114]:
+            - generic [ref=e116]:
+              - generic [ref=e117]:
+                - heading "Generator Controls & Datasets" [level=3] [ref=e118]
+                - paragraph [ref=e121]: Select a preset or fine-tune generation volume for mock data creation.
+              - tablist [ref=e123]:
+                - tab "Quick Presets" [ref=e251] [cursor=pointer]
+                - tab "Custom Sliders" [active] [selected]
+            - generic [ref=e129]:
+              - generic [ref=e135]:
+                - generic [ref=e136]:
+                  - generic [ref=e137]: Dedicated Studio Portfolios (Strict Isolation)
+                  - generic [ref=e138]: Isolated Environment
+                - paragraph [ref=e139]: All generated test data is strictly restricted to brand-new portfolios and projects created by the studio. Furthermore, all project team members, assignees, and worklog hours are strictly limited to newly created studio test users. Existing portfolios, real employees, and genuine worklogs remain completely untouched.
+              - generic [ref=e140]:
+                - generic [ref=e141]: No active studio test data logged. Workspace is clean.
+                - generic [ref=e146]: Clean State
+              - generic [ref=e254]:
+                - generic [ref=e255]:
+                  - generic [ref=e256]: Projects & Portfolios
+                  - generic [ref=e259]:
+                    - generic [ref=e260]:
+                      - generic [ref=e261]:
+                        - generic [ref=e262]: "Number of Projects to Create:"
+                        - generic [ref=e263]: "5"
+                      - slider [ref=e268]
+                    - generic [ref=e269]:
+                      - generic [ref=e270]:
+                        - generic [ref=e271]: "Number of New Portfolios:"
+                        - generic [ref=e272]: "2"
+                      - slider [ref=e277]
+                    - generic [ref=e278]:
+                      - generic [ref=e279]: Pricing Model
+                      - generic [ref=e280]:
+                        - button "Fixed Bid" [ref=e281] [cursor=pointer]
+                        - button "T&M" [ref=e282] [cursor=pointer]
+                        - button "Mixed" [ref=e283] [cursor=pointer]
+                - generic [ref=e284]:
+                  - generic [ref=e285]: Users & Team Distribution
+                  - generic [ref=e291]:
+                    - generic [ref=e292]:
+                      - generic [ref=e293]:
+                        - generic [ref=e294]: "Total New Members to Generate:"
+                        - generic [ref=e295]: 16 Members
+                      - slider [ref=e300]
+                    - generic [ref=e301]: Generates enterprise profiles across Administrator, Senior Management, Project Manager, Lead, and Team Member. Only these newly provisioned members are assigned to project teams, keeping real staff and actual worklogs unaffected.
+                - generic [ref=e306]:
+                  - generic [ref=e307]:
+                    - generic [ref=e308]: Agile Simulation & Dashboard Telemetry
+                    - generic [ref=e311]:
+                      - generic [ref=e312] [cursor=pointer]: Auto-Run Simulation
+                      - switch "Auto-Run Simulation" [checked] [ref=e313] [cursor=pointer]
+                  - generic [ref=e314]:
+                    - generic [ref=e315]:
+                      - generic [ref=e316]: "Target Simulation Progress:"
+                      - generic [ref=e317]: 75% (Recommended)
+                    - generic [ref=e318]:
+                      - button "25% - Kickoff Sprint 1 active, burndown started" [ref=e319] [cursor=pointer]:
+                        - generic [ref=e320]: 25% - Kickoff
+                        - generic [ref=e321]: Sprint 1 active, burndown started
+                      - button "50% - Mid-Point Sprint 1 done (0h), Sprint 2 start" [ref=e322] [cursor=pointer]:
+                        - generic [ref=e323]: 50% - Mid-Point
+                        - generic [ref=e324]: Sprint 1 done (0h), Sprint 2 start
+                      - button "75% - Active Mid-Flight Sprint 1 done, Sprint 2 active, UAT active" [ref=e325] [cursor=pointer]:
+                        - generic [ref=e326]: 75% - Active Mid-Flight
+                        - generic [ref=e327]: Sprint 1 done, Sprint 2 active, UAT active
+                      - button "100% - Finished All sprints complete, all tests passed" [ref=e328] [cursor=pointer]:
+                        - generic [ref=e329]: 100% - Finished
+                        - generic [ref=e330]: All sprints complete, all tests passed
+                    - paragraph [ref=e331]: Staggers leaf story and subtask completion across working days, logs authentic weekday hours, and seeds SIT/UAT/Prod testing executions so Sprint Burndowns, Release Burnups, and PM Dashboards display realistic curves out of the box.
+              - generic [ref=e228]:
+                - button "Wipe Studio Test Data" [disabled]
+                - button "Generate & Populate" [ref=e230] [cursor=pointer]
+  - button "Open FlowPilot AI Copilot" [ref=e244] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e238]
+  - alert [ref=e242]

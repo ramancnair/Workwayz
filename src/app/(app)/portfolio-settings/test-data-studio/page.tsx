@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,9 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { db, collection, getDocs } from '@/lib/db-provider';
 import { cn } from '@/lib/utils';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import {
@@ -32,10 +29,6 @@ import {
   ShieldCheck,
   Eye,
   Activity,
-  PlayCircle,
-  ExternalLink,
-  RefreshCw,
-  BarChart2,
   ChevronDown,
   ChevronUp,
   Sliders,
@@ -54,7 +47,6 @@ import {
   StudioLog,
   StudioLogBatch,
   StudioLogViewerModal,
-  simulateProjectProgression,
 } from '@/dev-tools';
 
 interface ProjectSliderProps {
@@ -133,7 +125,7 @@ export default function TestDataStudioPage() {
   const { toast } = useToast();
 
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState<'presets' | 'custom' | 'autorun'>('presets');
+  const [activeTab, setActiveTab] = useState<'presets' | 'custom'>('presets');
   const [selectedPreset, setSelectedPreset] = useState<'minimal' | 'standard' | 'stress'>('standard');
   const [expandedPreset, setExpandedPreset] = useState<'minimal' | 'standard' | 'stress' | null>(null);
   const [projectSimProgress, setProjectSimProgress] = useState<Record<'minimal' | 'standard' | 'stress', number[]>>({
@@ -150,6 +142,31 @@ export default function TestDataStudioPage() {
   // Configuration state
   const [config, setConfig] = useState<GeneratorConfig>(PRESET_CONFIGS.standard);
 
+  // Custom simulation distribution state (project count per milestone tier, max 5 each, max 20 total)
+  const [customSimDistribution, setCustomSimDistribution] = useState<Record<25 | 50 | 75 | 100, number>>({
+    25: 1,
+    50: 1,
+    75: 2,
+    100: 1,
+  });
+
+  const totalCustomProjects =
+    customSimDistribution[25] +
+    customSimDistribution[50] +
+    customSimDistribution[75] +
+    customSimDistribution[100];
+
+  const getCustomSimArray = () => {
+    const list: number[] = [];
+    ([25, 50, 75, 100] as const).forEach(pct => {
+      const count = customSimDistribution[pct] || 0;
+      for (let i = 0; i < count; i++) {
+        list.push(pct);
+      }
+    });
+    return list;
+  };
+
   // Studio Log state
   const [studioLog, setStudioLog] = useState<StudioLog | null>(null);
   const [loadingLog, setLoadingLog] = useState(true);
@@ -159,19 +176,13 @@ export default function TestDataStudioPage() {
   const [showLogViewer, setShowLogViewer] = useState(false);
   const [selectedRun, setSelectedRun] = useState<{ batch: StudioLogBatch; runNumber: number } | null>(null);
 
-  // Autorun Simulation state
-  const [availableProjects, setAvailableProjects] = useState<Array<{ id: string; name: string; status?: string }>>([]);
-  const [loadingProjects, setLoadingProjects] = useState(false);
-  const [selectedSimProjectId, setSelectedSimProjectId] = useState<string>('');
-  const [selectedSimStage, setSelectedSimStage] = useState<number>(75);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simProgressMsg, setSimProgressMsg] = useState<string | null>(null);
-  const [simResult, setSimResult] = useState<{ updatedStories: number; updatedTestCases: number; projectId: string; stage: number } | null>(null);
-
   // Execution states
   const [isLoading, setIsLoading] = useState(false);
+  const [operationType, setOperationType] = useState<'generate' | 'delete' | null>(null);
   const [progressMsg, setProgressMsg] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const isDeleteInProgress = isLoading && (operationType === 'delete' || /delet|wipe|purg|remov|clean/i.test(progressMsg || ''));
 
   const refreshLog = async () => {
     try {
@@ -181,34 +192,6 @@ export default function TestDataStudioPage() {
       console.warn('Error loading studio log:', e);
     } finally {
       setLoadingLog(false);
-    }
-  };
-
-  const fetchAvailableProjects = async () => {
-    if (!db) return;
-    setLoadingProjects(true);
-    try {
-      const snap = await getDocs(collection(db, 'projects'));
-      const list: Array<{ id: string; name: string; status?: string }> = [];
-      snap.forEach((d: any) => {
-        const data = typeof d.data === 'function' ? d.data() : d;
-        if (!data.isDeleted) {
-          list.push({
-            id: d.id,
-            name: data.name || 'Untitled Project',
-            status: data.status || 'Active',
-          });
-        }
-      });
-      list.sort((a, b) => a.name.localeCompare(b.name));
-      setAvailableProjects(list);
-      if (list.length > 0 && !selectedSimProjectId) {
-        setSelectedSimProjectId(list[0].id);
-      }
-    } catch (err) {
-      console.warn('Failed to load projects for autorun simulation:', err);
-    } finally {
-      setLoadingProjects(false);
     }
   };
 
@@ -224,7 +207,6 @@ export default function TestDataStudioPage() {
       } catch (e) {}
     }
     refreshLog();
-    fetchAvailableProjects();
   }, []);
 
   const getPresetProgressLabel = (presetKey: 'minimal' | 'standard' | 'stress') => {
@@ -299,52 +281,22 @@ export default function TestDataStudioPage() {
     return 'Release Done';
   };
 
-  const handleRunSimulation = async () => {
-    if (!selectedSimProjectId) {
+  const handleGenerate = async () => {
+    const isCustomTab = activeTab === 'custom';
+    const customArray = getCustomSimArray();
+    const projectCountToUse = isCustomTab ? customArray.length : config.projectCount;
+
+    if (projectCountToUse === 0) {
       toast({
         variant: 'destructive',
-        title: 'No Project Selected',
-        description: 'Please select a project to simulate.',
+        title: 'No Projects Configured',
+        description: 'Please allocate at least 1 project using the simulation sliders before generating.',
       });
       return;
     }
 
-    setIsSimulating(true);
-    setSimResult(null);
-    setSimProgressMsg(`Starting Agile simulation at ${selectedSimStage}% progression...`);
-
-    try {
-      const result = await simulateProjectProgression(
-        selectedSimProjectId,
-        selectedSimStage,
-        msg => setSimProgressMsg(msg)
-      );
-
-      setSimResult({
-        ...result,
-        projectId: selectedSimProjectId,
-        stage: selectedSimStage,
-      });
-
-      toast({
-        title: 'Agile Simulation Complete',
-        description: `Successfully simulated ${result.updatedStories} work items and ${result.updatedTestCases} test executions. Dashboards are ready!`,
-      });
-    } catch (err: any) {
-      console.error('Simulation execution error:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Simulation Failed',
-        description: err?.message || 'Could not complete simulation.',
-      });
-    } finally {
-      setIsSimulating(false);
-      setSimProgressMsg(null);
-    }
-  };
-
-  const handleGenerate = async () => {
     setIsLoading(true);
+    setOperationType('generate');
     setStatusMessage(null);
     setProgressMsg('Starting test data generation pipeline...');
 
@@ -367,14 +319,21 @@ export default function TestDataStudioPage() {
 
       // 3. Generate Projects with all subcollections (strictly using new users)
       setProgressMsg('Building projects with relational subcollections and agile telemetry...');
+      const projectSimToUse = isCustomTab
+        ? customArray
+        : (config.projectSimulationProgress ?? projectSimProgress[selectedPreset]);
+      const avgSimToUse = isCustomTab && customArray.length > 0
+        ? Math.round(customArray.reduce((a, b) => a + b, 0) / customArray.length)
+        : (config.simulationProgress ?? 75);
+
       const createdProjects = await generateProjects({
-        count: config.projectCount,
+        count: projectCountToUse,
         portfolioIds: portfolioIdsToUse,
         pricingModel: config.pricingModel,
         globalUsers: createdUsers,
         autoRunSimulation: config.autoRunSimulation ?? true,
-        simulationProgress: config.simulationProgress ?? 75,
-        projectSimulationProgress: config.projectSimulationProgress ?? projectSimProgress[selectedPreset],
+        simulationProgress: avgSimToUse,
+        projectSimulationProgress: projectSimToUse,
         onProgress: msg => setProgressMsg(msg),
       });
 
@@ -415,6 +374,7 @@ export default function TestDataStudioPage() {
     } finally {
       setIsLoading(false);
       setProgressMsg(null);
+      setOperationType(null);
     }
   };
 
@@ -435,6 +395,7 @@ All original users, pre-existing projects, and genuine portfolios will remain co
     if (!confirmed) return;
 
     setIsLoading(true);
+    setOperationType('delete');
     setStatusMessage(null);
     setProgressMsg('Reading studio creation log and wiping studio assets...');
 
@@ -475,6 +436,7 @@ All original users, pre-existing projects, and genuine portfolios will remain co
     } finally {
       setIsLoading(false);
       setProgressMsg(null);
+      setOperationType(null);
     }
   };
 
@@ -500,6 +462,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
     if (!confirmed) return;
 
     setIsLoading(true);
+    setOperationType('delete');
     setStatusMessage(null);
     setProgressMsg(`Wiping studio test data for run ${batchId}...`);
 
@@ -541,6 +504,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
     } finally {
       setIsLoading(false);
       setProgressMsg(null);
+      setOperationType(null);
     }
   };
 
@@ -586,10 +550,25 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
 
       {/* Live In-Progress Banner */}
       {isLoading && progressMsg && (
-        <Alert className="border-primary/40 bg-primary/5 text-foreground flex items-center gap-3">
-          <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
-          <AlertDescription className="text-xs font-medium">{progressMsg}</AlertDescription>
-        </Alert>
+        isDeleteInProgress ? (
+          <div
+            role="alert"
+            className="rounded-lg border-2 border-yellow-400 dark:border-yellow-400 bg-yellow-400/15 dark:bg-yellow-500/20 px-4 py-3 text-foreground flex items-center gap-3 shadow-[0_0_25px_rgba(250,204,21,0.25)] dark:shadow-[0_0_30px_rgba(250,204,21,0.3)] animate-in fade-in slide-in-from-top-1 duration-200"
+          >
+            <span className="px-2.5 py-1 rounded font-mono text-[11px] font-bold uppercase tracking-wider bg-yellow-400 text-yellow-950 dark:bg-yellow-400 dark:text-black shadow-xs flex items-center gap-1.5 shrink-0 animate-pulse">
+              <Trash2 className="w-3.5 h-3.5" /> Deleting
+            </span>
+            <Loader2 className="w-4 h-4 animate-spin text-yellow-600 dark:text-yellow-400 shrink-0" />
+            <span className="text-xs font-semibold text-yellow-950 dark:text-yellow-100 flex-1">
+              {progressMsg}
+            </span>
+          </div>
+        ) : (
+          <Alert className="border-primary/40 bg-primary/5 text-foreground flex items-center gap-3">
+            <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+            <AlertDescription className="text-xs font-medium">{progressMsg}</AlertDescription>
+          </Alert>
+        )
       )}
 
       {/* Embedded Studio Panel */}
@@ -615,10 +594,6 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                 <TabsTrigger value="custom" className="gap-1.5 text-xs">
                   <Layers className="w-3.5 h-3.5" />
                   Custom Sliders
-                </TabsTrigger>
-                <TabsTrigger value="autorun" className="gap-1.5 text-xs">
-                  <PlayCircle className="w-3.5 h-3.5 text-primary" />
-                  Auto-Run Simulation
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -1198,18 +1173,11 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                 </div>
 
                 <div className="space-y-4 text-xs">
-                  <div>
-                    <div className="flex justify-between text-muted-foreground mb-2">
-                      <span>Number of Projects to Create:</span>
-                      <Badge variant="outline" className="font-mono text-xs">{config.projectCount}</Badge>
-                    </div>
-                    <Slider
-                      min={1}
-                      max={20}
-                      step={1}
-                      value={[config.projectCount]}
-                      onValueChange={([val]) => setConfig({ ...config, projectCount: val })}
-                    />
+                  <div className="flex justify-between items-center p-2.5 rounded-md bg-card border border-border">
+                    <span className="text-muted-foreground">Total Projects to Create:</span>
+                    <Badge variant="secondary" className="font-mono font-bold text-xs">
+                      {totalCustomProjects} Projects
+                    </Badge>
                   </div>
 
                   <div>
@@ -1299,32 +1267,75 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                 {config.autoRunSimulation !== false ? (
                   <div className="space-y-3 pt-1">
                     <div className="flex justify-between items-center text-xs text-muted-foreground">
-                      <span>Target Simulation Progress:</span>
-                      <Badge variant="secondary" className="font-semibold text-xs">
-                        {config.simulationProgress ?? 75}% {config.simulationProgress === 75 ? '(Recommended)' : ''}
+                      <span className="font-semibold text-foreground">Target Simulation Progress &amp; Project Distribution:</span>
+                      <Badge variant="outline" className="font-mono text-xs font-semibold bg-primary/10 text-primary border-primary/30">
+                        Total: {totalCustomProjects} / 20 Projects
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       {[
-                        { pct: 25, label: '25% - Kickoff', desc: 'Sprint 1 active, burndown started' },
-                        { pct: 50, label: '50% - Mid-Point', desc: 'Sprint 1 done (0h), Sprint 2 start' },
-                        { pct: 75, label: '75% - Active Mid-Flight', desc: 'Sprint 1 done, Sprint 2 active, UAT active' },
-                        { pct: 100, label: '100% - Finished', desc: 'All sprints complete, all tests passed' },
-                      ].map(stage => (
-                        <Button
-                          key={stage.pct}
-                          type="button"
-                          variant={(config.simulationProgress ?? 75) === stage.pct ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setConfig({ ...config, simulationProgress: stage.pct })}
-                          className="flex flex-col items-start h-auto py-2 text-left"
-                        >
-                          <span className="text-xs font-semibold">{stage.label}</span>
-                          <span className="text-[10px] opacity-80 mt-0.5 leading-tight">{stage.desc}</span>
-                        </Button>
-                      ))}
+                        { pct: 25 as const, label: '25% - Kickoff', desc: 'Sprint 1 active, burndown started' },
+                        { pct: 50 as const, label: '50% - Mid-Point', desc: 'Sprint 1 done (0h), Sprint 2 start' },
+                        { pct: 75 as const, label: '75% - Active Mid-Flight', desc: 'Sprint 1 done, Sprint 2 active, UAT active' },
+                        { pct: 100 as const, label: '100% - Finished', desc: 'All sprints complete, all tests passed' },
+                      ].map(stage => {
+                        const count = customSimDistribution[stage.pct] || 0;
+                        return (
+                          <div
+                            key={stage.pct}
+                            className={cn(
+                              'p-3.5 rounded-lg border transition-all flex flex-col justify-between space-y-3',
+                              count > 0
+                                ? 'border-primary/50 bg-primary/5 shadow-xs'
+                                : 'border-border bg-card/60 opacity-80 hover:opacity-100 hover:border-border/90'
+                            )}
+                          >
+                            <div>
+                              <div className="text-xs font-semibold text-foreground mb-1">
+                                {stage.label}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-tight min-h-[26px]">
+                                {stage.desc}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-border/70 space-y-1.5">
+                              <div className="flex justify-between items-center text-[10px] font-mono text-muted-foreground">
+                                <span>Projects at {stage.pct}%:</span>
+                                <span className="font-bold text-foreground">{count} / 5</span>
+                              </div>
+                              <Slider
+                                min={0}
+                                max={5}
+                                step={1}
+                                value={[count]}
+                                disabled={config.autoRunSimulation === false}
+                                onValueChange={([val]) => {
+                                  setCustomSimDistribution(prev => ({ ...prev, [stage.pct]: val }));
+                                }}
+                                className="cursor-pointer py-1"
+                              />
+                              <div className="flex justify-between text-[9px] text-muted-foreground font-mono px-0.5 pointer-events-none">
+                                <span>0</span>
+                                <span>1</span>
+                                <span>2</span>
+                                <span>3</span>
+                                <span>4</span>
+                                <span>5</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+
+                    {totalCustomProjects === 0 && (
+                      <div className="p-2.5 rounded-md border border-amber-500/40 bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Please set at least 1 project using the sliders above to generate test data.</span>
+                      </div>
+                    )}
 
                     <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
                       Staggers leaf story and subtask completion across working days, logs authentic weekday hours, and seeds SIT/UAT/Prod testing executions so Sprint Burndowns, Release Burnups, and PM Dashboards display realistic curves out of the box.
@@ -1332,196 +1343,12 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Simulation disabled. Projects will be generated in fresh planning state with all work items in "To Do".
+                    Simulation disabled. All {totalCustomProjects} projects will be generated in fresh planning state with all work items in "To Do".
                   </p>
                 )}
               </div>
             </div>
           )}
-
-          {/* TAB 3: AUTORUN SIMULATION */}
-          {activeTab === 'autorun' && (
-            <div className="space-y-6">
-              <div className="bg-muted/30 border border-border rounded-lg p-5 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-foreground font-semibold text-base">
-                      <PlayCircle className="w-5 h-5 text-primary" />
-                      Agile Simulation Engine (On-Demand)
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Simulate realistic sprint execution, leaf task completion across working days, authentic weekday worklog hours, and QA test executions on any project in your workspace. This populates all project dashboards (Sprint Burndown, Release Burnup, Kanban, PM Dashboard, Quality Dashboard) with clean, dynamic curves.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchAvailableProjects}
-                    disabled={loadingProjects}
-                    className="h-8 gap-1.5 text-xs shrink-0"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${loadingProjects ? 'animate-spin' : ''}`} />
-                    Refresh Projects
-                  </Button>
-                </div>
-
-                {/* Project Selector */}
-                <div className="space-y-2 pt-2 border-t border-border">
-                  <Label className="text-xs font-semibold text-foreground">Select Target Project</Label>
-                  {availableProjects.length > 0 ? (
-                    <Select value={selectedSimProjectId} onValueChange={setSelectedSimProjectId}>
-                      <SelectTrigger className="w-full text-xs">
-                        <SelectValue placeholder="Choose a project to simulate..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableProjects.map(p => (
-                          <SelectItem key={p.id} value={p.id} className="text-xs">
-                            <span className="font-medium text-foreground">{p.name}</span>
-                            <span className="ml-2 text-muted-foreground">({p.status})</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="p-4 rounded-md border border-dashed border-border text-center text-xs text-muted-foreground space-y-2">
-                      <p>No active projects found in workspace.</p>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setActiveTab('presets')}
-                        className="text-xs h-7"
-                      >
-                        Generate Projects using Presets
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Simulation Stage Cards */}
-                <div className="space-y-2 pt-2 border-t border-border">
-                  <Label className="text-xs font-semibold text-foreground">Target Simulation Progression</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {[
-                      {
-                        pct: 25,
-                        label: '25% - Kickoff',
-                        desc: 'Sprint 1 is active. Leaf tasks initiated. Early burndown descending.',
-                      },
-                      {
-                        pct: 50,
-                        label: '50% - Sprint 1 Complete',
-                        desc: 'Sprint 1 leaf items 100% Done (burndown hits 0h). Sprint 2 begins. SIT testing initialized.',
-                      },
-                      {
-                        pct: 75,
-                        label: '75% - Active Mid-Flight',
-                        badge: 'Recommended',
-                        desc: 'Sprint 1 done (0h). Sprint 2 actively mid-flight with tasks Done/In QA/In Progress. Release Burnup climbing. SIT passed, UAT active.',
-                      },
-                      {
-                        pct: 100,
-                        label: '100% - Release Complete',
-                        desc: 'All sprints and releases 100% completed. Leaf items Done. Burndown hits 0h. All test cycles passed.',
-                      },
-                    ].map(stage => (
-                      <div
-                        key={stage.pct}
-                        onClick={() => setSelectedSimStage(stage.pct)}
-                        className={`p-3 rounded-lg border cursor-pointer transition-all flex flex-col justify-between ${
-                          selectedSimStage === stage.pct
-                            ? 'border-2 border-primary bg-primary/5 shadow-sm'
-                            : 'border-border bg-card hover:border-primary/40'
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-foreground">{stage.label}</span>
-                            {stage.badge && (
-                              <Badge variant="secondary" className="text-[9px] px-1 py-0">
-                                {stage.badge}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground leading-relaxed">{stage.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Simulation In-Progress */}
-                {isSimulating && simProgressMsg && (
-                  <Alert className="border-primary/40 bg-primary/5 text-foreground flex items-center gap-3">
-                    <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
-                    <AlertDescription className="text-xs font-medium">{simProgressMsg}</AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Simulation Result Banner with Deep Links */}
-                {simResult && (
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-foreground font-semibold text-xs">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>Agile Simulation Successfully Applied ({simResult.stage}%)</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Updated <strong className="text-foreground">{simResult.updatedStories}</strong> stories &amp; tasks and <strong className="text-foreground">{simResult.updatedTestCases}</strong> test executions. Sprint burndown and release burnup curves have been recalculated and calibrated up to today.
-                    </p>
-                    <div className="pt-2 border-t border-emerald-500/20 flex flex-wrap gap-2">
-                      <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-background">
-                        <Link href={`/projects/${simResult.projectId}/development/dashboard`}>
-                          <BarChart2 className="w-3.5 h-3.5 text-primary" />
-                          Sprint Burndown &amp; Burnup Dashboard
-                          <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-background">
-                        <Link href={`/projects/${simResult.projectId}/development/kanban`}>
-                          <FolderKanban className="w-3.5 h-3.5 text-primary" />
-                          Kanban Board
-                          <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-background">
-                        <Link href={`/projects/${simResult.projectId}/project-details/pm-dashboard`}>
-                          <Briefcase className="w-3.5 h-3.5 text-primary" />
-                          PM Dashboard
-                          <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-background">
-                        <Link href={`/projects/${simResult.projectId}/testing/dashboard`}>
-                          <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                          Quality &amp; Testing Dashboard
-                          <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Autorun Action Button */}
-                <div className="pt-2 flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={handleRunSimulation}
-                    disabled={isSimulating || !selectedSimProjectId || availableProjects.length === 0}
-                    className="gap-2"
-                  >
-                    {isSimulating ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <PlayCircle className="w-4 h-4" />
-                    )}
-                    {isSimulating ? 'Simulating Progress...' : `Run Simulation (${selectedSimStage}%)`}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
 
           {/* Actions */}
           <div className="flex justify-between items-center gap-3 pt-2 border-t flex-wrap">
@@ -1539,21 +1366,19 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                 : 'Wipe Studio Test Data'}
             </Button>
 
-            {activeTab !== 'autorun' && (
-              <Button
-                type="button"
-                onClick={handleGenerate}
-                disabled={isLoading}
-                className="flex items-center gap-2 ml-auto"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                {isLoading ? 'Generating Datasets...' : 'Generate & Populate'}
-              </Button>
-            )}
+            <Button
+              type="button"
+              onClick={handleGenerate}
+              disabled={isLoading || (activeTab === 'custom' && totalCustomProjects === 0)}
+              className="flex items-center gap-2 ml-auto"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {isLoading ? 'Generating Datasets...' : 'Generate & Populate'}
+            </Button>
           </div>
         </CardContent>
       </Card>

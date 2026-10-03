@@ -1,0 +1,150 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e6]:
+      - generic [ref=e8]:
+        - heading "ProjectFlow" [level=1] [ref=e14]
+        - generic [ref=e15]:
+          - button "Toggle Sidebar" [ref=e16] [cursor=pointer]
+          - button "Toggle theme" [ref=e19] [cursor=pointer]
+      - list [ref=e22]:
+        - listitem [ref=e23]:
+          - link "Access Settings" [ref=e24] [cursor=pointer]:
+            - /url: /portfolio-settings/access-settings
+        - listitem [ref=e29]:
+          - link "Database" [ref=e30] [cursor=pointer]:
+            - /url: /portfolio-settings/database
+        - listitem [ref=e37]:
+          - link "Authentication" [ref=e38] [cursor=pointer]:
+            - /url: /portfolio-settings/authentication
+        - listitem [ref=e45]:
+          - link "AI Config" [ref=e46] [cursor=pointer]:
+            - /url: /portfolio-settings/ai-config
+        - listitem [ref=e52]:
+          - button "Setup Wizard" [ref=e53] [cursor=pointer]
+        - listitem [ref=e58]:
+          - link "Archive" [ref=e59] [cursor=pointer]:
+            - /url: /portfolio-settings/archive
+        - listitem [ref=e65]:
+          - link "Test Data Studio" [ref=e66] [cursor=pointer]:
+            - /url: /portfolio-settings/test-data-studio
+        - listitem [ref=e71]:
+          - link "Cron Jobs" [ref=e72] [cursor=pointer]:
+            - /url: /portfolio-settings/cron-jobs
+      - generic [ref=e79] [cursor=pointer]:
+        - generic [ref=e80]: RN
+        - generic [ref=e82]:
+          - generic [ref=e83]: Raman Nair
+          - generic [ref=e84]: Administrator
+          - generic [ref=e85]: ramanreadsmail@gmail.com
+    - main [ref=e86]:
+      - generic [ref=e87]:
+        - tablist [ref=e90]:
+          - tab "My Projects" [ref=e91] [cursor=pointer]
+          - tab "Projects" [ref=e92] [cursor=pointer]
+          - tab "Quality" [ref=e93] [cursor=pointer]
+          - tab "Billing" [ref=e94] [cursor=pointer]
+          - tab "Users" [ref=e95] [cursor=pointer]
+          - tab "Holidays" [ref=e96] [cursor=pointer]
+          - tab "Portfolio Settings" [selected] [ref=e97] [cursor=pointer]
+          - tab "Portfolio Trash" [ref=e102] [cursor=pointer]
+        - generic [ref=e109]:
+          - generic [ref=e111]:
+            - heading "Test Data Studio" [level=2] [ref=e112]
+            - paragraph [ref=e113]: Configure, rapidly generate, or wipe relationally-linked mock datasets across portfolios, projects, and users.
+          - generic [ref=e114]:
+            - generic [ref=e116]:
+              - generic [ref=e117]:
+                - heading "Generator Controls & Datasets" [level=3] [ref=e118]
+                - paragraph [ref=e121]: Select a preset or fine-tune generation volume for mock data creation.
+              - tablist [ref=e123]:
+                - tab "Quick Presets" [active] [selected]
+                - tab "Custom Sliders" [ref=e124] [cursor=pointer]
+            - generic [ref=e129]:
+              - generic [ref=e135]:
+                - generic [ref=e136]:
+                  - generic [ref=e137]: Dedicated Studio Portfolios (Strict Isolation)
+                  - generic [ref=e138]: Isolated Environment
+                - paragraph [ref=e139]: All generated test data is strictly restricted to brand-new portfolios and projects created by the studio. Furthermore, all project team members, assignees, and worklog hours are strictly limited to newly created studio test users. Existing portfolios, real employees, and genuine worklogs remain completely untouched.
+              - generic [ref=e140]:
+                - generic [ref=e141]: No active studio test data logged. Workspace is clean.
+                - generic [ref=e146]: Clean State
+              - generic [ref=e332]:
+                - generic [ref=e333] [cursor=pointer]:
+                  - generic [ref=e334]:
+                    - generic [ref=e335]: Minimal Starter
+                    - paragraph [ref=e339]: Fast setup for quick UI smoke checks and lightweight flows.
+                    - generic [ref=e340]:
+                      - generic [ref=e341]:
+                        - generic [ref=e342]: "Portfolios:"
+                        - generic [ref=e343]: 1 New
+                      - generic [ref=e344]:
+                        - generic [ref=e345]: "Projects:"
+                        - generic [ref=e346]: "2"
+                      - generic [ref=e347]:
+                        - generic [ref=e348]: "Users:"
+                        - generic [ref=e349]: 8 Members
+                      - generic [ref=e350]:
+                        - generic [ref=e351]: "Pricing:"
+                        - generic [ref=e352]: T&M
+                  - generic [ref=e353]:
+                    - generic [ref=e354]: ~16 Work Items • 6 Sprints • 6 Test Cycles
+                    - button "Auto-Run Simulation 75%" [ref=e355]:
+                      - generic [ref=e356]:
+                        - generic [ref=e357]: Auto-Run Simulation
+                        - generic [ref=e358]: 75%
+                - generic [ref=e359] [cursor=pointer]:
+                  - generic [ref=e360]:
+                    - generic [ref=e361]:
+                      - generic [ref=e362]: Standard Demo
+                      - generic [ref=e365]: Recommended
+                    - paragraph [ref=e366]: Balanced relational baseline for stakeholder presentations & QA.
+                    - generic [ref=e367]:
+                      - generic [ref=e368]:
+                        - generic [ref=e369]: "Portfolios:"
+                        - generic [ref=e370]: 2 New
+                      - generic [ref=e371]:
+                        - generic [ref=e372]: "Projects:"
+                        - generic [ref=e373]: "5"
+                      - generic [ref=e374]:
+                        - generic [ref=e375]: "Users:"
+                        - generic [ref=e376]: 16 Members
+                      - generic [ref=e377]:
+                        - generic [ref=e378]: "Pricing:"
+                        - generic [ref=e379]: Mixed
+                  - generic [ref=e380]:
+                    - generic [ref=e381]: ~40 Work Items • 15 Sprints • 15 Test Cycles
+                    - button "Auto-Run Simulation 75%" [ref=e382]:
+                      - generic [ref=e383]:
+                        - generic [ref=e384]: Auto-Run Simulation
+                        - generic [ref=e385]: 75%
+                - generic [ref=e386] [cursor=pointer]:
+                  - generic [ref=e387]:
+                    - generic [ref=e388]: Enterprise Stress Test
+                    - paragraph [ref=e393]: Heavy volume dataset to test pagination, graphs, and system limits.
+                    - generic [ref=e394]:
+                      - generic [ref=e395]:
+                        - generic [ref=e396]: "Portfolios:"
+                        - generic [ref=e397]: 4 New
+                      - generic [ref=e398]:
+                        - generic [ref=e399]: "Projects:"
+                        - generic [ref=e400]: "12"
+                      - generic [ref=e401]:
+                        - generic [ref=e402]: "Users:"
+                        - generic [ref=e403]: 32 Members
+                      - generic [ref=e404]:
+                        - generic [ref=e405]: "Pricing:"
+                        - generic [ref=e406]: Mixed
+                  - generic [ref=e407]:
+                    - generic [ref=e408]: ~96 Work Items • 36 Sprints • 36 Test Cycles
+                    - button "Auto-Run Simulation 75%" [ref=e409]:
+                      - generic [ref=e410]:
+                        - generic [ref=e411]: Auto-Run Simulation
+                        - generic [ref=e412]: 75%
+              - generic [ref=e228]:
+                - button "Wipe Studio Test Data" [disabled]
+                - button "Generate & Populate" [ref=e230] [cursor=pointer]
+  - button "Open FlowPilot AI Copilot" [ref=e244] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e238]
+  - alert [ref=e242]
