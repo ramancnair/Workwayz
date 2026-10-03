@@ -54,7 +54,7 @@ export default function MyProjectsPage() {
       try {
         const parsed = JSON.parse(storedUser);
         setCurrentUser({
-          empId: parsed.empId || '',
+          empId: parsed.empId || parsed.id || parsed.uid || '',
           accessLevel: (parsed.accessLevel as AccessLevel) || 'Team Member',
           name: parsed.name || '',
           email: parsed.email || '',
@@ -114,62 +114,89 @@ export default function MyProjectsPage() {
     return () => unsub();
   }, []);
 
-  // Find which projects the current user is part of
+  // Find which projects the current user is part of (as PM or in Project Resources)
   useEffect(() => {
-    if (!currentUser?.empId || !allProjects.length) {
-      if (allProjects.length === 0 && !isLoadingUsers) {
+    if (!currentUser?.empId && !currentUser?.email) {
+      if (!isLoadingUsers) {
         setIsLoadingProjects(false);
       }
+      return;
+    }
+
+    if (!allProjects.length) {
+      setIsLoadingProjects(false);
       return;
     }
 
     const fetchUserProjects = async () => {
       setIsLoadingProjects(true);
 
-      // Super Admin, Administrators, and Senior Management have global visibility into all active projects
-      if (currentUser.accessLevel === 'Super Admin' || currentUser.accessLevel === 'Administrator' || currentUser.accessLevel === 'Senior Management') {
-        setMyProjectIds(allProjects.map(p => p.id));
-        setIsLoadingProjects(false);
-        return;
-      }
-
       if (!db) {
-        setMyProjectIds(allProjects.map(p => p.id));
+        setMyProjectIds([]);
         setIsLoadingProjects(false);
         return;
       }
 
       const projectIds: string[] = [];
+      const userEmpId = currentUser.empId?.trim().toLowerCase();
+      const userEmail = currentUser.email?.trim().toLowerCase();
+      const dbEmpId = currentUserFromDb?.empId?.trim().toLowerCase();
+      const dbId = currentUserFromDb?.id?.trim().toLowerCase();
+      const dbEmail = currentUserFromDb?.email?.trim().toLowerCase();
+
+      // Collect all possible identifiers for the current user
+      const validIdentifiers = new Set(
+        [userEmpId, dbEmpId, dbId].filter(Boolean) as string[]
+      );
+      const validEmails = new Set(
+        [userEmail, dbEmail].filter(Boolean) as string[]
+      );
 
       for (const project of allProjects) {
-        if (project.projectManagerId === currentUser.empId) {
+        // 1. Check if user is the assigned Project Manager
+        const pmId = project.projectManagerId?.trim().toLowerCase();
+        if (pmId && validIdentifiers.has(pmId)) {
           projectIds.push(project.id);
           continue;
         }
 
+        // 2. Check if user is in the project's resource roster (subcollection: projects/{projectId}/employees)
         try {
-          const empRef = collection(db!, 'projects', project.id, 'employees');
+          const empRef = collection(db, 'projects', project.id, 'employees');
           const empSnap = await getDocs(empRef);
 
           const isInProject = empSnap.docs.some((doc: any) => {
-            const data = doc.data();
-            return doc.id === currentUser.empId || data.empId === currentUser.empId;
+            const data = doc.data() || {};
+            const docId = doc.id?.trim().toLowerCase();
+            const memberEmpId = (data.empId || '')?.trim().toLowerCase();
+            const memberId = (data.id || data.userId || '')?.trim().toLowerCase();
+            const memberEmail = (data.email || data.clientEmail || '')?.trim().toLowerCase();
+
+            const matchesId =
+              (docId && validIdentifiers.has(docId)) ||
+              (memberEmpId && validIdentifiers.has(memberEmpId)) ||
+              (memberId && validIdentifiers.has(memberId));
+
+            const matchesEmail = memberEmail && validEmails.has(memberEmail);
+
+            return Boolean(matchesId || matchesEmail);
           });
 
           if (isInProject) {
             projectIds.push(project.id);
           }
-        } catch {
-          // Silently skip projects we can't read
+        } catch (err) {
+          console.warn(`[MyProjects] Could not check resources for project ${project.id}:`, err);
         }
       }
 
-      setMyProjectIds(projectIds.length > 0 ? projectIds : allProjects.map(p => p.id));
+      // Strictly set only projects where user is assigned (empty array if none)
+      setMyProjectIds(projectIds);
       setIsLoadingProjects(false);
     };
 
     fetchUserProjects();
-  }, [currentUser?.empId, currentUser?.accessLevel, allProjects, isLoadingUsers]);
+  }, [currentUser?.empId, currentUser?.email, currentUserFromDb, allProjects, isLoadingUsers]);
 
   const isUserEnabled = currentUserFromDb ? currentUserFromDb.isEnabled !== false : true;
 
