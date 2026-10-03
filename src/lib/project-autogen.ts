@@ -241,13 +241,10 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     'Tester',
   ];
 
-  // Filter out Administrator and PMO users so they are never assigned to projects
-  let eligibleUsers = globalUsers.filter(u => u.accessLevel !== 'Administrator' && u.accessLevel !== 'PMO');
+  // Filter out Super Admin, Administrator, and PMO users so they are never assigned to projects
+  let eligibleUsers = globalUsers.filter(u => u.accessLevel !== 'Super Admin' && u.accessLevel !== 'Administrator' && u.accessLevel !== 'PMO');
   if (eligibleUsers.length === 0) {
-    eligibleUsers = globalUsers.filter(u => u.accessLevel !== 'Administrator');
-  }
-  if (eligibleUsers.length === 0) {
-    eligibleUsers = globalUsers;
+    eligibleUsers = globalUsers.filter(u => u.accessLevel !== 'Super Admin' && u.accessLevel !== 'Administrator');
   }
 
   // Shuffle eligible users to choose at random
@@ -255,11 +252,11 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const pickedUsers = shuffledUsers.slice(0, Math.min(shuffledUsers.length, rolePool.length));
   const employeeIds: string[] = [];
 
-  // Find specific roles if available, fallback to first user
+  // Find specific roles if available, fallback to first eligible user
   const pmUserIdx = pickedUsers.findIndex((_, idx) => rolePool[idx] === 'PM');
   const testerUserIdx = pickedUsers.findIndex((_, idx) => rolePool[idx] === 'Tester');
-  const pmUserId = pickedUsers[pmUserIdx !== -1 ? pmUserIdx : 0]?.id || globalUsers[0]?.id;
-  const testerUserId = pickedUsers[testerUserIdx !== -1 ? testerUserIdx : 0]?.id || globalUsers[0]?.id;
+  const pmUserId = pickedUsers[pmUserIdx !== -1 ? pmUserIdx : 0]?.id || eligibleUsers[0]?.id || '';
+  const testerUserId = pickedUsers[testerUserIdx !== -1 ? testerUserIdx : 0]?.id || eligibleUsers[0]?.id || '';
 
   const devUserIds: string[] = [];
   pickedUsers.forEach((user, idx) => {

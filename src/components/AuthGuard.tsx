@@ -244,7 +244,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [pathname, router]);
 
   useEffect(() => {
-    if (!sessionUser?.accessLevel || sessionUser.accessLevel === 'Administrator' || !db) {
+    if (!sessionUser?.accessLevel || sessionUser.accessLevel === 'Administrator' || sessionUser.accessLevel === 'Super Admin' || !db) {
       setAccessChecked(true);
       return;
     }
@@ -304,7 +304,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isPublicPath, accessChecked, isPermissionAllowed, pathname, sessionUser?.accessLevel, customPageAccess, router]);
 
-  if (isAuthenticated === null || (isAuthenticated && !isPublicPath && !accessChecked && sessionUser?.accessLevel !== 'Administrator')) {
+  if (isAuthenticated === null || (isAuthenticated && !isPublicPath && !accessChecked && sessionUser?.accessLevel !== 'Administrator' && sessionUser?.accessLevel !== 'Super Admin')) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>

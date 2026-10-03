@@ -144,7 +144,7 @@ export default function DocumentsPage() {
   const qaDoc = documents.find(d => d.name.toLowerCase() === 'qa approval' || d.name.toLowerCase() === 'qa sign-off');
   const hasValidQaApproval = !!(qaDoc && qaDoc.location && qaDoc.location.trim() !== '');
 
-  const isAuthorized = !!(currentUser && ['PMO', 'Senior Management', 'Administrator'].includes(currentUser.accessLevel));
+  const isAuthorized = !!(currentUser && ['PMO', 'Senior Management', 'Administrator', 'Super Admin'].includes(currentUser.accessLevel));
 
   const permitToBuildApproved = !!project?.pmoApproval?.permitToBuild?.approved;
   const permitToBuildBy = project?.pmoApproval?.permitToBuild?.approvedBy;

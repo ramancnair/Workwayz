@@ -1573,6 +1573,18 @@ export async function executeFlowPilotActionOnClient(action: any) {
         };
       }
       case 'setProjectManager': {
+        if (params.projectManagerId && params.projectManagerId !== 'unassigned') {
+          const employeesSnap = await getDocs(collection(db, 'employees'));
+          const empDoc = employeesSnap.docs.find(
+            (d: any) => d.id === params.projectManagerId || d.data().empId === params.projectManagerId
+          );
+          if (empDoc) {
+            const accessLevel = empDoc.data().accessLevel || empDoc.data().role;
+            if (accessLevel === 'Super Admin' || accessLevel === 'Administrator') {
+              throw new Error('Super Admin and Administrator users cannot be assigned to projects, even as Project Manager.');
+            }
+          }
+        }
         const projectRef = doc(db, 'projects', params.projectId);
         const now = new Date().toISOString();
         await updateDoc(projectRef, {

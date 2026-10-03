@@ -1157,6 +1157,21 @@ export async function flowpilotMoveProjectToPortfolio(params: { projectId: strin
 // 17. Set Primary Project Manager
 export async function flowpilotSetProjectManager(params: { projectId: string; projectManagerId: string; projectManagerName?: string }) {
   if (!db || !params.projectId) throw new Error('Database or Project ID missing');
+
+  // Verify that the target PM is not a Super Admin or Administrator
+  if (params.projectManagerId && params.projectManagerId !== 'unassigned') {
+    const employeesSnap = await getDocs(collection(db, 'employees'));
+    const empDoc = employeesSnap.docs.find(
+      (d: any) => d.id === params.projectManagerId || d.data().empId === params.projectManagerId
+    );
+    if (empDoc) {
+      const accessLevel = empDoc.data().accessLevel || empDoc.data().role;
+      if (accessLevel === 'Super Admin' || accessLevel === 'Administrator') {
+        throw new Error('Super Admin and Administrator users cannot be assigned to projects, even as Project Manager.');
+      }
+    }
+  }
+
   const projectRef = doc(db, 'projects', params.projectId);
   const now = new Date().toISOString();
   await updateDoc(projectRef, {

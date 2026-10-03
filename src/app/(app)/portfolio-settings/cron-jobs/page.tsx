@@ -15,10 +15,10 @@ export default function AdminCronJobsPage() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('currentUser');
+      const stored = localStorage.getItem('projectflow_user') || localStorage.getItem('currentUser');
       if (stored) {
         const u = JSON.parse(stored);
-        setIsAdmin(u.accessLevel === 'Administrator' || u.role === 'Administrator');
+        setIsAdmin(u.accessLevel === 'Administrator' || u.role === 'Administrator' || u.accessLevel === 'Super Admin' || u.role === 'Super Admin');
       }
     } catch {}
   }, []);

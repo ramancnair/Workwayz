@@ -1165,6 +1165,12 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
     if (employees.some(e => e.id === employee.id)) {
       return false;
     }
+
+    // Super Admin and Administrator accounts cannot be assigned to projects
+    if (employee.accessLevel === 'Super Admin' || employee.accessLevel === 'Administrator') {
+      console.warn("Postgres Error: Super Admin and Administrator accounts cannot be assigned to projects.");
+      return false;
+    }
     
     try {
       const normalizeDateStr = (d: any): string | null => {

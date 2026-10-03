@@ -126,8 +126,8 @@ export default function MyProjectsPage() {
     const fetchUserProjects = async () => {
       setIsLoadingProjects(true);
 
-      // Administrators and Senior Management have global visibility into all active projects
-      if (currentUser.accessLevel === 'Administrator' || currentUser.accessLevel === 'Senior Management') {
+      // Super Admin, Administrators, and Senior Management have global visibility into all active projects
+      if (currentUser.accessLevel === 'Super Admin' || currentUser.accessLevel === 'Administrator' || currentUser.accessLevel === 'Senior Management') {
         setMyProjectIds(allProjects.map(p => p.id));
         setIsLoadingProjects(false);
         return;

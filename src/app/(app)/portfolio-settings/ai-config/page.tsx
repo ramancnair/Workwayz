@@ -71,7 +71,7 @@ export default function AIConfigPage() {
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
-                if (user.role === 'Administrator' || user.accessLevel === 'Administrator') {
+                if (user.role === 'Administrator' || user.accessLevel === 'Administrator' || user.role === 'Super Admin' || user.accessLevel === 'Super Admin') {
                     setIsAdmin(true);
                 }
             } catch (e) { }

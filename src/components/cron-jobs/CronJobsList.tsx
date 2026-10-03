@@ -72,7 +72,7 @@ export function CronJobsList({
         setCurrentUser({
           userId: u.empId || u.id || '',
           email: u.email || '',
-          isAdmin: u.accessLevel === 'Administrator' || u.role === 'Administrator',
+          isAdmin: u.accessLevel === 'Administrator' || u.role === 'Administrator' || u.accessLevel === 'Super Admin' || u.role === 'Super Admin',
         });
       }
     } catch {}

@@ -1,6 +1,6 @@
 import { AccessLevel } from '@/types';
 
-export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, string[]> = {
+export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator' | 'Super Admin'>, string[]> = {
   'Senior Management': [
     'Project Home', 'Portfolio Dashboard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
     'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
@@ -107,7 +107,7 @@ export function hasPagePermission(
 ): boolean {
   if (!pageName || pageName === 'My Projects') return true; // Universal landing page
   const userRole = (role || 'Team Member') as AccessLevel;
-  if (userRole === 'Administrator') return true;
+  if (userRole === 'Administrator' || userRole === 'Super Admin') return true;
 
   const targetPages = pageName === 'Test Cycle' || pageName === 'Test Plan' 
     ? ['Test Cycle', 'Test Plan'] 
@@ -129,7 +129,7 @@ export function hasPagePermission(
     }
   }
 
-  const allowedDefaults = defaultAccessSettings[userRole as Exclude<AccessLevel, 'Administrator'>];
+  const allowedDefaults = defaultAccessSettings[userRole as Exclude<AccessLevel, 'Administrator' | 'Super Admin'>];
   if (allowedDefaults) {
     return targetPages.some(p => allowedDefaults.includes(p));
   }
@@ -185,7 +185,7 @@ export function hasAnyProjectPermission(
   role: string | null | undefined,
   customPageAccess?: Record<string, boolean> | null
 ): boolean {
-  if (!role || role === 'Administrator') return true;
+  if (!role || role === 'Administrator' || role === 'Super Admin') return true;
   return allProjectPageNames.some(pageName => hasPagePermission(role, pageName, customPageAccess));
 }
 
@@ -196,7 +196,7 @@ export function getProjectLandingPage(
   customPageAccess?: Record<string, boolean> | null
 ): string | null {
   if (!projectId) return null;
-  if (!role || role === 'Administrator') {
+  if (!role || role === 'Administrator' || role === 'Super Admin') {
     return (projectStatus === 'Initial Estimation' || projectStatus === 'Not Started')
       ? `/projects/${projectId}/initial-estimation/specifications`
       : `/projects/${projectId}/development/dashboard`;
@@ -302,7 +302,7 @@ export function getPermittedFallbackRoute(
   role: string | null | undefined,
   customPageAccess?: Record<string, boolean> | null
 ): string | null {
-  if (!pathname || role === 'Administrator') return null;
+  if (!pathname || role === 'Administrator' || role === 'Super Admin') return null;
 
   // Project workspace check
   const projectMatch = pathname.match(/^\/projects\/([^\/]+)/);
@@ -542,4 +542,15 @@ export function getPermittedFallbackRoute(
   }
 
   return '/my-projects';
+}
+
+/**
+ * Checks whether a user or role can be assigned to a project (as a team resource or Project Manager).
+ * Rule: Super Admin and Administrator accounts are portfolio/system administrators and CANNOT
+ * be assigned to any projects (even as PM).
+ */
+export function isAssignableToProject(userOrRole?: { accessLevel?: string; role?: string } | string | null): boolean {
+  if (!userOrRole) return false;
+  const accessLevel = typeof userOrRole === 'string' ? userOrRole : (userOrRole.accessLevel || userOrRole.role);
+  return accessLevel !== 'Super Admin' && accessLevel !== 'Administrator';
 }

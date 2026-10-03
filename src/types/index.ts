@@ -159,7 +159,16 @@ export type TestCase = {
 
 export type UserRole = 'Developer' | 'Tester' | 'Architect' | 'BA' | 'PM' | 'Program Director';
 
-export type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
+export type AccessLevel = 'Super Admin' | 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
+
+export const ASSIGNABLE_ACCESS_LEVELS: Exclude<AccessLevel, 'Super Admin'>[] = [
+  'Administrator',
+  'Senior Management',
+  'Project Manager',
+  'Lead',
+  'Team Member',
+  'PMO',
+];
 
 export type LeavePeriod = {
   id: string; // uuid on the client

@@ -57,6 +57,17 @@ describe('ProjectFlow Permissions Matrix', () => {
       }
     });
 
+    it('Super Admin should have universal access across all pages', () => {
+      const allPages = [
+        'Access Settings', 'Database', 'Authentication', 'AI Config',
+        'Project Home', 'Portfolio Dashboard', 'Billing', 'Billing Rate',
+        'Kanban Board', 'Product Backlog', 'Test Execution', 'Risks', 'Project Trash'
+      ];
+      for (const page of allPages) {
+        expect(hasPagePermission('Super Admin', page)).toBe(true);
+      }
+    });
+
     it('My Projects should be universally accessible to any role', () => {
       expect(hasPagePermission('Team Member', 'My Projects')).toBe(true);
       expect(hasPagePermission('Project Manager', 'My Projects')).toBe(true);

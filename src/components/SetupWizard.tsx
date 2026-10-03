@@ -38,7 +38,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [ssoGoogle, setSsoGoogle] = useState(false);
   const [ssoGithub, setSsoGithub] = useState(false);
 
-  const [adminName, setAdminName] = useState('');
+  const [adminFirstName, setAdminFirstName] = useState('');
+  const [adminLastName, setAdminLastName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
@@ -122,9 +123,27 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   }, []);
 
   const handleNext = () => {
-    if (step === 3 && adminPassword !== adminConfirmPassword) {
-      toast({ title: "Validation Error", description: "Passwords do not match.", variant: "destructive" });
-      return;
+    if (step === 3) {
+      if (!adminFirstName.trim()) {
+        toast({ title: "Validation Error", description: "First Name is required.", variant: "destructive" });
+        return;
+      }
+      if (!adminLastName.trim()) {
+        toast({ title: "Validation Error", description: "Last Name is required.", variant: "destructive" });
+        return;
+      }
+      if (!adminEmail.trim()) {
+        toast({ title: "Validation Error", description: "Email ID is required.", variant: "destructive" });
+        return;
+      }
+      if (!adminPassword) {
+        toast({ title: "Validation Error", description: "Password is required.", variant: "destructive" });
+        return;
+      }
+      if (adminPassword !== adminConfirmPassword) {
+        toast({ title: "Validation Error", description: "Passwords do not match.", variant: "destructive" });
+        return;
+      }
     }
     if (step < 5) setStep(step + 1);
   };
@@ -229,7 +248,9 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             body: JSON.stringify({
               adminEmail,
               adminPassword,
-              adminName,
+              adminFirstName,
+              adminLastName,
+              adminName: `${adminFirstName} ${adminLastName}`.trim(),
               dbProvider,
               authProvider,
               fbProjectId,
@@ -247,6 +268,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           if (setupData.user) {
             localStorage.setItem('projectflow_user', JSON.stringify({
               ...setupData.user,
+              accessLevel: 'Super Admin',
               authProvider: authProvider,
               issuedAt: Date.now(),
             }));
@@ -371,7 +393,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             <CardDescription>
               {step === 1 && "Configure your primary database connection."}
               {step === 2 && "Set up identity and authentication providers."}
-              {step === 3 && "Create the master administrator account for the system."}
+              {step === 3 && "Create the master Super Admin account for the system."}
               {step === 4 && "Enable intelligent features by connecting an AI provider."}
               {step === 5 && "Review and finalize your setup configuration."}
             </CardDescription>
@@ -470,19 +492,23 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>User Name</Label>
-                    <Input placeholder="John Doe" value={adminName} onChange={e => setAdminName(e.target.value)} />
+                    <Label>First Name *</Label>
+                    <Input placeholder="John" value={adminFirstName} onChange={e => setAdminFirstName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Input value="Administrator" disabled className="bg-muted text-muted-foreground" />
+                    <Label>Last Name *</Label>
+                    <Input placeholder="Doe" value={adminLastName} onChange={e => setAdminLastName(e.target.value)} />
                   </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label>Email ID</Label>
+                  <div className="space-y-2">
+                    <Label>Email ID *</Label>
                     <Input type="email" placeholder="admin@example.com" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Password</Label>
+                    <Label>Role</Label>
+                    <Input value="Super Admin" disabled className="bg-muted text-foreground font-semibold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password *</Label>
                     <div className="relative">
                       <Input
                         type={showAdminPassword ? "text" : "password"}
@@ -501,7 +527,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Re-enter Password</Label>
+                    <Label>Re-enter Password *</Label>
                     <div className="relative">
                       <Input
                         type={showAdminConfirmPassword ? "text" : "password"}
@@ -587,7 +613,13 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     </li>
                     <li className="flex justify-between">
                       <span className="text-muted-foreground">Admin Account:</span>
-                      <span className="font-medium truncate max-w-[200px]">{adminEmail || 'Pending'}</span>
+                      <span className="font-medium truncate max-w-[240px]">
+                        {adminEmail ? `${adminFirstName ? `${adminFirstName} ${adminLastName}`.trim() : 'Super Admin'} (${adminEmail})` : 'Pending'}
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Role:</span>
+                      <span className="font-semibold text-purple-600 dark:text-purple-400">Super Admin</span>
                     </li>
                     <li className="flex justify-between">
                       <span className="text-muted-foreground">AI Integration:</span>

@@ -43,6 +43,7 @@ import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, Chev
 import { type User, type UserRole, type Story, type ImpactedSystem, type Project, type Horizontal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { isAssignableToProject } from '@/lib/permissions';
 import { useToast } from "@/hooks/use-toast";
 import { buttonVariants } from '@/components/ui/button';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, subWeeks, addYears, isWithinInterval, differenceInDays } from 'date-fns';
@@ -235,6 +236,15 @@ function ResourceDialog({
         return;
       }
 
+      if (!isAssignableToProject(userToAdd)) {
+        toast({
+          variant: "destructive",
+          title: "Assignment Prohibited",
+          description: "Super Admin and Administrator accounts cannot be assigned to any projects.",
+        });
+        return;
+      }
+
       const projectUserData: User = {
         ...userToAdd,
         role: values.role as UserRole,
@@ -252,7 +262,7 @@ function ResourceDialog({
       if (success) {
         toast({ title: "Success", description: `${userToAdd.firstName} added to the project.` });
       } else {
-        toast({ variant: "destructive", title: "Error", description: `Could not add user to project. They may already be on the team.` });
+        toast({ variant: "destructive", title: "Error", description: `Could not add user to project. They may already be on the team or ineligible.` });
       }
     }
 
@@ -260,7 +270,7 @@ function ResourceDialog({
     setEditingUser(null);
   };
 
-  const availableUsers = allUsers.filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '' && !projectUsers.some(pe => pe.id === emp.id));
+  const availableUsers = allUsers.filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '' && !projectUsers.some(pe => pe.id === emp.id) && isAssignableToProject(emp));
   const availableUserOptions = availableUsers
     .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
     .map(emp => ({

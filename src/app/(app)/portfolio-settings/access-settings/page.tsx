@@ -34,7 +34,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-const accessLevels: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
+const accessLevels: AccessLevel[] = ['Super Admin', 'Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
 interface PageGroup {
   id: string;
@@ -250,7 +250,7 @@ const scopeItems = [
 ];
 
 // Seeded defaults mapping for each access level fallback (Page Access)
-const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, string[]> = {
+const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator' | 'Super Admin'>, string[]> = {
   'Senior Management': [
     'Project Home', 'Portfolio Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
     'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
@@ -274,7 +274,7 @@ const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator'>, strin
 };
 
 // Seeded defaults mapping for each access level fallback (CRUD Access)
-const defaultCrudSettings: Record<Exclude<AccessLevel, 'Administrator'>, Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }>> = {
+const defaultCrudSettings: Record<Exclude<AccessLevel, 'Administrator' | 'Super Admin'>, Record<string, { create: boolean; read: boolean; update: boolean; delete: boolean }>> = {
   'Senior Management': {
     portfolio: { create: true, read: true, update: true, delete: false },
     project: { create: true, read: true, update: true, delete: false },
@@ -357,7 +357,8 @@ export default function AccessSettingsPage() {
                     );
                     newSettings[level][page] = dbVal ?? (
                         (level as string) === 'Administrator' ||
-                        ((level as string) !== 'Administrator' && (defaultAccessSettings as any)[level]?.includes(page))
+                        (level as string) === 'Super Admin' ||
+                        ((level as string) !== 'Administrator' && (level as string) !== 'Super Admin' && (defaultAccessSettings as any)[level]?.includes(page))
                     );
                 }
             }
@@ -368,7 +369,7 @@ export default function AccessSettingsPage() {
                 newCrudSettings[level] = {};
                 for (const scope of scopeItems) {
                     newCrudSettings[level][scope.dbId] = fetchedCrudSettings[level]?.[scope.dbId] ?? (
-                        level === 'Administrator' 
+                        (level === 'Administrator' || level === 'Super Admin')
                             ? { create: true, read: true, update: true, delete: true }
                             : (defaultCrudSettings[level]?.[scope.dbId] ?? { create: false, read: false, update: false, delete: false })
                     );
@@ -512,11 +513,12 @@ export default function AccessSettingsPage() {
                 for (const page of appPages) {
                     newSettings[level][page] = (
                         (level as string) === 'Administrator' ||
-                        ((level as string) !== 'Administrator' && (defaultAccessSettings as any)[level]?.includes(page) === true)
+                        (level as string) === 'Super Admin' ||
+                        ((level as string) !== 'Administrator' && (level as string) !== 'Super Admin' && (defaultAccessSettings as any)[level]?.includes(page) === true)
                     );
                 }
-                // Ensure legacy Trash follows Administrator only
-                newSettings[level]['Trash'] = (level as string) === 'Administrator';
+                // Ensure legacy Trash follows Administrator and Super Admin
+                newSettings[level]['Trash'] = (level as string) === 'Administrator' || (level as string) === 'Super Admin';
             }
 
             // Build default CRUD access
@@ -524,7 +526,7 @@ export default function AccessSettingsPage() {
             for (const level of accessLevels) {
                 newCrudSettings[level] = {};
                 for (const scope of scopeItems) {
-                    newCrudSettings[level][scope.dbId] = level === 'Administrator' 
+                    newCrudSettings[level][scope.dbId] = (level === 'Administrator' || level === 'Super Admin')
                         ? { create: true, read: true, update: true, delete: true }
                         : (defaultCrudSettings[level]?.[scope.dbId] ?? { create: false, read: false, update: false, delete: false });
                 }
@@ -741,7 +743,7 @@ export default function AccessSettingsPage() {
                                                                                     const targetState = checked === true;
                                                                                     handleGroupToggle(group.id, level, targetState);
                                                                                 }}
-                                                                                disabled={level === 'Administrator'}
+                                                                                disabled={level === 'Administrator' || level === 'Super Admin'}
                                                                                 title={`Toggle all pages under ${group.name} for ${level}`}
                                                                             />
                                                                         </TableCell>
@@ -763,7 +765,7 @@ export default function AccessSettingsPage() {
                                                                             <Checkbox
                                                                                 checked={accessSettings[level]?.[page] ?? false}
                                                                                 onCheckedChange={(checked) => handlePermissionChange(level, page, !!checked)}
-                                                                                disabled={level === 'Administrator'}
+                                                                                disabled={level === 'Administrator' || level === 'Super Admin'}
                                                                                 title={`Toggle access to ${page} for ${level}`}
                                                                             />
                                                                         </TableCell>
@@ -821,7 +823,7 @@ export default function AccessSettingsPage() {
                                                 <TableBody>
                                                     {accessLevels.map(level => {
                                                         const permissions = crudSettings[level]?.[scope.dbId] || { create: false, read: false, update: false, delete: false };
-                                                        const isBtnDisabled = level === 'Administrator';
+                                                        const isBtnDisabled = level === 'Administrator' || level === 'Super Admin';
                                                         
                                                         return (
                                                             <TableRow key={level} className="hover:bg-muted/5 transition-colors border-b">

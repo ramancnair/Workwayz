@@ -75,4 +75,32 @@ test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
       await expect(page.locator('body')).toContainText(/Project Home/i, { timeout: 20000 });
     }
   });
+
+  test('TC-WIZ-005: Admin user step requests First Name and Last Name and designates Super Admin role', async ({ page }) => {
+    await page.goto('/setup-wizard', { waitUntil: 'domcontentloaded' });
+
+    // Navigate to Step 3 (Admin User)
+    await expect(page.locator('text=Database Setup')).toBeVisible({ timeout: 15000 });
+    const nextBtn = page.locator('button:has-text("Next")');
+    await nextBtn.scrollIntoViewIfNeeded();
+    await nextBtn.dispatchEvent('click');
+
+    // In Step 2 (Authentication Setup)
+    await expect(page.locator('text=Authentication Setup')).toBeVisible({ timeout: 10000 });
+    await nextBtn.dispatchEvent('click');
+
+    // In Step 3 (Admin User Setup)
+    await expect(page.locator('text=Admin User Setup')).toBeVisible({ timeout: 10000 });
+
+    // Verify First Name and Last Name fields are present
+    await expect(page.locator('label:has-text("First Name")')).toBeVisible();
+    await expect(page.locator('label:has-text("Last Name")')).toBeVisible();
+    await expect(page.locator('input[placeholder="John"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="Doe"]')).toBeVisible();
+
+    // Verify Super Admin role is designated
+    const roleInput = page.locator('input[value="Super Admin"]');
+    await expect(roleInput).toBeVisible();
+    await expect(roleInput).toBeDisabled();
+  });
 });

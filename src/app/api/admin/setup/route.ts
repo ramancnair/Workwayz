@@ -5,7 +5,7 @@ import path from 'path';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        let { adminEmail, adminPassword, adminName, dbProvider, fbApiKey, fbProjectId, supaUrl, supaKey, authProvider } = body;
+        let { adminEmail, adminPassword, adminName, adminFirstName, adminLastName, dbProvider, fbApiKey, fbProjectId, supaUrl, supaKey, authProvider } = body;
 
         if (!adminEmail || !adminPassword) {
             return NextResponse.json({ success: false, error: 'Missing email or password' }, { status: 400 });
@@ -68,9 +68,15 @@ export async function POST(request: Request) {
 
         let uid = '';
         let empId = '';
-        const nameParts = (adminName || 'Admin User').trim().split(' ');
-        let firstName = nameParts[0];
-        let lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+        let firstName = (adminFirstName || '').trim();
+        let lastName = (adminLastName || '').trim();
+        if (!firstName && adminName) {
+            const nameParts = adminName.trim().split(' ');
+            firstName = nameParts[0] || 'Super';
+            lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Admin';
+        }
+        if (!firstName) firstName = 'Super';
+        if (!lastName) lastName = 'Admin';
 
         if (isSupabase) {
             const { createClient } = await import('@supabase/supabase-js');
@@ -139,7 +145,9 @@ export async function POST(request: Request) {
                     await supabaseAdmin
                         .from('employees')
                         .update({
-                            accessLevel: 'Administrator',
+                            firstName,
+                            lastName,
+                            accessLevel: 'Super Admin',
                             isEnabled: true,
                             isDeleted: false,
                             uid: uid || existingEmps[0].uid
@@ -165,7 +173,7 @@ export async function POST(request: Request) {
                         email: adminEmail,
                         phone: 'N/A',
                         experience: 0,
-                        accessLevel: 'Administrator',
+                        accessLevel: 'Super Admin',
                         avatar: 'https://placehold.co/40x40.png',
                         isDeleted: false,
                         isEnabled: true,
@@ -212,7 +220,13 @@ export async function POST(request: Request) {
                 if (!qSnap.empty) {
                     const docSnap = qSnap.docs[0];
                     empId = docSnap.id;
-                    await setDoc(doc(tempDb, 'employees', docSnap.id), { accessLevel: 'Administrator', isEnabled: true, isDeleted: false }, { merge: true });
+                    await setDoc(doc(tempDb, 'employees', docSnap.id), { 
+                        firstName,
+                        lastName,
+                        accessLevel: 'Super Admin', 
+                        isEnabled: true, 
+                        isDeleted: false 
+                    }, { merge: true });
                 }
             }
 
@@ -233,7 +247,7 @@ export async function POST(request: Request) {
                     email: adminEmail,
                     phone: 'N/A',
                     experience: 0,
-                    accessLevel: 'Administrator',
+                    accessLevel: 'Super Admin',
                     avatar: 'https://placehold.co/40x40.png',
                     isDeleted: false,
                     isEnabled: true,
@@ -248,8 +262,10 @@ export async function POST(request: Request) {
             success: true, 
             user: {
                 name: `${firstName} ${lastName}`.trim(),
+                firstName,
+                lastName,
                 email: adminEmail,
-                accessLevel: 'Administrator',
+                accessLevel: 'Super Admin',
                 empId,
                 uid
             }

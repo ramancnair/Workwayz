@@ -51,6 +51,18 @@ export async function DELETE(request: Request) {
         const email = searchParams.get('email');
         if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 });
 
+        // Reject if target user is Super Admin
+        const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
+        const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || 'firebase';
+        if (authProvider === 'supabase' || dbProvider === 'supabase') {
+            if (supabase) {
+                const { data } = await supabase.from('employees').select('accessLevel').eq('email', email).maybeSingle();
+                if (data?.accessLevel === 'Super Admin') {
+                    return NextResponse.json({ success: false, error: 'Super Admin users cannot be deleted via the application.' }, { status: 403 });
+                }
+            }
+        }
+
         return NextResponse.json({ success: true, message: 'Auth provider deletion handled' });
     } catch (e: any) {
         console.error("User deletion API error:", e);

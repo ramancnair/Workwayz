@@ -16,9 +16,9 @@ import { db } from '@/lib/db-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-type AccessLevel = 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
+type AccessLevel = 'Super Admin' | 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
-const PORTFOLIO_ROLES: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager'];
+const PORTFOLIO_ROLES: AccessLevel[] = ['Super Admin', 'Administrator', 'Senior Management', 'Project Manager'];
 
 export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();

@@ -40,7 +40,7 @@ export function usePermissions() {
   }, [userRole]);
 
   useEffect(() => {
-    if (!userRole || userRole === 'Administrator' || !db) {
+    if (!userRole || userRole === 'Administrator' || userRole === 'Super Admin' || !db) {
       setIsLoading(false);
       return;
     }

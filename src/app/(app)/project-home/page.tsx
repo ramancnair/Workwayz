@@ -47,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
+import { isAssignableToProject } from '@/lib/permissions';
 import { type Portfolio, type Project, type PricingModel, type User, type ProjectStatus, type RagStatus } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -114,7 +115,7 @@ function ProjectDialogContent({
   const [pmInputText, setPmInputText] = useState('');
 
   const pmOptions = useMemo(() => users
-    .filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '')
+    .filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '' && isAssignableToProject(user))
     .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
     .map(user => ({
       value: user.id,
@@ -492,6 +493,18 @@ export default function ProjectsDashboard() {
       if (new Date(values.endDate) < new Date(values.startDate)) {
         form.setError('endDate', { type: 'manual', message: 'End date must be after or on the same day as the start date.' });
         return;
+      }
+
+      if (values.projectManagerId) {
+        const pmUser = users.find(u => u.id === values.projectManagerId);
+        if (pmUser && !isAssignableToProject(pmUser)) {
+          toast({
+            variant: 'destructive',
+            title: 'Assignment Prohibited',
+            description: 'Super Admin and Administrator users cannot be assigned to projects, even as Project Manager.',
+          });
+          return;
+        }
       }
 
       if (editingProject) {

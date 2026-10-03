@@ -553,6 +553,7 @@ export async function generateEmployees(
 
   // Determine distribution
   const counts: Record<AccessLevel, number> = {
+    'Super Admin': 0,
     Administrator: 0,
     'Senior Management': 0,
     'Project Manager': 0,

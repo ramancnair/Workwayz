@@ -140,7 +140,12 @@ export default function PortfolioTrashPage() {
                 } else { // User
                     const userDoc = await getDoc(doc(db, 'employees', item.id));
                     if (userDoc.exists()) {
-                        const email = userDoc.data().email;
+                        const userData = userDoc.data();
+                        if (userData.accessLevel === 'Super Admin') {
+                            console.warn(`Attempt to permanently delete Super Admin (${item.id}) blocked.`);
+                            return;
+                        }
+                        const email = userData.email;
                         if (email) {
                             try {
                                 await fetch(`/api/users?email=${encodeURIComponent(email)}`, { method: 'DELETE' });

@@ -19,9 +19,10 @@ Set up the identity and authentication providers mapping to your selected databa
 *   **Single Sign-On (SSO):** Toggle configurations are available to natively `Enable Google SSO` or `Enable GitHub SSO`.
 
 ### Super Admin User Creation
-Establish the master administrator account for system deployment.
-*   **Fields Required:** *User Name* (e.g., John Doe), *Email ID* (e.g., admin@example.com), *Password*, and *Re-enter Password*.
-*   **Role Allocation:** Automatically designated the absolute role of **Administrator**.
+Establish the master super administrator account for system deployment.
+*   **Fields Required:** *First Name* (e.g., John), *Last Name* (e.g., Doe), *Email ID* (e.g., admin@example.com), *Password*, and *Re-enter Password*.
+*   **Role Allocation:** Automatically designated the highest role of **Super Admin**. This account has absolute access across all modules and settings and is permanently protected: it cannot be deleted even by other administrators in the UI and can only be removed directly via the database.
+*   **Project Assignment Restriction:** Super Admin and Administrator accounts serve strictly as portfolio/system administrators and **cannot be assigned to any projects**, neither as general project team resources nor as Project Manager (PM).
 
 ### AI Configuration Setup
 Enable intelligent project management utilities by connecting a generative AI foundation model provider. Note that the core application functions entirely without AI; however, automated estimation and strategic suggestion tools will be disabled.

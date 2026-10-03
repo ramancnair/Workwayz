@@ -78,7 +78,7 @@ import { z } from 'zod';
 
 export default function WorklogPage() {
   const { userRole } = usePermissions();
-  const isAdmin = userRole === 'Administrator';
+  const isAdmin = userRole === 'Administrator' || userRole === 'Super Admin';
 
   const {
     employees,

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type ProjectStatus, type RagStatus, type PricingModel } from '@/types';
+import { isAssignableToProject } from '@/lib/permissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -92,7 +93,7 @@ export default function ProjectSynopsisPage() {
     const { toast } = useToast();
 
     const pmOptions = useMemo(() => allUsers
-        .filter(u => (!u.isDeleted && u.isEnabled !== false) && !!u.empId && u.empId.trim() !== '')
+        .filter(u => (!u.isDeleted && u.isEnabled !== false) && !!u.empId && u.empId.trim() !== '' && isAssignableToProject(u))
         .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
         .map(user => ({
             value: user.id,
@@ -158,6 +159,18 @@ export default function ProjectSynopsisPage() {
     };
     
     const onInfoSubmit = async (values: z.infer<typeof keyInfoUpdateSchema>) => {
+        if (values.projectManagerId && values.projectManagerId !== 'unassigned') {
+            const pmUser = allUsers.find(u => u.id === values.projectManagerId);
+            if (pmUser && !isAssignableToProject(pmUser)) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Assignment Prohibited',
+                    description: 'Super Admin and Administrator users cannot be assigned to projects, even as Project Manager.',
+                });
+                return;
+            }
+        }
+
         const success = await updateProject({
             ...values,
             projectManagerId: values.projectManagerId === 'unassigned' ? undefined : values.projectManagerId,

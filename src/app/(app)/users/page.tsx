@@ -41,7 +41,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, ShieldCheck, ShieldOff, Clock, UserCheck, Search } from 'lucide-react';
-import { type User, type AccessLevel } from '@/types';
+import { type User, type AccessLevel, ASSIGNABLE_ACCESS_LEVELS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -50,7 +50,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 
-const accessLevels: AccessLevel[] = ['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
+const accessLevels: AccessLevel[] = ['Super Admin', 'Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
 const userFormSchema = z.object({
   empId: z.string().min(1, 'Emp ID is required'),
@@ -61,7 +61,7 @@ const userFormSchema = z.object({
   experience: z.coerce.number().optional(),
   employmentStartDate: z.string().optional().nullable(),
   employmentEndDate: z.string().optional().nullable(),
-  accessLevel: z.enum(['Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'], {
+  accessLevel: z.enum(['Super Admin', 'Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'], {
     required_error: 'Access Level is required',
   }),
   costAmount: z.union([z.string(), z.number()]).optional().nullable(),
@@ -140,7 +140,7 @@ export default function UsersPage() {
     }
   }, []);
 
-  const isAdmin = currentUser?.accessLevel === 'Administrator';
+  const isAdmin = currentUser?.accessLevel === 'Administrator' || currentUser?.accessLevel === 'Super Admin';
 
   const usersAwaitingEnablement = useMemo(() => {
     return users.filter(u => u.isEnabled === false);
@@ -251,6 +251,15 @@ export default function UsersPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deletingUser || !db) return;
+    if (deletingUser.accessLevel === 'Super Admin') {
+      toast({
+        variant: "destructive",
+        title: "Action Prohibited",
+        description: "Super Admin accounts cannot be deleted even by administrators. They can only be removed directly via the database.",
+      });
+      setDeletingUser(null);
+      return;
+    }
     const idToDelete = deletingUser.id;
     try {
       const userRef = doc(db, 'employees', idToDelete);
@@ -258,7 +267,7 @@ export default function UsersPage() {
       setSelectedUsers(prev => prev.filter(id => id !== idToDelete));
       toast({ title: "Success", description: "User moved to Trash." });
     } catch (error) {
-      console.error("Error deleting user:", error)
+      console.error("Error deleting user:", error);
       toast({ variant: "destructive", title: "Error", description: "Could not delete user." });
     }
     setDeletingUser(null);
@@ -266,16 +275,33 @@ export default function UsersPage() {
 
   const handleBulkDeleteConfirm = async () => {
     if (selectedUsers.length === 0 || !db) return;
+    // Filter out any Super Admin users - cannot be deleted via the application
+    const usersToDelete = selectedUsers.filter(userId => {
+      const u = users.find(user => user.id === userId);
+      return u?.accessLevel !== 'Super Admin';
+    });
+
+    if (usersToDelete.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Action Prohibited",
+        description: "Super Admin accounts cannot be deleted. Removal can only be performed directly via the database.",
+      });
+      setSelectedUsers([]);
+      setShowBulkDeleteConfirm(false);
+      return;
+    }
+
     const batch = writeBatch(db);
     const deletionTime = Timestamp.now();
-    selectedUsers.forEach(userId => {
+    usersToDelete.forEach(userId => {
       const userRef = doc(db!, 'employees', userId);
       batch.update(userRef, { isDeleted: true, deletedAt: deletionTime });
     });
 
     try {
       await batch.commit();
-      toast({ title: "Success", description: `${selectedUsers.length} user(s) moved to trash.` });
+      toast({ title: "Success", description: `${usersToDelete.length} user(s) moved to trash.` });
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Could not move users to trash." });
     } finally {
@@ -323,6 +349,14 @@ export default function UsersPage() {
         const updateData = { ...sanitizedValues };
         delete updateData.password;
         delete updateData.id;
+        // Never allow demoting a Super Admin via the UI
+        if (editingUser.accessLevel === 'Super Admin') {
+          updateData.accessLevel = 'Super Admin';
+        } else if (values.accessLevel === 'Super Admin') {
+          toast({ variant: "destructive", title: "Action Prohibited", description: "Super Admin can only be created via the Setup Wizard or directly in the database." });
+          setIsSubmitting(false);
+          return;
+        }
         if (editingUser.isEnabled === false) {
           if (!isAdmin) {
             toast({ variant: "destructive", title: "Unauthorized", description: "Only Administrators can enable users." });
@@ -345,6 +379,12 @@ export default function UsersPage() {
             : "User updated successfully."
         });
       } else {
+        if (values.accessLevel === 'Super Admin') {
+          toast({ variant: "destructive", title: "Action Prohibited", description: "Super Admin can only be created via the Setup Wizard or directly in the database." });
+          setIsSubmitting(false);
+          return;
+        }
+
         // Check for unique Emp ID when creating a new user
         const isEmpIdTaken = users.some(user => user.empId === values.empId);
         if (isEmpIdTaken) {
@@ -543,9 +583,18 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead className="w-10">
                     <Checkbox
-                      checked={filteredAndSortedUsers.length > 0 && selectedUsers.length === filteredAndSortedUsers.length}
+                      checked={
+                        filteredAndSortedUsers.filter(u => u.accessLevel !== 'Super Admin').length > 0 &&
+                        filteredAndSortedUsers
+                          .filter(u => u.accessLevel !== 'Super Admin')
+                          .every(item => selectedUsers.includes(item.id))
+                      }
                       onCheckedChange={(value) =>
-                        setSelectedUsers(value ? filteredAndSortedUsers.map(item => item.id) : [])
+                        setSelectedUsers(
+                          value
+                            ? filteredAndSortedUsers.filter(u => u.accessLevel !== 'Super Admin').map(item => item.id)
+                            : []
+                        )
                       }
                       aria-label="Select all"
                     />
@@ -564,6 +613,7 @@ export default function UsersPage() {
                     <TableCell>
                       <Checkbox
                         checked={selectedUsers.includes(user.id)}
+                        disabled={user.accessLevel === 'Super Admin'}
                         onCheckedChange={(value) =>
                           setSelectedUsers(
                             value
@@ -571,13 +621,27 @@ export default function UsersPage() {
                               : selectedUsers.filter((id) => id !== user.id)
                           )
                         }
-                        aria-label="Select row"
+                        aria-label={`Select row for ${user.firstName}`}
+                        title={user.accessLevel === 'Super Admin' ? "Super Admin cannot be selected for deletion" : undefined}
                       />
                     </TableCell>
                     <TableCell className="font-medium">{user.empId}</TableCell>
                     <TableCell className="max-w-[150px] truncate" title={`${user.firstName} ${user.lastName}`}>{user.firstName} {user.lastName}</TableCell>
                     <TableCell className="max-w-[220px] truncate" title={user.email}>{user.email}</TableCell>
-                    <TableCell>{user.accessLevel || 'N/A'}</TableCell>
+                    <TableCell>
+                      {user.accessLevel === 'Super Admin' ? (
+                        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800 font-semibold gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                          Super Admin
+                        </Badge>
+                      ) : user.accessLevel === 'Administrator' ? (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800 font-medium">
+                          Administrator
+                        </Badge>
+                      ) : (
+                        <span>{user.accessLevel || 'N/A'}</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {user.isEnabled === false ? (
                         <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 dark:text-amber-300 dark:border-amber-700 dark:bg-amber-900/30">
@@ -602,7 +666,14 @@ export default function UsersPage() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeletingUser(user)}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setDeletingUser(user)}
+                          disabled={user.accessLevel === 'Super Admin'}
+                          className={cn(user.accessLevel === 'Super Admin' && "opacity-40 cursor-not-allowed")}
+                          title={user.accessLevel === 'Super Admin' ? "Super Admin cannot be deleted via the application. Removal can only be performed directly via the database." : "Delete user"}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -683,18 +754,34 @@ export default function UsersPage() {
                   <FormField control={form.control} name="accessLevel" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Access Level *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an access level" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[...accessLevels].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => (
-                            <SelectItem key={level} value={level}>{level}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {editingUser?.accessLevel === 'Super Admin' ? (
+                        <div>
+                          <Input
+                            value="Super Admin"
+                            disabled
+                            className="bg-muted text-muted-foreground cursor-not-allowed font-medium"
+                          />
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Super Admin role cannot be changed via the UI. It can only be modified directly in the database.
+                          </p>
+                        </div>
+                      ) : (
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an access level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {[...ASSIGNABLE_ACCESS_LEVELS].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(level => (
+                              <SelectItem key={level} value={level}>{level}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )} />

@@ -1218,6 +1218,12 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       return false;
     }
 
+    // Super Admin and Administrator accounts cannot be assigned to projects
+    if (employee.accessLevel === 'Super Admin' || employee.accessLevel === 'Administrator') {
+      console.warn("Project Assignment Error: Super Admin and Administrator accounts cannot be assigned to projects.");
+      return false;
+    }
+
     try {
       const normalizeDateStr = (d: any): string | null => {
         if (!d) return null;

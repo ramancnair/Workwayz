@@ -67,6 +67,10 @@ interface RateStats {
 }
 
 const ROLE_PERMISSIONS: Record<string, { desc: string; crud: string }> = {
+  'Super Admin': {
+    desc: 'Primary Root System Administrator',
+    crud: 'Absolute CRUD across all modules, settings, and users; permanent account',
+  },
   Administrator: {
     desc: 'Full Unrestricted Organization Access',
     crud: 'Full CRUD across all modules, settings, projects, and users',
@@ -98,6 +102,9 @@ export function getUserAccessLevel(user: any): string {
   const raw = String(user.accessLevel || user.role || user.roleName || '').trim();
   const lower = raw.toLowerCase();
 
+  if (lower === 'super admin' || lower === 'superadmin' || lower === 'super_admin') {
+    return 'Super Admin';
+  }
   if (lower === 'administrator' || lower === 'admin' || lower === 'superuser') {
     return 'Administrator';
   }
