@@ -54,7 +54,7 @@ function pruneOldRecords(now: number) {
 export function recordRequestUsage(
   promptTokens: number = 0,
   completionTokens: number = 0,
-  modelName: string = 'gemini-2.5-flash',
+  modelName: string = 'gemini-3.8-flash',
   modelCalls: number = 1,
   toolCalls: number = 0,
   toolsUsed: string[] = []

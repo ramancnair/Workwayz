@@ -108,16 +108,16 @@ export function FpFallbackAlert({
             </Button>
           )}
 
-          {failedModel !== 'gemini-2.5-flash' && (
+          {failedModel !== 'gemini-3.8-flash' && (
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleQuickSwitch('gemini-2.5-flash')}
+              onClick={() => handleQuickSwitch('gemini-3.8-flash')}
               disabled={isLoading}
               className="h-7 px-2.5 text-xs bg-card/80 border-border hover:bg-accent font-medium gap-1.5 cursor-pointer shadow-2xs"
             >
               <Cpu className="h-3 w-3 text-muted-foreground" />
-              Switch to Gemini 2.5 Flash
+              Switch to Gemini 3.8 Flash
             </Button>
           )}
 

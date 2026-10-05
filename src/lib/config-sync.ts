@@ -113,8 +113,8 @@ export function syncConnectionsToEnv(connsData?: any): void {
             if (activeAi.baseUrl) envMap.set('LOCAL_AI_BASE_URL', `"${activeAi.baseUrl}"`);
 
             let targetModel = activeAi.model;
-            if (!targetModel || (activeAi.provider === 'google' && (targetModel === 'local-model' || !targetModel.startsWith('gemini-')))) {
-                if (activeAi.provider === 'google') targetModel = 'gemini-2.5-flash';
+            if (!targetModel || (activeAi.provider === 'google' && (targetModel === 'local-model' || targetModel === 'gemini-2.5-flash' || !targetModel.startsWith('gemini-')))) {
+                if (activeAi.provider === 'google') targetModel = 'gemini-3.8-flash';
                 else if (activeAi.provider === 'lmstudio') targetModel = 'meta/muse-glimmer';
                 else if (activeAi.provider === 'openai') targetModel = 'gpt-4o';
                 else if (activeAi.provider === 'anthropic') targetModel = 'claude-3-5-sonnet';

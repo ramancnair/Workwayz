@@ -161,8 +161,8 @@ export function ReportIssueModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[540px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[540px] max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center gap-2 text-primary font-semibold">
             <div className="p-2 rounded-lg bg-primary/10 text-primary">
               <Bug className="w-5 h-5" />
@@ -175,49 +175,52 @@ export function ReportIssueModal({
         </DialogHeader>
 
         {submittedResult ? (
-          <div className="py-6 flex flex-col items-center text-center gap-3">
-            {submittedResult.success ? (
-              <>
-                <div className="w-12 h-12 rounded-full bg-green-500/10 text-green-600 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <h4 className="text-lg font-semibold">Thank You! Report Submitted</h4>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  {submittedResult.message}
-                </p>
-                {submittedResult.issueUrl && (
-                  <Button asChild variant="outline" className="mt-2 gap-2">
-                    <a
-                      href={submittedResult.issueUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      View Issue #{submittedResult.issueNumber} on GitHub
-                    </a>
-                  </Button>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-                <h4 className="text-lg font-semibold">Submission Failed</h4>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  {submittedResult.message}
-                </p>
-              </>
-            )}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col items-center text-center gap-3">
+              {submittedResult.success ? (
+                <>
+                  <div className="w-12 h-12 rounded-full bg-green-500/10 text-green-600 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-lg font-semibold">Thank You! Report Submitted</h4>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    {submittedResult.message}
+                  </p>
+                  {submittedResult.issueUrl && (
+                    <Button asChild variant="outline" className="mt-2 gap-2">
+                      <a
+                        href={submittedResult.issueUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View Issue #{submittedResult.issueNumber} on GitHub
+                      </a>
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-lg font-semibold">Submission Failed</h4>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    {submittedResult.message}
+                  </p>
+                </>
+              )}
+            </div>
 
-            <DialogFooter className="w-full mt-4">
+            <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 w-full">
               <Button onClick={handleClose} className="w-full">
                 Close
               </Button>
             </DialogFooter>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
             <div className="space-y-1.5">
               <Label htmlFor="user-description">
                 What were you trying to do? <span className="text-destructive">*</span>
@@ -309,8 +312,9 @@ export function ReportIssueModal({
                 )}
               </div>
             )}
+            </div>
 
-            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 flex items-center justify-between sm:justify-end gap-2">
               <Button
                 type="button"
                 variant="ghost"

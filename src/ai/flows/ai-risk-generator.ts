@@ -10,6 +10,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { runPromptWithCascade } from '@/lib/ai/model-cascade';
 import { z } from 'genkit';
 
 const AiRiskGeneratorInputSchema = z.object({
@@ -55,7 +56,10 @@ const aiRiskGeneratorFlow = ai.defineFlow(
     outputSchema: AiRiskGeneratorOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    return await runPromptWithCascade(
+      (inp, opts) => prompt(inp, opts),
+      input,
+      { flowName: 'RiskGenerator' }
+    );
   }
 );

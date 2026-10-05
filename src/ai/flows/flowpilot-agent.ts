@@ -165,8 +165,8 @@ export async function getActiveAiDetails(): Promise<AiDetails> {
 
   // Provider-aware model sanitization and validation
   if (p === 'google') {
-    if (!model || model === 'local-model' || !model.startsWith('gemini-')) {
-      model = 'gemini-2.5-flash';
+    if (!model || model === 'local-model' || model === 'gemini-2.5-flash' || !model.startsWith('gemini-')) {
+      model = 'gemini-3.8-flash';
     }
   } else if (p === 'openai') {
     if (!model || model === 'local-model' || model.startsWith('gemini-')) {
@@ -414,13 +414,13 @@ ${liveSnapshotContext}
           errMsg.includes('resource exhausted');
 
         if (isOverloadedOr503 && aiDetails.provider === 'google') {
-          if (genkitModel !== 'googleai/gemini-2.5-flash') {
-            console.warn(`Model ${genkitModel} is busy (${genErr.message}). Retrying with gemini-2.5-flash fallback...`);
-            generateOptions.model = 'googleai/gemini-2.5-flash';
+          if (genkitModel !== 'googleai/gemini-3.8-flash' && genkitModel !== 'googleai/gemini-flash-latest') {
+            console.warn(`Model ${genkitModel} is busy (${genErr.message}). Retrying with gemini-3.8-flash fallback...`);
+            generateOptions.model = 'googleai/gemini-3.8-flash';
             return await ai.generate(generateOptions);
           } else {
-            console.warn(`Gemini 2.5 Flash is experiencing a brief high-demand spike. Retrying after 1.5s...`);
-            await new Promise((r) => setTimeout(r, 1500));
+            console.warn(`Model ${genkitModel} is busy (${genErr.message}). Retrying with gemini-flash-latest fallback...`);
+            generateOptions.model = 'googleai/gemini-flash-latest';
             return await ai.generate(generateOptions);
           }
         } else if (errMsg.includes('exceeded maximum tool call iterations')) {

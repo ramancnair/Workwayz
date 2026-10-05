@@ -8,7 +8,7 @@ let geminiModelCache: { timestamp: number; models: string[] } | null = null;
 
 async function getLiveGeminiModels(apiKey?: string): Promise<string[]> {
   if (!apiKey) {
-    return ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'];
+    return ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-pro'];
   }
 
   const now = Date.now();
@@ -33,6 +33,7 @@ async function getLiveGeminiModels(apiKey?: string): Promise<string[]> {
               name.includes('clip') ||
               name.includes('embedding') ||
               name.includes('banana') ||
+              name.includes('2.5-flash') || // deprecated
               name.includes('preview-customtools');
             return hasGenerate && !isExcluded;
           })
@@ -40,12 +41,14 @@ async function getLiveGeminiModels(apiKey?: string): Promise<string[]> {
 
         // Sort models: latest/popular first
         const sorted = filtered.sort((a: string, b: string) => {
+          if (a.includes('3.8-flash') && !b.includes('3.8-flash')) return -1;
+          if (!a.includes('3.8-flash') && b.includes('3.8-flash')) return 1;
+          if (a.includes('flash-latest') && !b.includes('flash-latest')) return -1;
+          if (!a.includes('flash-latest') && b.includes('flash-latest')) return 1;
           if (a.includes('3.7') && !b.includes('3.7')) return -1;
           if (!a.includes('3.7') && b.includes('3.7')) return 1;
-          if (a.includes('2.5-flash') && !b.includes('2.5-flash')) return -1;
-          if (!a.includes('2.5-flash') && b.includes('2.5-flash')) return 1;
-          if (a.includes('2.5-pro') && !b.includes('2.5-pro')) return -1;
-          if (!a.includes('2.5-pro') && b.includes('2.5-pro')) return 1;
+          if (a.includes('3.5') && !b.includes('3.5')) return -1;
+          if (!a.includes('3.5') && b.includes('3.5')) return 1;
           return a.localeCompare(b);
         });
 
@@ -57,7 +60,7 @@ async function getLiveGeminiModels(apiKey?: string): Promise<string[]> {
     console.warn('Could not fetch live models from Google API, using cached/fallback:', err);
   }
 
-  return geminiModelCache?.models || ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'];
+  return geminiModelCache?.models || ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-pro'];
 }
 
 export async function GET() {

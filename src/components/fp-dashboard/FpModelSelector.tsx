@@ -20,9 +20,9 @@ interface FpModelSelectorProps {
 }
 
 const DEFAULT_MODELS = [
-  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', tag: 'Fast & High Quota' },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', tag: 'Standard' },
+  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', tag: 'Latest & Recommended' },
   { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', tag: 'Production' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', tag: 'High Quota' },
   { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', tag: 'Preview' },
 ];
 

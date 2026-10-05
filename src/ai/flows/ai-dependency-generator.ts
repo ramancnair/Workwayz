@@ -10,6 +10,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { runPromptWithCascade } from '@/lib/ai/model-cascade';
 import { z } from 'genkit';
 
 const StoryInputSchema = z.object({
@@ -69,7 +70,10 @@ const aiDependencyGeneratorFlow = ai.defineFlow(
     outputSchema: AiDependencyGeneratorOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    return await runPromptWithCascade(
+      (inp, opts) => prompt(inp, opts),
+      input,
+      { flowName: 'DependencyGenerator' }
+    );
   }
 );

@@ -12,6 +12,8 @@ export interface StepCostResult {
 
 // Rates per 1M tokens in USD
 const MODEL_RATES: Record<string, { promptRate: number; completionRate: number }> = {
+  'gemini-3.8-flash': { promptRate: 0.075, completionRate: 0.30 },
+  'gemini-flash-latest': { promptRate: 0.075, completionRate: 0.30 },
   'gemini-3.5-flash': { promptRate: 0.075, completionRate: 0.30 },
   'gemini-2.5-flash': { promptRate: 0.075, completionRate: 0.30 },
   'gemini-1.5-flash': { promptRate: 0.075, completionRate: 0.30 },
@@ -26,10 +28,10 @@ const MODEL_RATES: Record<string, { promptRate: number; completionRate: number }
  */
 export function calculateStepCost(
   usage: TokenUsage,
-  modelName: string = 'gemini-2.5-flash'
+  modelName: string = 'gemini-3.8-flash'
 ): StepCostResult {
-  const normalizedModel = Object.keys(MODEL_RATES).find((m) => modelName.includes(m)) || 'gemini-2.5-flash';
-  const rates = MODEL_RATES[normalizedModel] || MODEL_RATES['gemini-2.5-flash'];
+  const normalizedModel = Object.keys(MODEL_RATES).find((m) => modelName.includes(m)) || 'gemini-3.8-flash';
+  const rates = MODEL_RATES[normalizedModel] || MODEL_RATES['gemini-3.8-flash'];
 
   const promptTokens = usage.promptTokens || 0;
   const completionTokens = usage.completionTokens || 0;

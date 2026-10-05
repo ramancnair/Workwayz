@@ -89,9 +89,9 @@ async function generateWithModelFallback(prompt: string, aiDetails: any) {
 
     if (isQuotaOrBusy && aiDetails.provider === 'google') {
       const alternateModel =
-        primaryModel === 'googleai/gemini-3.5-flash'
-          ? 'googleai/gemini-2.5-flash'
-          : 'googleai/gemini-3.5-flash';
+        primaryModel === 'googleai/gemini-3.8-flash'
+          ? 'googleai/gemini-flash-latest'
+          : 'googleai/gemini-3.8-flash';
       console.warn(`[FpAnalytics] Primary model ${primaryModel} quota/busy (${err.message}). Attempting fallback model ${alternateModel}...`);
       try {
         const retryRes = await ai.generate({

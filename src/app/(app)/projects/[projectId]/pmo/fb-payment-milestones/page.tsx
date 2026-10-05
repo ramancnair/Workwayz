@@ -765,12 +765,13 @@ export default function BillingPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingMilestone(null); setIsDialogOpen(open); }}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>{editingMilestone ? 'Edit Payment Milestone' : 'Add New Milestone'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
               <FormField
                 control={form.control}
                 name="name"
@@ -934,7 +935,8 @@ export default function BillingPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? 'Saving...' : 'Save Milestone'}
                 </Button>

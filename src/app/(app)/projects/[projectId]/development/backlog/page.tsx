@@ -80,7 +80,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Sub Task': CheckSquare,
 };
 
-const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
+const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task'];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
@@ -121,6 +121,15 @@ const storyFormSchema = z.object({
   predecessorId: z.string().optional(),
   createdAt: z.date().optional(),
   closedAt: z.date().optional(),
+});
+
+const addBugFormSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(60, 'Title cannot exceed 60 characters.'),
+  description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
+  severity: z.enum(['Critical', 'High', 'Medium', 'Low']),
+  status: z.string(),
+  assigneeId: z.string().optional(),
+  estimatedHours: z.coerce.number().optional(),
 });
 
 const subTaskFormSchema = z.object({
@@ -379,6 +388,7 @@ export default function BacklogPage() {
   const [epicToDelete, setEpicToDelete] = useState<Epic | null>(null);
   const [deleteEpicItems, setDeleteEpicItems] = useState(false);
   const [showAddSubTask, setShowAddSubTask] = useState(false);
+  const [showAddBug, setShowAddBug] = useState(false);
   const [isAiGenOpen, setIsAiGenOpen] = useState(false);
   const [isAiGenSubmitting, setIsAiGenSubmitting] = useState(false);
   
@@ -510,6 +520,18 @@ export default function BacklogPage() {
     resolver: zodResolver(bulkMoveSchema),
     defaultValues: { targetEpicId: 'no_change', targetReleaseId: 'no_change' }
   });
+
+  const addBugForm = useForm<z.infer<typeof addBugFormSchema>>({
+    resolver: zodResolver(addBugFormSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      severity: 'Medium',
+      status: 'To Triage',
+      assigneeId: 'unassigned',
+      estimatedHours: 0,
+    },
+  });
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
   
@@ -579,9 +601,12 @@ export default function BacklogPage() {
       if (!selectedStory) {
           setIsEditStorySubmitting(false);
           setShowAddSubTask(false);
+          setShowAddBug(false);
           subTaskForm.reset();
+          addBugForm.reset();
           return;
       }
+      setShowAddBug(false);
   
       if (selectedStory.itemType === 'Sub Task') {
           subTaskForm.reset({
@@ -899,6 +924,40 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
         toast({ variant: "destructive", title: "Error", description: "Could not add sub-task." });
     }
 };
+
+const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
+    if (!selectedStory) return;
+
+    const newBug: Omit<Story, 'id' | 'storyId'> = {
+        title: values.title,
+        description: values.description || '',
+        itemType: 'Bug',
+        status: values.status || 'To Triage',
+        severity: values.severity,
+        epicId: selectedStory.epicId,
+        parentStoryId: selectedStory.id,
+        sprintId: selectedStory.sprintId,
+        releaseId: selectedStory.releaseId,
+        assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+        estimatedHours: values.estimatedHours,
+    };
+
+    const success = await addStory(newBug, 'BUG');
+    if (success) {
+        toast({ title: 'Success', description: `Defect linked to [${selectedStory.storyId || 'REQ'}].` });
+        addBugForm.reset({
+            title: '',
+            description: '',
+            severity: 'Medium',
+            status: 'To Triage',
+            assigneeId: 'unassigned',
+            estimatedHours: 0,
+        });
+        setShowAddBug(false);
+    } else {
+        toast({ variant: "destructive", title: "Error", description: "Could not add defect." });
+    }
+};
     
   const handleDeleteEpic = (epicId: string) => {
     deleteEpic(epicId, deleteEpicItems).then(success => {
@@ -1207,12 +1266,13 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                 Add Requirement
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
-              <DialogHeader>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+              <DialogHeader className="px-6 py-4 border-b shrink-0">
                 <DialogTitle>Add New Requirement</DialogTitle>
               </DialogHeader>
               <Form {...addStoryForm}>
-                <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="space-y-4 py-4">
+                <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                      <FormField
                         control={addStoryForm.control}
                         name="itemType"
@@ -1228,7 +1288,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             <SelectContent>
                                 {workItemTypes.map(itemType => (
                                 <SelectItem key={itemType} value={itemType}>
-                                    {itemType === 'Bug' ? 'Defect' : itemType}
+                                    {itemType}
                                 </SelectItem>
                                 ))}
                             </SelectContent>
@@ -1682,11 +1742,12 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                             </>
                         )}
                     </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isAddStorySubmitting}>
-                        {isAddStorySubmitting ? 'Creating...' : `Create ${watchedItemType}`}
-                        </Button>
-                    </DialogFooter>
+                  </div>
+                  <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
+                    <Button type="submit" disabled={isAddStorySubmitting}>
+                      {isAddStorySubmitting ? 'Creating...' : `Create ${watchedItemType}`}
+                    </Button>
+                  </DialogFooter>
                 </form>
               </Form>
             </DialogContent>
@@ -1980,42 +2041,44 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
       </div>
 
       <Dialog open={!!editingEpic} onOpenChange={(isOpen) => !isOpen && setEditingEpic(null)}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>Edit Epic</DialogTitle>
             <DialogDescription>
               Make changes to your epic here. Click save when you&apos;re done.
             </DialogDescription>
           </DialogHeader>
           <Form {...editEpicForm}>
-            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="space-y-4">
-              <FormField
-                control={editEpicForm.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Epic title" {...field} maxLength={60} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editEpicForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe the epic..." {...field} maxLength={300} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
+            <form onSubmit={editEpicForm.handleSubmit(onEditEpicSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+                <FormField
+                  control={editEpicForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Epic title" {...field} maxLength={60} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editEpicForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Describe the epic..." {...field} maxLength={300} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="button" variant="outline" onClick={() => setEditingEpic(null)}>
                   Cancel
                 </Button>
@@ -3255,7 +3318,57 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
                                        })}
                                        </div>
                                    ) : (
-                                       <p className="text-sm text-muted-foreground italic px-2">No defects linked.</p>
+                                       <p className="text-sm text-muted-foreground italic px-2">No defects linked to this story.</p>
+                                   )}
+
+                                   {showAddBug ? (
+                                       <div className="p-4 border rounded-md bg-muted/40 space-y-4 mt-2">
+                                           <h4 className="font-semibold text-sm">Add Defect to [{selectedStory?.storyId || 'REQ'}] {selectedStory?.title}</h4>
+                                           <Form {...addBugForm}>
+                                               <div className="space-y-3">
+                                                   <FormField control={addBugForm.control} name="title" render={({field}) => (
+                                                       <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Defect title..." {...field} maxLength={60} /></FormControl><FormMessage/></FormItem>
+                                                   )}/>
+                                                   <FormField control={addBugForm.control} name="description" render={({field}) => (
+                                                       <FormItem><FormLabel>Description / Steps to Reproduce</FormLabel><FormControl><Textarea placeholder="Steps to reproduce..." {...field} maxLength={300} /></FormControl><FormMessage/></FormItem>
+                                                   )}/>
+                                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                       <FormField control={addBugForm.control} name="severity" render={({field}) => (
+                                                           <FormItem><FormLabel>Severity</FormLabel>
+                                                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                               <FormControl><SelectTrigger><SelectValue placeholder="Select severity" /></SelectTrigger></FormControl>
+                                                               <SelectContent>
+                                                                   {severities.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                                               </SelectContent>
+                                                           </Select><FormMessage/></FormItem>
+                                                       )}/>
+                                                       <FormField control={addBugForm.control} name="assigneeId" render={({field}) => (
+                                                           <FormItem><FormLabel>Assignee</FormLabel>
+                                                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+                                                               <FormControl><SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger></FormControl>
+                                                               <SelectContent>
+                                                                   <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                                   {[...users].filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '').map(emp => (
+                                                                       <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                                                   ))}
+                                                               </SelectContent>
+                                                           </Select><FormMessage/></FormItem>
+                                                       )}/>
+                                                   </div>
+                                                   <FormField control={addBugForm.control} name="estimatedHours" render={({field}) => (
+                                                       <FormItem><FormLabel>Effort (hours)</FormLabel><FormControl><Input type="number" step="any" placeholder="0.00" {...field} value={field.value ?? ''} className="font-mono" /></FormControl><FormMessage/></FormItem>
+                                                   )}/>
+                                                   <div className="flex justify-end gap-2 pt-2">
+                                                       <Button type="button" variant="ghost" onClick={() => setShowAddBug(false)}>Cancel</Button>
+                                                       <Button type="button" onClick={addBugForm.handleSubmit(handleAddBug)}>Save Defect</Button>
+                                                   </div>
+                                               </div>
+                                           </Form>
+                                       </div>
+                                   ) : (
+                                       <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddBug(true)}>
+                                           <PlusCircle className="mr-2 h-4 w-4"/> Add Defect
+                                       </Button>
                                    )}
                                </div>
                            </TabsContent>
@@ -3400,60 +3513,62 @@ function TestCaseEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
           <DialogTitle>Edit Test Case: {testCase.testCaseId}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2 overflow-y-auto max-h-[calc(90vh-140px)] px-1">
-          <div className="space-y-2">
-            <Label htmlFor="tc-title">Title</Label>
-            <Input id="tc-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
             <div className="space-y-2">
-              <Label htmlFor="tc-type">Type</Label>
-              <Select value={type} onValueChange={(v: any) => setType(v)}>
-                <SelectTrigger id="tc-type"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Functional">Functional</SelectItem>
-                  <SelectItem value="Non-functional">Non-functional</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="tc-title">Title</Label>
+              <Input id="tc-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tc-type">Type</Label>
+                <Select value={type} onValueChange={(v: any) => setType(v)}>
+                  <SelectTrigger id="tc-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Functional">Functional</SelectItem>
+                    <SelectItem value="Non-functional">Non-functional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tc-sprint">Sprint</Label>
+                <Select value={sprintId} onValueChange={setSprintId}>
+                  <SelectTrigger id="tc-sprint"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="backlog">Backlog</SelectItem>
+                    {sprints.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tc-sprint">Sprint</Label>
-              <Select value={sprintId} onValueChange={setSprintId}>
-                <SelectTrigger id="tc-sprint"><SelectValue /></SelectTrigger>
+              <Label htmlFor="tc-release">Release</Label>
+              <Select value={releaseId} onValueChange={setReleaseId}>
+                <SelectTrigger id="tc-release"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="backlog">Backlog</SelectItem>
-                  {sprints.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {releases.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="tc-desc">Description (Steps)</Label>
+              <Textarea id="tc-desc" value={description} onChange={(e) => setDescription(e.target.value)} required rows={4} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tc-expected">Expected Result</Label>
+              <Textarea id="tc-expected" value={expectedResult} onChange={(e) => setExpectedResult(e.target.value)} required rows={3} />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="tc-release">Release</Label>
-            <Select value={releaseId} onValueChange={setReleaseId}>
-              <SelectTrigger id="tc-release"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {releases.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tc-desc">Description (Steps)</Label>
-            <Textarea id="tc-desc" value={description} onChange={(e) => setDescription(e.target.value)} required rows={4} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tc-expected">Expected Result</Label>
-            <Textarea id="tc-expected" value={expectedResult} onChange={(e) => setExpectedResult(e.target.value)} required rows={3} />
-          </div>
-          <DialogFooter className="pt-2 flex flex-row justify-between items-center w-full">
+          <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 flex flex-row justify-between items-center w-full">
             {onDelete && (
               <Button
                 type="button"

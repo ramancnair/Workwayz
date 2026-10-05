@@ -184,7 +184,7 @@ export function FlowPilotChatWidget() {
     isLmStudioRunning: boolean;
   }>({
     lmStudioModels: [],
-    geminiModels: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+    geminiModels: ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-pro'],
     isLmStudioRunning: false,
   });
 
@@ -229,7 +229,7 @@ export function FlowPilotChatWidget() {
         if (d?.lmStudioModels) {
           setAvailableModels({
             lmStudioModels: d.lmStudioModels,
-            geminiModels: d.geminiModels || ['gemini-2.5-flash', 'gemini-2.5-pro'],
+            geminiModels: d.geminiModels || ['gemini-3.8-flash', 'gemini-flash-latest'],
             isLmStudioRunning: d.isLmStudioRunning,
           });
         }

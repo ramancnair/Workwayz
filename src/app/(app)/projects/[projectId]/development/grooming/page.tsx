@@ -1139,12 +1139,13 @@ export default function GroomingPage() {
             </div>
 
         <Dialog open={isSprintDialogOpen} onOpenChange={(isOpen) => { if(!isOpen) setEditingSprint(null); setIsSprintDialogOpen(isOpen); }}>
-            <DialogContent>
-                <DialogHeader>
+            <DialogContent className="sm:max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+                <DialogHeader className="px-6 py-4 border-b shrink-0">
                     <DialogTitle>{editingSprint ? 'Edit Sprint' : 'Create New Sprint'}</DialogTitle>
                 </DialogHeader>
                 <Form {...sprintForm}>
-                    <form onSubmit={sprintForm.handleSubmit(handleSprintSubmit)} className="space-y-4 py-4">
+                    <form onSubmit={sprintForm.handleSubmit(handleSprintSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                         <div className="space-y-2">
                             <Label htmlFor="sprint-id-display">Sprint ID</Label>
                             <Input
@@ -1229,7 +1230,8 @@ export default function GroomingPage() {
                                 </FormItem>
                             )}
                         />
-                        <DialogFooter>
+                        </div>
+                        <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                             <Button type="submit">{editingSprint ? 'Save Changes' : 'Create Sprint'}</Button>
                         </DialogFooter>
                     </form>
@@ -2520,60 +2522,62 @@ function TestCaseEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
           <DialogTitle>Edit Test Case: {testCase.testCaseId}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2 overflow-y-auto max-h-[calc(90vh-140px)] px-1">
-          <div className="space-y-2">
-            <Label htmlFor="tc-title">Title</Label>
-            <Input id="tc-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
             <div className="space-y-2">
-              <Label htmlFor="tc-type">Type</Label>
-              <Select value={type} onValueChange={(v: any) => setType(v)}>
-                <SelectTrigger id="tc-type"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Functional">Functional</SelectItem>
-                  <SelectItem value="Non-functional">Non-functional</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="tc-title">Title</Label>
+              <Input id="tc-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tc-type">Type</Label>
+                <Select value={type} onValueChange={(v: any) => setType(v)}>
+                  <SelectTrigger id="tc-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Functional">Functional</SelectItem>
+                    <SelectItem value="Non-functional">Non-functional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tc-sprint">Sprint</Label>
+                <Select value={sprintId} onValueChange={setSprintId}>
+                  <SelectTrigger id="tc-sprint"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="backlog">Backlog</SelectItem>
+                    {sprints.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tc-sprint">Sprint</Label>
-              <Select value={sprintId} onValueChange={setSprintId}>
-                <SelectTrigger id="tc-sprint"><SelectValue /></SelectTrigger>
+              <Label htmlFor="tc-release">Release</Label>
+              <Select value={releaseId} onValueChange={setReleaseId}>
+                <SelectTrigger id="tc-release"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="backlog">Backlog</SelectItem>
-                  {sprints.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {releases.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="tc-desc">Description (Steps)</Label>
+              <Textarea id="tc-desc" value={description} onChange={(e) => setDescription(e.target.value)} required rows={4} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tc-expected">Expected Result</Label>
+              <Textarea id="tc-expected" value={expectedResult} onChange={(e) => setExpectedResult(e.target.value)} required rows={3} />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="tc-release">Release</Label>
-            <Select value={releaseId} onValueChange={setReleaseId}>
-              <SelectTrigger id="tc-release"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {releases.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>[{r.releaseId}] {r.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tc-desc">Description (Steps)</Label>
-            <Textarea id="tc-desc" value={description} onChange={(e) => setDescription(e.target.value)} required rows={4} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tc-expected">Expected Result</Label>
-            <Textarea id="tc-expected" value={expectedResult} onChange={(e) => setExpectedResult(e.target.value)} required rows={3} />
-          </div>
-          <DialogFooter className="pt-2 flex flex-row justify-between items-center w-full">
+          <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 flex flex-row justify-between items-center w-full">
             {onDelete && (
               <Button
                 type="button"

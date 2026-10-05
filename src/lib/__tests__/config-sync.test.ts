@@ -63,7 +63,7 @@ describe('Config Sync Engine (config-sync.ts)', () => {
                     provider: 'google',
                     isActive: true,
                     apiKey: 'ai-key-123',
-                    model: 'gemini-2.5-flash',
+                    model: 'gemini-3.8-flash',
                 }
             ],
             authentication: [
@@ -88,7 +88,7 @@ describe('Config Sync Engine (config-sync.ts)', () => {
         expect(updatedEnv).toContain('NEXT_PUBLIC_SUPABASE_ANON_KEY="anon-key-123"');
         expect(updatedEnv).toContain('NEXT_PUBLIC_AUTH_PROVIDER="supabase"');
         expect(updatedEnv).toContain('NEXT_PUBLIC_AI_PROVIDER="google"');
-        expect(updatedEnv).toContain('AI_DEFAULT_MODEL="gemini-2.5-flash"');
+        expect(updatedEnv).toContain('AI_DEFAULT_MODEL="gemini-3.8-flash"');
         expect(process.env.NEXT_PUBLIC_DB_PROVIDER).toBe('supabase');
     });
 

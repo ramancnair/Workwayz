@@ -9,6 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import { runPromptWithCascade } from '@/lib/ai/model-cascade';
 import {z} from 'genkit';
 
 const AiTaskTestSuggestionsInputSchema = z.object({
@@ -57,7 +58,10 @@ const aiTaskTestSuggestionsFlow = ai.defineFlow(
     outputSchema: AiTaskTestSuggestionsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    return await runPromptWithCascade(
+      (inp, opts) => prompt(inp, opts),
+      input,
+      { flowName: 'TaskTestSuggestions' }
+    );
   }
 );

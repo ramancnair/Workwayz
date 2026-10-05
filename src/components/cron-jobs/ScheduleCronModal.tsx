@@ -242,8 +242,8 @@ export function ScheduleCronModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center gap-2 text-primary font-medium text-xs">
             <Clock className="h-4 w-4" />
             <span>Automated FlowPilot Query Scheduler</span>
@@ -254,7 +254,8 @@ export function ScheduleCronModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 min-h-0">
           {/* Query preview banner */}
           <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 text-xs space-y-1">
             <div className="font-semibold text-primary flex items-center gap-1.5">
@@ -474,8 +475,9 @@ export function ScheduleCronModal({
               )}
             </div>
           </div>
+          </div>
 
-          <DialogFooter className="gap-2 pt-2 border-t border-border">
+          <DialogFooter className="px-6 py-4 border-t bg-background shrink-0 gap-2">
             <Button
               type="button"
               variant="outline"

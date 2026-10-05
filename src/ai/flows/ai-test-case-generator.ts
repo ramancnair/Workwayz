@@ -9,6 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { runPromptWithCascade } from '@/lib/ai/model-cascade';
 import { z } from 'genkit';
 
 const StoryInputSchema = z.object({
@@ -67,7 +68,10 @@ const aiTestCaseGeneratorFlow = ai.defineFlow(
     outputSchema: AiTestCaseGeneratorOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    return await runPromptWithCascade(
+      (inp, opts) => prompt(inp, opts),
+      input,
+      { flowName: 'TestCaseGenerator' }
+    );
   }
 );

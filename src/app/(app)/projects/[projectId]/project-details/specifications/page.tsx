@@ -58,6 +58,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getAiTechStackSuggestions, getAiHorizontalSuggestions } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AiLoadingState } from '@/components/AiLoadingState';
+import { Badge } from '@/components/ui/badge';
 
 const summarySchema = z.object({
   summary: z.string().optional(),

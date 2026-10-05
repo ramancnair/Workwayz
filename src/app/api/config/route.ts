@@ -93,8 +93,8 @@ export async function POST(request: Request) {
             }
 
             let targetModel = ai.model;
-            if (!targetModel || (ai.provider === 'google' && (targetModel === 'local-model' || !targetModel.startsWith('gemini-')))) {
-                if (ai.provider === 'google') targetModel = 'gemini-2.5-flash';
+            if (!targetModel || (ai.provider === 'google' && (targetModel === 'local-model' || targetModel === 'gemini-2.5-flash' || !targetModel.startsWith('gemini-')))) {
+                if (ai.provider === 'google') targetModel = 'gemini-3.8-flash';
                 else if (ai.provider === 'lmstudio') targetModel = 'meta/muse-glimmer';
                 else if (ai.provider === 'openai') targetModel = 'gpt-4o';
                 else if (ai.provider === 'anthropic') targetModel = 'claude-3-5-sonnet';

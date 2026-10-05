@@ -111,7 +111,10 @@ const bugFormSchema = z.object({
   title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
-  parentStoryId: z.string().optional(),
+  parentStoryId: z.string({ required_error: 'Related story is required.' }).refine(
+    val => !!val && val.trim() !== '' && val !== 'unassigned',
+    { message: 'A defect must be linked to a story. Please select a related story.' }
+  ),
   relatedTestCaseId: z.string().optional(),
   reporterId: z.string().optional(),
   assigneeId: z.string().optional(),
@@ -700,13 +703,13 @@ export default function DefectTrackerPage() {
                     name="parentStoryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Related Story</FormLabel>
+                        <FormLabel>Related Story <span className="text-destructive">*</span></FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
                               list="parent-story-options-tracker"
-                              placeholder="Search for a story/requirement..."
+                              placeholder="Search for a story/requirement (required)..."
                               className="pl-9"
                               value={parentStoryInputText}
                               onChange={(e) => {

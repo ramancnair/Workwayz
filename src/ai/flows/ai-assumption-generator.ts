@@ -10,6 +10,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { runPromptWithCascade } from '@/lib/ai/model-cascade';
 import { z } from 'genkit';
 import type { AssumptionCategory } from '@/types';
 
@@ -69,7 +70,10 @@ const aiAssumptionGeneratorFlow = ai.defineFlow(
     outputSchema: AiAssumptionGeneratorOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    return await runPromptWithCascade(
+      (inp, opts) => prompt(inp, opts),
+      input,
+      { flowName: 'AssumptionGenerator' }
+    );
   }
 );

@@ -1094,12 +1094,13 @@ export default function TestCyclePage() {
       </div>
 
       <Dialog open={isPlanDialogOpen} onOpenChange={(open) => { setIsPlanDialogOpen(open); if (!open) setEditingPlan(null); }}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle>{editingPlan ? 'Edit Test Cycle' : 'Add Test Cycle'}</DialogTitle>
           </DialogHeader>
           <Form {...testCycleForm}>
-            <form onSubmit={testCycleForm.handleSubmit(onTestCycleSubmit)} className="space-y-4 pt-2">
+            <form onSubmit={testCycleForm.handleSubmit(onTestCycleSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
               <FormField control={testCycleForm.control} name="name" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Cycle Name</FormLabel>
@@ -1203,7 +1204,8 @@ export default function TestCyclePage() {
                   Project timeline: {format(parseISO(project.startDate), 'dd MMM yyyy')}{project.endDate ? ` — ${format(parseISO(project.endDate), 'dd MMM yyyy')}` : ''}
                 </p>
               )}
-              <DialogFooter>
+              </div>
+              <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit">{editingPlan ? 'Save Changes' : 'Create Cycle'}</Button>
               </DialogFooter>
             </form>

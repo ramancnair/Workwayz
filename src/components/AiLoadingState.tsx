@@ -10,29 +10,27 @@ export interface AiLoadingStep {
 }
 
 const DEFAULT_STACK_STEPS: AiLoadingStep[] = [
-  { label: 'Connecting to AI server', detail: 'Establishing secure model stream' },
-  { label: 'Sending project summary & scope', detail: 'Packaging technical requirements & context' },
-  { label: 'AI is thinking & architecting options', detail: 'Evaluating modern tech stacks & patterns' },
-  { label: 'Decomposing impacted systems', detail: 'Designing frontend, backend, databases & APIs' },
-  { label: 'Calibrating effort & daily billing rates', detail: 'Estimating ballpark man-days and consultancy rates' },
-  { label: 'Finalizing recommendations', detail: 'Structuring 3 tailored architectural options' },
+  { label: 'Connecting to AI service', detail: 'Initiating secure model connection' },
+  { label: 'Sending project scope & prompt', detail: 'Packaging technical requirements for tech stack analysis' },
+  { label: 'Waiting for AI model response', detail: 'Model is synthesizing architectural options & effort estimates' },
+  { label: 'Still processing request', detail: 'AI inference may take 10-20s during peak traffic periods' },
+  { label: 'Receiving & structuring response', detail: 'Formatting systems, effort and daily rates' },
 ];
 
 const DEFAULT_HORIZONTAL_STEPS: AiLoadingStep[] = [
-  { label: 'Connecting to AI server', detail: 'Establishing secure model stream' },
-  { label: 'Sending project summary & baseline', detail: 'Analyzing scope and team delivery model' },
-  { label: 'AI is analyzing delivery lifecycle', detail: 'Evaluating QA, DevOps, Architecture & PM needs' },
-  { label: 'Formulating horizontal strategies', detail: 'Balancing governance, agility & compliance' },
-  { label: 'Calibrating weightage & billing rates', detail: 'Calculating percentage effort distribution & rates' },
-  { label: 'Finalizing strategy recommendations', detail: 'Structuring 3 delivery approach options' },
+  { label: 'Connecting to AI service', detail: 'Initiating secure model connection' },
+  { label: 'Sending project scope & baseline', detail: 'Packaging requirements for horizontal strategy analysis' },
+  { label: 'Waiting for AI model response', detail: 'Model is synthesizing delivery strategies & weightages' },
+  { label: 'Still processing request', detail: 'AI inference may take 10-20s during peak traffic periods' },
+  { label: 'Receiving & structuring response', detail: 'Formatting governance, effort and rate distributions' },
 ];
 
 const DEFAULT_GENERAL_STEPS: AiLoadingStep[] = [
-  { label: 'Connecting to AI server', detail: 'Establishing secure model connection' },
+  { label: 'Connecting to AI service', detail: 'Initiating secure model connection' },
   { label: 'Sending request to AI model', detail: 'Transferring input parameters' },
-  { label: 'AI server is thinking', detail: 'Processing reasoning and context' },
-  { label: 'Generating response', detail: 'Synthesizing structured output' },
-  { label: 'Finalizing response', detail: 'Validating output structure' },
+  { label: 'Waiting for AI model response', detail: 'Model is processing reasoning and generating response' },
+  { label: 'Still processing request', detail: 'AI inference in progress' },
+  { label: 'Receiving & structuring response', detail: 'Validating output structure' },
 ];
 
 interface AiLoadingStateProps {
@@ -154,6 +152,10 @@ export function AiLoadingState({
           />
         ))}
       </div>
+
+      <p className="text-[11px] text-muted-foreground/60 mt-3 font-normal">
+        Awaiting response from AI model • Status updates while request is in-flight
+      </p>
     </div>
   );
 }

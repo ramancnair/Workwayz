@@ -253,10 +253,11 @@ export default function ProjectSynopsisPage() {
                             />
                         </CardContent>
                     </Card>
-                    <DialogContent className="sm:max-w-2xl">
-                        <DialogHeader><DialogTitle>Edit Key Information</DialogTitle></DialogHeader>
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+                        <DialogHeader className="px-6 py-4 border-b shrink-0"><DialogTitle>Edit Key Information</DialogTitle></DialogHeader>
                         <Form {...infoForm}>
-                            <form onSubmit={infoForm.handleSubmit(onInfoSubmit)} className="space-y-4">
+                            <form onSubmit={infoForm.handleSubmit(onInfoSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                    <FormField control={infoForm.control} name="status" render={({ field }) => (
                                         <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{projectStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
@@ -326,7 +327,8 @@ export default function ProjectSynopsisPage() {
                                         <FormItem><FormLabel>End Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage/></FormItem>
                                     )}/>
                                 </div>
-                                <DialogFooter>
+                                </div>
+                                <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                                     <Button type="submit" disabled={infoForm.formState.isSubmitting}>
                                         {infoForm.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
                                     </Button>
@@ -414,45 +416,47 @@ export default function ProjectSynopsisPage() {
                                 )}
                             </CardContent>
                         </Card>
-                        <DialogContent className="sm:max-w-3xl">
-                            <DialogHeader>
+                        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+                            <DialogHeader className="px-6 py-4 border-b shrink-0">
                                 <DialogTitle>Edit Project Health</DialogTitle>
                             </DialogHeader>
                             <Form {...healthForm}>
-                                <form onSubmit={healthForm.handleSubmit(onHealthSubmit)} className="space-y-4">
-                                    <Card className="pt-4 border-none shadow-none">
-                                        <CardContent className="space-y-4 p-0">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <FormField control={healthForm.control} name="overallStatus" render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Overall Health</FormLabel>
-                                                        <Select onValueChange={field.onChange} value={field.value}>
-                                                            <FormControl><SelectTrigger><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
-                                                            <SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                                                        </Select>
-                                                    </FormItem>
-                                                )}/>
-                                                <FormField control={healthForm.control} name="statusComments" render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Status Comments</FormLabel>
-                                                        <FormControl><Textarea placeholder="Add comments about the current status..." {...field} value={field.value ?? ''}/></FormControl>
-                                                    </FormItem>
-                                                )}/>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <FormField control={healthForm.control} name="scopeStatus" render={({ field }) => (
-                                                    <FormItem><FormLabel>Scope</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                                )}/>
-                                                <FormField control={healthForm.control} name="costStatus" render={({ field }) => (
-                                                    <FormItem><FormLabel>Cost</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                                )}/>
-                                                <FormField control={healthForm.control} name="timeStatus" render={({ field }) => (
-                                                    <FormItem><FormLabel>Time</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                                )}/>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                    <DialogFooter>
+                                <form onSubmit={healthForm.handleSubmit(onHealthSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+                                        <Card className="pt-4 border-none shadow-none">
+                                            <CardContent className="space-y-4 p-0">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <FormField control={healthForm.control} name="overallStatus" render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Overall Health</FormLabel>
+                                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                                <FormControl><SelectTrigger><SelectValue placeholder="Set status" /></SelectTrigger></FormControl>
+                                                                <SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                                            </Select>
+                                                        </FormItem>
+                                                    )}/>
+                                                    <FormField control={healthForm.control} name="statusComments" render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Status Comments</FormLabel>
+                                                            <FormControl><Textarea placeholder="Add comments about the current status..." {...field} value={field.value ?? ''}/></FormControl>
+                                                        </FormItem>
+                                                    )}/>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <FormField control={healthForm.control} name="scopeStatus" render={({ field }) => (
+                                                        <FormItem><FormLabel>Scope</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                                    )}/>
+                                                    <FormField control={healthForm.control} name="costStatus" render={({ field }) => (
+                                                        <FormItem><FormLabel>Cost</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                                    )}/>
+                                                    <FormField control={healthForm.control} name="timeStatus" render={({ field }) => (
+                                                        <FormItem><FormLabel>Time</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Set status"/></SelectTrigger></FormControl><SelectContent>{ragStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                                                    )}/>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                    <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                                         <Button type="submit" disabled={healthForm.formState.isSubmitting}>
                                             {healthForm.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
                                         </Button>

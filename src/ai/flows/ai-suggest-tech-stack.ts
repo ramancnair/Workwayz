@@ -5,6 +5,7 @@
  */
 
 import { ai, activeModel } from '@/ai/genkit';
+import { runPromptWithCascade } from '@/lib/ai/model-cascade';
 import { z } from 'genkit';
 
 const TechStackSuggestionInputSchema = z.object({
@@ -64,8 +65,11 @@ const aiSuggestTechStackFlow = ai.defineFlow(
     outputSchema: TechStackSuggestionOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    return await runPromptWithCascade(
+      (inp, opts) => prompt(inp, opts),
+      input,
+      { flowName: 'TechStackSuggest' }
+    );
   }
 );
 
